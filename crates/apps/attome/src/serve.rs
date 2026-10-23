@@ -524,11 +524,33 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             .await;
         }
     });
-    let server_fut = axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .with_graceful_shutdown(attome::boot::wait_for_shutdown(server_shutdown));
+    // Z5-T6: HTTPS (HTTP/2 and HTTP/1.1) straight from the server when
+    // `app.tls.enabled`; plain HTTP behind a terminating proxy otherwise.
+    let server_fut: std::pin::Pin<
+        Box<dyn std::future::Future<Output = std::io::Result<()>> + Send>,
+    > = if config.app.tls.enabled {
+        let listener = attome::tls::TlsListener::start(listener, &config.app.tls)
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
+        // `TapIo` carries the peer address through to `ConnectInfo`; the
+        // tap itself does nothing.
+        let listener = axum::serve::ListenerExt::tap_io(listener, |_| {});
+        tracing::info!("serving HTTPS on {addr}");
+        Box::pin(std::future::IntoFuture::into_future(
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .with_graceful_shutdown(attome::boot::wait_for_shutdown(server_shutdown)),
+        ))
+    } else {
+        Box::pin(std::future::IntoFuture::into_future(
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .with_graceful_shutdown(attome::boot::wait_for_shutdown(server_shutdown)),
+        ))
+    };
     // P-worker-process-split: `jobs.run_worker_inline` (default true, today's
     // behavior unchanged) gates whether this process builds/runs the apalis
     // `Monitor` at all. `false` means a split deployment's dedicated `worker`

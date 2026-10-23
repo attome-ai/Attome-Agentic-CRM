@@ -72,6 +72,8 @@ pub mod epoch;
 pub mod invitation;
 pub mod jwt;
 pub mod mfa;
+/// S11-T1: the OAuth client credentials token endpoint's core.
+pub mod oauth_token;
 pub mod oidc;
 /// Q2-T1: identity provider presets, brokers included.
 pub mod oidc_presets;

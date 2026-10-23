@@ -95,6 +95,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(7 * 86_400),
     );
+    // Z6-T3: 1% of stored files read back against their hash, weekly.
+    crate::jobs::spawn_file_integrity_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(7 * 86_400),
+    );
     // AA13-T9: the monthly SLO report (hourly check) and the fast-burn check.
     crate::jobs::spawn_slo_monthly_report_scheduler(
         db.clone(),

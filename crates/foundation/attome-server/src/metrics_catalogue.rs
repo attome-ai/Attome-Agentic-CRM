@@ -654,6 +654,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "أكبر تأخر لأي اشتراك بعدد الأحداث.",
     },
     MetricInfo {
+        name: "file_integrity_failures_total",
+        kind: "counter",
+        unit: "files",
+        en: "Stored files the weekly sample found changed or missing, by kind (mismatch, missing).",
+        ar: "الملفات المخزّنة التي وجدها الفحص الأسبوعي متغيّرة أو مفقودة، حسب النوع.",
+    },
+    MetricInfo {
         name: "hot_cache_lookups_total",
         kind: "counter",
         unit: "lookups",
@@ -778,6 +785,34 @@ pub const CATALOGUE: &[MetricInfo] = &[
         unit: "flag",
         en: "1 when the file store answers.",
         ar: "قيمة 1 عندما يستجيب مخزن الملفات.",
+    },
+    MetricInfo {
+        name: "outbound_breaker_state",
+        kind: "gauge",
+        unit: "state",
+        en: "Each outbound service's breaker: 0 closed, 1 half open, 2 open (the worst of its endpoints).",
+        ar: "قاطع كل خدمة خارجية: 0 مغلق، 1 نصف مفتوح، 2 مفتوح (أسوأ نقاطها).",
+    },
+    MetricInfo {
+        name: "outbound_calls_total",
+        kind: "counter",
+        unit: "calls",
+        en: "Calls to outside services, by service and outcome.",
+        ar: "الاستدعاءات للخدمات الخارجية، حسب الخدمة والنتيجة.",
+    },
+    MetricInfo {
+        name: "outbound_latency_seconds",
+        kind: "histogram",
+        unit: "seconds",
+        en: "How long a call to an outside service took, its retries included.",
+        ar: "مدة الاستدعاء لخدمة خارجية، بما في ذلك إعادة المحاولات.",
+    },
+    MetricInfo {
+        name: "outbound_retries_total",
+        kind: "counter",
+        unit: "retries",
+        en: "Retries of calls to outside services, by service.",
+        ar: "إعادات محاولة الاستدعاءات للخدمات الخارجية، حسب الخدمة.",
     },
     MetricInfo {
         name: "platform_job_duration_seconds",

@@ -80,11 +80,89 @@ async fn probe_once(state: &EngineState, worker_stale_after: f64) {
     // back once every probe has been recorded.
     let before = Capability::ALL.map(|c| state.base.capabilities.state(c));
     probe_round(state, worker_stale_after).await;
+    // AB6-T8: the breaker gauge, and an audit event per breaker change.
+    let breakers = attome_outbound::registry::publish();
+    for (name, from, to) in breaker_changes(&breakers) {
+        audit_breaker_change(state, name, from, to).await;
+    }
     let after = Capability::ALL.map(|c| state.base.capabilities.state(c));
     for (i, capability) in Capability::ALL.into_iter().enumerate() {
         if let Some(change) = period_change(before[i], after[i]) {
             record_period(&state.base.db, capability, change).await;
         }
+    }
+}
+
+/// AB6-T8: the breaker states the previous round saw, by service name.
+static LAST_BREAKERS: std::sync::Mutex<Vec<(&'static str, attome_outbound::BreakerState)>> =
+    std::sync::Mutex::new(Vec::new());
+
+fn state_name(state: attome_outbound::BreakerState) -> &'static str {
+    match state {
+        attome_outbound::BreakerState::Closed => "closed",
+        attome_outbound::BreakerState::HalfOpen => "half_open",
+        attome_outbound::BreakerState::Open => "open",
+    }
+}
+
+/// Which services' breakers opened or closed since the last round. Half open
+/// is a step on the way, not a change worth an event. A service first seen
+/// open counts as opened.
+fn breaker_changes(
+    now: &[attome_outbound::registry::ServiceState],
+) -> Vec<(&'static str, &'static str, &'static str)> {
+    use attome_outbound::BreakerState::{Closed, Open};
+    let mut last = LAST_BREAKERS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut changes = Vec::new();
+    for s in now {
+        let before = last
+            .iter()
+            .find(|(name, _)| *name == s.name)
+            .map(|(_, state)| *state)
+            .unwrap_or(Closed);
+        let opened = s.state == Open && before != Open;
+        let closed = s.state == Closed && before == Open;
+        if opened || closed {
+            changes.push((s.name, state_name(before), state_name(s.state)));
+        }
+        if s.state != attome_outbound::BreakerState::HalfOpen {
+            match last.iter_mut().find(|(name, _)| *name == s.name) {
+                Some(entry) => entry.1 = s.state,
+                None => last.push((s.name, s.state)),
+            }
+        }
+    }
+    changes
+}
+
+/// AB6-T8: one Configuration audit event, attributed to the system (no
+/// request, no user), when a dependency's breaker opens or closes. Best
+/// effort: a failed write is logged and the probe carries on.
+async fn audit_breaker_change(state: &EngineState, service: &'static str, from: &str, to: &str) {
+    use attome_audit::security::{MandatoryCategory, SecurityAuditor, SecurityEvent};
+    let event = SecurityEvent::new(
+        MandatoryCategory::Configuration,
+        attome_audit::AuditOperation::Update,
+        uuid::Uuid::nil(),
+        "outbound_service",
+        None,
+    )
+    .named("dependency_breaker_changed")
+    .attributed(attome_audit::initiator::Attribution {
+        acting_user_id: uuid::Uuid::nil(),
+        initiator: attome_audit::initiator::Initiator::System,
+        agent_session_id: None,
+        agent_action_id: None,
+    })
+    .comment(format!("{service} breaker {from} -> {to}"));
+    let auditor = SecurityAuditor::from_state(state);
+    let write = auditor.write(event);
+    match tokio::time::timeout(PROBE_TIMEOUT, write).await {
+        Ok(Ok(_)) => tracing::warn!(service, from, to, "outbound breaker changed"),
+        Ok(Err(e)) => tracing::warn!(error = %e, service, "breaker change not audited"),
+        Err(_) => tracing::warn!(service, "breaker change audit timed out"),
     }
 }
 
@@ -382,7 +460,28 @@ fn worker_outcome(age: &Result<Option<f64>, sqlx::Error>, stale_after: f64) -> P
 /// Folds one outcome into the registry and logs only the *transitions* — a
 /// probe loop that logged every round would emit ~2,900 lines a day per node
 /// saying nothing changed, which is how a real transition gets missed.
+/// AB6-T8: the outbound service whose breaker stands for `capability`.
+fn breaker_service(capability: Capability) -> Option<&'static str> {
+    match capability {
+        Capability::AiModel => Some("ai_model"),
+        Capability::ObjectStorage => Some("object_storage"),
+        Capability::Email => Some("smtp"),
+        _ => None,
+    }
+}
+
 fn record(state: &EngineState, capability: Capability, outcome: ProbeOutcome, error: Option<&str>) {
+    // AB6-T8: while the capability's outbound breaker is open, the probe
+    // counts as failed even if this one request got through: real traffic
+    // is failing.
+    let breaker_open = breaker_service(capability)
+        .and_then(attome_outbound::registry::state_of)
+        .is_some_and(|s| s == attome_outbound::BreakerState::Open);
+    let (outcome, error) = if breaker_open && outcome != ProbeOutcome::Disabled {
+        (ProbeOutcome::Unreachable, Some("breaker_open"))
+    } else {
+        (outcome, error)
+    };
     let before = state.base.capabilities.state(capability);
     let after = state.base.capabilities.record(capability, outcome);
     if before == after {
@@ -414,6 +513,41 @@ fn record(state: &EngineState, capability: Capability, outcome: ProbeOutcome, er
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// AB6-T8: an open and a close are each one change; a half-open step is
+    /// none; the services map onto the capabilities they gate.
+    #[test]
+    fn breaker_opens_and_closes_are_changes() {
+        use attome_outbound::BreakerState::{Closed, HalfOpen, Open};
+        use attome_outbound::registry::ServiceState;
+        let at = |state| {
+            vec![ServiceState {
+                name: "probe_test_service",
+                state,
+                count: 1,
+                calls: 0,
+                failures: 0,
+                retries: 0,
+            }]
+        };
+        assert!(breaker_changes(&at(Closed)).is_empty());
+        assert_eq!(
+            breaker_changes(&at(Open)),
+            vec![("probe_test_service", "closed", "open")]
+        );
+        assert!(breaker_changes(&at(Open)).is_empty(), "still open");
+        assert!(breaker_changes(&at(HalfOpen)).is_empty(), "a probe step");
+        assert_eq!(
+            breaker_changes(&at(Closed)),
+            vec![("probe_test_service", "open", "closed")]
+        );
+        assert_eq!(breaker_service(Capability::AiModel), Some("ai_model"));
+        assert_eq!(breaker_service(Capability::Email), Some("smtp"));
+        assert_eq!(
+            breaker_service(Capability::ObjectStorage),
+            Some("object_storage")
+        );
+    }
 
     /// AB5-T8: a period opens when a capability becomes unavailable and
     /// closes when it stops being unavailable; nothing else touches it.

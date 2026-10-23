@@ -1079,6 +1079,29 @@ async fn dispatch_platform_job(
                 );
             }
         }
+        // Z6-T3: a sample of stored files read back and compared.
+        EngineJob::FileIntegritySample => {
+            let live = attome_document::integrity::live_versions(&db).await?;
+            let stats = attome_document::integrity::sample_check(
+                &db,
+                attome_state.base.storage.store(),
+                &attome_document::integrity::SampleScope::weekly(live),
+            )
+            .await?;
+            if stats.mismatched > 0 || stats.missing > 0 {
+                tracing::error!(
+                    checked = stats.checked,
+                    mismatched = stats.mismatched,
+                    missing = stats.missing,
+                    "file integrity: stored files differ from what was uploaded"
+                );
+            } else {
+                tracing::info!(
+                    checked = stats.checked,
+                    "file integrity: weekly sample clean"
+                );
+            }
+        }
         // Q16-T2: the weekly audit chain verification.
         EngineJob::AuditChainVerify => {
             let store = if config.audit.external_anchoring_enabled {
@@ -2752,6 +2775,7 @@ const DEDUP_KEY_AI_FOLLOWUP_SCAN: &str = "ai-followup-scan";
 const DEDUP_KEY_TABLE_HEALTH_SAMPLE: &str = "table-health-sample";
 const DEDUP_KEY_AUDIT_CHAIN_VERIFY: &str = "audit-chain-verify";
 const DEDUP_KEY_UPLOAD_RESCAN_SWEEP: &str = "upload-rescan-sweep";
+const DEDUP_KEY_FILE_INTEGRITY_SAMPLE: &str = "file-integrity-sample";
 const DEDUP_KEY_SLO_MONTHLY_REPORT: &str = "slo-monthly-report";
 const DEDUP_KEY_SLO_BURN_CHECK: &str = "slo-burn-check";
 const DEDUP_KEY_PERF_REGRESSION_CHECK: &str = "perf-regression-check";
@@ -4153,6 +4177,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::TableHealthSample => DEDUP_KEY_TABLE_HEALTH_SAMPLE,
         EngineJob::AuditChainVerify => DEDUP_KEY_AUDIT_CHAIN_VERIFY,
         EngineJob::UploadRescanSweep => DEDUP_KEY_UPLOAD_RESCAN_SWEEP,
+        EngineJob::FileIntegritySample => DEDUP_KEY_FILE_INTEGRITY_SAMPLE,
         EngineJob::SloMonthlyReport => DEDUP_KEY_SLO_MONTHLY_REPORT,
         EngineJob::SloBurnCheck => DEDUP_KEY_SLO_BURN_CHECK,
         EngineJob::PerfRegressionCheck => DEDUP_KEY_PERF_REGRESSION_CHECK,
@@ -4583,6 +4608,17 @@ pub fn spawn_upload_rescan_scheduler(db: DbPool, interval: std::time::Duration) 
         EngineJob::UploadRescanSweep,
         DEDUP_KEY_UPLOAD_RESCAN_SWEEP,
         "upload rescan",
+    );
+}
+
+/// Z6-T3: a sample of stored files read back, weekly.
+pub fn spawn_file_integrity_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::FileIntegritySample,
+        DEDUP_KEY_FILE_INTEGRITY_SAMPLE,
+        "file integrity sample",
     );
 }
 

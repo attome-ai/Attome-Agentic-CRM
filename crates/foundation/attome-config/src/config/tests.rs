@@ -350,12 +350,48 @@ fn validate_checks_the_model_catalogue() {
             }],
             "adapter",
         ),
+        (
+            vec![CatalogueModel {
+                max_concurrent: Some(0),
+                ..model("a")
+            }],
+            "max_concurrent",
+        ),
     ] {
         config.inference.catalogue = bad;
         let err = config.validate().unwrap_err().to_string();
         assert!(err.contains(needle), "{err}");
     }
     assert!(DataLabel::Secret > DataLabel::Health && DataLabel::Health > DataLabel::Public);
+}
+
+/// Z5-T6: TLS is off by default; on, it needs both files and a known
+/// minimum version.
+#[test]
+fn validate_checks_the_tls_files() {
+    let mut config = minimal_valid_config();
+    assert!(!config.app.tls.enabled);
+    config.app.tls.enabled = true;
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("app.tls.cert_path"), "{err}");
+
+    let dir = std::env::temp_dir().join(format!("attome-tls-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let cert = dir.join("cert.pem");
+    std::fs::write(&cert, "x").unwrap();
+    config.app.tls.cert_path = cert.to_string_lossy().into_owned();
+    config.app.tls.key_path = dir.join("missing.pem").to_string_lossy().into_owned();
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("app.tls.key_path"), "{err}");
+
+    config.app.tls.key_path = cert.to_string_lossy().into_owned();
+    config.validate().expect("both files exist");
+    config.app.tls.min_version = Some("1.1".into());
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("app.tls.min_version"), "{err}");
+    config.app.tls.min_version = Some("1.3".into());
+    assert!(config.app.tls.tls13_only());
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]

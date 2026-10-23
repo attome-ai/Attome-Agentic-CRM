@@ -399,7 +399,9 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "sqlx",
+ "thiserror 2.0.21",
  "tokio",
+ "tokio-rustls",
  "totp-rs",
  "tower",
  "tower-http 0.7.1",
@@ -1055,6 +1057,7 @@ dependencies = [
  "futures-util",
  "hex",
  "infer",
+ "metrics",
  "object_store",
  "quick-xml",
  "serde",
@@ -1584,6 +1587,7 @@ name = "attome-outbound"
 version = "0.1.0"
 dependencies = [
  "attome-types",
+ "metrics",
  "reqwest",
  "thiserror 2.0.21",
  "tokio",

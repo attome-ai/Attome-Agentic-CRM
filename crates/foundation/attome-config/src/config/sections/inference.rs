@@ -364,6 +364,10 @@ pub struct CatalogueModel {
     /// when an operator says so.
     #[serde(default = "default_allowed_labels")]
     pub allowed_labels: Vec<DataLabel>,
+    /// Z9-T6: how many calls a self-hosted model serves at once (default 4);
+    /// more wait their turn. Ignored for a hosted model.
+    #[serde(default)]
+    pub max_concurrent: Option<usize>,
 }
 
 fn default_catalogue_adapter() -> String {

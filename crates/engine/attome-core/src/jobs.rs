@@ -540,6 +540,9 @@ pub enum EngineJob {
     /// K2-T2: the weekly rescan of files promoted in the last 30 days, with
     /// the scanner's current signatures. Bare unit variant.
     UploadRescanSweep,
+    /// Z6-T3: the weekly read-back of 1% of stored files against their
+    /// recorded size and SHA-256. Bare unit variant.
+    FileIntegritySample,
     /// AA13-T9: writes the latest finished month's SLO report when it is
     /// missing. Bare unit variant.
     SloMonthlyReport,
@@ -1090,6 +1093,7 @@ impl EngineJob {
             | Self::TableHealthSample
             | Self::AuditChainVerify
             | Self::UploadRescanSweep
+            | Self::FileIntegritySample
             | Self::SloMonthlyReport
             | Self::SloBurnCheck
             | Self::PerfRegressionCheck
@@ -1238,6 +1242,7 @@ impl EngineJob {
             EngineJob::TableHealthSample => "TableHealthSample",
             EngineJob::AuditChainVerify => "AuditChainVerify",
             EngineJob::UploadRescanSweep => "UploadRescanSweep",
+            EngineJob::FileIntegritySample => "FileIntegritySample",
             EngineJob::SloMonthlyReport => "SloMonthlyReport",
             EngineJob::SloBurnCheck => "SloBurnCheck",
             EngineJob::PerfRegressionCheck => "PerfRegressionCheck",
@@ -1389,6 +1394,7 @@ impl EngineJob {
             | Self::TableHealthSample
             | Self::AuditChainVerify
             | Self::UploadRescanSweep
+            | Self::FileIntegritySample
             | Self::SloMonthlyReport
             | Self::SloBurnCheck
             | Self::PerfRegressionCheck
@@ -1554,6 +1560,7 @@ impl EngineJob {
             | Self::TableHealthSample
             | Self::AuditChainVerify
             | Self::UploadRescanSweep
+            | Self::FileIntegritySample
             | Self::SloMonthlyReport
             | Self::SloBurnCheck
             | Self::PerfRegressionCheck
@@ -1982,6 +1989,7 @@ mod tests {
         assert_round_trips(EngineJob::TableHealthSample);
         assert_round_trips(EngineJob::AuditChainVerify);
         assert_round_trips(EngineJob::UploadRescanSweep);
+        assert_round_trips(EngineJob::FileIntegritySample);
         assert_round_trips(EngineJob::SloMonthlyReport);
         assert_round_trips(EngineJob::SloBurnCheck);
         assert_round_trips(EngineJob::PerfRegressionCheck);

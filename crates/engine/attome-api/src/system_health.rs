@@ -114,6 +114,9 @@ async fn dependencies(State(state): State<EngineState>, _ctx: Authorized<Admin>)
         },
         "audit_chainer": audit,
         "degraded_history": history,
+        // AB6-T9: each outbound service on this node: its breaker (the worst
+        // of its endpoints), error rate and retries over the last hour.
+        "outbound": outbound_report(),
         "capabilities": {
             "gated_routes": capabilities,
             "audit_ingest": {
@@ -122,6 +125,27 @@ async fn dependencies(State(state): State<EngineState>, _ctx: Authorized<Admin>)
             },
         },
     }))
+}
+
+/// AB6-T9: the `outbound` array of the dependency map.
+fn outbound_report() -> Value {
+    let rows: Vec<Value> = attome_outbound::registry::states()
+        .into_iter()
+        .map(|s| {
+            json!({
+                "service": s.name,
+                "state": match s.state {
+                    attome_outbound::BreakerState::Closed => "closed",
+                    attome_outbound::BreakerState::HalfOpen => "half_open",
+                    attome_outbound::BreakerState::Open => "open",
+                },
+                "error_rate": s.error_rate(),
+                "retries_1h": s.retries,
+                "endpoints": s.count,
+            })
+        })
+        .collect();
+    Value::Array(rows)
 }
 
 /// AB5-T6: the read-only reason this node should hold, from the operator

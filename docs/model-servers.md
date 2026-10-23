@@ -103,6 +103,9 @@ model can do and which data it may see:
 - `allowed_labels`: the sensitivity labels of content the model may receive, from `public`,
   `internal`, `personal`, `financial`, `health` and `secret`. Unset means `public` and `internal`.
 - `adapter`: `openai_compatible` (the only one today).
+- `max_concurrent`: for a `self_hosted` model, how many calls it serves at once (default 4).
+  Further calls queue: a chat call waits up to 10 seconds, a background job as long as it takes,
+  and background jobs never take the last slot.
 
 Each AI task names what it needs (capabilities, the smallest context it fits in, small or large),
 and the router picks the **cheapest** model that meets those needs and may receive the request's
@@ -116,3 +119,9 @@ come first and are never traded for price:
 When no model qualifies the task is refused with an error naming the task and the label, rather
 than sent somewhere it should not go. An empty catalogue (the default) changes nothing: tasks run
 on `inference.generation` or their `inference.task_models` entry.
+
+When the chosen model fails (a server error, a timeout), is busy or has its breaker open, a routed
+call moves to the next model the same rules allow, cheapest first, and the answer records which
+models were passed over and why. It never falls back to a model the content's label rules out. A
+refusal of the request itself (too long, malformed) is returned at once rather than retried
+elsewhere.

@@ -768,6 +768,8 @@ impl AppConfig {
         self.validate_storage_backend(production)?;
         // Z9-T3 — see `validate_model_catalogue`.
         validate_model_catalogue(&self.inference.catalogue)?;
+        // Z5-T6 — see `validate_tls`.
+        validate_tls(&self.app.tls)?;
         Self::check_secret_ring("auth.jwt_secret", &self.auth.jwt_secret, production)?;
         Self::check_signing_seeds("auth.jwt_signing_keys", &self.auth.jwt_signing_keys)?;
         // P-api-key-hashing (D-112, revised) — unconditional, unlike the
@@ -2497,6 +2499,39 @@ pub(crate) fn validate_inference_timeout_secs(field: &str, value: u64) -> Result
 pub(crate) const IPV6_BUCKET_PREFIX_MIN: u8 = 32;
 pub(crate) const IPV6_BUCKET_PREFIX_MAX: u8 = 128;
 
+/// Z5-T6: with `app.tls.enabled`, both files are named and exist, and the
+/// minimum version is one the server speaks. Checked at boot, so a typo in a
+/// path is a refusal to start naming the field, not a failed handshake.
+pub(crate) fn validate_tls(tls: &super::TlsSection) -> Result<(), ConfigError> {
+    if !tls.enabled {
+        return Ok(());
+    }
+    for (field, path) in [
+        ("app.tls.cert_path", &tls.cert_path),
+        ("app.tls.key_path", &tls.key_path),
+    ] {
+        if path.trim().is_empty() {
+            return Err(ConfigError::Invalid {
+                field: field.into(),
+                reason: "must be set when app.tls.enabled = true".into(),
+            });
+        }
+        if !std::path::Path::new(path.trim()).is_file() {
+            return Err(ConfigError::Invalid {
+                field: field.into(),
+                reason: format!("no file at {:?}", path.trim()),
+            });
+        }
+    }
+    match tls.min_version.as_deref().map(str::trim) {
+        None | Some("1.2") | Some("1.3") => Ok(()),
+        Some(other) => Err(ConfigError::Invalid {
+            field: "app.tls.min_version".into(),
+            reason: format!("must be \"1.2\" or \"1.3\", got {other:?}"),
+        }),
+    }
+}
+
 /// Z9-T3: every catalogue model has a unique id, a known adapter, a context
 /// size and a price that is a number of zero or more.
 pub(crate) fn validate_model_catalogue(
@@ -2519,6 +2554,8 @@ pub(crate) fn validate_model_catalogue(
             Some("max_context must be above 0".to_owned())
         } else if !model.cost_per_1k_tokens.is_finite() || model.cost_per_1k_tokens < 0.0 {
             Some("cost_per_1k_tokens must be 0 or more".to_owned())
+        } else if model.max_concurrent == Some(0) {
+            Some("max_concurrent must be 1 or more".to_owned())
         } else {
             None
         };

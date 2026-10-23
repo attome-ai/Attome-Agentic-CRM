@@ -28,6 +28,14 @@ fn valid_client_slug(s: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
+/// An OAuth scope token (RFC 6749 §3.3): printable ASCII, no space, quote
+/// or backslash.
+fn valid_scope(s: &str) -> bool {
+    (1..=100).contains(&s.len())
+        && s.bytes()
+            .all(|b| b == 0x21 || (0x23..=0x5B).contains(&b) || (0x5D..=0x7E).contains(&b))
+}
+
 fn valid_slot(s: &str) -> bool {
     matches!(s, "primary" | "secondary")
 }
@@ -82,6 +90,11 @@ struct UpdateClientBody {
     auto_disable_days: Option<i32>,
     /// S1-T10: grant or withdraw acting as a user.
     can_act_as_user: Option<bool>,
+    /// S11-T1: the PEM public key (RSA, P-256/P-384 or Ed25519) that checks
+    /// the client's token-endpoint assertions; an empty string removes it.
+    oauth_public_key_pem: Option<String>,
+    /// S11-T1: the scopes an access token may carry.
+    oauth_scopes: Option<Vec<String>>,
     row_version: i64,
 }
 
@@ -178,6 +191,10 @@ struct ClientDetail {
     auto_disable_days: i32,
     /// S1-T10: may name a user to act as.
     can_act_as_user: bool,
+    /// S11-T1: whether a public key for token-endpoint assertions is set.
+    oauth_public_key_set: bool,
+    /// S11-T1: the scopes an access token may carry.
+    oauth_scopes: Vec<String>,
     last_used_at: Option<DateTime<Utc>>,
     row_version: i64,
     created_at: DateTime<Utc>,
@@ -443,6 +460,8 @@ async fn create_client(
             max_payload_bytes: body.max_payload_bytes,
             auto_disable_days: body.auto_disable_days,
             can_act_as_user: body.can_act_as_user,
+            oauth_public_key_set: false,
+            oauth_scopes: Vec::new(),
             last_used_at: None,
             row_version: 0,
             created_at: now,
@@ -509,6 +528,13 @@ async fn get_client(
 
     let keys = fetch_keys(&state.base.db, client_db_id).await?;
     let permissions = fetch_permissions(&state.base.db, client_db_id).await?;
+    let (oauth_public_key_set, oauth_scopes) = sqlx::query_as::<_, (bool, Vec<String>)>(
+        "SELECT oauth_public_key_pem IS NOT NULL, oauth_scopes FROM s2s_client WHERE id = $1",
+    )
+    .bind(client_db_id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
 
     Ok(Json(ClientDetail {
         id: row.0,
@@ -523,6 +549,8 @@ async fn get_client(
         max_payload_bytes: row.9,
         auto_disable_days: row.10,
         can_act_as_user: row.15,
+        oauth_public_key_set,
+        oauth_scopes,
         last_used_at: row.11,
         row_version: row.12,
         created_at: row.13,
@@ -562,6 +590,26 @@ async fn update_client(
     }
     if let Some(user_id) = body.service_user_ref {
         ensure_service_user_exists(&state.base.db, user_id).await?;
+    }
+    let oauth_key = match body.oauth_public_key_pem.as_deref().map(str::trim) {
+        None => None,
+        Some("") => Some(None),
+        Some(pem) if attome_auth::oauth_token::public_key_is_usable(pem) => {
+            Some(Some(pem.to_owned()))
+        }
+        Some(_) => {
+            return Err(AppError::Validation(
+                "oauth_public_key_pem must be an RSA, EC (P-256, P-384) or Ed25519 public key in PEM"
+                    .into(),
+            ));
+        }
+    };
+    if let Some(scopes) = &body.oauth_scopes
+        && scopes.iter().any(|s| !valid_scope(s))
+    {
+        return Err(AppError::Validation(
+            "each OAuth scope is 1-100 printable characters with no space or quote".into(),
+        ));
     }
 
     let cur = sqlx::query_as::<
@@ -644,6 +692,8 @@ async fn update_client(
             auto_disable_days = $9,
             service_user_ref  = $11,
             can_act_as_user   = $12,
+            oauth_public_key_pem = CASE WHEN $13 THEN $14 ELSE oauth_public_key_pem END,
+            oauth_scopes      = COALESCE($15, oauth_scopes),
             updated_at        = NOW(),
             row_version       = row_version + 1
         WHERE id = $1 AND row_version = $10 AND is_deleted = FALSE
@@ -661,6 +711,9 @@ async fn update_client(
     .bind(body.row_version)
     .bind(new_service_user)
     .bind(new_act_as)
+    .bind(oauth_key.is_some())
+    .bind(oauth_key.flatten())
+    .bind(body.oauth_scopes.as_deref())
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?

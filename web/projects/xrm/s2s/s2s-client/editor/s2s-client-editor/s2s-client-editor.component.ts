@@ -60,6 +60,12 @@ export class S2sClientEditorComponent implements OnInit {
   editMaxConcurrent = '';
   /** S1-T11: the grant to act as a named user. */
   editCanActAs = false;
+  /** S11-T1: a new public key to store (blank keeps the current one). */
+  editOauthKey = '';
+  /** S11-T1: whether to remove the stored key on save. */
+  removeOauthKey = false;
+  /** S11-T1: the OAuth scopes, space-separated. */
+  editOauthScopes = '';
   permForm: PermForm = emptyPermForm();
 
   ngOnInit(): void { this.load(); this.loadLogs(); }
@@ -77,6 +83,9 @@ export class S2sClientEditorComponent implements OnInit {
         this.editRpm = String(c.rate_limit_rpm);
         this.editMaxConcurrent = String(c.max_concurrent);
         this.editCanActAs = c.can_act_as_user;
+        this.editOauthKey = '';
+        this.removeOauthKey = false;
+        this.editOauthScopes = (c.oauth_scopes ?? []).join(' ');
         this.loading.set(false);
       },
       error: (e: ApiError) => { this.error.set(e.message); this.loading.set(false); },
@@ -103,9 +112,16 @@ export class S2sClientEditorComponent implements OnInit {
       rate_limit_rpm: Number(this.editRpm),
       max_concurrent: Number(this.editMaxConcurrent),
       can_act_as_user: this.editCanActAs,
+      oauth_public_key_pem: this.removeOauthKey ? '' : (this.editOauthKey.trim() || undefined),
+      oauth_scopes:   this.editOauthScopes.split(/\s+/).filter(s => s.length > 0),
       row_version:    c.row_version,
     }).subscribe({
-      next:  updated => { this.client.set(updated); this.savingMeta.set(false); },
+      next:  updated => {
+        this.client.set(updated);
+        this.editOauthKey = '';
+        this.removeOauthKey = false;
+        this.savingMeta.set(false);
+      },
       error: (e: ApiError) => { this.metaError.set(e.message); this.savingMeta.set(false); },
     });
   }

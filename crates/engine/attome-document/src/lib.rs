@@ -46,6 +46,8 @@ pub mod engine;
 pub mod esign;
 pub mod files;
 pub mod files_scan;
+/// Z6-T3: the weekly read-back of a sample of stored files.
+pub mod integrity;
 pub mod share;
 /// K1-T4: document text for global search.
 pub mod text_extract;

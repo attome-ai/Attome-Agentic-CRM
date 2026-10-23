@@ -505,6 +505,80 @@ pub async fn read_after(
     Ok((events, next))
 }
 
+/// AA7-T4: [`read_after`] for one entity's events. When none is found, the
+/// position moves up to the feed's [`horizon`] (every event before it has
+/// finished and none was for this entity), so a quiet entity is not
+/// rescanned from the same place on every call.
+pub async fn read_after_for_entity(
+    conn: &mut PgConnection,
+    entity: &str,
+    position: CursorPosition,
+    limit: i64,
+) -> Result<(Vec<ChangeEvent>, CursorPosition), AppError> {
+    #[allow(clippy::type_complexity)]
+    let rows: Vec<(
+        Uuid,
+        String,
+        Uuid,
+        String,
+        Option<String>,
+        chrono::DateTime<chrono::Utc>,
+        Vec<String>,
+        bool,
+        i64,
+    )> = sqlx::query_as(
+        "SELECT id, entity_logicalname, record_id, operation, event_name, created_at,                 changed_attributes, quiet, commit_xid::text::bigint          FROM entity_change_event          WHERE entity_logicalname = $4            AND (commit_xid > $1::text::xid8                 OR (commit_xid = $1::text::xid8 AND id > $2))            AND commit_xid < pg_snapshot_xmin(pg_current_snapshot())          ORDER BY commit_xid, id          LIMIT $3",
+    )
+    .bind(position.last_commit_xid.to_string())
+    .bind(position.last_id.unwrap_or(Uuid::nil()))
+    .bind(limit)
+    .bind(entity)
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+
+    let next = match rows.last() {
+        Some(row) => CursorPosition {
+            last_commit_xid: row.8,
+            last_id: Some(row.0),
+        },
+        None => {
+            let edge = horizon(conn).await?;
+            if edge.last_commit_xid > position.last_commit_xid {
+                edge
+            } else {
+                position
+            }
+        }
+    };
+    let events = rows
+        .into_iter()
+        .map(
+            |(
+                id,
+                entity_logicalname,
+                record_id,
+                operation,
+                event_name,
+                created_at,
+                changed_attributes,
+                quiet,
+                _,
+            )| ChangeEvent {
+                id,
+                entity_logicalname,
+                record_id,
+                operation,
+                event_name,
+                created_at,
+                changed_attributes,
+                quiet,
+            },
+        )
+        .collect();
+    Ok((events, next))
+}
+
 /// Advances `consumer`'s cursor past `event`.
 ///
 /// Call this AFTER the batch's work is durable, and never in the same

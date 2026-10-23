@@ -37,6 +37,8 @@ pub mod bulk;
 pub mod bulk_edit;
 mod bulk_graph;
 pub mod business_rules;
+/// AA7-T4: `POST /api/v1/query/changes`, what changed since a cursor.
+pub mod changes;
 pub mod composite;
 pub mod customer_tests;
 pub mod data_mapping;

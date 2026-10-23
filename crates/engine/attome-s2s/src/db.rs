@@ -107,6 +107,70 @@ pub async fn load_client_and_key(
 }
 
 /// S1-T10: whether the client may name a user to act as.
+/// S11-T1: a client as an OAuth access token's request needs it.
+#[derive(Debug)]
+pub struct OAuthClientRow {
+    pub client_db_id: Uuid,
+    pub client_id: String,
+    pub client_name: String,
+    pub client_status: String,
+    pub service_user_ref: Option<Uuid>,
+    pub rate_limit_rpm: i32,
+    pub max_concurrent: i32,
+    pub allowed_cidrs: Option<Vec<String>>,
+    pub max_payload_bytes: i64,
+    pub auto_disable_days: i32,
+    pub client_last_used: Option<DateTime<Utc>>,
+}
+
+/// The live client named `client_id_slug`, for a Bearer request.
+pub async fn load_oauth_client(
+    db: &DbPool,
+    client_id_slug: &str,
+) -> Result<Option<OAuthClientRow>, AppError> {
+    let row = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            String,
+            String,
+            String,
+            Option<Uuid>,
+            i32,
+            i32,
+            Option<Vec<String>>,
+            i64,
+            i32,
+            Option<DateTime<Utc>>,
+        ),
+    >(
+        r#"
+        SELECT id, client_id, name, status, service_user_ref, rate_limit_rpm,
+               max_concurrent, allowed_cidrs, max_payload_bytes,
+               auto_disable_days, last_used_at
+        FROM s2s_client
+        WHERE client_id = $1 AND is_deleted = FALSE
+        "#,
+    )
+    .bind(client_id_slug)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(row.map(|r| OAuthClientRow {
+        client_db_id: r.0,
+        client_id: r.1,
+        client_name: r.2,
+        client_status: r.3,
+        service_user_ref: r.4,
+        rate_limit_rpm: r.5,
+        max_concurrent: r.6,
+        allowed_cidrs: r.7,
+        max_payload_bytes: r.8,
+        auto_disable_days: r.9,
+        client_last_used: r.10,
+    }))
+}
+
 pub async fn client_can_act_as_user(db: &DbPool, client_db_id: Uuid) -> Result<bool, AppError> {
     let granted: Option<bool> =
         sqlx::query_scalar("SELECT can_act_as_user FROM s2s_client WHERE id = $1")

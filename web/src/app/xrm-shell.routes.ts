@@ -119,6 +119,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin').then(m => m.AdminConsoleComponent),
           },
           {
+            // AB6-T9: capabilities and each outbound service's breaker.
+            path: 'dependencies',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin').then(m => m.DependenciesComponent),
+          },
+          {
             // Z3-T10: per-cache numbers and purge.
             path: 'caches',
             canActivate: [authGuard],

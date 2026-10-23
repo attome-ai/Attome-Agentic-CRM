@@ -34,6 +34,7 @@ futures-util.workspace    = true
 hex.workspace             = true
 infer.workspace           = true
 quick-xml.workspace       = true
+metrics.workspace         = true
 object_store.workspace    = true
 serde.workspace           = true
 serde_json.workspace      = true

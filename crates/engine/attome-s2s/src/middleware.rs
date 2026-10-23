@@ -1,3 +1,4 @@
+use attome_auth::oauth_token::AccessClaims;
 use attome_auth::session::{SessionClaims, TokenType};
 use attome_server::{
     middleware::{bypass::is_bypass, client_ip::client_ip},
@@ -65,6 +66,11 @@ fn ip_allowed(cidrs: Option<&[String]>, ip: Option<std::net::IpAddr>) -> bool {
 /// (so `attome-server/auth.rs` skips re-auth without needing S2S knowledge).
 pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) -> Response {
     if !req.headers().contains_key(H_CLIENT_ID) {
+        // S11-T1: an access token from the OAuth token endpoint. Any other
+        // bearer (or none) passes through to `authn` untouched.
+        if let Some(claims) = oauth_access_claims(&state, &req) {
+            return oauth_authn(state, req, next, claims).await;
+        }
         return next.run(req).await;
     }
 
@@ -525,6 +531,228 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
         }
     }
 
+    response
+}
+
+/// The claims of an OAuth access token in `Authorization: Bearer`, or
+/// `None` when there is none or it does not validate as one.
+fn oauth_access_claims(state: &AppState, req: &Request) -> Option<AccessClaims> {
+    let token = req
+        .headers()
+        .get(axum::http::header::AUTHORIZATION)?
+        .to_str()
+        .ok()?
+        .strip_prefix("Bearer ")?
+        .trim();
+    attome_auth::oauth_token::validate_access_token(
+        token,
+        &state.secrets.load().jwt_secret,
+        &state.config.auth.jwt_issuer,
+        state.config.jwt_audience(),
+    )
+    .ok()
+}
+
+/// S11-T1: a request carrying an OAuth access token. The token proves the
+/// client authenticated at the token endpoint within ten minutes; the
+/// client's present state is checked here as on the signed path (status,
+/// idle limit, the service user the token names, IP allow-list, rate and
+/// concurrency limits, payload limit, entity ceiling). A token cannot act as
+/// a user: the act-as header is part of a signature, and a bearer request
+/// has none.
+async fn oauth_authn(state: AppState, req: Request, next: Next, token: AccessClaims) -> Response {
+    if is_bypass(req.uri().path()) {
+        return next.run(req).await;
+    }
+    if req.headers().contains_key(H_ACT_AS) {
+        return AppError::Forbidden.into_response();
+    }
+    let correlation_id = optional_header(&req, H_CORR_ID);
+    let ip_addr = client_ip(&req, &state.config);
+    let ip_address = ip_addr.map(|ip| ip.to_string());
+
+    let record = match db::load_oauth_client(&state.db, &token.client_id).await {
+        Ok(Some(r)) => r,
+        Ok(None) => return AppError::Unauthorized.into_response(),
+        Err(e) => return e.into_response(),
+    };
+    let idle = record
+        .client_last_used
+        .is_some_and(|last| (Utc::now() - last).num_days() >= record.auto_disable_days as i64);
+    // A client re-pointed at another service user invalidates its tokens.
+    if record.client_status != "active" || idle || record.service_user_ref != Some(token.claims.sub)
+    {
+        tracing::debug!("s2s: OAuth token of unusable client '{}'", record.client_id);
+        return AppError::Unauthorized.into_response();
+    }
+    if !ip_allowed(record.allowed_cidrs.as_deref(), ip_addr) {
+        tracing::warn!(
+            "s2s: client '{}' request from disallowed IP '{}'",
+            record.client_id,
+            ip_address.as_deref().unwrap_or("unknown"),
+        );
+        return AppError::Unauthorized.into_response();
+    }
+    let service_user_id = token.claims.sub;
+
+    // A fresh nonce: a bearer request has none to replay, so the guard only
+    // counts it in the client's window.
+    match rate_limit::check_with_nonce(
+        &state.redis_coordination,
+        &record.client_id,
+        &format!("bearer:{}", Uuid::now_v7()),
+        record.rate_limit_rpm,
+    )
+    .await
+    {
+        Ok(()) => {}
+        Err(AppError::TooManyRequests {
+            retry_after_secs: None,
+        }) => {
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                [(
+                    axum::http::header::RETRY_AFTER,
+                    HeaderValue::from_static("60"),
+                )],
+                "rate limit exceeded",
+            )
+                .into_response();
+        }
+        Err(e) => return e.into_response(),
+    }
+    let concurrency_guard = match concurrency::acquire(
+        &state.redis_coordination,
+        &record.client_id,
+        record.max_concurrent,
+    )
+    .await
+    {
+        Ok(guard) => guard,
+        Err(AppError::TooManyRequests {
+            retry_after_secs: None,
+        }) => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                [(
+                    axum::http::header::RETRY_AFTER,
+                    HeaderValue::from_static("1"),
+                )],
+                "too many concurrent requests",
+            )
+                .into_response();
+        }
+        Err(e) => return e.into_response(),
+    };
+
+    let method = req.method().as_str().to_owned();
+    let path_and_query = req
+        .uri()
+        .path_and_query()
+        .map(|pq| pq.as_str())
+        .unwrap_or_else(|| req.uri().path())
+        .to_owned();
+    let (parts, body) = req.into_parts();
+    let body_bytes = match axum::body::to_bytes(body, record.max_payload_bytes as usize).await {
+        Ok(b) => b,
+        Err(_) => {
+            concurrency_guard.release().await;
+            return (
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "request body exceeds client limit",
+            )
+                .into_response();
+        }
+    };
+
+    let ceiling = match db::load_permissions(&state.db, record.client_db_id).await {
+        Ok(rows) => entity_ceiling(&rows),
+        Err(e) => {
+            tracing::error!(
+                "s2s: loading permissions for client '{}' failed: {e}",
+                record.client_id
+            );
+            concurrency_guard.release().await;
+            return AppError::Internal("s2s permission lookup failed".into()).into_response();
+        }
+    };
+    if ceiling.is_some() {
+        match state.security.resolve(service_user_id).await {
+            Ok(ctx) if ctx.is_admin => {
+                tracing::warn!(
+                    "s2s: client '{}' has permission rows but its service user is an admin — \
+                     refused (D-766); point it at a non-admin service user",
+                    record.client_id
+                );
+                concurrency_guard.release().await;
+                return AppError::Forbidden.into_response();
+            }
+            Ok(_) => {}
+            Err(e) => {
+                concurrency_guard.release().await;
+                return e.into_response();
+            }
+        }
+    }
+
+    let mut req = Request::from_parts(parts, Body::from(body_bytes));
+    req.extensions_mut().insert(S2SClaims {
+        client_db_id: record.client_db_id,
+        client_id: record.client_id.clone(),
+        client_name: record.client_name.clone(),
+        // No key signed this request; the token stands for the client.
+        key_db_id: Uuid::nil(),
+        key_slot: "oauth".to_owned(),
+        service_user_id,
+        correlation_id: correlation_id.clone(),
+        acted_as_user_id: None,
+    });
+    req.extensions_mut()
+        .insert(attome_server::middleware::api_version::S2sClientRef(
+            record.client_db_id,
+        ));
+    if let Some(ceiling) = ceiling {
+        req.extensions_mut().insert(ceiling);
+    }
+    // As on the signed path, `authn` skips re-auth when it finds these; the
+    // access token's own `jti` and `exp` carry over.
+    req.extensions_mut().insert(SessionClaims {
+        typ: TokenType::Session,
+        ..token.claims
+    });
+
+    let start = std::time::Instant::now();
+    let mut response = next.run(req).await;
+    concurrency_guard.release().await;
+    if let Some(ref corr) = correlation_id
+        && let Ok(val) = HeaderValue::from_str(corr)
+    {
+        response.headers_mut().insert(H_CORR_ID, val);
+    }
+    if state.config.s2s.access_log_enabled {
+        let entry = crate::access_log::LogEntry {
+            client_ref: Some(record.client_db_id),
+            client_name: Some(record.client_name.clone()),
+            method,
+            path: path_and_query,
+            status_code: Some(response.status().as_u16() as i16),
+            response_time_ms: Some(start.elapsed().as_millis() as i32),
+            bytes_received: None,
+            bytes_sent: None,
+            correlation_id,
+            ip_address,
+            nonce: None,
+            error_code: None,
+            acted_as_user_id: None,
+            created_at: Utc::now(),
+        };
+        const STREAM_MAXLEN: u64 = 100_000;
+        if let Err(e) =
+            telemetry::record_access_log(&state.redis_coordination, &entry, STREAM_MAXLEN).await
+        {
+            tracing::warn!("s2s: failed to record access log entry: {e}");
+        }
+    }
     response
 }
 

@@ -91,6 +91,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
             "content",
         ),
         (attome_s2s::admin::openapi_fragment(), "core"),
+        (attome_s2s::oauth_clients::openapi_fragment(), "core"),
         (attome_events::admin::openapi_fragment(), "integration"),
         (attome_audit::admin::openapi_fragment(), "audit"),
         (crate::audit_read::openapi_fragment(), "audit"),

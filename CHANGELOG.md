@@ -8,6 +8,17 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- HTTPS without a proxy (Z5-T6): with `app.tls.enabled` the server terminates TLS itself (HTTP/2 and
+  HTTP/1.1 by ALPN; `app.tls.min_version = "1.3"` refuses TLS 1.2) from `app.tls.cert_path` and
+  `key_path`, reloading the files every 12 hours and on SIGHUP. Boot names the file that is missing
+  or unreadable. Behind nginx, leave it off.
+- OAuth 2.0 client credentials for server-to-server clients (S11-T1): `POST /api/v1/oauth/token`
+  issues a ten-minute access token for the client's service user, typed `s2s_access` so no session
+  validator accepts it. Clients authenticate with private_key_jwt (RS256, ES256 or EdDSA; each
+  assertion's `jti` is accepted once) or client_secret_basic; every issued token writes a
+  `s2s_token_issued` credential event. A bearer request gets the signed path's checks (status, idle
+  limit, IP allow-list, rate, concurrency and payload limits, entity ceiling) and cannot act as a
+  user. The admin client API gains `oauth_public_key_pem` and `oauth_scopes` (migration 0205).
 - Content-Security-Policy nonces and reports (Q21-T2): each web app page is served with a fresh
   128-bit nonce, on Angular's `ngCspNonce` and the page's scripts, and its `script-src` names it;
   every page policy adds `object-src 'none'` and reports violations to the new public, rate-limited
@@ -191,6 +202,34 @@ that makes it; the release gate's contract step refuses a release that breaks th
   (`flow` for a workflow pass, `job` for a bulk job, NULL for an ordinary request) and `flow_run_id` (migration 0203). Every write a
   workflow pass makes carries `channel = 'flow'` and the instance id, so a subscriber can skip a
   flow's echo of its own update.
+- Model fallback (Z9-T4): `attome_inference::fallback::call_with_fallback` runs a routed AI call on
+  the best catalogue model and moves to the next one the data rules allow when a model fails, times
+  out, is busy or has its breaker open (one `ai_route` breaker per model id). A refused request is
+  returned at once. The answer names the model that gave it and every model passed over, and why.
+- A weekly file integrity sample (Z6-T3): one stored file in a hundred (at most 1,000) is read back
+  and its size and SHA-256 compared with what was recorded at upload; a changed or missing file is
+  logged by version id and key, counted in `file_integrity_failures_total{kind}` and raises the
+  built-in `FileIntegrityFailures` alert (runbook included). Nothing is changed automatically.
+- A queue per self-hosted model (Z9-T6): `inference.catalogue[].max_concurrent` (default 4) calls
+  run at once on a self-hosted model; a chat call waits up to 10 s for a slot and then is passed
+  over as busy (a retryable error), a batch call waits as long as needed and batch calls never hold
+  the last slot.
+- Allocation budgets for the key requests (AA14-T4, `tests/request_allocs.rs`): bytes allocated and
+  peak live bytes per request, measured on the request's own task, against
+  `tests/request_allocs.json`; more than 20% above a baseline fails.
+- Admin > Dependencies (AB6-T9): each gated capability's state and each outbound service's breaker
+  (red when open), error rate and retries over the last hour, in English and Arabic; the webhook
+  row links to the dead letters. `GET /health/dependencies` gains an `outbound` array.
+- `POST /api/v1/query/changes` (AA7-T4): the records of one entity added, changed or removed since
+  a signed cursor, as the caller may read them now. A record the caller can no longer read is
+  listed in `removed` by id only.
+- Outbound metrics and breaker state (AB6-T8): `outbound_calls_total{service,outcome}`,
+  `outbound_latency_seconds{service}`, `outbound_retries_total{service}` and
+  `outbound_breaker_state{service}` (0 closed, 1 half open, 2 open). While the `ai_model`,
+  `object_storage` or `smtp` breaker is open, the capability probe counts that capability as failed;
+  each open and close writes a `dependency_breaker_changed` audit event attributed to the system.
+- A census test fails when a crate builds its own HTTP client outside `attome_outbound::http`
+  (AB6-T11, `tests/outbound_single_layer.rs`).
 - Background jobs that run in chunks slow down while the node is busy (AA10-T6): every five seconds
   the server reads the p95 latency of the requests it served since the last look and the read
   replica's lag, and the batch runner waits 0 ms, 200 ms or 1 s before each chunk (p95 under

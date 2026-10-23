@@ -52,6 +52,29 @@
         <p id="s2s-client-act-as-hint" class="cell-muted">{{ 's2sClientPage.actAsHint' | translate }}</p>
       </div>
     </div>
+    <div class="form-row-1" data-oauth>
+      <div class="field">
+        <label for="s2s-client-oauth-key">{{ 's2sClientPage.oauthKey' | translate }}</label>
+        <textarea id="s2s-client-oauth-key" rows="4" [(ngModel)]="editOauthKey" dir="ltr"
+                  [disabled]="removeOauthKey" placeholder="-----BEGIN PUBLIC KEY-----"
+                  aria-describedby="s2s-client-oauth-key-hint"></textarea>
+        <p id="s2s-client-oauth-key-hint" class="cell-muted" data-oauth-key-state>
+          {{ (client()?.oauth_public_key_set ? 's2sClientPage.oauthKeySet' : 's2sClientPage.oauthKeyNone') | translate }}
+        </p>
+        @if (client()?.oauth_public_key_set) {
+          <label for="s2s-client-oauth-remove">
+            <input id="s2s-client-oauth-remove" type="checkbox" [(ngModel)]="removeOauthKey">
+            {{ 's2sClientPage.oauthKeyRemove' | translate }}
+          </label>
+        }
+      </div>
+      <div class="field">
+        <label for="s2s-client-oauth-scopes">{{ 's2sClientPage.oauthScopes' | translate }}</label>
+        <input id="s2s-client-oauth-scopes" type="text" [(ngModel)]="editOauthScopes" dir="ltr"
+               aria-describedby="s2s-client-oauth-scopes-hint">
+        <p id="s2s-client-oauth-scopes-hint" class="cell-muted">{{ 's2sClientPage.oauthScopesHint' | translate }}</p>
+      </div>
+    </div>
     @if (metaError()) { <p class="error-msg">{{ metaError() }}</p> }
     <div class="btn-row">
       <button class="btn-primary" (click)="saveMeta()" [disabled]="savingMeta()">

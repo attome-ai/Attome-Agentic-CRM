@@ -8,8 +8,12 @@
       "runbook": "observability/runbooks/HighHttpErrorRate.md",
       "kind": "ratio",
       "metric": "axum_http_requests_total",
-      "match": { "status": "5*" },
-      "denominator": { "metric": "axum_http_requests_total" },
+      "match": {
+        "status": "5*"
+      },
+      "denominator": {
+        "metric": "axum_http_requests_total"
+      },
       "min_denominator": 20,
       "window_minutes": 5,
       "op": ">",
@@ -112,6 +116,18 @@
       "aggregate": "max",
       "op": ">",
       "value": 300,
+      "for_minutes": 0
+    },
+    {
+      "name": "FileIntegrityFailures",
+      "severity": "critical",
+      "summary": "Stored files differ from what was uploaded, or are missing",
+      "runbook": "observability/runbooks/FileIntegrityFailures.md",
+      "kind": "increase",
+      "metric": "file_integrity_failures_total",
+      "window_minutes": 60,
+      "op": ">",
+      "value": 0,
       "for_minutes": 0
     }
   ]

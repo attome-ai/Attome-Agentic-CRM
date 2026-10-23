@@ -13990,6 +13990,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/oauth/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/offline/profile": {
         parameters: {
             query?: never;
@@ -14721,6 +14737,28 @@ export interface paths {
         get: operations["vapid_public_key"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/query/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What changed in an entity since a cursor
+         * @description AA7-T4: records added, changed or removed since `cursor`, as the caller
+         *     may see them now. A record the caller can no longer read is listed in
+         *     `removed` with its id only. Without a cursor the read starts now.
+         */
+        post: operations["query_changes"];
         delete?: never;
         options?: never;
         head?: never;
@@ -23500,6 +23538,27 @@ export interface components {
             /** @description `text | number | currency | date | bool | choice | rich_text`. */
             field_type: string;
         };
+        ChangesRequest: {
+            /** @description The `next_cursor` of the previous call; absent to start from now. */
+            cursor?: string | null;
+            /** @description The entity's logical name. */
+            entity: string;
+            /**
+             * Format: int64
+             * @description Change events to read, 1 to 500 (default 100).
+             */
+            page_size?: number | null;
+        };
+        ChangesResponse: {
+            /** @description Whether the page was full: more changes may be waiting. */
+            has_more: boolean;
+            /** @description Where the next call resumes. */
+            next_cursor: string;
+            /** @description Records deleted since the cursor, or no longer visible to the caller. */
+            removed: string[];
+            /** @description Records added or changed since the cursor that the caller may read. */
+            upserted: components["schemas"]["EntityRecordResponse"][];
+        };
         /** @description `GET /api/v1/admin/changesets/{id}`. */
         ChangesetDetail: {
             changeset: components["schemas"]["ChangesetSummary"];
@@ -23798,6 +23857,10 @@ export interface components {
             /** Format: int64 */
             max_payload_bytes: number;
             name: string;
+            /** @description S11-T1: whether a public key for token-endpoint assertions is set. */
+            oauth_public_key_set: boolean;
+            /** @description S11-T1: the scopes an access token may carry. */
+            oauth_scopes: string[];
             permissions: components["schemas"]["PermissionItem"][];
             /** Format: int32 */
             rate_limit_rpm: number;
@@ -31416,6 +31479,14 @@ export interface components {
             channels: string[];
             /** @description The caller's stored rows. A (category, channel) with no row is enabled. */
             items: components["schemas"]["NotificationPreference"][];
+        };
+        /** @description A refused token request (RFC 6749 §5.2). */
+        OAuthErrorBody: {
+            /**
+             * @description `invalid_request`, `invalid_client`, `unsupported_grant_type`,
+             *     `invalid_scope` or `server_error`.
+             */
+            error: string;
         };
         ObjectSessionResponse: {
             /**
@@ -44487,11 +44558,35 @@ export interface components {
          * @enum {string}
          */
         ToKind: "agent" | "user" | "queue";
+        /** @description An issued access token (RFC 6749 §5.1). */
+        TokenBody: {
+            access_token: string;
+            /**
+             * Format: int64
+             * @description Seconds until it expires.
+             */
+            expires_in: number;
+            scope: string;
+            /** @description Always `Bearer`. */
+            token_type: string;
+        };
         /** @description One token that differs between a version and its scope's published one. */
         TokenChange: {
             after?: unknown;
             before?: unknown;
             field: string;
+        };
+        /** @description A token request (RFC 6749 §4.4.2, RFC 7523 §2.2), form-encoded. */
+        TokenForm: {
+            /** @description The client's signed JWT. */
+            client_assertion?: string | null;
+            /** @description `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`. */
+            client_assertion_type?: string | null;
+            client_id?: string | null;
+            /** @description Always `client_credentials`. */
+            grant_type: string;
+            /** @description Space-separated scopes; omit for every scope the client holds. */
+            scope?: string | null;
         };
         TokenPasswordBody: {
             password: string;
@@ -45156,6 +45251,13 @@ export interface components {
             /** Format: int64 */
             max_payload_bytes?: number | null;
             name?: string | null;
+            /**
+             * @description S11-T1: the PEM public key (RSA, P-256/P-384 or Ed25519) that checks
+             *     the client's token-endpoint assertions; an empty string removes it.
+             */
+            oauth_public_key_pem?: string | null;
+            /** @description S11-T1: the scopes an access token may carry. */
+            oauth_scopes?: string[] | null;
             /** Format: int32 */
             rate_limit_rpm?: number | null;
             /** Format: int64 */
@@ -91571,6 +91673,57 @@ export interface operations {
             };
         };
     };
+    token: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["TokenForm"];
+            };
+        };
+        responses: {
+            /** @description An access token */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenBody"];
+                };
+            };
+            /** @description Malformed request, grant type or scope */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthErrorBody"];
+                };
+            };
+            /** @description The client could not be authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthErrorBody"];
+                };
+            };
+            /** @description The token could not be issued */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthErrorBody"];
+                };
+            };
+        };
+    };
     get_offline_profile: {
         parameters: {
             query?: never;
@@ -94031,6 +94184,75 @@ export interface operations {
             };
             /** @description Web Push is not configured */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    query_changes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangesRequest"];
+            };
+        };
+        responses: {
+            /** @description The changes since the cursor, and the cursor to resume from */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangesResponse"];
+                };
+            };
+            /** @description A cursor this deployment did not issue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read this entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description page_size out of range */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

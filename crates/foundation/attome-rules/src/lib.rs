@@ -112,6 +112,8 @@ mod compile;
 mod context;
 pub mod currency;
 pub mod decision_table;
+/// A30-T2: environment variables as `env.<name>`.
+pub mod env;
 mod error;
 mod eval;
 pub mod functions;

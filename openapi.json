@@ -74495,6 +74495,84 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/oauth/token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "token",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "An access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenBody"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request, grant type or scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The client could not be authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The token could not be issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "credential",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/offline/profile": {
       "get": {
         "tags": [
@@ -78353,6 +78431,107 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/query/changes": {
+      "post": {
+        "tags": [
+          "query"
+        ],
+        "summary": "What changed in an entity since a cursor",
+        "description": "AA7-T4: records added, changed or removed since `cursor`, as the caller\nmay see them now. A record the caller can no longer read is listed in\n`removed` with its id only. Without a cursor the read starts now.",
+        "operationId": "query_changes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The changes since the cursor, and the cursor to resume from",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A cursor this deployment did not issue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read this entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "page_size out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "reads the change feed and the caller's visible records; writes nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/query/execute": {
@@ -116240,6 +116419,67 @@
           }
         }
       },
+      "ChangesRequest": {
+        "type": "object",
+        "required": [
+          "entity"
+        ],
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The `next_cursor` of the previous call; absent to start from now."
+          },
+          "entity": {
+            "type": "string",
+            "description": "The entity's logical name."
+          },
+          "page_size": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Change events to read, 1 to 500 (default 100)."
+          }
+        }
+      },
+      "ChangesResponse": {
+        "type": "object",
+        "required": [
+          "upserted",
+          "removed",
+          "next_cursor",
+          "has_more"
+        ],
+        "properties": {
+          "has_more": {
+            "type": "boolean",
+            "description": "Whether the page was full: more changes may be waiting."
+          },
+          "next_cursor": {
+            "type": "string",
+            "description": "Where the next call resumes."
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Records deleted since the cursor, or no longer visible to the caller."
+          },
+          "upserted": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntityRecordResponse"
+            },
+            "description": "Records added or changed since the cursor that the caller may read."
+          }
+        }
+      },
       "ChangesetDetail": {
         "type": "object",
         "description": "`GET /api/v1/admin/changesets/{id}`.",
@@ -117013,6 +117253,8 @@
           "max_payload_bytes",
           "auto_disable_days",
           "can_act_as_user",
+          "oauth_public_key_set",
+          "oauth_scopes",
           "row_version",
           "created_at",
           "updated_at",
@@ -117077,6 +117319,17 @@
           },
           "name": {
             "type": "string"
+          },
+          "oauth_public_key_set": {
+            "type": "boolean",
+            "description": "S11-T1: whether a public key for token-endpoint assertions is set."
+          },
+          "oauth_scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "S11-T1: the scopes an access token may carry."
           },
           "permissions": {
             "type": "array",
@@ -136156,6 +136409,19 @@
               "$ref": "#/components/schemas/NotificationPreference"
             },
             "description": "The caller's stored rows. A (category, channel) with no row is enabled."
+          }
+        }
+      },
+      "OAuthErrorBody": {
+        "type": "object",
+        "description": "A refused token request (RFC 6749 §5.2).",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "`invalid_request`, `invalid_client`, `unsupported_grant_type`,\n`invalid_scope` or `server_error`."
           }
         }
       },
@@ -170349,6 +170615,33 @@
           "queue"
         ]
       },
+      "TokenBody": {
+        "type": "object",
+        "description": "An issued access token (RFC 6749 §5.1).",
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in",
+          "scope"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds until it expires."
+          },
+          "scope": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string",
+            "description": "Always `Bearer`."
+          }
+        }
+      },
       "TokenChange": {
         "type": "object",
         "description": "One token that differs between a version and its scope's published one.",
@@ -170360,6 +170653,46 @@
           "before": {},
           "field": {
             "type": "string"
+          }
+        }
+      },
+      "TokenForm": {
+        "type": "object",
+        "description": "A token request (RFC 6749 §4.4.2, RFC 7523 §2.2), form-encoded.",
+        "required": [
+          "grant_type"
+        ],
+        "properties": {
+          "client_assertion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The client's signed JWT."
+          },
+          "client_assertion_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`urn:ietf:params:oauth:client-assertion-type:jwt-bearer`."
+          },
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grant_type": {
+            "type": "string",
+            "description": "Always `client_credentials`."
+          },
+          "scope": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Space-separated scopes; omit for every scope the client holds."
           }
         }
       },
@@ -172009,6 +172342,23 @@
               "string",
               "null"
             ]
+          },
+          "oauth_public_key_pem": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "S11-T1: the PEM public key (RSA, P-256/P-384 or Ed25519) that checks\nthe client's token-endpoint assertions; an empty string removes it."
+          },
+          "oauth_scopes": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "S11-T1: the scopes an access token may carry."
           },
           "rate_limit_rpm": {
             "type": [
@@ -174977,7 +175327,6 @@
     }
   ],
   "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -175029,5 +175378,6 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10"
 }

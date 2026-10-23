@@ -46,6 +46,9 @@ pub mod adapter;
 pub mod budget;
 pub mod catalogue;
 pub mod embed;
+/// Z9-T4: falling back to the next allowed model.
+pub mod fallback;
+pub mod gpu_queue;
 pub mod generate;
 pub mod models;
 pub mod ocr;

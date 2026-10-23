@@ -63,8 +63,8 @@ pub use config::{
     RateLimitSection, ReleaseReportSection, RuntimeDbCredentials, S2SSection, S2sSeededClient,
     S2sSeededPermission, S3Target, SendGridSettings, SesSettings, ShedPermits, ShedSection,
     SpendSection, StatementClassOverrides, StatementClassTimeouts, StorageBackend, StorageSection,
-    TranslationSection, WebchatSection, WebcrawlSection, cidr_contains, config_json_schema,
-    endpoint_is_in_deployment,
+    TlsSection, TranslationSection, WebchatSection, WebcrawlSection, cidr_contains,
+    config_json_schema, endpoint_is_in_deployment,
 };
 pub use env::{APP_ENV_VAR, DEBUG_APP_ENV, app_env, is_debug_app_env, is_debug_env};
 pub use keyring::{BARE_STRING_KEY_ID, KeyRing};

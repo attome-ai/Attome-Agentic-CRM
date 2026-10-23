@@ -87,13 +87,15 @@ opentelemetry.workspace         = true
 opentelemetry-otlp.workspace    = true
 opentelemetry_sdk.workspace     = true
 rand.workspace                  = true
-reqwest                         = { workspace = true, features = ["cookies"] }
+reqwest                         = { workspace = true, features = ["cookies", "http2"] }
 rustls.workspace                = true
 serde.workspace                 = true
 serde_json.workspace            = true
 sha2.workspace                  = true
 sqlx.workspace                  = true
+thiserror.workspace             = true
 tokio.workspace                 = true
+tokio-rustls.workspace          = true
 tower-http.workspace            = true
 tracing.workspace               = true
 tracing-opentelemetry.workspace = true

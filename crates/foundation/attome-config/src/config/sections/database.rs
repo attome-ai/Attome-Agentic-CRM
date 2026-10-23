@@ -115,6 +115,35 @@ pub struct AppSection {
     /// the usage page. Free text; nothing is enforced by it.
     #[serde(default)]
     pub contract_reference: Option<String>,
+    /// Z5-T6: the server terminates TLS itself (HTTP/2 and HTTP/1.1), so a
+    /// single server needs no reverse proxy in front of it.
+    #[serde(default)]
+    pub tls: TlsSection,
+}
+
+/// Z5-T6: `app.tls`. Off by default: the server speaks plain HTTP, as behind
+/// a TLS-terminating proxy.
+#[derive(Debug, Clone, Default, Deserialize, schemars::JsonSchema)]
+pub struct TlsSection {
+    /// Serve HTTPS on `app.port` from the certificate and key below.
+    #[serde(default)]
+    pub enabled: bool,
+    /// The PEM certificate chain, leaf first.
+    #[serde(default)]
+    pub cert_path: String,
+    /// The PEM private key (PKCS#8, PKCS#1 or SEC1).
+    #[serde(default)]
+    pub key_path: String,
+    /// The oldest TLS version accepted: `"1.2"` (the default) or `"1.3"`.
+    #[serde(default)]
+    pub min_version: Option<String>,
+}
+
+impl TlsSection {
+    /// Whether only TLS 1.3 is accepted.
+    pub fn tls13_only(&self) -> bool {
+        self.min_version.as_deref().map(str::trim) == Some("1.3")
+    }
 }
 
 fn default_deployment_profile() -> String {

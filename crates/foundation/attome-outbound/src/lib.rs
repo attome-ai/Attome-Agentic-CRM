@@ -23,9 +23,12 @@ pub mod deadline;
 pub mod endpoints;
 /// Q21-T1: the one way to build an HTTP client for a call out, behind the SSRF guard.
 pub mod http;
+/// AB6-T8: every service's breaker state, for the capability probe.
+pub mod registry;
 pub mod retry;
 
 use std::future::Future;
+use std::sync::Arc;
 use std::time::Duration;
 
 pub use breaker::{Breaker, BreakerConfig, BreakerState};
@@ -64,16 +67,23 @@ impl Default for Policy {
 pub struct Service {
     pub name: &'static str,
     pub policy: Policy,
-    pub breaker: Breaker,
+    /// Shared with [`registry`], which reports every service's state.
+    pub breaker: Arc<Breaker>,
+    /// AB6-T9: this service's calls, failures and retries in the last hour.
+    pub stats: Arc<registry::CallStats>,
     pub budget: RetryBudget,
     pub bulkheads: Bulkheads,
 }
 
 impl Service {
     pub fn new(name: &'static str, policy: Policy) -> Self {
+        let breaker = Arc::new(Breaker::new(policy.breaker));
+        let stats = Arc::new(registry::CallStats::default());
+        registry::register(name, &breaker, &stats);
         Self {
             name,
-            breaker: Breaker::new(policy.breaker),
+            breaker,
+            stats,
             budget: RetryBudget::default(),
             bulkheads: Bulkheads::new(policy.interactive_slots, policy.background_slots),
             policy,
@@ -168,6 +178,35 @@ where
     F: FnMut() -> Fut,
     Fut: Future<Output = Result<T, E>>,
 {
+    let started = std::time::Instant::now();
+    let result = call_inner(svc, class, idempotent, &mut attempt).await;
+    // AB6-T8: one sample per call, whatever the attempts.
+    let outcome = match &result {
+        Ok(_) => "ok",
+        Err(OutboundError::Open { .. }) => "breaker_open",
+        Err(OutboundError::Busy) => "busy",
+        Err(OutboundError::Timeout) => "timeout",
+        Err(OutboundError::Failed(_)) => "failed",
+    };
+    metrics::counter!("outbound_calls_total", "service" => svc.name, "outcome" => outcome)
+        .increment(1);
+    svc.stats.call(result.is_err());
+    metrics::histogram!("outbound_latency_seconds", "service" => svc.name)
+        .record(started.elapsed().as_secs_f64());
+    result
+}
+
+async fn call_inner<T, E, F, Fut>(
+    svc: &Service,
+    class: CallClass,
+    idempotent: bool,
+    attempt: &mut F,
+) -> Result<T, OutboundError<E>>
+where
+    E: Retryable,
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<T, E>>,
+{
     let mut tries: u32 = 0;
     loop {
         tries += 1;
@@ -227,6 +266,8 @@ where
             wait_ms = wait.as_millis() as u64,
             "outbound: retrying"
         );
+        metrics::counter!("outbound_retries_total", "service" => svc.name).increment(1);
+        svc.stats.retry();
         tokio::time::sleep(wait).await;
     }
 }
@@ -244,6 +285,101 @@ mod tests {
     impl Retryable for Flaky {
         fn retryable(&self) -> bool {
             self.0
+        }
+    }
+
+    /// Records the name and labels of every metric registered.
+    #[derive(Default)]
+    struct Names(std::sync::Mutex<Vec<String>>);
+
+    impl Names {
+        fn note(&self, key: &metrics::Key) {
+            let labels: Vec<String> = key
+                .labels()
+                .map(|l| format!("{}={}", l.key(), l.value()))
+                .collect();
+            self.0
+                .lock()
+                .unwrap()
+                .push(format!("{}{{{}}}", key.name(), labels.join(",")));
+        }
+    }
+
+    impl metrics::Recorder for Names {
+        fn describe_counter(
+            &self,
+            _: metrics::KeyName,
+            _: Option<metrics::Unit>,
+            _: metrics::SharedString,
+        ) {
+        }
+        fn describe_gauge(
+            &self,
+            _: metrics::KeyName,
+            _: Option<metrics::Unit>,
+            _: metrics::SharedString,
+        ) {
+        }
+        fn describe_histogram(
+            &self,
+            _: metrics::KeyName,
+            _: Option<metrics::Unit>,
+            _: metrics::SharedString,
+        ) {
+        }
+        fn register_counter(
+            &self,
+            key: &metrics::Key,
+            _: &metrics::Metadata<'_>,
+        ) -> metrics::Counter {
+            self.note(key);
+            metrics::Counter::noop()
+        }
+        fn register_gauge(&self, key: &metrics::Key, _: &metrics::Metadata<'_>) -> metrics::Gauge {
+            self.note(key);
+            metrics::Gauge::noop()
+        }
+        fn register_histogram(
+            &self,
+            key: &metrics::Key,
+            _: &metrics::Metadata<'_>,
+        ) -> metrics::Histogram {
+            self.note(key);
+            metrics::Histogram::noop()
+        }
+    }
+
+    /// AB6-T8: a call records its outcome and latency, a retry counts, and
+    /// the registry publishes the breaker state.
+    #[test]
+    fn metrics_emitted_on_call() {
+        let names = Names::default();
+        metrics::with_local_recorder(&names, || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_time()
+                .build()
+                .unwrap();
+            runtime.block_on(async {
+                let svc = quick_service();
+                let ok: Result<u8, OutboundError<Flaky>> =
+                    call(&svc, CallClass::Interactive, true, || async { Ok(1) }).await;
+                assert!(ok.is_ok());
+                let _ = attempts(&svc, true, Flaky(true)).await;
+            });
+            registry::publish();
+        });
+        let names = names.0.into_inner().unwrap();
+        for expected in [
+            "outbound_calls_total{service=test,outcome=ok}",
+            "outbound_calls_total{service=test,outcome=failed}",
+            "outbound_latency_seconds{service=test}",
+            "outbound_retries_total{service=test}",
+            "outbound_breaker_state{service=test}",
+        ] {
+            assert!(
+                names.iter().any(|n| n == expected),
+                "{expected} in {names:?}"
+            );
         }
     }
 

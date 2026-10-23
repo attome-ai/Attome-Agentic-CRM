@@ -422,7 +422,9 @@ async fn ensure_sidebar_privilege(
 // linked to `system.admin` like its route. Icons are in the subset.
 // Bumped 18 -> 19: the admin-only "Administration" console (U10-T3) under
 // Management and "My Timesheet" (V3-T1) under Projects.
-const SEED_VERSION: &str = "19";
+// Bumped 19 -> 20: the admin-only "Dependencies" page (AB6-T9) under
+// Management. Its icon is in the subset.
+const SEED_VERSION: &str = "20";
 
 pub async fn seed(db: &DbPool) -> Result<(), AppError> {
     attome_core::seed_gate::run_if_stale(db, "sidebar", SEED_VERSION, || seed_body(db)).await
@@ -1081,6 +1083,20 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     )
     .await?;
     ensure_sidebar_privilege(db, caches, ADMIN_PRIVILEGE_KEY).await?;
+    // AB6-T9: capabilities and outbound breakers, admin-only like the
+    // dependency map it reads.
+    let dependencies = upsert_sidebar(
+        db,
+        "Dependencies",
+        Some("/xrm/admin/dependencies"),
+        "las la-heartbeat",
+        "#dc2626",
+        Some(management_group),
+        46,
+        Some("core"),
+    )
+    .await?;
+    ensure_sidebar_privilege(db, dependencies, ADMIN_PRIVILEGE_KEY).await?;
     // U10-T3: the admin console, admin-only like its route.
     let console = upsert_sidebar(
         db,

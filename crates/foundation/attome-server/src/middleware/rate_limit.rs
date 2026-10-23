@@ -62,6 +62,8 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
         "/api/v1/auth/step-up-callback/oidc/{provider}",
         "credential",
     ),
+    // S11-T1: client authentication, the credential-guessing class.
+    ("POST", "/api/v1/oauth/token", "credential"),
     ("POST", "/api/v1/auth/reset-request", "password_reset"),
     ("POST", "/api/v1/auth/reset-confirm", "password_reset"),
     // attome-auth hardening 1.8: the email-verification confirm route is the

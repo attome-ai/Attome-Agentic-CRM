@@ -73,6 +73,17 @@ pub fn route<'c>(
     needs: &TaskNeeds<'_>,
     label: DataLabel,
 ) -> Result<&'c ModelEntry, RouteError> {
+    candidates(catalogue, needs, label).map(|models| models[0])
+}
+
+/// Z9-T4: every model `needs` may run on for `label` content, best first
+/// (cheapest, then the preferred size, then catalogue order); never empty.
+/// [`crate::fallback`] tries them in this order.
+pub fn candidates<'c>(
+    catalogue: &'c Catalogue,
+    needs: &TaskNeeds<'_>,
+    label: DataLabel,
+) -> Result<Vec<&'c ModelEntry>, RouteError> {
     if catalogue.is_empty() {
         return Err(RouteError::EmptyCatalogue {
             task: needs.task.to_owned(),
@@ -89,27 +100,32 @@ pub fn route<'c>(
             label,
         });
     }
-    allowed
+    let mut fitting: Vec<&ModelEntry> = allowed
         .into_iter()
         .filter(|model| model.can(needs.capabilities) && model.max_context >= needs.min_context)
-        .min_by(|a, b| {
-            let by_cost = a
-                .cost_per_1k_tokens
-                .partial_cmp(&b.cost_per_1k_tokens)
-                .unwrap_or(Ordering::Equal);
-            let by_size = match needs.preferred {
-                PreferredSize::Small => a.max_context.cmp(&b.max_context),
-                PreferredSize::Large => b.max_context.cmp(&a.max_context),
-            };
-            // Same cost and size: the catalogue's own order decides, so the
-            // choice is stable from one call to the next.
-            by_cost.then(by_size)
-        })
-        .ok_or_else(|| RouteError::NoModelMeetsNeeds {
+        .collect();
+    if fitting.is_empty() {
+        return Err(RouteError::NoModelMeetsNeeds {
             task: needs.task.to_owned(),
             label,
             min_context: needs.min_context,
-        })
+        });
+    }
+    // A stable sort: equal models keep the catalogue's order.
+    fitting.sort_by(|a, b| {
+        let by_cost = a
+            .cost_per_1k_tokens
+            .partial_cmp(&b.cost_per_1k_tokens)
+            .unwrap_or(Ordering::Equal);
+        let by_size = match needs.preferred {
+            PreferredSize::Small => a.max_context.cmp(&b.max_context),
+            PreferredSize::Large => b.max_context.cmp(&a.max_context),
+        };
+        // Same cost and size: the catalogue's own order decides, so the
+        // choice is stable from one call to the next.
+        by_cost.then(by_size)
+    });
+    Ok(fitting)
 }
 
 #[cfg(test)]
@@ -131,6 +147,7 @@ mod tests {
             cost_per_1k_tokens: cost,
             self_hosted,
             allowed_labels: labels.to_vec(),
+            max_concurrent: 4,
         }
     }
 

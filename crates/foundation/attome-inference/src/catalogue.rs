@@ -25,6 +25,8 @@ pub struct ModelEntry {
     pub self_hosted: bool,
     /// The labels of content it may be sent.
     pub allowed_labels: Vec<DataLabel>,
+    /// Z9-T6: calls a self-hosted model serves at once.
+    pub max_concurrent: usize,
 }
 
 impl ModelEntry {
@@ -49,6 +51,9 @@ impl From<&CatalogueModel> for ModelEntry {
             cost_per_1k_tokens: model.cost_per_1k_tokens,
             self_hosted: model.self_hosted,
             allowed_labels: model.allowed_labels.clone(),
+            max_concurrent: model
+                .max_concurrent
+                .unwrap_or(crate::gpu_queue::DEFAULT_SLOTS),
         }
     }
 }

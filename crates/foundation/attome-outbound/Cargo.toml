@@ -12,6 +12,7 @@ publish.workspace      = true
 
 [dependencies]
 attome-types.workspace = true
+metrics.workspace      = true
 reqwest.workspace      = true
 thiserror.workspace    = true
 tokio.workspace        = true

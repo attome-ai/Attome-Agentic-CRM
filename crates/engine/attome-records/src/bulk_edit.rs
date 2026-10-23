@@ -16,8 +16,8 @@ use attome_core::filter::{
     FieldCastError, Filter, FilterSchema, cast_for_attr, is_multi_choice_attr,
 };
 use attome_core::{AttrInfo, EngineState, FieldType, quote_ident};
-use attome_security::{RecordAction, SecurityContextExt};
 use attome_security::record_action::Bulk;
+use attome_security::{RecordAction, SecurityContextExt};
 use attome_server::authz::{Authorized, RecordScoped};
 use attome_server::capability::{Available, BatchJobs};
 use attome_server::security::SecurityContext;
@@ -685,16 +685,8 @@ async fn bulk_edit(
             }),
         ));
     }
-    let submitted = submit_bulk(
-        &state,
-        &ctx,
-        &entity,
-        "update",
-        items,
-        false,
-        request.quiet,
-    )
-    .await?;
+    let submitted =
+        submit_bulk(&state, &ctx, &entity, "update", items, false, request.quiet).await?;
     Ok((
         StatusCode::ACCEPTED,
         Json(BulkEditSubmitted {
@@ -783,16 +775,8 @@ async fn bulk_edit_undo(
     let count = request.undo.len();
     let record_ids: Vec<Uuid> = request.undo.iter().map(|i| i.id).collect();
     let items = undo_items(request.undo);
-    let submitted = submit_bulk(
-        &state,
-        &ctx,
-        &entity,
-        "update",
-        items,
-        false,
-        request.quiet,
-    )
-    .await?;
+    let submitted =
+        submit_bulk(&state, &ctx, &entity, "update", items, false, request.quiet).await?;
     Ok((
         StatusCode::ACCEPTED,
         Json(BulkEditSubmitted {

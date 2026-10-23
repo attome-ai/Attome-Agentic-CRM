@@ -26,6 +26,10 @@ pub enum TokenType {
     /// `PortalSession`; only a validator asking for `AgentSession` by name
     /// ([`crate::jwt::validate_typed_session_token`]) accepts it.
     AgentSession,
+    /// A short-lived access token a server-to-server client got from the
+    /// OAuth token endpoint (S11-T1). Only
+    /// [`crate::oauth_token::validate_access_token`] accepts it.
+    S2sAccess,
 }
 
 /// JWT claims embedded in the `session_token` HttpOnly cookie.

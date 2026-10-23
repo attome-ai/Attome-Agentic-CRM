@@ -2960,7 +2960,7 @@ pub async fn execute_stored_query_with_definition(
 /// document even if a future refactor stops referencing one from a response.
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(execute),
+    paths(execute, crate::changes::changes),
     components(schemas(
         ExecuteQueryRequest,
         Filter,
@@ -2977,7 +2977,10 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 }
 
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/query/execute", post(execute))
+    Router::new()
+        .route("/api/v1/query/execute", post(execute))
+        // AA7-T4: what changed in an entity since a cursor.
+        .route("/api/v1/query/changes", post(crate::changes::changes))
 }
 
 #[cfg(test)]

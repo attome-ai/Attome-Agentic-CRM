@@ -31,6 +31,7 @@ export const ADMIN_SCREENS: readonly AdminScreen[] = [
   { title: 'adminConsole.screen.secrets', route: '/xrm/admin/secrets', area: 'security' },
   { title: 'adminConsole.screen.configStarts', route: '/xrm/admin/config-starts', area: 'operations' },
   { title: 'adminConsole.screen.caches', route: '/xrm/admin/caches', area: 'operations' },
+  { title: 'adminConsole.screen.dependencies', route: '/xrm/admin/dependencies', area: 'operations' },
   { title: 'adminConsole.screen.timers', route: '/xrm/admin/timers', area: 'operations' },
   { title: 'adminConsole.screen.rules', route: '/xrm/admin/rules', area: 'data' },
   { title: 'adminConsole.screen.duplicates', route: '/xrm/admin/duplicates', area: 'data' },

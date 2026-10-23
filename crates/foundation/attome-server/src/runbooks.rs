@@ -44,6 +44,7 @@ runbooks!(
     "EmailSuppressionSpike",
     "EventDeliveryBacklogGrowing",
     "EventDeliveryDeadLettered",
+    "FileIntegrityFailures",
     "HighHttpErrorRate",
     "HttpRejectionsSpike",
     "IdempotencyKeysStuckPending",

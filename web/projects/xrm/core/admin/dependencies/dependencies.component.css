@@ -1,0 +1,20 @@
+.dep-state {
+  display: inline-block;
+  padding-inline: 0.5rem;
+  border-radius: 999px;
+  font-size: 0.85em;
+  border: 1px solid currentColor;
+}
+
+.dep-ok {
+  color: var(--color-success, #15803d);
+}
+
+.dep-warn {
+  color: var(--color-warning, #b45309);
+}
+
+.dep-bad {
+  color: var(--color-danger, #dc2626);
+  font-weight: 600;
+}

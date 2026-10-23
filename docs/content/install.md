@@ -76,6 +76,30 @@ email and the one-time password the install printed, then:
    `attome backup drill` proves one restores.
 4. Read the [admin guide](admin.md).
 
+## HTTPS without a proxy
+
+A single server can serve HTTPS itself (HTTP/2, falling back to HTTP/1.1), so no reverse proxy is
+needed in front of it. Point it at a certificate chain and its private key, both PEM files:
+
+```json
+"app": {
+  "tls": {
+    "enabled": true,
+    "cert_path": "/etc/attome/tls/fullchain.pem",
+    "key_path": "/etc/attome/tls/privkey.pem",
+    "min_version": "1.2"
+  }
+}
+```
+
+- `min_version` is `"1.2"` (the default) or `"1.3"`.
+- The server refuses to start, naming the setting, when a file is missing or unreadable.
+- A renewed certificate is picked up without a restart: the files are read again every twelve
+  hours, and at once on `SIGHUP` (Linux). A file that no longer loads keeps the current certificate
+  in use and logs an error.
+- Plain HTTP is not answered on the HTTPS port. Set `app.public_frontend_url` to the `https://`
+  address, and turn on `auth.secure_cookies`.
+
 ## By hand
 
 `attome init` does what the scripts do, on a machine where the binary is already in place:

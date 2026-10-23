@@ -2530,6 +2530,42 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
         }
         // ── S2S ─────────────────────────────────────────────────────────────
+        // S11-T1: a client gets a token with a key's secret (client_secret_basic).
+        "POST /api/v1/oauth/token" => {
+            let slug = uniq("oauth");
+            let (service_user, _) = seed_user(&fx.base, "s2s-oauth").await;
+            let client = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/s2s/clients",
+                Some(json!({
+                    "client_id": slug, "name": "oauth emission client",
+                    "service_user_ref": service_user,
+                })),
+            )
+            .await;
+            let key = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/s2s/clients/{}/keys", id_of(&client)),
+                Some(json!({"slot": "primary"})),
+            )
+            .await;
+            let secret = key["secret"].as_str().expect("the new key's secret");
+            let basic =
+                base64::engine::general_purpose::STANDARD.encode(format!("{slug}:{secret}"));
+            let mut req = Request::builder()
+                .method("POST")
+                .uri("/api/v1/oauth/token")
+                .header("origin", ORIGIN)
+                .header(header::AUTHORIZATION, format!("Basic {basic}"))
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("grant_type=client_credentials"))
+                .expect("build request");
+            req.extensions_mut()
+                .insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 9], 40_009))));
+            req
+        }
         "POST /api/v1/admin/s2s/clients" => {
             let (service_user, _) = seed_user(&fx.base, "s2s-service").await;
             request(

@@ -27,8 +27,8 @@ mod lookup_names;
 mod merge;
 mod mutations;
 pub mod new_record;
-pub mod recycle_bin;
 mod record_shares;
+pub mod recycle_bin;
 /// M01 Core P3 gap (D-455): `/{entity}/{id}/related/{relationship}` — the
 /// generic M:M link/unlink/list API.
 mod related;
@@ -122,6 +122,8 @@ pub use mutations::{
     update_record_for_outcome, update_record_for_with_comment, validate_create,
 };
 pub use recycle_bin::{LargeDelete, take_large_deletes};
+/// AA7-T4: the record shape `query/changes` answers with.
+pub use response::EntityRecordResponse;
 /// M07 Phase A: `POST /{entity}/{id}/transition` takes an optional `If-Match`
 /// (absent = the record's current version) with the same parsing rules as
 /// the delete/restore paths.

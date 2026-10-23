@@ -32,7 +32,7 @@ describe('S2sClientEditorComponent route input', () => {
     const client = {
       id: 'client-1', client_id: 'c', name: 'C', description: null, status: 'active',
       service_user_ref: null, rate_limit_rpm: 60, max_concurrent: 2, allowed_cidrs: null,
-      max_payload_bytes: 1, auto_disable_days: 90, can_act_as_user: true, last_used_at: null,
+      max_payload_bytes: 1, auto_disable_days: 90, can_act_as_user: true, oauth_public_key_set: false, oauth_scopes: ["records.read"], last_used_at: null,
       row_version: 3, created_at: '', updated_at: '', keys: [], permissions: [],
     };
     getClient.mockReturnValueOnce(of(client) as never);
@@ -47,7 +47,7 @@ describe('S2sClientEditorComponent route input', () => {
     fixture.componentInstance.saveMeta();
     expect(updateClient).toHaveBeenCalledWith(
       'client-1',
-      expect.objectContaining({ can_act_as_user: false, row_version: 3 }),
+      expect.objectContaining({ can_act_as_user: false, oauth_scopes: ["records.read"], row_version: 3 }),
     );
   });
 });

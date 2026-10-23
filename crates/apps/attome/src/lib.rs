@@ -57,5 +57,7 @@ pub mod serve;
 pub mod sms_inbound;
 /// J8-T1: social channels in and replies out.
 pub mod social;
+/// Z5-T6: the server terminates TLS itself.
+pub mod tls;
 /// J6-T1: calls out and in.
 pub mod voice;

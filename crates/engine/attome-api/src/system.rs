@@ -329,6 +329,9 @@ impl EngineSystem {
             // handler's doc) and reachable at authn/authz time only because
             // its path is one of `bypass.rs`'s `EXACT_BYPASS_PATHS`.
             .merge(crate::content_public::routes())
+            // S11-T1: the OAuth token endpoint, bypass-listed; the client
+            // authenticates in the request.
+            .merge(attome_s2s::oauth_clients::routes())
             // Z6-T1: local-disk storage links — public and bypass-listed like
             // content_public; the signed link is the credential.
             .merge(crate::storage_local::routes())

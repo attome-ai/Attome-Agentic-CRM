@@ -50,6 +50,10 @@ export interface ClientDetail {
   auto_disable_days:  number;
   /** S1-T10: may name a user to act as (`x-attome-act-as`). */
   can_act_as_user:    boolean;
+  /** S11-T1: whether a public key for OAuth token assertions is set. */
+  oauth_public_key_set: boolean;
+  /** S11-T1: the scopes an OAuth access token may carry. */
+  oauth_scopes:       string[];
   last_used_at:       string | null;
   row_version:        number;
   created_at:         string;
@@ -112,6 +116,9 @@ export interface UpdateClientBody {
   max_payload_bytes?:  number;
   auto_disable_days?:  number;
   can_act_as_user?:    boolean;
+  /** S11-T1: a PEM public key; an empty string removes it. */
+  oauth_public_key_pem?: string;
+  oauth_scopes?:       string[];
   row_version:         number;
 }
 

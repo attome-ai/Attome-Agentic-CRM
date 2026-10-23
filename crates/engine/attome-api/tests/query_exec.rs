@@ -3443,3 +3443,225 @@ fn msgpack_list_decodes_to_same_rows_as_json() {
         assert!(pack_bytes.len() < json_bytes.len(), "names are sent once");
     })
 }
+
+/// AA7-T4: one `POST /api/v1/query/changes` call.
+async fn changes(
+    app: &axum::Router,
+    cookie: &str,
+    entity: &str,
+    cursor: Option<&str>,
+) -> (StatusCode, serde_json::Value) {
+    let mut body = serde_json::json!({ "entity": entity });
+    if let Some(cursor) = cursor {
+        body["cursor"] = serde_json::json!(cursor);
+    }
+    send_json(app, "POST", "/api/v1/query/changes", cookie, body).await
+}
+
+fn upserted_ids(body: &serde_json::Value) -> Vec<String> {
+    body["upserted"]
+        .as_array()
+        .expect("upserted")
+        .iter()
+        .map(|r| r["id"].as_str().expect("record id").to_owned())
+        .collect()
+}
+
+fn removed_ids(body: &serde_json::Value) -> Vec<String> {
+    body["removed"]
+        .as_array()
+        .expect("removed")
+        .iter()
+        .map(|r| r.as_str().expect("removed id").to_owned())
+        .collect()
+}
+
+/// AA7-T4: from a cursor taken first, a create, an update and a delete come
+/// back as two upserts and then a removal; a cursor taken after them sees
+/// nothing new.
+#[test]
+fn changes_since_add_update_delete() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, _, first) = etag_fixture(&system, &app, &cookie).await;
+
+        let (status, start) = changes(&app, &cookie, &logicalname, None).await;
+        assert_eq!(status, StatusCode::OK, "{start}");
+        assert!(start["upserted"].as_array().unwrap().is_empty());
+        let cursor = start["next_cursor"].as_str().unwrap().to_owned();
+
+        let second = create_titled_record(&app, &cookie, &logicalname, "second").await;
+        let (status, record) = send_json(
+            &app,
+            "GET",
+            &format!("/api/v1/{logicalname}/{first}"),
+            &cookie,
+            serde_json::Value::Null,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{record}");
+        let version = record["row_version"].to_string();
+        let req = Request::builder()
+            .method("PATCH")
+            .uri(format!("/api/v1/{logicalname}/{first}"))
+            .header("cookie", &cookie)
+            .header("sec-fetch-site", "same-origin")
+            .header("content-type", "application/json")
+            .header("if-match", format!("\"{}\"", version.trim_matches('"')))
+            .body(Body::from(
+                serde_json::json!({ "title": "first, edited" }).to_string(),
+            ))
+            .unwrap();
+        let res = app.clone().oneshot(req).await.expect("patch");
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let (status, page) = changes(&app, &cookie, &logicalname, Some(&cursor)).await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        let ids = upserted_ids(&page);
+        assert!(ids.contains(&first.to_string()), "{page}");
+        assert!(ids.contains(&second.to_string()), "{page}");
+        assert!(removed_ids(&page).is_empty());
+        let edited = page["upserted"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["id"] == first.to_string())
+            .unwrap();
+        assert_eq!(edited["data"]["title"], "first, edited");
+        let cursor = page["next_cursor"].as_str().unwrap().to_owned();
+
+        let (status, _) = send_json(
+            &app,
+            "DELETE",
+            &format!("/api/v1/{logicalname}/{second}"),
+            &cookie,
+            serde_json::Value::Null,
+        )
+        .await;
+        assert!(status.is_success(), "{status}");
+        let (_, page) = changes(&app, &cookie, &logicalname, Some(&cursor)).await;
+        assert_eq!(removed_ids(&page), vec![second.to_string()], "{page}");
+        assert!(upserted_ids(&page).is_empty());
+
+        let (_, after) = changes(
+            &app,
+            &cookie,
+            &logicalname,
+            Some(page["next_cursor"].as_str().unwrap()),
+        )
+        .await;
+        assert!(
+            upserted_ids(&after).is_empty() && removed_ids(&after).is_empty(),
+            "{after}"
+        );
+    })
+}
+
+/// AA7-T4: a record the caller loses access to comes back in `removed`,
+/// id only, with none of its data.
+#[test]
+fn changes_since_permission_removal_lists_removed_only() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, admin) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, _, record) = etag_fixture(&system, &app, &admin).await;
+        let entity_id: Uuid =
+            sqlx::query_scalar("SELECT id FROM entity_info WHERE logicalname = $1")
+                .bind(&logicalname)
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        let (reader, reader_cookie, role_id) = seed_rls_reader(&db, &logicalname).await;
+        // None tier for the entity, so only the share lets the reader see it.
+        sqlx::query(
+            "INSERT INTO role_mm_entity_access             (id, role_ref, entity_ref, read_access_level, write_access_level, delete_access_level, owner_layer)              VALUES ($1, $2, $3, 0, 0, 0, 'project')",
+        )
+        .bind(Uuid::now_v7())
+        .bind(role_id)
+        .bind(entity_id)
+        .execute(&db)
+        .await
+        .unwrap();
+        grant_record_view_share(&db, entity_id, record, reader).await;
+        system
+            .state()
+            .base
+            .security
+            .invalidate_sync(reader)
+            .await
+            .unwrap();
+
+        let (status, start) = changes(&app, &reader_cookie, &logicalname, None).await;
+        assert_eq!(status, StatusCode::OK, "{start}");
+        let cursor = start["next_cursor"].as_str().unwrap().to_owned();
+
+        // A change the reader may see.
+        create_titled_record(&app, &admin, &logicalname, "not shared").await;
+        sqlx::query(&format!(
+            "UPDATE \"{logicalname}\" SET title = 'secret' WHERE id = $1"
+        ))
+        .bind(record)
+        .execute(&db)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) VALUES ($1, $2, 'update')",
+        )
+        .bind(&logicalname)
+        .bind(record)
+        .execute(&db)
+        .await
+        .unwrap();
+        // Then the share is taken away.
+        sqlx::query("DELETE FROM record_share WHERE record_id = $1 AND principal_id = $2")
+            .bind(record)
+            .bind(reader)
+            .execute(&db)
+            .await
+            .unwrap();
+        system
+            .state()
+            .base
+            .security
+            .invalidate_sync(reader)
+            .await
+            .unwrap();
+
+        let (status, page) = changes(&app, &reader_cookie, &logicalname, Some(&cursor)).await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        assert!(removed_ids(&page).contains(&record.to_string()), "{page}");
+        assert!(!upserted_ids(&page).contains(&record.to_string()), "{page}");
+        assert!(
+            !page.to_string().contains("secret"),
+            "no data of a hidden record: {page}"
+        );
+    })
+}
+
+/// AA7-T4: a cursor this deployment did not issue is refused.
+#[test]
+fn changes_since_invalid_cursor_is_422() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, _, _) = etag_fixture(&system, &app, &cookie).await;
+        let (status, body) = changes(&app, &cookie, &logicalname, Some("forged.cursor")).await;
+        // Z14-T5's contract: a forged cursor is `400 invalid_cursor`.
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        assert_eq!(body["error"], "invalid_cursor", "{body}");
+        let (status, _) = send_json(
+            &app,
+            "POST",
+            "/api/v1/query/changes",
+            &cookie,
+            serde_json::json!({ "entity": logicalname, "page_size": 0 }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    })
+}

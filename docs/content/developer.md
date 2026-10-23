@@ -9,13 +9,26 @@ Everything the web app does goes through the HTTP API under `/api/v1`. The OpenA
 reference is generated from it. `/api/v1/openapi/deployment.json` describes this deployment's own
 entities and fields.
 
-- **Authentication**: an API key (`Authorization: Bearer <key>`), a browser session, OIDC sign-in,
-  or HMAC-signed server-to-server calls for integrations.
+- **Authentication**: an API key (`Authorization: ApiKey <public id>:<secret>`), a browser session,
+  OIDC sign-in, or, for integrations, server-to-server calls: HMAC-signed, or with an OAuth access
+  token (`Authorization: Bearer <token>`).
+- **OAuth for integrations**: `POST /api/v1/oauth/token` (form-encoded, `grant_type=client_credentials`)
+  gives an S2S client a ten-minute access token for its service user. The client proves itself
+  with a JWT signed by its own key (`client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`;
+  `iss` and `sub` its client id, `aud` the deployment's JWT issuer or the endpoint's URL, `exp` at
+  most five minutes ahead, a `jti` used once) or with one of its keys' secrets in
+  `Authorization: Basic`. An administrator sets the client's public key and scopes with
+  `PATCH /api/v1/admin/s2s/clients/{id}` (`oauth_public_key_pem`, `oauth_scopes`). Each bearer
+  request is checked against the client's present state like a signed one.
 - **Records**: `GET/POST /api/v1/{entity}`, `GET/PATCH/DELETE /api/v1/{entity}/{id}`. An update needs
   `If-Match: "<row_version>"` from the record you read; a stale version answers 409.
 - **Queries**: `POST /api/v1/query/execute` runs a stored query or a view with filters, keyset
   paging (`after_id`) and an optional exact total. Send `Accept: application/msgpack` for a
   smaller MessagePack answer: each row is an array in the order `data.fields` names.
+- **Changes since**: `POST /api/v1/query/changes` with `{entity}` answers a cursor; send it back as
+  `{entity, cursor}` to get the records added or changed since (`upserted`, as you may read them
+  now), the ids deleted or no longer visible to you (`removed`, id only) and the next cursor. Use
+  it to keep a local copy in step without re-reading the whole list.
 - **Lists** answer `{items, total, page, page_size}` (pages start at 1); unbounded lists use a cursor
   (`next_cursor`).
 - **Retries**: send `Idempotency-Key` on a create or an action; a retry with the same key gets the

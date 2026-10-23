@@ -134,10 +134,15 @@ const DYNAMIC_ACTION: &str = "Dynamic";
 /// transaction, after resolving the request's plan and step from the
 /// database) can answer — there is no static verb this route could name.
 ///
+/// Raised from 5 to 6 deliberately (AA7-T4, 2026-10-23) for
+/// `query_exec::changes` — `POST /api/v1/query/changes` names its entity in
+/// the body, as `execute` does, and each record is filtered by the caller's
+/// record-level access before it is returned.
+///
 /// If this ever reaches 0, delete the constant and both halves of
 /// `bare_record_scoped_routes_ratchet_downward` rather than leaving a floor
 /// nothing can trip.
-const MAX_BARE_RECORD_SCOPED: usize = 5;
+const MAX_BARE_RECORD_SCOPED: usize = 6;
 
 /// Routes carrying neither an `Authorized<P>` policy nor a `require_*` call,
 /// each with the reason it is safe. Verified by reading every handler.
