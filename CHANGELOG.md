@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Dead-letter inbox screen (M5-T3) at `/xrm/jobs/dead-letters`: groups with their count, last
+  failure, a sample message and a "new today" / "still failing" marker; replay a group at a chosen
+  number of items a minute; open a group to replay one item or discard it with a reason. English
+  and Arabic.
 - Dead-letter inbox (M5-T2): `GET /api/v1/admin/dead-letters/groups` (dead letters of every source
   grouped by cause, largest first), `GET /api/v1/admin/dead-letters?source=&group=`,
   `POST /api/v1/admin/dead-letters/{source}/{id}/replay`, `POST .../{source}/{id}/discard` (a reason
