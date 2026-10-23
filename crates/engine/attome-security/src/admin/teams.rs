@@ -393,6 +393,8 @@ pub(super) async fn add_team_role(
     Path(team_id): Path<Uuid>,
     Json(AddTeamRoleBody { role_id }): Json<AddTeamRoleBody>,
 ) -> Result<(StatusCode, Json<TeamRoleItem>), AppError> {
+    // Q12-T3: never a role carrying privileges the granter lacks.
+    crate::grants::require_role_within_ceiling(&state.base.db, &ctx, role_id).await?;
     let role_name: Option<String> =
         sqlx::query_scalar("SELECT name FROM role WHERE id = $1 AND is_deleted = false")
             .bind(role_id)

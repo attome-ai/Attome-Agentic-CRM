@@ -196,6 +196,8 @@ pub(super) async fn create_role_grant(
     if key.is_empty() {
         return Err(AppError::Validation("privilege_key is required".into()));
     }
+    // Q12-T3: never a privilege the granter lacks.
+    crate::grants::require_privilege_within_ceiling(&ctx, key)?;
 
     let role_name: Option<String> =
         sqlx::query_scalar("SELECT name FROM role WHERE id = $1 AND is_deleted = false")

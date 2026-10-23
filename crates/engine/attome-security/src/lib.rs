@@ -5,11 +5,11 @@ pub mod cache;
 pub mod conditions;
 pub mod context;
 pub mod db;
-/// Q3-T1: SCIM 2.0 provisioning of users and teams.
-pub mod scim;
 pub mod entity_privileges;
 pub mod field_gate;
 pub mod grant_expiry;
+/// Q12-T3: a delegated administrator cannot grant more than they hold.
+pub mod grants;
 pub mod mfa;
 pub mod mfa_policy;
 pub mod model;
@@ -20,6 +20,8 @@ pub mod rls;
 pub mod rls_fragment;
 /// D-792 — the fleet console's rollout privilege and role.
 pub mod rollout;
+/// Q3-T1: SCIM 2.0 provisioning of users and teams.
+pub mod scim;
 pub mod seed;
 pub mod session_policy;
 pub mod strict_authz;

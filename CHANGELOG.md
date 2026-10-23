@@ -184,6 +184,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Grant ceiling (Q12-T3): assigning a role to a user or team, or a privilege to a role or user, is
+  refused when the granter does not hold every privilege granted; full administrators are never
+  refused, and role grants keep their optional second-approver gate (D-195).
 - Quality issue routing and authoring (L2-T4): new open issues go to the domain steward or the
   record owner, due in the target's `issue_sla_days` (7; migration 0236); `PATCH
   /api/v1/admin/data/quality/issues/{id}` moves an issue through open, in progress, fixed,

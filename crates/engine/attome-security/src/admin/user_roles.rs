@@ -251,6 +251,8 @@ pub(super) async fn assign_user_role(
     Json(body): Json<AssignUserRoleBody>,
 ) -> Result<(StatusCode, Json<AssignUserRoleResponse>), AppError> {
     crate::grant_expiry::valid_end(body.valid_until, chrono::Utc::now())?;
+    // Q12-T3: never a role carrying privileges the granter lacks.
+    crate::grants::require_role_within_ceiling(&state.base.db, &ctx, body.role_id).await?;
     let payload = serde_json::json!({
         "user_id": user_id,
         "role_id": body.role_id,
