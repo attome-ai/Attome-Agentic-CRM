@@ -14,6 +14,7 @@
 
 - [Architecture](architecture.md)
 - [Agents](agents.md): what agents may do, their tools, delegation and safety.
+- [Identity brokers](identity-brokers.md): signing in with a SAML-only identity provider through Entra ID, Okta, AD FS or Keycloak over OpenID Connect.
 - [Hijri calendar](hijri.md): Umm al-Qura dates, corrections, grouping, autonumbers and holidays.
 - [Duplicate rules](duplicates.md): comparators, what saving a duplicate does, scans, merges and undo.
 - [Scanning](scanning.md): scannable fields, GS1 codes, finding records by code, scan actions and the deep-link rule.
