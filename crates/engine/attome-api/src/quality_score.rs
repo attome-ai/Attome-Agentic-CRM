@@ -449,7 +449,7 @@ async fn upsert_uniqueness_issues(
 
 /// Every active `system.admin` holder — same query shape
 /// `attome_ai::quality_monitor::admin_recipients` (D-435) already uses.
-async fn admin_recipients(db: &DbPool) -> Result<Vec<Uuid>, AppError> {
+pub(crate) async fn admin_recipients(db: &DbPool) -> Result<Vec<Uuid>, AppError> {
     sqlx::query_scalar(
         "SELECT DISTINCT su.id \
          FROM user_account su \

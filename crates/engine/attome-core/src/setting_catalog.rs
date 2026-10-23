@@ -305,6 +305,25 @@ fn limit_settings() -> Vec<SettingDescriptor> {
 /// B5-T3: record settings.
 fn records_settings() -> Vec<SettingDescriptor> {
     vec![
+        // L6-T5: scheduled profiles and snapshot retention.
+        SettingDescriptor::new(
+            "data_profile.schedule",
+            "Entities profiled on a schedule, each with a cron in the deployment's time zone, as \
+             {\"contact\": \"0 2 * * *\"}; a profile that drifts from the one before alerts the \
+             data stewards. None by default (L6-T5).",
+            || json!({"type": "object", "additionalProperties": {"type": "string", "minLength": 9, "maxLength": 100}}),
+            &[SettingScope::Deployment],
+            false,
+            || json!({}),
+        ),
+        SettingDescriptor::new(
+            "data_profile.retention_days",
+            "Days a data profile snapshot is kept before it is deleted (L6-T5). 1 to 3650.",
+            || json!({"type": "integer", "minimum": 1, "maximum": 3650}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(365),
+        ),
         // M12-T3: hours heavy scheduled work waits out.
         SettingDescriptor::new(
             "jobs.quiet_windows",

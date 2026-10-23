@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Data profile drift, schedules and retention (L6-T5). Each completed profile is compared with the
+  entity's previous one: a null share up 10 points or more, a new most-frequent value, or a
+  changed top pattern shape. Any drift is stored on the profile (`drift`) and sent once per run to
+  the data stewards; system administrators receive it until stewards exist. The new
+  `data_profile.schedule` setting profiles entities on a cron in the deployment's time zone; none
+  by default. Snapshots older than `data_profile.retention_days` (365) are deleted. Migration 0220.
 - Data profile patterns (L6-T3). Each text field also reports its ten most common value shapes
   with their share (digits `9`, Latin `A`, Arabic `ع`), the share matching its declared format
   (`options.pattern`), and Arabic-aware counts: Arabic, Latin or mixed script; Eastern or Western

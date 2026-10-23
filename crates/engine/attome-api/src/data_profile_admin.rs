@@ -42,6 +42,9 @@ mod scan;
 /// L6-T3: pattern shapes and Arabic-aware measures.
 mod patterns;
 
+/// L6-T5: drift between snapshots, scheduled profiles, retention.
+pub mod drift;
+
 /// How long the profile scan may run.
 const SCAN_TIMEOUT: &str = "120s";
 
@@ -339,6 +342,11 @@ pub async fn process(
     .await
     .map_err(AppError::internal)?;
 
+    // L6-T5: compare with the previous snapshot and alert on drift. A
+    // failure here never fails the profile itself.
+    if let Err(error) = drift::after_run(state, &entity_name, profile_id).await {
+        tracing::warn!(%profile_id, entity = %entity_name, %error, "data profile drift check failed");
+    }
     Ok(())
 }
 

@@ -2822,6 +2822,8 @@ const DEDUP_KEY_OAUTH_REFRESH: &str = "integration-oauth-refresh";
 const DEDUP_KEY_DEAD_LETTER_SWEEP: &str = "dead-letter-sweep";
 /// M9-T3: approval request steps mailed to their approvers.
 const DEDUP_KEY_APPROVAL_EMAIL_LINKS: &str = "approval-email-links";
+/// L6-T5: scheduled data profiles and snapshot retention.
+const DEDUP_KEY_DATA_PROFILE_SCHEDULE: &str = "data-profile-schedule";
 const DEDUP_KEY_NOTIFICATION_QUEUE: &str = "notification-queue-sweep";
 /// D15-T2: the personal mail capture (a registered job type).
 const DEDUP_KEY_MAIL_CAPTURE: &str = "mail-capture";
@@ -2935,6 +2937,11 @@ pub const WORKFLOW_RECORD_SCHEDULE: attome_jobs::JobType = attome_jobs::JobType 
     lane: attome_jobs::Lane::Batch,
     ..attome_jobs::JobType::new(attome_workflow::schedule_trigger::RECORD_SCHEDULE_JOB, 1)
 };
+
+/// L6-T5: every five minutes, scheduled data profiles started and old
+/// snapshots pruned (no payload).
+pub const DATA_PROFILE_SCHEDULE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::data_profile_admin::drift::SCHEDULE_JOB, 1);
 
 /// M14-T3: one inbound hook event processed, in its key's order (payload
 /// `attome_api::inbound_hooks::ProcessEvent`). Five attempts, as the inbox
@@ -3216,6 +3223,24 @@ pub fn register_job_types() {
                 let payload: attome_workflow::schedule_trigger::RecordSchedulePayload =
                     job.payload()?;
                 attome_workflow::schedule_trigger::run_record_batch(&state, payload).await
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            DATA_PROFILE_SCHEDULE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let summary = attome_api::data_profile_admin::drift::schedule_sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if summary.started > 0 || summary.pruned > 0 {
+                    tracing::info!(
+                        started = summary.started,
+                        pruned = summary.pruned,
+                        "data profile schedule: done"
+                    );
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");
@@ -4357,6 +4382,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == APPROVAL_EMAIL_LINKS.name => {
             DEDUP_KEY_APPROVAL_EMAIL_LINKS
         }
+        EngineJob::Registered(job) if job.name == DATA_PROFILE_SCHEDULE.name => {
+            DEDUP_KEY_DATA_PROFILE_SCHEDULE
+        }
         EngineJob::Registered(job) if job.name == MAIL_CAPTURE.name => DEDUP_KEY_MAIL_CAPTURE,
         EngineJob::Registered(job) if job.name == INBOUND_MAIL.name => DEDUP_KEY_INBOUND_MAIL,
         EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
@@ -4844,6 +4872,25 @@ pub fn spawn_notification_queue_scheduler(db: DbPool, interval: std::time::Durat
         job,
         DEDUP_KEY_NOTIFICATION_QUEUE,
         "notification queue sweep",
+    );
+}
+
+/// L6-T5: every five minutes, scheduled data profiles and retention.
+pub fn spawn_data_profile_schedule_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(DATA_PROFILE_SCHEDULE.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "data profile schedule: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_DATA_PROFILE_SCHEDULE,
+        "data profile schedule",
     );
 }
 

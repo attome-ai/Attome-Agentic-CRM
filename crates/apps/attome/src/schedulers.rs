@@ -118,6 +118,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(300),
     );
+    // L6-T5: scheduled data profiles and snapshot retention, every five minutes.
+    crate::jobs::spawn_data_profile_schedule_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(300),
+    );
     // M9-T3: approvers mailed a one-time link to each pending step, every minute.
     crate::jobs::spawn_approval_email_links_scheduler(
         db.clone(),
