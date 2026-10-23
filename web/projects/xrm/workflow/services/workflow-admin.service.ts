@@ -144,6 +144,9 @@ export const NODE_TYPES: NodeTypeSpec[] = [
   // E8-T2: a step another module contributes (a journey's send email).
   { type: 'module_step', label: 'Module Step', inputs: [{ name: 'input', portType: 'json' }],
     outputs: [{ name: 'output', portType: 'json' }] },
+  // M1-T4: run a flow once per batch of up to 100 items, then go on.
+  { type: 'for_each', label: 'For Each', inputs: [{ name: 'items', portType: 'json', required: true }],
+    outputs: [{ name: 'out', portType: 'json' }] },
 ];
 
 export function nodeTypeSpec(type: string): NodeTypeSpec | undefined {
@@ -327,6 +330,13 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
   sub_workflow: [
     { key: 'definition_logicalname', label: 'Workflow', kind: 'workflow', required: true,
       hint: 'Must have a published version. Nesting is capped at 20 levels deep.' },
+  ],
+  // scheduler::execute_for_each + for_each_batch_size (M1-T4)
+  for_each: [
+    { key: 'definition_logicalname', label: 'Workflow', kind: 'workflow', required: true,
+      hint: 'Runs once per batch, with {items, batch_index, batch_count} as its input.' },
+    { key: 'batch_size', label: 'Batch size', kind: 'number', default: 100,
+      hint: '1 to 100 items per run.' },
   ],
   // scheduler::execute_webhook
   webhook: [

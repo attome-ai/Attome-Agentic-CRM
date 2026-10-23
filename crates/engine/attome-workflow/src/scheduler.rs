@@ -39,7 +39,7 @@ use uuid::Uuid;
 
 use crate::graph::{Graph, GraphNode};
 use crate::model::{InstanceRow, NodeRunRow, NodeRunState};
-use crate::node_types::NodeType;
+use crate::node_types::{NodeType, ON_ERROR_PORT};
 use crate::trigger_index;
 
 const MAX_PASS_ITERATIONS: usize = 2000;
@@ -344,8 +344,20 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
         None
     };
     let mut iterations = 0usize;
+    // M1-T4: the run's limits. Steps count every node execution so far,
+    // retries included; a run past its time limit fails before its next step.
+    let max_steps = run_limit(state, "workflow.max_steps_per_run");
+    let mut steps_used: i64 = node_runs
+        .values()
+        .map(|nr| i64::from(nr.attempt_count))
+        .sum();
+    let mut limit_exceeded = run_time_exceeded(state, instance_id).await?;
 
     'pass: loop {
+        if limit_exceeded.is_some() {
+            instance_failed = true;
+            break 'pass;
+        }
         iterations += 1;
         if iterations > MAX_PASS_ITERATIONS {
             tracing::error!(%instance_id, "workflow execute: pass exceeded iteration bound, treating as failed");
@@ -381,6 +393,16 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
             {
                 node_data.insert("exit_reason".into(), Value::String(reason));
                 instance_cancelled = true;
+                break 'pass;
+            }
+
+            steps_used += 1;
+            if steps_used > max_steps {
+                limit_exceeded = Some(format!(
+                    "the run made more than {max_steps} node executions \
+                     (limits.workflow.max_steps_per_run)"
+                ));
+                instance_failed = true;
                 break 'pass;
             }
 
@@ -507,6 +529,19 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
                             condition: Some(serde_json::json!({ "kind": "retry" })),
                             resume_at: Some(Utc::now() + chrono::Duration::seconds(backoff_secs)),
                         });
+                    } else if graph
+                        .outbound_edges(&node_id)
+                        .any(|edge| edge.from_port == ON_ERROR_PORT)
+                    {
+                        // M1-T4: the node failed for good but wires
+                        // `on_error`: the run goes on down that port.
+                        let error = error_output(&node_id, &e.to_string());
+                        entry.status = "succeeded".into();
+                        entry.completed_at = Some(Utc::now());
+                        entry.output = Some(error.clone());
+                        node_data.insert(node_id.clone(), error);
+                        record_error_taken(&mut node_data, &node_id);
+                        mark_untaken_branch(&graph, &node_id, ON_ERROR_PORT, &mut node_runs);
                     } else {
                         entry.status = "failed".into();
                         entry.completed_at = Some(Utc::now());
@@ -519,6 +554,11 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
         if instance_failed || !pending_waits.is_empty() {
             break 'pass;
         }
+    }
+
+    if let Some(message) = &limit_exceeded {
+        tracing::warn!(%instance_id, %message, "workflow execute: run limit exceeded, failing the run");
+        node_data.insert("limit_exceeded".into(), Value::String(message.clone()));
     }
 
     let all_terminal = graph.nodes.iter().all(|n| {
@@ -1081,7 +1121,7 @@ pub(crate) fn ready_nodes(
             // instance with nothing on any node_run to say why.
             if graph
                 .inbound_edges(&node.id)
-                .all(|e| upstream_settled(node_runs, node_data, &e.from_node))
+                .all(|e| edge_settled(node_runs, node_data, e))
             {
                 out.push(node.id.clone());
             }
@@ -1096,7 +1136,7 @@ pub(crate) fn ready_nodes(
             let total = inbound.len();
             let settled = inbound
                 .iter()
-                .filter(|e| upstream_settled(node_runs, node_data, &e.from_node))
+                .filter(|e| edge_settled(node_runs, node_data, e))
                 .count();
             let (_, threshold) = join_mode_and_threshold(&node.config, total);
             if total > 0 && settled >= threshold {
@@ -1117,15 +1157,85 @@ pub(crate) fn ready_nodes(
             if edges.is_empty() {
                 return !required;
             }
-            edges
-                .iter()
-                .all(|e| upstream_settled(node_runs, node_data, &e.from_node))
+            edges.iter().all(|e| edge_settled(node_runs, node_data, e))
         });
         if ready {
             out.push(node.id.clone());
         }
     }
     out
+}
+
+/// M1-T4: an `on_error` edge carries something only when its source failed
+/// and took that port; otherwise it is settled like any edge.
+fn edge_settled(
+    node_runs: &HashMap<String, NodeRunState>,
+    node_data: &serde_json::Map<String, Value>,
+    edge: &crate::graph::GraphEdge,
+) -> bool {
+    if edge.from_port == ON_ERROR_PORT && !error_taken(node_data, &edge.from_node) {
+        return false;
+    }
+    upstream_settled(node_runs, node_data, &edge.from_node)
+}
+
+/// M1-T4: the `node_data` key listing the nodes that took `on_error`.
+const ERRORS_TAKEN_KEY: &str = "on_error_taken";
+
+fn error_taken(node_data: &serde_json::Map<String, Value>, node_id: &str) -> bool {
+    node_data
+        .get(ERRORS_TAKEN_KEY)
+        .and_then(Value::as_array)
+        .is_some_and(|ids| ids.iter().any(|v| v.as_str() == Some(node_id)))
+}
+
+fn record_error_taken(node_data: &mut serde_json::Map<String, Value>, node_id: &str) {
+    let ids = node_data
+        .entry(ERRORS_TAKEN_KEY)
+        .or_insert_with(|| Value::Array(Vec::new()));
+    if let Value::Array(ids) = ids
+        && !ids.iter().any(|v| v.as_str() == Some(node_id))
+    {
+        ids.push(Value::String(node_id.to_owned()));
+    }
+}
+
+/// M1-T4: what an `on_error` port carries.
+pub(crate) fn error_output(node_id: &str, message: &str) -> Value {
+    serde_json::json!({
+        "error_kind": attome_core::dead_letter::classify_error(message),
+        "message": message,
+        "node_id": node_id,
+    })
+}
+
+/// M1-T4: a run limit (`limits.workflow.*`): the value an operator stored,
+/// else the registry's default.
+fn run_limit(state: &EngineState, key: &str) -> i64 {
+    state
+        .runtime_limit(key)
+        .or_else(|| attome_config::limits::spec(key).map(|spec| spec.default_solo))
+        .unwrap_or(i64::MAX)
+}
+
+/// M1-T4: why the run is past `limits.workflow.max_run_minutes`, if it is.
+async fn run_time_exceeded(
+    state: &EngineState,
+    instance_id: Uuid,
+) -> Result<Option<String>, AppError> {
+    let max_minutes = run_limit(state, "workflow.max_run_minutes");
+    let started: Option<chrono::DateTime<Utc>> =
+        sqlx::query_scalar("SELECT started_at FROM workflow_instance WHERE id = $1")
+            .bind(instance_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let over = started.is_some_and(|started| {
+        chrono::Duration::try_minutes(max_minutes).is_some_and(|limit| Utc::now() - started > limit)
+    });
+    Ok(over.then(|| {
+        format!("the run is older than {max_minutes} minutes (limits.workflow.max_run_minutes)")
+    }))
 }
 
 /// An edge's source counts as settled when it `succeeded` (with its output
@@ -1214,7 +1324,6 @@ pub(crate) fn propagate_skips(
     node_data: &serde_json::Map<String, Value>,
     node_runs: &mut HashMap<String, NodeRunState>,
 ) -> bool {
-    let _ = node_data;
     let mut progressed = false;
     for node in &graph.nodes {
         let status = node_runs.get(&node.id).map(|nr| nr.status.as_str());
@@ -1225,10 +1334,17 @@ pub(crate) fn propagate_skips(
         if inbound.is_empty() {
             continue;
         }
+        // M1-T4: an `on_error` edge of a node that succeeded without taking
+        // it is as dead as an edge of a skipped node.
         let all_dead = inbound.iter().all(|e| {
             node_runs
                 .get(&e.from_node)
-                .map(|nr| nr.status == "skipped")
+                .map(|nr| {
+                    nr.status == "skipped"
+                        || (e.from_port == ON_ERROR_PORT
+                            && nr.status == "succeeded"
+                            && !error_taken(node_data, &e.from_node))
+                })
                 .unwrap_or(false)
         });
         if all_dead {
@@ -1394,6 +1510,7 @@ async fn execute_node(
         NodeType::Wait => Ok(execute_wait(node)),
         NodeType::WaitForEvent => Ok(execute_wait_for_event(node)),
         NodeType::SubWorkflow => execute_sub_workflow(state, instance, node, input).await,
+        NodeType::ForEach => execute_for_each(state, instance, node, input).await,
         // Plain passthrough — the fan-out itself is just "more than one
         // outbound edge from this node's output port", which the graph
         // already supported before `Split` existed as a named type.
@@ -2749,7 +2866,8 @@ fn execute_wait_for_event(node: &GraphNode) -> NodeOutcome {
 /// `admin.rs`'s publish-time direct-self-reference check catches the most
 /// common authoring mistake (a definition pointing at itself) immediately;
 /// this catches every other cycle length, plus simple runaway fan-out.
-const MAX_SUB_WORKFLOW_DEPTH: i64 = 20;
+/// M1-T4: the largest batch a for-each hands one run.
+pub(crate) const MAX_FOR_EACH_BATCH: usize = 100;
 
 async fn execute_sub_workflow(
     state: &EngineState,
@@ -2765,29 +2883,8 @@ async fn execute_sub_workflow(
             AppError::internal(format!("sub_workflow node {:?} missing config", node.id))
         })?;
 
-    let depth = instance
-        .context
-        .get("workflow_depth")
-        .and_then(Value::as_i64)
-        .unwrap_or(0);
-    if depth >= MAX_SUB_WORKFLOW_DEPTH {
-        return Err(AppError::Validation(format!(
-            "sub-workflow nesting exceeded the maximum depth ({MAX_SUB_WORKFLOW_DEPTH}) — \
-             likely a cycle between workflow definitions (node {:?})",
-            node.id
-        )));
-    }
-
-    let version_id: Uuid = sqlx::query_scalar(
-        "SELECT v.id FROM workflow_definition_version v \
-         JOIN workflow_definition d ON d.id = v.definition_id \
-         WHERE d.logicalname = $1 AND v.status = 'published' AND d.is_active = TRUE AND d.is_deleted = FALSE",
-    )
-    .bind(logicalname)
-    .fetch_optional(&state.base.db)
-    .await
-    .map_err(AppError::internal)?
-    .ok_or_else(|| AppError::Validation(format!("sub-workflow {logicalname:?} has no published version")))?;
+    let depth = nesting_depth(state, instance, node)?;
+    let version_id = published_version(state, logicalname).await?;
 
     let child_context = serde_json::json!({
         "input": input.get("input").cloned().unwrap_or(Value::Null),
@@ -2813,6 +2910,150 @@ async fn execute_sub_workflow(
         ),
         resume_at: None,
         eventual_output: serde_json::json!({ "child_instance_id": child_id }),
+    })
+}
+
+/// The run's nesting depth, refused at `limits.workflow.max_nesting` (M1-T4;
+/// before it, a fixed 20) — likely a cycle between flow definitions.
+fn nesting_depth(
+    state: &EngineState,
+    instance: &InstanceRow,
+    node: &GraphNode,
+) -> Result<i64, AppError> {
+    let depth = instance
+        .context
+        .get("workflow_depth")
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    let max_depth = run_limit(state, "workflow.max_nesting");
+    if depth >= max_depth {
+        return Err(AppError::Validation(format!(
+            "sub-workflow nesting exceeded the maximum depth ({max_depth}, \
+             limits.workflow.max_nesting) — likely a cycle between workflow definitions (node {:?})",
+            node.id
+        )));
+    }
+    Ok(depth)
+}
+
+async fn published_version(state: &EngineState, logicalname: &str) -> Result<Uuid, AppError> {
+    sqlx::query_scalar(
+        "SELECT v.id FROM workflow_definition_version v \
+         JOIN workflow_definition d ON d.id = v.definition_id \
+         WHERE d.logicalname = $1 AND v.status = 'published' AND d.is_active = TRUE AND d.is_deleted = FALSE",
+    )
+    .bind(logicalname)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or_else(|| AppError::Validation(format!("sub-workflow {logicalname:?} has no published version")))
+}
+
+/// M1-T4: the items a for-each goes through: the wired `items` array, a
+/// single value as a list of one, nothing as an empty list.
+pub(crate) fn for_each_items(input: &Value) -> Vec<Value> {
+    match input.get("items") {
+        Some(Value::Array(items)) => items.clone(),
+        Some(Value::Null) | None => Vec::new(),
+        Some(other) => vec![other.clone()],
+    }
+}
+
+/// M1-T4: `config.batch_size`, 1 to [`MAX_FOR_EACH_BATCH`] (the default).
+pub(crate) fn for_each_batch_size(config: &Value) -> usize {
+    config
+        .get("batch_size")
+        .and_then(Value::as_u64)
+        .and_then(|n| usize::try_from(n).ok())
+        .unwrap_or(MAX_FOR_EACH_BATCH)
+        .clamp(1, MAX_FOR_EACH_BATCH)
+}
+
+/// M1-T4: what a for-each reports once every batch run ended, or `None`
+/// while one is still going (or not yet visible).
+pub(crate) fn for_each_summary(statuses: &[String], batch_count: usize) -> Option<Value> {
+    if statuses.len() < batch_count
+        || statuses
+            .iter()
+            .any(|s| !matches!(s.as_str(), "completed" | "failed" | "cancelled"))
+    {
+        return None;
+    }
+    let count = |status: &str| statuses.iter().filter(|s| *s == status).count();
+    Some(serde_json::json!({
+        "batch_count": batch_count,
+        "completed": count("completed"),
+        "failed": count("failed"),
+        "cancelled": count("cancelled"),
+    }))
+}
+
+/// M1-T4: starts one run of the named flow per batch of the items and
+/// waits until they all ended ([`resume_parent_after_sub_workflow`] resumes
+/// this node with [`for_each_summary`] once the last one does).
+async fn execute_for_each(
+    state: &EngineState,
+    instance: &InstanceRow,
+    node: &GraphNode,
+    input: &Value,
+) -> Result<NodeOutcome, AppError> {
+    let logicalname = node
+        .config
+        .get("definition_logicalname")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            AppError::Validation(format!("for_each node {:?} names no flow", node.id))
+        })?;
+    let items = for_each_items(input);
+    let max_items = run_limit(state, "workflow.max_loop_items");
+    if i64::try_from(items.len()).unwrap_or(i64::MAX) > max_items {
+        return Err(AppError::Validation(format!(
+            "for_each node {:?}: {} items is more than {max_items} (limits.workflow.max_loop_items)",
+            node.id,
+            items.len()
+        )));
+    }
+    if items.is_empty() {
+        return Ok(NodeOutcome::Succeeded {
+            output: serde_json::json!({
+                "batch_count": 0, "completed": 0, "failed": 0, "cancelled": 0,
+                "child_instance_ids": [],
+            }),
+        });
+    }
+    let depth = nesting_depth(state, instance, node)?;
+    let version_id = published_version(state, logicalname).await?;
+    let batches: Vec<&[Value]> = items.chunks(for_each_batch_size(&node.config)).collect();
+    let batch_count = batches.len();
+    let mut children = Vec::with_capacity(batch_count);
+    for (batch_index, batch) in batches.into_iter().enumerate() {
+        let context = serde_json::json!({
+            "input": { "items": batch, "batch_index": batch_index, "batch_count": batch_count },
+            "parent_instance_id": instance.id,
+            "parent_node_id": node.id,
+            "workflow_depth": depth + 1,
+        });
+        children.push(
+            crate::instance_admin::start_instance_internal(
+                state,
+                version_id,
+                None,
+                instance.started_by,
+                None,
+                context,
+            )
+            .await?,
+        );
+    }
+    Ok(NodeOutcome::Waiting {
+        match_type: "signal",
+        entity_logicalname: None,
+        condition: Some(serde_json::json!({ "kind": "for_each", "child_instance_ids": children })),
+        resume_at: None,
+        eventual_output: serde_json::json!({
+            "child_instance_ids": children,
+            "batch_count": batch_count,
+        }),
     })
 }
 
@@ -2932,8 +3173,11 @@ pub(crate) async fn resume_parent_after_sub_workflow(
     child_status: &str,
 ) -> Result<(), AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    // `FOR UPDATE`: two batch runs of one for-each ending together resume
+    // it once (M1-T4).
     let node_run_id: Option<Uuid> = sqlx::query_scalar(
-        "SELECT id FROM workflow_node_run WHERE instance_id = $1 AND node_id = $2 AND status = 'waiting'",
+        "SELECT id FROM workflow_node_run \
+         WHERE instance_id = $1 AND node_id = $2 AND status = 'waiting' FOR UPDATE",
     )
     .bind(parent_instance_id)
     .bind(parent_node_id)
@@ -2943,6 +3187,46 @@ pub(crate) async fn resume_parent_after_sub_workflow(
     let Some(node_run_id) = node_run_id else {
         tx.rollback().await.ok();
         return Ok(());
+    };
+
+    // A for-each's waiting output lists its batch runs; it resumes only
+    // when the last of them ended.
+    let waiting: Option<Value> =
+        sqlx::query_scalar("SELECT node_data -> $2 FROM workflow_instance WHERE id = $1")
+            .bind(parent_instance_id)
+            .bind(parent_node_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(AppError::internal)?
+            .flatten();
+    let batch_runs: Option<Vec<Uuid>> = waiting
+        .as_ref()
+        .and_then(|w| w.get("child_instance_ids"))
+        .and_then(Value::as_array)
+        .map(|ids| {
+            ids.iter()
+                .filter_map(Value::as_str)
+                .filter_map(|id| Uuid::parse_str(id).ok())
+                .collect()
+        });
+    let output = match batch_runs {
+        Some(ids) => {
+            let statuses: Vec<String> =
+                sqlx::query_scalar("SELECT status FROM workflow_instance WHERE id = ANY($1)")
+                    .bind(&ids)
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(AppError::internal)?;
+            let Some(mut summary) = for_each_summary(&statuses, ids.len()) else {
+                tx.rollback().await.ok();
+                return Ok(());
+            };
+            summary["child_instance_ids"] = serde_json::json!(ids);
+            summary
+        }
+        None => {
+            serde_json::json!({ "child_instance_id": child_instance_id, "status": child_status })
+        }
     };
 
     sqlx::query(
@@ -2961,7 +3245,7 @@ pub(crate) async fn resume_parent_after_sub_workflow(
     )
     .bind(parent_instance_id)
     .bind(parent_node_id)
-    .bind(serde_json::json!({ "child_instance_id": child_instance_id, "status": child_status }))
+    .bind(&output)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -3267,5 +3551,136 @@ mod join_split_tests {
         let runs: HashMap<String, NodeRunState> = HashMap::new();
         let data = serde_json::Map::new();
         assert!(!ready_nodes(&graph, &runs, &data).contains(&"j".to_string()));
+    }
+}
+
+#[cfg(test)]
+mod for_each_tests {
+    //! M1-T4: for-each batching, its summary, and the `on_error` port's
+    //! liveness — pure logic, no database.
+    use super::*;
+    use crate::graph::{Graph, GraphEdge, GraphNode};
+
+    fn node(id: &str, ty: &str) -> GraphNode {
+        GraphNode {
+            id: id.into(),
+            node_type: ty.into(),
+            config: serde_json::json!({}),
+            ports: Value::Null,
+        }
+    }
+
+    fn edge(from_node: &str, from_port: &str, to_node: &str, to_port: &str) -> GraphEdge {
+        GraphEdge {
+            from_node: from_node.into(),
+            from_port: from_port.into(),
+            to_node: to_node.into(),
+            to_port: to_port.into(),
+        }
+    }
+
+    fn settled(id: &str, status: &str) -> (String, NodeRunState) {
+        let mut nr = new_node_run_state(id);
+        nr.status = status.into();
+        (id.to_owned(), nr)
+    }
+
+    #[test]
+    fn for_each_splits_a_thousand_items_into_batches_of_a_hundred() {
+        let items: Vec<Value> = (0..1000).map(|i| serde_json::json!(i)).collect();
+        let input = serde_json::json!({ "items": items });
+        let list = for_each_items(&input);
+        let size = for_each_batch_size(&serde_json::json!({}));
+        assert_eq!(size, MAX_FOR_EACH_BATCH);
+        assert_eq!(list.chunks(size).count(), 10);
+        assert_eq!(
+            for_each_batch_size(&serde_json::json!({ "batch_size": 500 })),
+            100
+        );
+        assert_eq!(
+            for_each_batch_size(&serde_json::json!({ "batch_size": 0 })),
+            1
+        );
+        assert_eq!(
+            for_each_items(&serde_json::json!({ "items": "one" })).len(),
+            1
+        );
+        assert!(for_each_items(&serde_json::json!({})).is_empty());
+    }
+
+    #[test]
+    fn for_each_resumes_only_when_every_batch_run_ended() {
+        let s = |list: &[&str]| list.iter().map(|x| (*x).to_owned()).collect::<Vec<_>>();
+        assert_eq!(for_each_summary(&s(&["completed", "running"]), 2), None);
+        assert_eq!(
+            for_each_summary(&s(&["completed"]), 2),
+            None,
+            "one not visible yet"
+        );
+        let done = for_each_summary(&s(&["completed", "failed", "completed"]), 3).expect("done");
+        assert_eq!(done["completed"], 2);
+        assert_eq!(done["failed"], 1);
+        assert_eq!(done["batch_count"], 3);
+    }
+
+    #[test]
+    fn for_each_on_error_port_carries_the_failure() {
+        let out = error_output("call_erp", "webhook delivery timed out");
+        assert_eq!(out["node_id"], "call_erp");
+        assert_eq!(out["error_kind"], "timeout");
+        assert_eq!(out["message"], "webhook delivery timed out");
+    }
+
+    /// `t -> w`, `w.out -> ok`, `w.on_error -> handler`.
+    fn error_graph() -> Graph {
+        Graph {
+            nodes: vec![
+                node("t", "trigger"),
+                node("w", "webhook"),
+                node("ok", "wait"),
+                node("handler", "wait"),
+            ],
+            edges: vec![
+                edge("t", "out", "w", "body"),
+                edge("w", "response", "ok", "in"),
+                edge("w", ON_ERROR_PORT, "handler", "in"),
+            ],
+        }
+    }
+
+    #[test]
+    fn for_each_on_error_handler_is_skipped_when_the_node_succeeds() {
+        let graph = error_graph();
+        let mut runs: HashMap<String, NodeRunState> =
+            [settled("t", "succeeded"), settled("w", "succeeded")]
+                .into_iter()
+                .collect();
+        let mut data = serde_json::Map::new();
+        data.insert("t".into(), serde_json::json!({}));
+        data.insert("w".into(), serde_json::json!({ "status": 200 }));
+        let ready = ready_nodes(&graph, &runs, &data);
+        assert_eq!(ready, vec!["ok".to_owned()], "the handler is not ready");
+        runs.extend([settled("ok", "succeeded")]);
+        assert!(propagate_skips(&graph, &data, &mut runs));
+        assert_eq!(runs["handler"].status, "skipped");
+    }
+
+    #[test]
+    fn for_each_on_error_handler_runs_when_the_node_took_the_port() {
+        let graph = error_graph();
+        let mut runs: HashMap<String, NodeRunState> =
+            [settled("t", "succeeded"), settled("w", "succeeded")]
+                .into_iter()
+                .collect();
+        let mut data = serde_json::Map::new();
+        data.insert("t".into(), serde_json::json!({}));
+        data.insert("w".into(), error_output("w", "boom"));
+        record_error_taken(&mut data, "w");
+        mark_untaken_branch(&graph, "w", ON_ERROR_PORT, &mut runs);
+        assert_eq!(runs["ok"].status, "skipped", "the normal path is skipped");
+        assert_eq!(
+            ready_nodes(&graph, &runs, &data),
+            vec!["handler".to_owned()]
+        );
     }
 }

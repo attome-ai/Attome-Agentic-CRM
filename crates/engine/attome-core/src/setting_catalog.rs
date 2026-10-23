@@ -255,6 +255,39 @@ fn limit_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(60_000),
         ),
+        // M1-T4: a flow run's bounds.
+        SettingDescriptor::new(
+            "limits.workflow.max_steps_per_run",
+            "Node executions one flow run may make, retries included; the run fails when it would make more. 10 to 100,000.",
+            || json!({ "type": "integer", "minimum": 10, "maximum": 100_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(1_000),
+        ),
+        SettingDescriptor::new(
+            "limits.workflow.max_loop_items",
+            "Items one for-each step may go through; a longer list fails the step. 1 to 1,000,000.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 1_000_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(10_000),
+        ),
+        SettingDescriptor::new(
+            "limits.workflow.max_nesting",
+            "Levels of sub-flows and for-each runs one run may nest inside each other. 1 to 50.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 50 }),
+            DEPLOYMENT,
+            false,
+            || json!(20),
+        ),
+        SettingDescriptor::new(
+            "limits.workflow.max_run_minutes",
+            "Minutes a flow run may last, waits included; an older run fails on its next step. 1 to 525,600.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 525_600 }),
+            DEPLOYMENT,
+            false,
+            || json!(43_200),
+        ),
         // AA9-T7: not a limit itself, the share of one at which the daily
         // check warns the administrators.
         SettingDescriptor::new(

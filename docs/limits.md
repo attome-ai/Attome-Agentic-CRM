@@ -34,6 +34,10 @@ gets one notification per warning limit.
 | `query.timeout_ms.interactive` | how long an ordinary request's statement may run | resource | runtime setting | 5,000 milliseconds |
 | `query.timeout_ms.report` | how long a report's statement may run | resource | runtime setting | 60,000 milliseconds |
 | `query.timeout_ms.export` | how long an export's statement may run | resource | runtime setting | 60,000 milliseconds |
+| `workflow.max_steps_per_run` | node executions one flow run may make, retries included | resource | runtime setting | 1,000 node runs |
+| `workflow.max_loop_items` | items one for-each step may go through | resource | runtime setting | 10,000 items |
+| `workflow.max_nesting` | sub-flows and for-each runs one run may nest inside each other | resource | runtime setting | 20 levels |
+| `workflow.max_run_minutes` | minutes a flow run may last, waits included | resource | runtime setting | 43,200 minutes (30 days) |
 | `ai.spend.deployment_monthly` | what the whole deployment may spend on models in a month | resource | runtime setting | no cap |
 | `ai.spend.caller_monthly` | what one person may spend on models in a month | resource | runtime setting | no cap |
 | `ai.spend.agent_monthly` | what one agent may spend on models in a month | resource | runtime setting | no cap |

@@ -110,10 +110,24 @@ pub enum NodeType {
     /// classified as the most conservative step: an external effect behind
     /// the fired-marker mechanism.
     ModuleStep,
+    /// M1-T4: runs the flow named by `config.definition_logicalname` once
+    /// per batch of the wired `items` (an array; `config.batch_size`, at
+    /// most 100, default 100), each batch as its own run with
+    /// `{"items", "batch_index", "batch_count"}` as its input, and waits
+    /// until every batch run has ended. Output: the batch count and how many
+    /// runs completed, failed or were cancelled. The list may hold at most
+    /// `limits.workflow.max_loop_items` items.
+    ForEach,
 }
 
+/// M1-T4: the output port every node except a trigger may wire. When the
+/// node fails for good it takes this port with `{error_kind, message,
+/// node_id}` instead of failing the run; when it succeeds, whatever only
+/// this port feeds is skipped.
+pub const ON_ERROR_PORT: &str = "on_error";
+
 impl NodeType {
-    pub const ALL: [Self; 18] = [
+    pub const ALL: [Self; 19] = [
         Self::Trigger,
         Self::Condition,
         Self::CreateRecord,
@@ -132,6 +146,7 @@ impl NodeType {
         Self::DuplicateCheck,
         Self::Assign,
         Self::ModuleStep,
+        Self::ForEach,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -154,6 +169,7 @@ impl NodeType {
             Self::DuplicateCheck => "duplicate_check",
             Self::Assign => "assign",
             Self::ModuleStep => "module_step",
+            Self::ForEach => "for_each",
         }
     }
 
@@ -173,7 +189,7 @@ impl NodeType {
     pub fn is_wait_capable(self) -> bool {
         matches!(
             self,
-            Self::Wait | Self::WaitForEvent | Self::Approval | Self::SubWorkflow
+            Self::Wait | Self::WaitForEvent | Self::Approval | Self::SubWorkflow | Self::ForEach
         )
     }
 
@@ -209,6 +225,7 @@ impl NodeType {
             | Self::Wait
             | Self::WaitForEvent
             | Self::SubWorkflow
+            | Self::ForEach
             | Self::Split
             | Self::Join
             | Self::Route
@@ -275,6 +292,7 @@ impl NodeType {
             Self::DuplicateCheck => &[("record_id", PortType::RecordId, true)],
             Self::Assign => &[("record_id", PortType::RecordId, true)],
             Self::ModuleStep => &[("input", PortType::Json, false)],
+            Self::ForEach => &[("items", PortType::Json, true)],
         }
     }
 
@@ -327,6 +345,7 @@ impl NodeType {
             Self::DuplicateCheck => &[("found", PortType::Json), ("none", PortType::Json)],
             Self::Assign => &[("record", PortType::RecordId)],
             Self::ModuleStep => &[("output", PortType::Json)],
+            Self::ForEach => &[("out", PortType::Json)],
         }
     }
 
@@ -382,13 +401,15 @@ impl NodeType {
                 retry: RetryClass::RequiresKey,
             },
             // Wait-capable types. No effect of their own; they suspend.
-            Self::Approval | Self::Wait | Self::WaitForEvent | Self::SubWorkflow => {
-                NodeCapability {
-                    risk: RiskTier::Read,
-                    effect: Effect::Read,
-                    retry: RetryClass::Idempotent,
-                }
-            }
+            Self::Approval
+            | Self::Wait
+            | Self::WaitForEvent
+            | Self::SubWorkflow
+            | Self::ForEach => NodeCapability {
+                risk: RiskTier::Read,
+                effect: Effect::Read,
+                retry: RetryClass::Idempotent,
+            },
             // Pure graph-shape markers — a `Split` copies its input to its
             // output, a `Join` merges whichever branch outputs have settled.
             // Neither reaches outside the process.
@@ -862,7 +883,7 @@ mod tests {
         for node in NodeType::ALL {
             let _ = node.capability();
         }
-        assert_eq!(NodeType::ALL.len(), 18, "the node set is closed (I-5)");
+        assert_eq!(NodeType::ALL.len(), 19, "the node set is closed (I-5)");
     }
 
     /// `Split`/`Join` are graph-shape markers, not the branching type
@@ -949,5 +970,19 @@ mod tests {
         assert_eq!(cap.risk, d.risk);
         assert_eq!(cap.effect, d.effect);
         assert_eq!(cap.retry, d.retry);
+    }
+
+    /// M1-T4's `for_each`, pinned: waits for its batch runs, starts them
+    /// like a sub-flow (no external effect of its own), never branches.
+    #[test]
+    fn for_each_waits_reads_items_and_does_not_branch() {
+        let t = NodeType::ForEach;
+        assert_eq!(NodeType::parse("for_each"), Some(t));
+        assert!(t.is_wait_capable());
+        assert!(!t.is_branching());
+        assert!(!t.is_entry());
+        assert_eq!(t.side_effect(), SideEffect::None);
+        assert_eq!(t.input_ports(), &[("items", PortType::Json, true)]);
+        assert_eq!(t.output_ports(), &[("out", PortType::Json)]);
     }
 }

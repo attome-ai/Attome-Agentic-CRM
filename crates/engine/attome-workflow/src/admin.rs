@@ -987,7 +987,7 @@ async fn publish_version(
     // definition's own sub_workflow node pointing at itself. A cycle
     // spanning two or more *different* definitions can't be fully ruled out
     // here (a target definition can be edited/republished after this check
-    // passes) — `scheduler::MAX_SUB_WORKFLOW_DEPTH` is the runtime backstop
+    // passes) — `limits.workflow.max_nesting` (`scheduler::nesting_depth`) is the runtime backstop
     // for every cycle length this check can't see.
     let (own_logicalname, own_name): (String, String) =
         sqlx::query_as("SELECT logicalname, name FROM workflow_definition WHERE id = $1")

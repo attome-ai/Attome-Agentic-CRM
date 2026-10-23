@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::node_types::NodeType;
+use crate::node_types::{NodeType, PortType};
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct GraphNode {
@@ -64,14 +64,15 @@ impl Graph {
 /// of the "sub-workflow recursion" risk (a cycle across two or more
 /// *different* definitions can't be fully ruled out at publish time, since
 /// a target definition can be edited/republished later — see
-/// `scheduler::MAX_SUB_WORKFLOW_DEPTH` for that half). Pure and DB-free so
+/// `limits.workflow.max_nesting` for that half). Pure and DB-free so
 /// it's directly unit-testable, unlike the HTTP handler it's called from.
 pub fn reject_self_referencing_sub_workflow(
     graph: &Graph,
     own_logicalname: &str,
 ) -> Result<(), ValidationError> {
     for node in &graph.nodes {
-        if node.node_type != "sub_workflow" {
+        // M1-T4: a for-each runs its flow too.
+        if node.node_type != "sub_workflow" && node.node_type != "for_each" {
             continue;
         }
         if node
@@ -184,6 +185,28 @@ pub fn validate(graph: &Graph) -> Result<String, ValidationError> {
             ))
         })?;
         typed.insert(node.id.as_str(), node_type);
+        // M1-T4: a for-each names its flow and a batch of 1 to 100.
+        if node_type == NodeType::ForEach {
+            if node
+                .config
+                .get("definition_logicalname")
+                .and_then(serde_json::Value::as_str)
+                .is_none_or(str::is_empty)
+            {
+                return Err(ValidationError(format!(
+                    "for_each node {:?} must name the flow to run (definition_logicalname)",
+                    node.id
+                )));
+            }
+            if let Some(size) = node.config.get("batch_size")
+                && !size.as_i64().is_some_and(|n| (1..=100).contains(&n))
+            {
+                return Err(ValidationError(format!(
+                    "for_each node {:?}: batch_size must be a whole number from 1 to 100",
+                    node.id
+                )));
+            }
+        }
         // Z11-T15: a Condition's expression parses at publish.
         if node_type == NodeType::Condition
             && let Some(expression) = crate::condition::expression_of(&node.config)
@@ -222,11 +245,16 @@ pub fn validate(graph: &Graph) -> Result<String, ValidationError> {
                 edge.to_node
             ))
         })?;
+        // M1-T4: every node but a trigger has an `on_error` port.
+        let error_port = (edge.from_port == crate::node_types::ON_ERROR_PORT
+            && !from_type.is_entry())
+        .then_some((crate::node_types::ON_ERROR_PORT, PortType::Json));
         let (_, from_port_type) = from_type
             .output_ports()
             .iter()
             .find(|(name, _)| *name == edge.from_port)
             .copied()
+            .or(error_port)
             .ok_or_else(|| {
                 ValidationError(format!(
                     "node {:?} ({from_type}) has no output port {:?}",

@@ -102,6 +102,30 @@ const fn ai_budget(key: &'static str, purpose: &'static str) -> LimitSpec {
     }
 }
 
+/// M1-T4: a flow run's bounds, changed at run time.
+const fn workflow_limit(
+    key: &'static str,
+    purpose: &'static str,
+    default: i64,
+    floor: i64,
+    ceiling: i64,
+    unit: &'static str,
+) -> LimitSpec {
+    LimitSpec {
+        key,
+        purpose,
+        kind: LimitKind::Resource,
+        scope: LimitScope::RuntimeSetting,
+        default_solo: default,
+        default_team: default,
+        default_scale: default,
+        floor,
+        ceiling,
+        unit,
+        owner: "M1",
+    }
+}
+
 /// Every limit.
 pub static LIMITS: &[LimitSpec] = &[
     rate(
@@ -186,6 +210,38 @@ pub static LIMITS: &[LimitSpec] = &[
         unit: "attempts",
         owner: "authentication",
     },
+    workflow_limit(
+        "workflow.max_steps_per_run",
+        "node executions one flow run may make, retries included",
+        1_000,
+        10,
+        100_000,
+        "node runs",
+    ),
+    workflow_limit(
+        "workflow.max_loop_items",
+        "items one for-each step may go through",
+        10_000,
+        1,
+        1_000_000,
+        "items",
+    ),
+    workflow_limit(
+        "workflow.max_nesting",
+        "sub-flows and for-each runs one run may nest inside each other",
+        20,
+        1,
+        50,
+        "levels",
+    ),
+    workflow_limit(
+        "workflow.max_run_minutes",
+        "minutes a flow run may last, waits included",
+        43_200,
+        1,
+        525_600,
+        "minutes",
+    ),
     ai_budget(
         "ai.spend.deployment_monthly",
         "what the whole deployment may spend on models in a month",

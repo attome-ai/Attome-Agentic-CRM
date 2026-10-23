@@ -488,6 +488,7 @@ fn simulate_node(
         NodeType::Wait => Ok(simulate_wait(node)),
         NodeType::WaitForEvent => Ok(simulate_wait_for_event(node)),
         NodeType::SubWorkflow => simulate_sub_workflow(node),
+        NodeType::ForEach => simulate_for_each(node, input),
         NodeType::AgentStep => simulate_agent_step(node, input),
         NodeType::Route => Ok(simulate_route(node, approval_decisions)),
         NodeType::ModuleStep => simulate_module_step(state, node, module_steps),
@@ -853,6 +854,25 @@ fn simulate_sub_workflow(node: &GraphNode) -> Result<SimOutcome, AppError> {
     Ok(SimOutcome::WouldWait {
         reason: format!(
             "would start child workflow {logicalname:?} — a simulate run never starts a real sub-workflow instance"
+        ),
+        eventual_output: Value::Null,
+    })
+}
+
+/// M1-T4: a dry run starts no batch run; it says how many it would start.
+fn simulate_for_each(node: &GraphNode, input: &Value) -> Result<SimOutcome, AppError> {
+    let logicalname = node
+        .config
+        .get("definition_logicalname")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            AppError::Validation(format!("for_each node {:?} names no flow", node.id))
+        })?;
+    let items = scheduler::for_each_items(input).len();
+    let batches = items.div_ceil(scheduler::for_each_batch_size(&node.config));
+    Ok(SimOutcome::WouldWait {
+        reason: format!(
+            "would run {logicalname:?} {batches} times for {items} items — a simulate run starts no batch run"
         ),
         eventual_output: Value::Null,
     })

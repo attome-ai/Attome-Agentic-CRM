@@ -184,6 +184,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Flow loops, error branches and run limits (M1-T4): node type `for_each` runs the flow named by
+  `definition_logicalname` once per batch of its `items` (`batch_size` 1–100, default 100), each
+  batch with `{items, batch_index, batch_count}` as input, and waits for every batch run; its output
+  counts the runs that completed, failed or were cancelled. Every node except a trigger may wire an
+  `on_error` port: a node that fails for good takes it with `{error_kind, message, node_id}` instead
+  of failing the run, and a node that succeeds skips what only that port feeds. New runtime limits
+  `limits.workflow.max_steps_per_run` (1,000), `max_loop_items` (10,000), `max_nesting` (20, which
+  replaces the fixed sub-flow depth) and `max_run_minutes` (30 days); a run past one fails with the
+  reason in `node_data.limit_exceeded`.
 - Dead-letter alerts and retention (M5-T4): an hourly `dead_letter_sweep` job discards items that
   first failed more than `jobs.dead_letter_retention_days` ago (through their source, as the system
   user, with the reason on the audit event), and counts groups that are new or gained ten or more
