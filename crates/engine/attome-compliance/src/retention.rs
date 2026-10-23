@@ -599,7 +599,33 @@ async fn execute_entity_purge(
     approved_by: Option<Uuid>,
 ) -> Result<Option<String>, AppError> {
     let (entity_logicalname, record_id) = parse_entity_target(target)?;
+    // Defensive default only — every row reaching `execute_action` was set
+    // by the approve endpoint, which always records `approved_by`. Not an
+    // `unwrap()` (guidelines §6) in case an older/hand-inserted row lacks it.
+    let actor = approved_by.unwrap_or(Uuid::nil());
+    let (key_destroyed, scrubbed) = purge_record(
+        state,
+        entity_logicalname,
+        record_id,
+        actor,
+        "retention_purge",
+    )
+    .await?;
+    Ok(Some(format!(
+        "key_destroyed={key_destroyed}, scrubbed={scrubbed}"
+    )))
+}
 
+/// Crypto-shreds and scrubs one record as `actor`, writing `event_name` as
+/// its Security/Erasure audit event; whether the key was destroyed and the
+/// record scrubbed. K7-T1's approved dispositions purge through it too.
+pub(crate) async fn purge_record(
+    state: &EngineState,
+    entity_logicalname: &str,
+    record_id: Uuid,
+    actor: Uuid,
+    event_name: &str,
+) -> Result<(bool, bool), AppError> {
     let registry = state.entities.load();
     let meta = registry.get(entity_logicalname).ok_or_else(|| {
         AppError::internal(format!(
@@ -607,11 +633,7 @@ async fn execute_entity_purge(
         ))
     })?;
     let attrs = meta.attrs.clone();
-
-    // Defensive default only — every row reaching `execute_action` was set
-    // by the approve endpoint, which always records `approved_by`. Not an
-    // `unwrap()` (guidelines §6) in case an older/hand-inserted row lacks it.
-    let actor = approved_by.unwrap_or(Uuid::nil());
+    drop(registry);
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
@@ -676,7 +698,7 @@ async fn execute_entity_purge(
         request_context: AuditRequestContext::default(),
         correlation_id: None,
         batch_id: None,
-        event_name: Some("retention_purge".to_string()),
+        event_name: Some(event_name.to_string()),
         event_comment: Some(format!(
             "P-retention-archive-completion: retention purge for {entity_logicalname}/{record_id} \
              (key_destroyed={key_destroyed}, scrubbed={scrubbed})"
@@ -698,9 +720,7 @@ async fn execute_entity_purge(
     )
     .await;
 
-    Ok(Some(format!(
-        "key_destroyed={key_destroyed}, scrubbed={scrubbed}"
-    )))
+    Ok((key_destroyed, scrubbed))
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────

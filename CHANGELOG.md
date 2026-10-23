@@ -188,6 +188,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Records management (K7-T1): `POST /api/v1/admin/records/categories` (and `GET`) keeps records
+  categories; `POST /api/v1/admin/records/declarations` declares a record under one, after which the
+  generic update, delete, hard delete and restore refuse it with `409`. `POST
+  /api/v1/admin/records/dispositions` asks for a declared record's disposition and
+  `.../dispositions/{id}/decide` lets a second administrator approve or reject it: approval refuses a
+  record under a legal hold, purges it as retention does and stores a certificate with its SHA-256
+  (migration 0242).
 - Evidence collectors (R11-T1): the daily `grc_evidence_collect` job writes a `grc_evidence` record
   per check: administrators with a confirmed second factor, the administrator count (at most
   `grc.max_admins`, default 5), undecided accesses in completed access reviews, the newest restore

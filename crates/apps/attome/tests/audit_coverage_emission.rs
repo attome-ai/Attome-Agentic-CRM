@@ -885,6 +885,54 @@ async fn provision_entity_and_record(fx: &Fx) -> (Uuid, Uuid) {
     (entity_id, id_of(&record))
 }
 
+/// K7-T1: a fresh records category's id.
+async fn records_category(fx: &Fx) -> Uuid {
+    id_of(
+        &admin(
+            fx,
+            "POST",
+            "/api/v1/admin/records/categories",
+            Some(json!({"name": uniq("category")})),
+        )
+        .await,
+    )
+}
+
+/// K7-T1: a declared record of the throwaway entity with a pending
+/// disposition another person asked for; the request's id.
+async fn pending_disposition(fx: &Fx) -> Uuid {
+    let category = records_category(fx).await;
+    let record = entity_record(fx, "to dispose").await;
+    admin(
+        fx,
+        "POST",
+        "/api/v1/admin/records/declarations",
+        Some(json!({"entity": fx.entity, "record_id": record, "category_id": category})),
+    )
+    .await;
+    let requester = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO user_account (id, user_name, email, is_active) \
+         VALUES ($1, $2, $2 || '@test.invalid', true)",
+    )
+    .bind(requester)
+    .bind(format!("records-requester-{requester}"))
+    .execute(&fx.base.db)
+    .await
+    .expect("a requester");
+    sqlx::query_scalar(
+        "INSERT INTO record_disposition (entity, record_id, category_ref, requested_by) \
+         VALUES ($1, $2, $3, $4) RETURNING id",
+    )
+    .bind(&fx.entity)
+    .bind(record)
+    .bind(category)
+    .bind(requester)
+    .fetch_one(&fx.base.db)
+    .await
+    .expect("a pending disposition")
+}
+
 /// L1-T5: the throwaway entity as master data (its side tables) and a fresh
 /// golden record of it.
 async fn master_golden(fx: &Fx) -> Uuid {
@@ -5709,6 +5757,32 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 &format!("/api/v1/admin/data/quality/targets/{}", fx.entity),
                 t,
                 None,
+            )
+        }
+        // K7-T1: records management.
+        "POST /api/v1/admin/records/categories" => request(
+            "POST",
+            "/api/v1/admin/records/categories",
+            t,
+            Some(json!({"name": uniq("category")})),
+        ),
+        "POST /api/v1/admin/records/declarations" => {
+            let category = records_category(fx).await;
+            let record = entity_record(fx, "to declare").await;
+            request(
+                "POST",
+                "/api/v1/admin/records/declarations",
+                t,
+                Some(json!({"entity": fx.entity, "record_id": record, "category_id": category})),
+            )
+        }
+        "POST /api/v1/admin/records/dispositions/{id}/decide" => {
+            let id = pending_disposition(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/records/dispositions/{id}/decide"),
+                t,
+                Some(json!({"decision": "approve"})),
             )
         }
         // L1-T5: a steward's pins and certification of a golden record.

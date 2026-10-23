@@ -1016,6 +1016,8 @@ pub async fn update_record_for_outcome(
     if is_append_only {
         return Err(AppError::Forbidden);
     }
+    // K7-T1: a declared record is immutable on the generic write path.
+    super::declared::refuse_if_declared(&state.base.db, &entity_name, record_id).await?;
     require_record_access(
         &state,
         ctx,
@@ -1548,6 +1550,8 @@ pub async fn delete_record_for(
     if is_append_only {
         return Err(AppError::Forbidden);
     }
+    // K7-T1: a declared record is immutable on the generic write path.
+    super::declared::refuse_if_declared(&state.base.db, &entity_name, record_id).await?;
     crate::entity_mutation::require_metadata_table_unlocked(state, ctx, &entity_name).await?;
     require_record_access(
         state,
@@ -1773,6 +1777,8 @@ pub async fn hard_delete_record_for(
     if is_append_only {
         return Err(AppError::Forbidden);
     }
+    // K7-T1: a declared record is immutable on the generic write path.
+    super::declared::refuse_if_declared(&state.base.db, &entity_name, record_id).await?;
     crate::entity_mutation::require_metadata_table_unlocked(state, ctx, &entity_name).await?;
     require_record_access_any_active_state(
         state,
@@ -2002,6 +2008,8 @@ pub async fn restore_record_for(
     if is_append_only {
         return Err(AppError::Forbidden);
     }
+    // K7-T1: a declared record is immutable on the generic write path.
+    super::declared::refuse_if_declared(&state.base.db, &entity_name, record_id).await?;
     let actor = MutationActor::fetch(state, acting_user_id).await;
     let dependents = state.entities.load().dependents_of(entity_id);
 

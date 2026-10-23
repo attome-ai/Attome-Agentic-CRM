@@ -467,6 +467,13 @@ impl EngineSystem {
                 ),
             )
             .merge(
+                // K7-T1: records categories, declarations and dispositions.
+                attome_compliance::records_mgmt::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // M23 Records Management (D-456) — archive disposition
                 // admin surface (list + restore).
                 attome_compliance::archive_admin::routes().layer(middleware::from_fn_with_state(
