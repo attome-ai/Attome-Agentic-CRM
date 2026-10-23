@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Revenue contracts from sources (F11-T3): with `revrec.contracts` on, a confirmed order or an active
+  subscription gets a revenue contract and, per line, obligations from the product's revenue rule
+  (one per split template kind by weight), built once in a background job;
+  `POST /api/v1/ledger/revrec/contracts/combine` merges one customer's contracts unless a schedule
+  line is locked.
 - Revenue schedules (F11-T2): `attome_ledger::revrec::schedule` spreads an invoice line evenly per day
   over its service period across fiscal periods of any length (the last takes the rounding
   remainder), or recognises it on the invoice date, and writes its revenue contract, obligation and

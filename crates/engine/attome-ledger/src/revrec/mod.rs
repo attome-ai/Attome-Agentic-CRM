@@ -4,4 +4,6 @@
 //! contract changes and the period close follow in their own modules
 //! (F11-T3 onward).
 
+/// F11-T3: contracts from orders and subscriptions, and combining them.
+pub mod contract;
 pub mod schedule;

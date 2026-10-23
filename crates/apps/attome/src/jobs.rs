@@ -1796,6 +1796,26 @@ async fn dispatch_platform_job(
                     .await?;
             tracing::info!(?stats, "data quality daily snapshot: run complete");
         }
+        // F11-T3: revenue contracts from confirmed orders and active
+        // subscriptions.
+        EngineJob::RevrecContractSweep => {
+            let queued = attome_ledger::revrec::contract::sweep(&attome_state).await?;
+            if queued > 0 {
+                tracing::info!(queued, "revenue contracts: builds queued");
+            }
+        }
+        EngineJob::RevrecContractFromSource {
+            source_kind,
+            source_id,
+        } => {
+            let built = attome_ledger::revrec::contract::build_from_source(
+                &attome_state,
+                &source_kind,
+                source_id,
+            )
+            .await?;
+            tracing::info!(%source_kind, %source_id, ?built, "revenue contract built");
+        }
         EngineJob::QualityIncrementalSweep => {
             let stats = attome_api::quality::incremental::tick(&attome_state).await?;
             if stats != attome_api::quality::incremental::TickStats::default() {
@@ -2807,6 +2827,7 @@ const DEDUP_KEY_MARKETING_SWEEP: &str = "marketing-sweep";
 const DEDUP_KEY_ROLE_GRANT_EXPIRY: &str = "role-grant-expiry";
 const DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP: &str = "sales-default-team-sweep";
 const DEDUP_KEY_QUALITY_INCREMENTAL_SWEEP: &str = "quality-incremental-sweep";
+const DEDUP_KEY_REVREC_CONTRACT_SWEEP: &str = "revrec-contract-sweep";
 const DEDUP_KEY_COMMISSION_CREDIT_SWEEP: &str = "commission-credit-sweep";
 const DEDUP_KEY_BILLING_REQUEST_SWEEP: &str = "billing-request-sweep";
 const DEDUP_KEY_BILLING_SCHEDULE_RUN: &str = "billing-schedule-run";
@@ -4360,6 +4381,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::RoleGrantExpiry => DEDUP_KEY_ROLE_GRANT_EXPIRY,
         EngineJob::SalesDefaultTeamSweep => DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP,
         EngineJob::QualityIncrementalSweep => DEDUP_KEY_QUALITY_INCREMENTAL_SWEEP,
+        EngineJob::RevrecContractSweep => DEDUP_KEY_REVREC_CONTRACT_SWEEP,
         EngineJob::CommissionCreditSweep => DEDUP_KEY_COMMISSION_CREDIT_SWEEP,
         EngineJob::BillingRequestSweep => DEDUP_KEY_BILLING_REQUEST_SWEEP,
         EngineJob::BillingScheduleRun => DEDUP_KEY_BILLING_SCHEDULE_RUN,
@@ -5733,6 +5755,18 @@ pub fn spawn_billing_overdue_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::BillingOverdueSweep,
         DEDUP_KEY_BILLING_OVERDUE_SWEEP,
         "billing overdue",
+    );
+}
+
+/// F11-T3: every minute, revenue contracts for confirmed orders and active
+/// subscriptions.
+pub fn spawn_revrec_contract_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::RevrecContractSweep,
+        DEDUP_KEY_REVREC_CONTRACT_SWEEP,
+        "revenue contracts",
     );
 }
 

@@ -47,6 +47,7 @@ attome-commission.workspace = true
 attome-compliance.workspace = true
 attome-model.workspace = true
 attome-jobs.workspace = true
+attome-ledger.workspace = true
 attome-metadata.workspace = true
 attome-metric.workspace = true
 attome-service.workspace = true

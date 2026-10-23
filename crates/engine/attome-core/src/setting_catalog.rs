@@ -415,6 +415,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(true),
         ),
+        // F11-T3: revenue contracts from orders and subscriptions.
+        SettingDescriptor::new(
+            "revrec.contracts",
+            "Whether a confirmed order or an active subscription gets its revenue contract and \
+         performance obligations, built in the background after the change (F11-T3). Off by \
+         default.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         // L2-T3: the quality scoring's issue caps.
         SettingDescriptor::new(
             "quality.max_issues_per_run",

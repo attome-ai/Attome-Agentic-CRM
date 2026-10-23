@@ -25,5 +25,6 @@ impl EngineModel for LedgerModel {
         crate::posting::routes()
             .merge(crate::intercompany::routes())
             .merge(crate::statements::routes())
+            .merge(crate::revrec::contract::routes())
     }
 }

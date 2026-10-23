@@ -504,6 +504,15 @@ pub enum EngineJob {
     /// batch); the next batch is a new job carrying the last id reached, so
     /// a restart resumes there.
     QualityRescan { entity: String, after: Option<Uuid> },
+    /// F11-T3: queues contract builds for orders now confirmed and
+    /// subscriptions now active, off the change feed. Bare unit variant.
+    RevrecContractSweep,
+    /// F11-T3: builds the revenue contract and obligations of one order or
+    /// subscription (`source_kind` `order` or `subscription`).
+    RevrecContractFromSource {
+        source_kind: String,
+        source_id: Uuid,
+    },
     /// L1-T4: recomputes one golden record of a master entity from its
     /// attached contributions, as `actor` (who sent the contribution).
     MasterRebuild {
@@ -1027,6 +1036,7 @@ impl EngineJob {
             | Self::SalesDefaultTeamApply { .. }
             | Self::QualityRescan { .. }
             | Self::MasterRebuild { .. }
+            | Self::RevrecContractFromSource { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
@@ -1094,6 +1104,7 @@ impl EngineJob {
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
             | Self::QualityIncrementalSweep
+            | Self::RevrecContractSweep
             | Self::CommissionCreditSweep
             | Self::BillingRequestSweep
             | Self::BillingScheduleRun
@@ -1206,6 +1217,7 @@ impl EngineJob {
             EngineJob::SalesDefaultTeamApply { .. } => "SalesDefaultTeamApply",
             EngineJob::QualityRescan { .. } => "QualityRescan",
             EngineJob::MasterRebuild { .. } => "MasterRebuild",
+            EngineJob::RevrecContractFromSource { .. } => "RevrecContractFromSource",
             EngineJob::SalesScheduleShift { .. } => "SalesScheduleShift",
             EngineJob::SalesCallOutcomeRules { .. } => "SalesCallOutcomeRules",
             EngineJob::AiFollowupRuleRun { .. } => "AiFollowupRuleRun",
@@ -1246,6 +1258,7 @@ impl EngineJob {
             EngineJob::RoleGrantExpiry => "RoleGrantExpiry",
             EngineJob::SalesDefaultTeamSweep => "SalesDefaultTeamSweep",
             EngineJob::QualityIncrementalSweep => "QualityIncrementalSweep",
+            EngineJob::RevrecContractSweep => "RevrecContractSweep",
             EngineJob::CommissionCreditSweep => "CommissionCreditSweep",
             EngineJob::BillingRequestSweep => "BillingRequestSweep",
             EngineJob::BillingScheduleRun => "BillingScheduleRun",
@@ -1400,6 +1413,7 @@ impl EngineJob {
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
             | Self::QualityIncrementalSweep
+            | Self::RevrecContractSweep
             | Self::CommissionCreditSweep
             | Self::BillingRequestSweep
             | Self::BillingScheduleRun
@@ -1462,6 +1476,7 @@ impl EngineJob {
             | Self::SalesDefaultTeamApply { .. }
             | Self::QualityRescan { .. }
             | Self::MasterRebuild { .. }
+            | Self::RevrecContractFromSource { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
@@ -1568,6 +1583,7 @@ impl EngineJob {
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
             | Self::QualityIncrementalSweep
+            | Self::RevrecContractSweep
             | Self::CommissionCreditSweep
             | Self::BillingRequestSweep
             | Self::BillingScheduleRun
@@ -1642,6 +1658,7 @@ impl EngineJob {
             | Self::SalesDefaultTeamApply { .. }
             | Self::QualityRescan { .. }
             | Self::MasterRebuild { .. }
+            | Self::RevrecContractFromSource { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
@@ -2004,6 +2021,11 @@ mod tests {
         assert_round_trips(EngineJob::RoleGrantExpiry);
         assert_round_trips(EngineJob::SalesDefaultTeamSweep);
         assert_round_trips(EngineJob::QualityIncrementalSweep);
+        assert_round_trips(EngineJob::RevrecContractSweep);
+        assert_round_trips(EngineJob::RevrecContractFromSource {
+            source_kind: "order".into(),
+            source_id: Uuid::now_v7(),
+        });
         assert_round_trips(EngineJob::QualityRescan {
             entity: "account".into(),
             after: Some(Uuid::now_v7()),

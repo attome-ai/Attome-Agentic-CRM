@@ -27,5 +27,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = posting::openapi_fragment();
     doc.merge(intercompany::openapi_fragment());
     doc.merge(statements::openapi_fragment());
+    doc.merge(revrec::contract::openapi_fragment());
     doc
 }
