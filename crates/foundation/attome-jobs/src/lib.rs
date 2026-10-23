@@ -327,6 +327,36 @@ pub async fn enqueue_on_pool<J: Job>(pool: &attome_db::DbPool, job: J) -> Result
     Ok(())
 }
 
+/// AB6-T5: [`enqueue_on_pool`] for a job that must not run before
+/// `run_at` (a delivery waiting for its endpoint's breaker to close).
+pub async fn enqueue_at_on_pool<J: Job>(
+    pool: &attome_db::DbPool,
+    job: J,
+    run_at: DateTime<Utc>,
+) -> Result<(), sqlx::Error> {
+    let namespace = namespace_for(&job);
+    let priority = job.priority().apalis_priority();
+    let max_attempts = job.max_attempts();
+    let payload = serde_json::to_value(JobEnvelope::new_with_trace_context(
+        job,
+        current_traceparent(),
+    ))
+    .map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+    sqlx::query(attome_db::tagged_sql!(
+        "jobs.queue",
+        "SELECT apalis.push_job(\
+             job_type => $1, job => $2::json, run_at => $3, priority => $4, max_attempts => $5)"
+    ))
+    .bind(namespace)
+    .bind(payload)
+    .bind(run_at)
+    .bind(priority)
+    .bind(max_attempts)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 /// Deduplicated counterpart to [`enqueue`] — `Ok(true)` if a new row was
 /// actually inserted, `Ok(false)` if an eligible (`Pending`/`Running`/
 /// `Failed`) row with the same `(job_type, dedup_key)` already existed and

@@ -17,6 +17,7 @@ attome-config.workspace   = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-jobs.workspace     = true
+attome-outbound.workspace = true
 attome-modules.workspace  = true
 attome-rules.workspace    = true
 attome-security.workspace = true

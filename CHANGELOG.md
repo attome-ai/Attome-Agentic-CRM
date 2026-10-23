@@ -2333,6 +2333,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- A breaker per outside endpoint (AB6-T5): each REST connector endpoint (system and host) and each
+  webhook target (subscription and host) has its own, so one failing endpoint does not slow the
+  others. A REST GET is retried; a POST only when it carries an `Idempotency-Key`. A webhook whose
+  target's breaker is open is queued again for when it reopens, without counting an attempt.
 - Object storage and mail sends go through the outbound layer (AB6-T4): the services
   `object_storage` and `smtp` each have a breaker, bulkheads and one retry budget, so an outage fails
   fast instead of every request waiting out its timeout. A cloud store's own retries are off; a GET,

@@ -20,6 +20,14 @@
 //! request that omits `max_attempts` gets (`standard` = 8, `extended` =
 //! 20), the two ends of that same clamped range.
 //!
+//! **Breaker (AB6-T5).** Each subscription's target host has its own
+//! breaker ([`endpoint`]). While it is open, a delivery is not attempted and
+//! not counted: [`defer_if_open`] queues the same delivery again for when the
+//! breaker may let a call through, and the job ends. A 429, a 5xx, a timeout
+//! or a refused connection counts against the breaker; any other answer is
+//! the target's own and does not. There is no retry loop here: retries stay
+//! M13's job backoff and `max_attempts`.
+//!
 //! **SSRF.** `target_url` is screened by `ssrf_guard::validate_url` at
 //! subscription save time (`admin.rs`) and unconditionally again here,
 //! immediately before every send — DNS can change between the two. A
@@ -37,6 +45,71 @@ use uuid::Uuid;
 
 use crate::crypto;
 use crate::telemetry::{self, DeadLetterReason as Why};
+
+/// AB6-T5: webhook targets' breakers, one per subscription and host.
+static ENDPOINTS: std::sync::LazyLock<attome_outbound::EndpointServices> =
+    std::sync::LazyLock::new(|| {
+        attome_outbound::EndpointServices::new(
+            "webhook",
+            attome_outbound::Policy {
+                timeout: std::time::Duration::from_secs(15),
+                ..attome_outbound::Policy::default()
+            },
+            1_000,
+        )
+    });
+
+/// The endpoint key of a subscription's target: the subscription and the
+/// target's host and port.
+pub fn endpoint_key(subscription: Uuid, url: &reqwest::Url) -> String {
+    format!(
+        "{subscription}:{}:{}",
+        url.host_str().unwrap_or_default(),
+        url.port_or_known_default().unwrap_or_default()
+    )
+}
+
+/// The breaker-holding service of a subscription's target.
+pub fn endpoint(
+    subscription: Uuid,
+    url: &reqwest::Url,
+) -> std::sync::Arc<attome_outbound::Service> {
+    ENDPOINTS.get(&endpoint_key(subscription, url))
+}
+
+/// When `service`'s breaker is open: queues delivery `delivery_id` again for
+/// when it may let a call through, and answers `true`, so the caller ends
+/// without attempting or counting anything. `false` when it may be tried now.
+pub async fn defer_if_open(
+    db: &DbPool,
+    delivery_id: Uuid,
+    service: &attome_outbound::Service,
+) -> Result<bool, AppError> {
+    let Err(retry_after) = service.breaker.allow() else {
+        return Ok(false);
+    };
+    let wait =
+        chrono::Duration::from_std(retry_after).unwrap_or_else(|_| chrono::Duration::seconds(30));
+    attome_jobs::enqueue_at_on_pool(
+        db,
+        attome_core::jobs::EngineJob::EventsDeliverWebhook { delivery_id },
+        Utc::now() + wait,
+    )
+    .await
+    .map_err(AppError::internal)?;
+    tracing::info!(
+        %delivery_id,
+        retry_after_secs = retry_after.as_secs(),
+        "events delivery: the target's breaker is open; queued again without an attempt"
+    );
+    Ok(true)
+}
+
+/// Whether an HTTP answer says the target is unwell (rather than refusing
+/// this one request).
+fn unwell(status: reqwest::StatusCode) -> bool {
+    status == reqwest::StatusCode::TOO_MANY_REQUESTS || status.is_server_error()
+}
 
 /// Standard: 8 attempts before dead-lettering (roughly a day of T2-12's
 /// backoff curve). Extended: 20 (close to apalis's own 25-attempt ceiling)
@@ -127,6 +200,27 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
         return Ok(());
     };
 
+    let url = match reqwest::Url::parse(target_url) {
+        Ok(u) => u,
+        Err(_) => {
+            dead_letter(
+                &state.base.db,
+                delivery.id,
+                kind,
+                Why::BadUrl,
+                "target url no longer parses",
+            )
+            .await?;
+            return Ok(());
+        }
+    };
+
+    // AB6-T5: an open breaker defers the delivery before it is counted.
+    let breaker = endpoint(delivery.subscription_ref, &url);
+    if defer_if_open(&state.base.db, delivery.id, &breaker).await? {
+        return Ok(());
+    }
+
     // Every call here is one apalis attempt — see this module's doc comment
     // for why that keeps this counter and apalis's own `Attempt` in lockstep.
     let attempts = mark_attempt(&state.base.db, delivery.id).await?;
@@ -142,20 +236,6 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
         return Ok(());
     }
 
-    let url = match reqwest::Url::parse(target_url) {
-        Ok(u) => u,
-        Err(_) => {
-            dead_letter(
-                &state.base.db,
-                delivery.id,
-                kind,
-                Why::BadUrl,
-                "target url no longer parses",
-            )
-            .await?;
-            return Ok(());
-        }
-    };
     if attome_server::ssrf_guard::validate_url(&url).await.is_err() {
         dead_letter(
             &state.base.db,
@@ -223,6 +303,10 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
         .send()
         .await;
     telemetry::attempt(kind, attempt_started.elapsed().as_secs_f64());
+    breaker.breaker.record(match &send_result {
+        Ok(resp) => !unwell(resp.status()),
+        Err(_) => false,
+    });
 
     match send_result {
         Ok(resp) if resp.status().is_success() => {

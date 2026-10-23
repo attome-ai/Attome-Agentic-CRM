@@ -1140,6 +1140,7 @@ dependencies = [
  "attome-jobs",
  "attome-metadata",
  "attome-modules",
+ "attome-outbound",
  "attome-rules",
  "attome-security",
  "attome-server",

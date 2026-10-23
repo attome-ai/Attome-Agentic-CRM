@@ -125,6 +125,118 @@ fn guarded_request(
     }
 }
 
+/// AB6-T5: each connector endpoint's own outbound service (breaker,
+/// bulkheads, retry budget), keyed by the system and the target's host.
+static ENDPOINTS: std::sync::LazyLock<attome_outbound::EndpointServices> =
+    std::sync::LazyLock::new(|| {
+        attome_outbound::EndpointServices::new(
+            "integration_rest",
+            attome_outbound::Policy {
+                timeout: Duration::from_secs(REQUEST_TIMEOUT_SECS),
+                ..attome_outbound::Policy::default()
+            },
+            1_000,
+        )
+    });
+
+fn endpoint_key(system: &IntegrationSystem, url: &reqwest::Url) -> String {
+    format!(
+        "{}:{}:{}",
+        system.id,
+        url.host_str().unwrap_or_default(),
+        url.port_or_known_default().unwrap_or_default()
+    )
+}
+
+/// A failed attempt, as the outbound layer judges it.
+struct Failure {
+    retryable: bool,
+    retry_after: Option<Duration>,
+    /// The target's answer, when it answered.
+    status: Option<reqwest::StatusCode>,
+    message: String,
+}
+
+impl std::fmt::Display for Failure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl attome_outbound::Retryable for Failure {
+    fn retryable(&self) -> bool {
+        self.retryable
+    }
+    fn retry_after(&self) -> Option<Duration> {
+        self.retry_after
+    }
+}
+
+/// Sends `request` through its endpoint's service: refused at once while
+/// that endpoint's breaker is open, and retried only when `idempotent`. A
+/// 429 or 5xx is a retryable failure; any other answer is returned as is.
+/// `Ok(Err(status))`: the target still answered a 429 or 5xx after the last
+/// attempt.
+async fn send_through(
+    system: &IntegrationSystem,
+    url: &reqwest::Url,
+    idempotent: bool,
+    request: reqwest::RequestBuilder,
+) -> Result<Result<reqwest::Response, reqwest::StatusCode>, AppError> {
+    let service = ENDPOINTS.get(&endpoint_key(system, url));
+    let outcome = attome_outbound::call(
+        &service,
+        attome_outbound::CallClass::Background,
+        idempotent,
+        || {
+            let attempt = request.try_clone();
+            async move {
+                let attempt = attempt.ok_or_else(|| Failure {
+                    retryable: false,
+                    retry_after: None,
+                    status: None,
+                    message: "the request body cannot be sent twice".into(),
+                })?;
+                let response = attempt.send().await.map_err(|e| Failure {
+                    retryable: e.is_timeout() || e.is_connect(),
+                    retry_after: None,
+                    status: None,
+                    message: e.to_string(),
+                })?;
+                let status = response.status();
+                if status == reqwest::StatusCode::TOO_MANY_REQUESTS || status.is_server_error() {
+                    let retry_after = response
+                        .headers()
+                        .get(reqwest::header::RETRY_AFTER)
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(|v| v.trim().parse::<u64>().ok())
+                        .map(Duration::from_secs);
+                    return Err(Failure {
+                        retryable: true,
+                        retry_after,
+                        status: Some(status),
+                        message: format!("HTTP {status}"),
+                    });
+                }
+                Ok(response)
+            }
+        },
+    )
+    .await;
+    match outcome {
+        Ok(response) => Ok(Ok(response)),
+        Err(attome_outbound::OutboundError::Failed(Failure {
+            status: Some(status),
+            ..
+        })) => Ok(Err(status)),
+        Err(attome_outbound::OutboundError::Failed(failure)) => Err(AppError::Validation(format!(
+            "request to {} failed: {}",
+            system.base_url, failure.message
+        ))),
+        Err(other) => Err(AppError::from(other)),
+    }
+}
+
 async fn validate_target(url: &str) -> Result<reqwest::Url, AppError> {
     let parsed = reqwest::Url::parse(url)
         .map_err(|_| AppError::Validation("base_url is not a valid URL".into()))?;
@@ -148,14 +260,21 @@ impl Connector for RestAdapter {
             }
             let client = guarded_client(system, credential).await?;
             let request = apply_auth(
-                guarded_request(&client, reqwest::Method::GET, url)?,
+                guarded_request(&client, reqwest::Method::GET, url.clone())?,
                 system,
                 credential,
                 b"",
             )?;
-            let response = request.send().await.map_err(|e| {
-                AppError::Validation(format!("pull request to {} failed: {e}", system.base_url))
-            })?;
+            // AB6-T5: a GET may be retried.
+            let response = match send_through(system, &url, true, request).await? {
+                Ok(response) => response,
+                Err(status) => {
+                    return Err(AppError::Validation(format!(
+                        "pull request to {} returned HTTP {status}",
+                        system.base_url
+                    )));
+                }
+            };
             if !response.status().is_success() {
                 return Err(AppError::Validation(format!(
                     "pull request to {} returned HTTP {}",
@@ -179,23 +298,30 @@ impl Connector for RestAdapter {
             let client = guarded_client(system, credential).await?;
             let body = serde_json::to_vec(event).map_err(AppError::internal)?;
             let mut request = apply_auth(
-                guarded_request(&client, reqwest::Method::POST, url)?,
+                guarded_request(&client, reqwest::Method::POST, url.clone())?,
                 system,
                 credential,
                 &body,
             )?;
             // S9-T5: the same key on every retry of this effect.
-            if let Some(key) = system.idempotency_header() {
+            let key = system.idempotency_header();
+            if let Some(key) = &key {
                 request = request.header("Idempotency-Key", key);
             }
-            let response = request
+            let request = request
                 .header("Content-Type", "application/json")
-                .body(body)
-                .send()
-                .await
-                .map_err(|e| {
-                    AppError::Validation(format!("push request to {} failed: {e}", system.base_url))
-                })?;
+                .body(body);
+            // AB6-T5: a POST is retried only when it carries an
+            // Idempotency-Key, so the target can drop a repeat.
+            let response = match send_through(system, &url, key.is_some(), request).await? {
+                Ok(response) => response,
+                Err(status) => {
+                    return Ok(PushResult {
+                        ok: false,
+                        detail: Some(format!("HTTP {status}")),
+                    });
+                }
+            };
             let ok = response.status().is_success();
             let detail = if ok {
                 None
@@ -323,6 +449,37 @@ mod tests {
     fn parse_pull_response_rejects_an_object_with_no_items_array() {
         let body = br#"{"foo": "bar"}"#;
         assert!(parse_pull_response(body).is_err());
+    }
+
+    /// AB6-T5: each endpoint has its own breaker: opening one leaves
+    /// another system's, and another host's, closed.
+    #[test]
+    fn connector_breaker_isolated_per_endpoint() {
+        let one = stub_system("https://erp-one.example.com/items".into(), "api_key");
+        let mut two = stub_system("https://erp-two.example.com/items".into(), "api_key");
+        two.id = uuid::Uuid::now_v7();
+        let url_one = reqwest::Url::parse(&one.base_url).unwrap();
+        let url_two = reqwest::Url::parse(&two.base_url).unwrap();
+        let a = ENDPOINTS.get(&endpoint_key(&one, &url_one));
+        let b = ENDPOINTS.get(&endpoint_key(&two, &url_two));
+        assert!(std::sync::Arc::ptr_eq(
+            &a,
+            &ENDPOINTS.get(&endpoint_key(&one, &url_one))
+        ));
+        for _ in 0..30 {
+            a.breaker.record(false);
+        }
+        assert!(a.breaker.allow().is_err(), "the failing endpoint opened");
+        assert!(b.breaker.allow().is_ok(), "another endpoint stays closed");
+        let other_host = reqwest::Url::parse("https://erp-one-backup.example.com/x").unwrap();
+        assert!(
+            ENDPOINTS
+                .get(&endpoint_key(&one, &other_host))
+                .breaker
+                .allow()
+                .is_ok(),
+            "the same system on another host stays closed"
+        );
     }
 
     #[test]

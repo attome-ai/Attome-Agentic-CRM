@@ -19,6 +19,8 @@
 pub mod breaker;
 pub mod bulkhead;
 pub mod deadline;
+/// AB6-T5: one service per endpoint of an outside system.
+pub mod endpoints;
 /// Q21-T1: the one way to build an HTTP client for a call out, behind the SSRF guard.
 pub mod http;
 pub mod retry;
@@ -28,6 +30,7 @@ use std::time::Duration;
 
 pub use breaker::{Breaker, BreakerConfig, BreakerState};
 pub use bulkhead::{Bulkheads, CallClass};
+pub use endpoints::EndpointServices;
 pub use retry::{RetryBudget, RetryPolicy};
 
 /// How long a call waits for a bulkhead slot.
