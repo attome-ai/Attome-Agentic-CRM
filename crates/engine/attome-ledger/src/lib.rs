@@ -10,6 +10,8 @@
 pub mod intercompany;
 pub mod model;
 pub mod posting;
+/// F11: revenue recognition schedules.
+pub mod revrec;
 /// W5-T3: trial balance, profit and loss, balance sheet.
 pub mod statements;
 

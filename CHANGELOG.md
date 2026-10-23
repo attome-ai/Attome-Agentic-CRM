@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Revenue schedules (F11-T2): `attome_ledger::revrec::schedule` spreads an invoice line evenly per day
+  over its service period across fiscal periods of any length (the last takes the rounding
+  remainder), or recognises it on the invoice date, and writes its revenue contract, obligation and
+  schedule lines once.
 - Revenue recognition records (F11-T1): ledger pack changeset 0003 with revenue rules (and a rule on
   product), revenue contracts, performance obligations, standalone selling prices, schedule lines,
   contract changes, close runs and balance snapshots, with Arabic labels and Accountant/Ledger Viewer
