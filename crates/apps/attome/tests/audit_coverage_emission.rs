@@ -366,6 +366,9 @@ fn test_config() -> AppConfig {
     // D-788 rule 9 — the recovery-archive restore drivers seal and open
     // values under this ring (a restore without it is `archive_key_missing`).
     config.metadata.recovery_archive_key_encryption_key = KeyRing::single("12".repeat(32));
+    // M14-T1 — an inbound hook's secret is sealed under this ring; creating
+    // one refuses without it.
+    config.integration.credential_encryption_key = KeyRing::single("34".repeat(32));
     // C4 — the chat confirm driver executes an AI-surface action, which
     // `gate::admissible` refuses while the AI switch is off (it is fixed at
     // process start, A-18), so this process starts with it on.
@@ -5051,6 +5054,46 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({})),
             )
         }
+        // M14-T1: builder-defined inbound hooks.
+        "POST /api/v1/admin/inbound-hooks" => request(
+            "POST",
+            "/api/v1/admin/inbound-hooks",
+            t,
+            Some(inbound_hook_body(fx)),
+        ),
+        "PATCH /api/v1/admin/inbound-hooks/{id}" => {
+            let hook = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/inbound-hooks",
+                Some(inbound_hook_body(fx)),
+            )
+            .await;
+            let mut body = inbound_hook_body(fx);
+            body["name"] = hook["name"].clone();
+            body["row_version"] = hook["row_version"].clone();
+            request(
+                "PATCH",
+                &format!("/api/v1/admin/inbound-hooks/{}", id_of(&hook)),
+                t,
+                Some(body),
+            )
+        }
+        "DELETE /api/v1/admin/inbound-hooks/{id}" => {
+            let hook = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/inbound-hooks",
+                Some(inbound_hook_body(fx)),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/inbound-hooks/{}", id_of(&hook)),
+                t,
+                None,
+            )
+        }
         // M12-T3: pausing and resuming a schedule.
         "POST /api/v1/admin/schedules/{kind}/{id}/pause" => {
             let def = workflow_definition(fx).await;
@@ -6477,6 +6520,17 @@ fn waiting_workflow_graph() -> Value {
 
 /// A fresh workflow definition — one per caller so `logicalname` never
 /// collides with another driven route.
+/// M14-T1: a bearer hook that creates a record of the fixture entity.
+fn inbound_hook_body(fx: &Fx) -> Value {
+    json!({
+        "name": format!("emit-{}", Uuid::now_v7().simple()),
+        "auth": { "kind": "bearer" },
+        "secret": "emission-secret",
+        "handler": { "type": "record", "entity": fx.entity, "fields": { "title": "/title" } },
+        "run_as": fx.admin_id,
+    })
+}
+
 async fn workflow_definition(fx: &Fx) -> Value {
     let logicalname = format!("audit_emit_wf_{}", Uuid::now_v7().simple());
     admin(

@@ -569,6 +569,14 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // M14-T1: builder-defined inbound endpoints; the public
+                // `/api/v1/hooks/{name}` is bypass-listed by its shape.
+                crate::inbound_hooks::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // M7-T2/T3: stage processes for forms and reports.
                 crate::stage_process_api::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),

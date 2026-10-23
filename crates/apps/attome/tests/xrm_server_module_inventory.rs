@@ -179,6 +179,8 @@ const BASELINE: &[&str] = &[
     "schema",
     // M12-T3: one list over flow, report and platform schedules.
     "schedules_admin",
+    // M14-T1: builder-defined inbound endpoints.
+    "inbound_hooks",
     "seed_support",
     // M7-T2/T3: stage processes read for forms and measured from stage_move.
     "stage_process_api",

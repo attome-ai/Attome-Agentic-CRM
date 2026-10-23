@@ -228,6 +228,7 @@ pub mod rule_admin;
 mod schema;
 mod seed_support;
 mod service_public;
+pub mod inbound_hooks;
 pub mod schedules_admin;
 pub mod stage_process_api;
 pub mod settings_admin;

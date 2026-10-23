@@ -158,6 +158,11 @@ const MAX_BARE_RECORD_SCOPED: usize = 6;
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
         "POST",
+        "/api/v1/hooks/{name}",
+        "M14-T1: a provider's call to a builder-defined hook; the hook's own address allow-list, mTLS, signature or bearer secret (constant-time), timestamp window and once-only event id are the credential, and its handler runs as the hook's service user through the ordinary write paths. Bypass-listed by its one-segment shape.",
+    ),
+    (
+        "POST",
         "/api/v1/approvals/email-link",
         "M9-T3: the single-use emailed link token (peppered HMAC, one approver, one request step, 72 h) is the credential; it reads only the request that link names and uses nothing. Bypass-listed.",
     ),

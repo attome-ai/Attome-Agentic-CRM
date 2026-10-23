@@ -179,6 +179,16 @@ fn is_integrations_webhook_path(path: &str) -> bool {
     !system.is_empty() && is_webhook && no_trailing_segment
 }
 
+/// M14-T1: a builder-defined inbound hook, `/api/v1/hooks/{name}`: exactly
+/// one non-empty segment after the prefix, nothing after it, so no route
+/// mounted under a hook's name later is swept into the bypass. The handler
+/// (`attome_api::inbound_hooks::call_hook`) checks the hook's own
+/// credential, address and replay rules before anything runs.
+fn is_inbound_hook_path(path: &str) -> bool {
+    path.strip_prefix("/api/v1/hooks/")
+        .is_some_and(|name| !name.is_empty() && !name.contains('/'))
+}
+
 /// F5-T7: a payment gateway's webhook,
 /// `/api/v1/billing/gateways/{system}/webhook`: the same segment-shape match
 /// as [`is_integrations_webhook_path`] (one `{system}` segment, the literal
@@ -341,6 +351,7 @@ pub fn is_bypass(path: &str) -> bool {
             .iter()
             .any(|prefix| path.starts_with(prefix))
         || is_integrations_webhook_path(path)
+        || is_inbound_hook_path(path)
         || is_billing_gateway_webhook_path(path)
         || is_payment_link_path(path)
         || is_service_intake_path(path)
@@ -604,6 +615,14 @@ mod tests {
     #[test]
     fn integration_webhook_prefix_requires_the_slash_boundary() {
         assert!(!is_bypass("/api/v1/integrations-admin"));
+    }
+
+    #[test]
+    fn only_the_inbound_hook_shape_is_public() {
+        assert!(is_bypass("/api/v1/hooks/shop-orders"));
+        assert!(!is_bypass("/api/v1/hooks/"));
+        assert!(!is_bypass("/api/v1/hooks/shop-orders/admin"));
+        assert!(!is_bypass("/api/v1/admin/inbound-hooks"));
     }
 
     #[test]
