@@ -165,6 +165,15 @@ scripts/
   run-matrix.ps1               runs every k6 scenario at N=1/4/12 (or -NodeCounts/-Scenarios),
                                 writes results/matrix-summary<-RunTag>.json. Accepts
                                 -Topology/-ChainerEnabled/-RunTag for step 5/6 re-runs.
+                                AA1-T4: without -Scenarios it runs the production-shaped
+                                matrix instead: -Mix (default production_mix) at each of
+                                -Profile's concurrency_levels, audit chainer on (asserted in
+                                the node config), one summary per level in
+                                results/<mix>-<profile>-c<level>-<primary|replica>.json and
+                                peak Postgres connections plus the write class's max latency
+                                (the audit-lock symptom) in results/matrix-<mix>-<profile>-
+                                <target>.json. -Plan lists the levels and files and exits;
+                                -Replica refuses until the replica compose stack exists.
   run-p112-exercise.ps1         P1.8d step 5 — runs crud_read/list_query/mutating_write at
                                 N=20 (default) direct vs pgbouncer, sampling Postgres
                                 connection count under load; writes

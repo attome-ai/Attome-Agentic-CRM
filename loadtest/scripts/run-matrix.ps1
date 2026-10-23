@@ -35,9 +35,162 @@ param(
     # AA1-T3: before each scenario, restart the nodes and empty the cache, and
     # run with no warm-up window. Default is warm: production_mix.js discards
     # its first 30 s.
-    [switch]$Cold
+    [switch]$Cold,
+    # AA1-T4: the production-shaped run. Unless -Scenarios is passed (the
+    # per-scenario matrix above), the script runs this k6 mix once per
+    # concurrency level of -Profile (profiles.json), with the audit chainer on.
+    [string]$Mix = "production_mix",
+    # AA1-T4: run against a read replica (database.read_url). Needs the
+    # scale-out recipe's replica compose stack, which this repository does
+    # not ship yet, so a real run refuses; -Plan still lists the files.
+    [switch]$Replica,
+    # AA1-T4: print each planned level and its result file, then exit 0
+    # without starting nodes or k6.
+    [switch]$Plan
 )
 . "$PSScriptRoot/common.ps1"
+
+if (-not $PSBoundParameters.ContainsKey('Scenarios')) {
+    $profiles = Get-Content (Join-Path $script:LoadtestDir "profiles.json") -Raw | ConvertFrom-Json
+    $profileInfo = $profiles.$Profile
+    if ($null -eq $profileInfo -or $Profile -like "_*") {
+        throw "Unknown profile '$Profile' — profiles.json has: " +
+              (($profiles.PSObject.Properties.Name | Where-Object { $_ -notlike "_*" }) -join ", ")
+    }
+    if (-not (Test-Path (Join-Path $script:LoadtestDir "k6/$Mix.js"))) {
+        throw "No k6 mix loadtest/k6/$Mix.js"
+    }
+    $target = if ($Replica) { "replica" } else { "primary" }
+    $levels = @($profileInfo.concurrency_levels)
+    $planned = foreach ($level in $levels) {
+        [PSCustomObject]@{ level = [int]$level; file = "$Mix-$Profile-c$level-$target.json" }
+    }
+    if ($Plan) {
+        foreach ($p in $planned) { Write-Host "c$($p.level) $target -> loadtest/results/$($p.file)" }
+        exit 0
+    }
+    Assert-LoadtestSafety
+    if ($Replica) {
+        throw "-Replica needs the scale-out recipe's replica compose stack (a streaming replica " +
+              "and database.read_url), which is not in this repository yet; run without -Replica."
+    }
+
+    $seedInfoPath = Join-Path $script:GenDir "seed-info.json"
+    if (-not (Test-Path $seedInfoPath)) {
+        throw "loadtest/.generated/seed-info.json not found — run seed.ps1 first."
+    }
+    $seed = Get-Content $seedInfoPath -Raw | ConvertFrom-Json
+    $nodeCount = $NodeCounts[0]
+    $rows = @()
+    foreach ($p in $planned) {
+        Write-Host ""
+        Write-Host "=== $Mix c$($p.level) [$Profile, $target, $nodeCount node(s), chainer on] ==="
+        $ports = Start-LoadtestNodes -Count $nodeCount -BootstrapAdminEmail $seed.admin_email `
+            -Topology $Topology -ChainerEnabled
+        # The run is production-shaped only if the nodes chain audit rows the
+        # way a deployment does; a config that says otherwise is refused.
+        foreach ($port in $ports) {
+            $cfg = Get-Content (Join-Path $script:GenDir "config-node-$port.json") -Raw | ConvertFrom-Json
+            if ($cfg.audit.chainer_enabled -ne $true) {
+                Stop-LoadtestNodes
+                throw "config-node-$port.json has audit.chainer_enabled = $($cfg.audit.chainer_enabled); " +
+                      "the production-shaped run needs it true (New-LoadtestConfig -ChainerEnabled)."
+            }
+        }
+        $baseUrls = if ($script:IsWindowsHost) {
+            ($ports | ForEach-Object { "http://host.docker.internal:$_" }) -join ','
+        } else {
+            ($ports | ForEach-Object { "http://localhost:$_" }) -join ','
+        }
+        $resultPath = Join-Path $script:ResultsDir $p.file
+        if (Test-Path $resultPath) { Remove-Item $resultPath -Force }
+        $k6EnvVars = @{
+            BASE_URLS      = $baseUrls
+            TEST_EMAIL     = $seed.test_email
+            TEST_PASSWORD  = $seed.test_password
+            BULK_ENTITY    = $seed.bulk_entity
+            BULK_QUERY_ID  = $seed.bulk_query_id
+            BULK_ROW_COUNT = $seed.bulk_row_count
+            DURATION       = $Duration
+            WARMUP         = if ($Cold) { "0s" } else { "30s" }
+            RATE           = $profileInfo.rated_rps
+            VUS            = $p.level
+        }
+        $seedSummary = Join-Path $script:ResultsDir "seed-$Profile.json"
+        if (Test-Path $seedSummary) {
+            $k6EnvVars.SEED_FILE = if ($script:IsWindowsHost) { "/work/results/seed-$Profile.json" } else { $seedSummary }
+        }
+
+        # Peak connections: sampled every two seconds while k6 runs.
+        $stopFile = Join-Path $script:GenDir "conn-sampler.stop"
+        if (Test-Path $stopFile) { Remove-Item $stopFile -Force }
+        $sampler = Start-Job -ArgumentList $stopFile -ScriptBlock {
+            param($stop)
+            $peak = 0
+            while (-not (Test-Path $stop)) {
+                $n = docker exec loadtest-postgres-loadtest-1 psql -U postgres -d attome_loadtest -t -A -c `
+                    "SELECT count(*) FROM pg_stat_activity WHERE datname = 'attome_loadtest'" 2>$null
+                if ("$n".Trim() -match '^\d+$' -and [int]"$n".Trim() -gt $peak) { $peak = [int]"$n".Trim() }
+                Start-Sleep -Seconds 2
+            }
+            $peak
+        }
+        if ($script:IsWindowsHost) {
+            $k6Env = @()
+            foreach ($kv in $k6EnvVars.GetEnumerator()) { $k6Env += @("-e", "$($kv.Key)=$($kv.Value)") }
+            & docker run --rm -v "$($script:LoadtestDir):/work" @k6Env grafana/k6 run `
+                "/work/k6/$Mix.js" `
+                --summary-trend-stats "avg,min,med,p(50),p(90),p(95),p(99),max" `
+                --summary-export "/work/results/$($p.file)"
+        } else {
+            $k6Args = @()
+            foreach ($kv in $k6EnvVars.GetEnumerator()) { $k6Args += @("-e", "$($kv.Key)=$($kv.Value)") }
+            & k6 run @k6Args (Join-Path $script:LoadtestDir "k6/$Mix.js") `
+                --summary-trend-stats "avg,min,med,p(50),p(90),p(95),p(99),max" `
+                --summary-export $resultPath
+        }
+        New-Item -ItemType File -Path $stopFile -Force | Out-Null
+        $peakConnections = Receive-Job -Job $sampler -Wait -AutoRemoveJob
+        Remove-Item $stopFile -Force -ErrorAction SilentlyContinue
+
+        if (Test-Path $resultPath) {
+            $summary = Get-Content $resultPath -Raw | ConvertFrom-Json
+            $trend = $summary.metrics.http_req_duration
+            # The audit-lock symptom (writes stalling ~1.4 s behind the chain
+            # lock) shows as the write class's max, not its percentiles.
+            $write = $summary.metrics.'http_req_duration{op:write,phase:measure}'
+            $failed = $summary.metrics.http_req_failed
+            $backlogRaw = @(Get-AuditIngestBacklog)[0]
+            $rows += [PSCustomObject]@{
+                mix                  = $Mix
+                profile              = $Profile
+                level                = $p.level
+                target               = $target
+                file                 = $p.file
+                p50_ms               = [Math]::Round($trend.'p(50)', 1)
+                p95_ms               = [Math]::Round($trend.'p(95)', 1)
+                p99_ms               = [Math]::Round($trend.'p(99)', 1)
+                max_write_ms         = if ($null -ne $write) { [Math]::Round($write.max, 1) } else { $null }
+                peak_pg_connections  = $peakConnections
+                failed_requests      = if ($null -ne $failed) { $failed.passes } else { $null }
+                audit_ingest_backlog = [int64]("$backlogRaw".Trim())
+            }
+            if ($null -ne $write -and $write.max -ge 1400) {
+                Write-Warning "c$($p.level): a write took $([Math]::Round($write.max)) ms — the audit-lock symptom."
+            }
+        } else {
+            Write-Warning "c$($p.level) produced no summary-export — check docker/k6 output above."
+        }
+        Stop-LoadtestNodes
+    }
+    $rows | Format-Table -AutoSize
+    $summaryName = if ($RunTag) { "matrix-$Mix-$Profile-$target-$RunTag.json" } else { "matrix-$Mix-$Profile-$target.json" }
+    $rows | ConvertTo-Json -Depth 5 | Set-Content -Path (Join-Path $script:ResultsDir $summaryName) -Encoding utf8
+    Write-Host ""
+    Write-Host "Matrix summary written to loadtest/results/$summaryName"
+    exit 0
+}
+
 Assert-LoadtestSafety
 
 $fileSuffix = if ($RunTag) { "-$RunTag" } else { "" }
