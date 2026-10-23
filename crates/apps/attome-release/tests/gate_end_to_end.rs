@@ -119,7 +119,7 @@ fn tag_is_refused_until_both_reports_are_green_then_allowed() {
     assert_eq!(out.status.code(), Some(3));
     assert!(String::from_utf8_lossy(&out.stderr).contains("windows"));
 
-    // Both green: tagged.
+    // Both green but no release public key: refused, naming it (AC4-T9).
     let windows = report(&dir, "windows", &head, "overridden");
     assert!(
         run(&dir, &["import-report", windows.to_str().unwrap()])
@@ -127,11 +127,54 @@ fn tag_is_refused_until_both_reports_are_green_then_allowed() {
             .success()
     );
     let out = run(&dir, &["tag", "0.0.1"]);
+    assert_eq!(out.status.code(), Some(3));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("deploy/cosign.pub"));
+
+    // Signed with a throwaway key pair kept outside the repository: tagged.
+    // Needs cosign; without it the signed path has nothing to drive.
+    if Command::new("cosign").arg("version").output().is_err() {
+        eprintln!("SKIP: cosign is not installed; the signed tag path is not exercised");
+        let _ = std::fs::remove_dir_all(&dir);
+        return;
+    }
+    let vault = std::env::temp_dir().join(format!("attome-release-e2e-key-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&vault);
+    std::fs::create_dir_all(&vault).unwrap();
+    let made = Command::new("cosign")
+        .args(["generate-key-pair"])
+        .env("COSIGN_PASSWORD", "")
+        .current_dir(&vault)
+        .output()
+        .unwrap();
+    assert!(
+        made.status.success(),
+        "{}",
+        String::from_utf8_lossy(&made.stderr)
+    );
+    std::fs::create_dir_all(dir.join("deploy")).unwrap();
+    std::fs::copy(
+        vault.join("cosign.pub"),
+        dir.join("deploy").join("cosign.pub"),
+    )
+    .unwrap();
+    let out = Command::new(BIN)
+        .args(["tag", "0.0.1"])
+        .env("COSIGN_KEY", vault.join("cosign.key"))
+        .env("COSIGN_PASSWORD", "")
+        .current_dir(&dir)
+        .output()
+        .unwrap();
     assert!(
         out.status.success(),
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
+    assert!(
+        dir.join("target/release-gate/gate-windows.json.sig")
+            .is_file(),
+        "the windows report is signed"
+    );
+    let _ = std::fs::remove_dir_all(&vault);
     let tags = Command::new("git")
         .args(["tag"])
         .current_dir(&dir)

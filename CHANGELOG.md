@@ -8,6 +8,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Signed gate reports (AC4-T9): `attome-release tag` signs each operating system's gate report with
+  the release key (`COSIGN_KEY`, refused when it lies inside the working tree) into `gate-<os>.json.sig`
+  and verifies it against `deploy/cosign.pub`, offline; a missing key or a failed signature refuses
+  the tag. `docs/release-signing.md` says how the key pair is made and kept.
 - HTTPS without a proxy (Z5-T6): with `app.tls.enabled` the server terminates TLS itself (HTTP/2 and
   HTTP/1.1 by ALPN; `app.tls.min_version = "1.3"` refuses TLS 1.2) from `app.tls.cert_path` and
   `key_path`, reloading the files every 12 hours and on SIGHUP. Boot names the file that is missing

@@ -26,7 +26,7 @@ attome slo report loadtest/results/matrix-summary-release.json
 
 Each class is met, missed (naming the percentile over target) or not measured. A class without a
 measurement is never reported as met, and a missed class does not fail the gate: the notes simply
-cannot claim it. The report is unsigned until the release signing key exists (AC4-T9).
+cannot claim it. The gate reports are signed when the release is tagged ([release signing](release-signing.md)).
 
 ## Targets
 

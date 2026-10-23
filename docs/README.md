@@ -32,7 +32,7 @@
 - [Background jobs](jobs.md): registering a job type, schedules and batch jobs with checkpoints, progress and cancel.
 - [Slow statements](slow-queries.md): turning on pg_stat_statements and auto_explain, reading query tags and plans.
 - [Backup](backup.md), [Versions and support](versions-and-support.md), [API versions](api-versions.md), [API workflows (Arazzo)](api/arazzo/), [Model servers](model-servers.md)
-- [Release](release.md), [SLOs](slo.md), [Testing](testing.md), [Build machine](build-machine.md)
+- [Release](release.md), [Release signing](release-signing.md), [SLOs](slo.md), [Testing](testing.md), [Build machine](build-machine.md)
 - `evidence/`: dated measurements (latency, memory, AI quality) that releases are checked against.
 
 ## Building the documentation site

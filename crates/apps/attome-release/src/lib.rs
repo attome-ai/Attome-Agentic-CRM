@@ -40,6 +40,7 @@ pub mod repro;
 pub mod sbom;
 /// M17-T3 — typed entity code from a deployment's OpenAPI document.
 pub mod sdk_generate;
+pub mod sign;
 pub mod slo;
 pub mod slo_report;
 pub mod supply;
@@ -657,7 +658,8 @@ pub fn import_report(source: &Path) -> ExitCode {
 }
 
 /// `attome release tag <version>`: tags the current commit `v<version>` only
-/// when its Windows and Linux gate reports are present and green; exit 3
+/// when its Windows and Linux gate reports are present, green and signed
+/// with the release key ([`sign`]); exit 3
 /// otherwise, naming what is missing.
 pub fn tag(version: &str) -> ExitCode {
     match tag_release(version) {
@@ -705,6 +707,13 @@ fn tag_release(version: &str) -> Result<String, (u8, String)> {
         let lines: Vec<String> = problems.iter().map(ToString::to_string).collect();
         return Err((3u8, lines.join("\n")));
     }
+    // AC4-T9: each report signed with the release key and verified against
+    // deploy/cosign.pub before anything is written.
+    let reports: Vec<PathBuf> = parity::RELEASE_OSES
+        .iter()
+        .map(|os| parity::report_path(&gate_dir(&root), os))
+        .collect();
+    sign::sign_reports(&root, &reports).map_err(|error| (3u8, error))?;
 
     let today = test_flaky::date_from_unix(unix_seconds());
     let read = |rel: &str| {

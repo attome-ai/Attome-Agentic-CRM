@@ -61,12 +61,14 @@ bump.
 ## 4. Tag
 
 ```sh
-cargo run -p attome-release -- tag 2.0.0
+COSIGN_KEY=~/attome-release-key/cosign.key cargo run -p attome-release -- tag 2.0.0
 ```
 
 It refuses unless the tracked tree is clean, `v2.0.0` does not exist yet, `[Unreleased]` in
 `CHANGELOG.md` says something, and `gate-windows.json` and `gate-linux.json` are both present, both
-from this commit and both green (exit 3 names what is missing). Then it sets `[workspace.package]
+from this commit and both green, and it signs each report with the release key and verifies it
+against `deploy/cosign.pub` (`COSIGN_KEY` names the key; see [release signing](release-signing.md));
+exit 3 names what is missing or failed. Then it sets `[workspace.package]
 version` in `Cargo.toml`, moves `[Unreleased]` under `## [2.0.0] - <date>`, adds the release to
 `docs/releases/stability.json`, commits `release: v2.0.0` and creates the annotated tag `v2.0.0`.
 It never pushes: push the branch and the tag yourself once you are satisfied.
