@@ -17,6 +17,8 @@
 
 /// AA7-T5: cooked artefacts at hash-named URLs.
 pub(crate) mod cooked;
+/// M6-T4: fill a published flow template with its arguments.
+pub(crate) mod flow_template;
 /// A5-T2: merging one option set value into another.
 pub mod option_merge;
 
@@ -2277,6 +2279,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/model/option_set/{id}/merge",
             post(option_merge::merge_values),
         )
+        .route(
+            "/api/v1/admin/model/flow_template/{id}/instantiate",
+            post(flow_template::instantiate),
+        )
         .route("/api/v1/admin/model/kinds", get(list_kinds))
         .route("/api/v1/model/navigation/{id}", get(menu))
         .route(
@@ -2339,6 +2345,7 @@ pub fn routes() -> Router<EngineState> {
         version_nodes,
         rollback_version,
         option_merge::merge_values,
+        flow_template::instantiate,
         export_files,
         import_files,
         blueprint_plan,
@@ -2368,6 +2375,8 @@ pub fn routes() -> Router<EngineState> {
         MetadataVersionView,
         option_merge::MergeValuesRequest,
         option_merge::MergeValuesQueued,
+        flow_template::InstantiateRequest,
+        flow_template::InstantiateResponse,
         ModelFile,
         ModelFiles,
         MenuView,

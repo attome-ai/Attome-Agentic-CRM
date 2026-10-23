@@ -2345,6 +2345,21 @@ export const xrmEn = {
     noDeliveries: 'Nothing delivered yet.',
     required: 'A name, an http or https target and an owner are required.',
   },
+  flowTemplates: {
+    title: 'Flow templates',
+    intro: 'Start a flow from a template: fill in its parameters and a draft opens in the editor. Or save one of your flows as a template.',
+    search: 'Search templates',
+    none: 'No published template yet.',
+    types: { entity: 'entity', attribute: 'field', user: 'user id', users: 'user ids, comma separated', text: 'text', number: 'number' },
+    flowName: 'New flow name',
+    logicalname: 'New flow logical name',
+    start: 'Create draft flow',
+    saveTitle: 'Save a flow as a template',
+    fromFlow: 'Flow',
+    templateName: 'Template name',
+    description: 'Description',
+    save: 'Save as template',
+  },
   notificationPrefs: {
     delivery: {
       title: 'Delivery',

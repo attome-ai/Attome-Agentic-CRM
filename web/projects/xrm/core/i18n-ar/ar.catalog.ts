@@ -2267,6 +2267,21 @@ export const xrmAr = {
     noDeliveries: 'لم يُسلَّم شيء بعد.',
     required: 'الاسم ووجهة http أو https والمالك مطلوبة.',
   },
+  flowTemplates: {
+    title: 'قوالب التدفقات',
+    intro: 'ابدأ تدفقًا من قالب: املأ معاملاته فتُفتح مسودة في المحرر. أو احفظ أحد تدفقاتك قالبًا.',
+    search: 'ابحث في القوالب',
+    none: 'لا يوجد قالب منشور بعد.',
+    types: { entity: 'كيان', attribute: 'حقل', user: 'معرّف مستخدم', users: 'معرّفات مستخدمين مفصولة بفواصل', text: 'نص', number: 'رقم' },
+    flowName: 'اسم التدفق الجديد',
+    logicalname: 'الاسم المنطقي للتدفق الجديد',
+    start: 'إنشاء مسودة تدفق',
+    saveTitle: 'حفظ تدفق كقالب',
+    fromFlow: 'التدفق',
+    templateName: 'اسم القالب',
+    description: 'الوصف',
+    save: 'حفظ كقالب',
+  },
   notificationPrefs: {
     delivery: {
       title: 'طريقة الوصول',

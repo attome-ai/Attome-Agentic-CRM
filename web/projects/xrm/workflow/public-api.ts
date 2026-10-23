@@ -12,6 +12,7 @@ export { WorkflowCreatePageComponent }       from './workflow-definition/page/wo
 export { WorkflowGraphEditorComponent }      from './workflow-definition/editor/workflow-graph-editor/workflow-graph-editor.component';
 export { WorkflowInstanceListComponent }     from './workflow-instance/list/workflow-instance-list/workflow-instance-list.component';
 export { WorkflowInstanceDetailComponent }   from './workflow-instance/detail/workflow-instance-detail/workflow-instance-detail.component';
+export { WorkflowTemplateGalleryComponent }  from './workflow-template/template-gallery.component';
 export type {
   DefinitionListItem, DefinitionDetail, VersionSummary, VersionDetail,
   CreateDefinitionBody, UpdateDefinitionBody, CreateVersionBody, UpdateVersionGraphBody,

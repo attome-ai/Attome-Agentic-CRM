@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Flow template gallery (M6-T4) at `/xrm/workflow/templates`: search the published `flow_template`
+  objects, fill in a template's parameters and create a draft flow from it (opened in the editor),
+  or save an existing flow's newest version as a template. New
+  `POST /api/v1/admin/model/flow_template/{id}/instantiate {args}` answers the filled graph or the
+  arguments' issues and writes nothing. English and Arabic.
 - Replay a flow version over recent runs (M4-T3):
   `POST /api/v1/workflow/definitions/{id}/versions/{version_id}/replay {last}` (1–50, default 10)
   runs each of the flow's latest finished runs' trigger input and approval decisions through the
