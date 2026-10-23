@@ -2936,6 +2936,14 @@ pub const WORKFLOW_RECORD_SCHEDULE: attome_jobs::JobType = attome_jobs::JobType 
     ..attome_jobs::JobType::new(attome_workflow::schedule_trigger::RECORD_SCHEDULE_JOB, 1)
 };
 
+/// M14-T3: one inbound hook event processed, in its key's order (payload
+/// `attome_api::inbound_hooks::ProcessEvent`). Five attempts, as the inbox
+/// row counts them, then the dead-letter inbox.
+pub const INBOUND_HOOK_PROCESS: attome_jobs::JobType = attome_jobs::JobType {
+    max_attempts: attome_api::inbound_hooks::MAX_ATTEMPTS,
+    ..attome_jobs::JobType::new(attome_api::inbound_hooks::PROCESS_JOB, 1)
+};
+
 /// M9-T3: every minute, each pending request step's approvers mailed a
 /// one-time link (no payload).
 pub const APPROVAL_EMAIL_LINKS: attome_jobs::JobType =
@@ -3208,6 +3216,17 @@ pub fn register_job_types() {
                 let payload: attome_workflow::schedule_trigger::RecordSchedulePayload =
                     job.payload()?;
                 attome_workflow::schedule_trigger::run_record_batch(&state, payload).await
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            INBOUND_HOOK_PROCESS,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_api::inbound_hooks::ProcessEvent = job.payload()?;
+                attome_api::inbound_hooks::process_event(&state, payload.event_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
             },
         ) {
             tracing::error!(%error, "job type registration failed");

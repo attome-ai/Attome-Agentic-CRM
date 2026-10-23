@@ -16,13 +16,25 @@
 //! 4. the body is JSON carrying `schema.required` (else 422);
 //! 5. its event id is claimed for the first time (else 409, a replay).
 //!
-//! Then the handler runs as the hook's `run_as` service user, through the
-//! ordinary paths, so rules, record security and audit apply:
+//! M14-T3: the call is acknowledged fast. The event is written to the hook's
+//! inbox (`inbound_hook_event`, migration 0218, unique by hook and event
+//! id) with a job ([`PROCESS_JOB`]) in the same transaction, and the
+//! answer is 202 at once. A delivery whose event id is already in the inbox
+//! is acknowledged as a duplicate and not processed again. The job runs the
+//! handler as the hook's `run_as` service user, through the ordinary paths,
+//! so rules, record security and audit apply:
 //! `{"type": "record", "entity": "...", "fields": {"attr": "/json/pointer"}}`
 //! creates a record from the body; `{"type": "flow", "definition_id": "..."}`
-//! starts the flow's published version with the body as context. A call
-//! whose handler fails gives its event id back, so the provider's retry is
-//! not refused as a replay.
+//! starts the flow's published version with the body as context.
+//!
+//! With an `ordering_key` (a JSON pointer into the body), events of one key
+//! are processed strictly in the order they arrived: a job claims the
+//! key's oldest waiting event, under a short advisory lock held only while it
+//! claims, and works through the key's queue. An event of the key still
+//! being processed holds the others back. An event that fails is retried by
+//! the job, and after [`MAX_ATTEMPTS`] it is marked failed, stops holding
+//! its key back, and its job is in the dead-letter inbox (M5), where a
+//! replay starts it again.
 
 use std::net::SocketAddr;
 
@@ -47,6 +59,24 @@ use uuid::Uuid;
 /// The largest body a hook reads.
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 
+/// M14-T3: the registered job type that processes one inbox event
+/// (payload [`ProcessEvent`]).
+pub const PROCESS_JOB: &str = "inbound_hook_process";
+
+/// M14-T3: tries before an event is marked failed; the job type's own
+/// attempt budget is the same.
+pub const MAX_ATTEMPTS: i32 = 5;
+
+/// How long an event may sit in `processing` before a later job takes it
+/// over (its worker died).
+const PROCESSING_LEASE_MINUTES: i32 = 10;
+
+/// M14-T3: the job payload.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessEvent {
+    pub event_id: Uuid,
+}
+
 /// One inbound hook, as administrators see it.
 #[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
 pub struct InboundHookView {
@@ -63,6 +93,9 @@ pub struct InboundHookView {
     #[schema(value_type = Object)]
     pub handler: Value,
     pub run_as: Uuid,
+    /// M14-T3: a JSON pointer into the body; events with the same value are
+    /// processed in arrival order.
+    pub ordering_key: Option<String>,
     pub is_active: bool,
     pub secret_last4: Option<String>,
     pub row_version: i64,
@@ -71,7 +104,8 @@ pub struct InboundHookView {
 }
 
 const COLUMNS: &str = "id, name, auth, ip_allow, require_mtls, body_schema AS schema, handler, \
-                       run_as, is_active, secret_last4, row_version, created_at, updated_at";
+                       run_as, ordering_key, is_active, secret_last4, row_version, created_at, \
+                       updated_at";
 
 /// A hook's definition.
 #[derive(Debug, Deserialize, ToSchema)]
@@ -93,6 +127,10 @@ pub struct InboundHookBody {
     pub handler: Value,
     /// The service user the handler runs as.
     pub run_as: Uuid,
+    /// M14-T3: a JSON pointer into the body (`/order/id`) whose value orders
+    /// processing; none processes events as they come.
+    #[serde(default)]
+    pub ordering_key: Option<String>,
     #[serde(default = "default_true")]
     pub is_active: bool,
 }
@@ -144,6 +182,15 @@ async fn check_body(
         ));
     }
     inbound::check_auth(&body.auth).map_err(AppError::Validation)?;
+    if body
+        .ordering_key
+        .as_deref()
+        .is_some_and(|p| !p.starts_with('/') || p.len() > 200)
+    {
+        return Err(AppError::Validation(
+            "ordering_key is a JSON pointer such as /order/id".into(),
+        ));
+    }
     match body.secret.as_deref() {
         Some(secret) if !(8..=4096).contains(&secret.len()) => {
             return Err(AppError::Validation(
@@ -348,8 +395,8 @@ async fn create_hook(
     let view: InboundHookView = sqlx::query_as(&format!(
         "INSERT INTO inbound_hook \
              (id, name, auth, secret_sealed, secret_last4, ip_allow, require_mtls, body_schema, \
-              handler, run_as, is_active, created_by) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
+              handler, run_as, is_active, created_by, ordering_key) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
          ON CONFLICT DO NOTHING RETURNING {COLUMNS}"
     ))
     .bind(id)
@@ -364,6 +411,7 @@ async fn create_hook(
     .bind(body.run_as)
     .bind(body.is_active)
     .bind(ctx.user_id)
+    .bind(&body.ordering_key)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?
@@ -428,7 +476,8 @@ async fn update_hook(
         "UPDATE inbound_hook SET name = $3, auth = $4, \
                 secret_sealed = COALESCE($5, secret_sealed), secret_last4 = COALESCE($6, secret_last4), \
                 ip_allow = $7, require_mtls = $8, body_schema = $9, handler = $10, run_as = $11, \
-                is_active = $12, row_version = row_version + 1, updated_at = now() \
+                is_active = $12, ordering_key = $13, row_version = row_version + 1, \
+                updated_at = now() \
           WHERE id = $1 AND row_version = $2 AND NOT is_deleted RETURNING {COLUMNS}"
     ))
     .bind(id)
@@ -443,6 +492,7 @@ async fn update_hook(
     .bind(&body.handler)
     .bind(body.run_as)
     .bind(body.is_active)
+    .bind(&body.ordering_key)
     .fetch_optional(&mut *tx)
     .await
     .map_err(|e| match e {
@@ -538,6 +588,7 @@ async fn delete_hook(
 #[derive(sqlx::FromRow)]
 struct LiveHook {
     id: Uuid,
+    name: String,
     auth: Value,
     secret_sealed: String,
     ip_allow: Vec<String>,
@@ -545,14 +596,40 @@ struct LiveHook {
     body_schema: Value,
     handler: Value,
     run_as: Uuid,
+    ordering_key: Option<String>,
 }
+
+const LIVE_COLUMNS: &str = "id, name, auth, secret_sealed, ip_allow, require_mtls, body_schema, \
+                            handler, run_as, ordering_key";
 
 /// What an accepted call did.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct HookAccepted {
     pub accepted: bool,
-    pub record_id: Option<Uuid>,
-    pub instance_id: Option<Uuid>,
+    /// The inbox event the call was written to.
+    pub event_id: Uuid,
+    /// The event id was already in the inbox: acknowledged, not processed
+    /// again.
+    pub duplicate: bool,
+}
+
+/// What a processed event did.
+#[derive(Debug, Serialize)]
+struct HandlerOutcome {
+    record_id: Option<Uuid>,
+    instance_id: Option<Uuid>,
+}
+
+/// The ordering value of `payload` at `pointer`, as text.
+pub fn ordering_value(pointer: Option<&str>, payload: &Value) -> Option<String> {
+    let value = payload.pointer(pointer?)?;
+    match value {
+        Value::Null => None,
+        Value::String(s) => Some(s.clone()),
+        other => Some(other.to_string()),
+    }
+    .filter(|v| !v.is_empty())
+    .map(|v| v.chars().take(200).collect())
 }
 
 /// The record a record handler creates from `payload`.
@@ -578,7 +655,7 @@ async fn run_handler(
     hook: &LiveHook,
     name: &str,
     payload: Value,
-) -> Result<HookAccepted, AppError> {
+) -> Result<HandlerOutcome, AppError> {
     let ctx = state.base.security.resolve(hook.run_as).await?;
     match hook.handler["type"].as_str() {
         Some("record") => {
@@ -592,8 +669,7 @@ async fn run_handler(
                 Value::Object(body),
             )
             .await?;
-            Ok(HookAccepted {
-                accepted: true,
+            Ok(HandlerOutcome {
                 record_id: Some(record_id),
                 instance_id: None,
             })
@@ -624,8 +700,7 @@ async fn run_handler(
                 serde_json::json!({ "trigger": "hook", "hook": name, "body": payload }),
             )
             .await?;
-            Ok(HookAccepted {
-                accepted: true,
+            Ok(HandlerOutcome {
                 record_id: None,
                 instance_id: Some(instance),
             })
@@ -671,10 +746,9 @@ async fn call_hook(
         .await
         .map_err(|_| AppError::Validation("the body is too large".into()))?;
 
-    let hook: LiveHook = sqlx::query_as(
-        "SELECT id, auth, secret_sealed, ip_allow, require_mtls, body_schema, handler, run_as \
-           FROM inbound_hook WHERE name = $1 AND is_active AND NOT is_deleted",
-    )
+    let hook: LiveHook = sqlx::query_as(&format!(
+        "SELECT {LIVE_COLUMNS} FROM inbound_hook WHERE name = $1 AND is_active AND NOT is_deleted"
+    ))
     .bind(&name)
     .fetch_optional(&state.base.db)
     .await
@@ -722,13 +796,208 @@ async fn call_hook(
             "replay: this event was already accepted",
         ));
     }
-    match run_handler(&state, &hook, &name, payload).await {
+    match accept(&state, &hook, &verified.nonce, payload).await {
         Ok(accepted) => Ok((StatusCode::ACCEPTED, Json(accepted))),
         Err(error) => {
             inbound::release_nonce(&state, hook.id, &verified.nonce).await;
             Err(error)
         }
     }
+}
+
+/// M14-T3: writes the event to the inbox with its job, in one transaction;
+/// a known event id is a duplicate and enqueues nothing.
+async fn accept(
+    state: &EngineState,
+    hook: &LiveHook,
+    event_key: &str,
+    payload: Value,
+) -> Result<HookAccepted, AppError> {
+    let ordering = ordering_value(hook.ordering_key.as_deref(), &payload);
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let inserted: Option<Uuid> = sqlx::query_scalar(
+        "INSERT INTO inbound_hook_event (hook_id, event_key, ordering_key, payload) \
+         VALUES ($1, $2, $3, $4) ON CONFLICT (hook_id, event_key) DO NOTHING RETURNING id",
+    )
+    .bind(hook.id)
+    .bind(event_key)
+    .bind(&ordering)
+    .bind(&payload)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(event_id) = inserted else {
+        let existing: Uuid = sqlx::query_scalar(
+            "SELECT id FROM inbound_hook_event WHERE hook_id = $1 AND event_key = $2",
+        )
+        .bind(hook.id)
+        .bind(event_key)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        attome_db::tx::commit(tx).await?;
+        return Ok(HookAccepted {
+            accepted: true,
+            event_id: existing,
+            duplicate: true,
+        });
+    };
+    let job = attome_jobs::RegisteredJob {
+        name: PROCESS_JOB.to_owned(),
+        version: 1,
+        payload: serde_json::to_value(ProcessEvent { event_id }).map_err(AppError::internal)?,
+        next: None,
+    };
+    attome_jobs::enqueue_in_tx(&mut tx, attome_core::jobs::EngineJob::Registered(job))
+        .await
+        .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok(HookAccepted {
+        accepted: true,
+        event_id,
+        duplicate: false,
+    })
+}
+
+#[derive(sqlx::FromRow)]
+struct EventRow {
+    id: Uuid,
+    hook_id: Uuid,
+    ordering_key: Option<String>,
+    payload: Value,
+    attempts: i32,
+}
+
+/// Claims the next event to process for `event_id`'s queue: the event itself
+/// when its hook has no ordering, else its key's oldest waiting event while
+/// no other event of the key is being processed.
+async fn claim_next(state: &EngineState, event_id: Uuid) -> Result<Option<EventRow>, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let own: Option<(Uuid, Option<String>)> =
+        sqlx::query_as("SELECT hook_id, ordering_key FROM inbound_hook_event WHERE id = $1")
+            .bind(event_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    let Some((hook_id, key)) = own else {
+        return Ok(None);
+    };
+    let lease = format!("{PROCESSING_LEASE_MINUTES} minutes");
+    let claimed = match key {
+        None => sqlx::query_as::<_, EventRow>(
+            "UPDATE inbound_hook_event SET status = 'processing', attempts = attempts + 1, \
+                    claimed_at = now() \
+              WHERE id = $1 AND (status = 'received' \
+                    OR (status = 'processing' AND claimed_at < now() - $2::interval)) \
+             RETURNING id, hook_id, ordering_key, payload, attempts",
+        )
+        .bind(event_id)
+        .bind(&lease)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::internal)?,
+        Some(key) => {
+            let locked: bool =
+                sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+                    .bind(crate::ADVISORY_LOCK_NAMESPACE)
+                    .bind(format!("attome-api/inbound-hook-order:{hook_id}:{key}"))
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map_err(AppError::internal)?;
+            if !locked {
+                // Another job is claiming this key's next event right now;
+                // retry rather than exit, so an event is never left behind.
+                return Err(AppError::Conflict(
+                    "another job is claiming this key's next event; retried",
+                ));
+            }
+            sqlx::query_as::<_, EventRow>(
+                "UPDATE inbound_hook_event SET status = 'processing', attempts = attempts + 1, \
+                        claimed_at = now() \
+                  WHERE id = ( \
+                     SELECT e.id FROM inbound_hook_event e \
+                      WHERE e.hook_id = $1 AND e.ordering_key = $2 \
+                        AND (e.status = 'received' \
+                             OR (e.status = 'processing' AND e.claimed_at < now() - $3::interval)) \
+                        AND NOT EXISTS (SELECT 1 FROM inbound_hook_event p \
+                                         WHERE p.hook_id = $1 AND p.ordering_key = $2 \
+                                           AND p.status = 'processing' \
+                                           AND p.claimed_at >= now() - $3::interval) \
+                      ORDER BY e.received_at, e.id LIMIT 1) \
+                 RETURNING id, hook_id, ordering_key, payload, attempts",
+            )
+            .bind(hook_id)
+            .bind(&key)
+            .bind(&lease)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(AppError::internal)?
+        }
+    };
+    attome_db::tx::commit(tx).await?;
+    Ok(claimed)
+}
+
+/// M14-T3: the [`PROCESS_JOB`] handler. Processes `event_id`, or for an
+/// ordered hook its key's queue up to and past it, oldest first. A handler
+/// failure puts the event back for the job's retry, or after
+/// [`MAX_ATTEMPTS`] marks it failed; either way the job fails, so the last
+/// failure is in the dead-letter inbox.
+pub async fn process_event(state: &EngineState, event_id: Uuid) -> Result<(), AppError> {
+    // A replay from the dead-letter inbox starts the event again.
+    sqlx::query(
+        "UPDATE inbound_hook_event SET status = 'received', attempts = 0, error = NULL \
+          WHERE id = $1 AND status = 'failed'",
+    )
+    .bind(event_id)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    while let Some(event) = claim_next(state, event_id).await? {
+        let hook: Option<LiveHook> = sqlx::query_as(&format!(
+            "SELECT {LIVE_COLUMNS} FROM inbound_hook WHERE id = $1 AND NOT is_deleted"
+        ))
+        .bind(event.hook_id)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        let outcome = match &hook {
+            Some(hook) => run_handler(state, hook, &hook.name, event.payload.clone()).await,
+            None => Err(AppError::NotFound),
+        };
+        match outcome {
+            Ok(done) => {
+                sqlx::query(
+                    "UPDATE inbound_hook_event SET status = 'done', processed_at = now(), \
+                            error = NULL, result = $2 WHERE id = $1",
+                )
+                .bind(event.id)
+                .bind(serde_json::to_value(&done).map_err(AppError::internal)?)
+                .execute(&state.base.db)
+                .await
+                .map_err(AppError::internal)?;
+            }
+            Err(error) => {
+                let status = if event.attempts >= MAX_ATTEMPTS {
+                    "failed"
+                } else {
+                    "received"
+                };
+                sqlx::query("UPDATE inbound_hook_event SET status = $2, error = $3 WHERE id = $1")
+                    .bind(event.id)
+                    .bind(status)
+                    .bind(error.to_string().chars().take(500).collect::<String>())
+                    .execute(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?;
+                return Err(error);
+            }
+        }
+        if event.ordering_key.is_none() {
+            break;
+        }
+    }
+    Ok(())
 }
 
 pub fn routes() -> Router<EngineState> {
@@ -755,6 +1024,22 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inbound_inbox_orders_by_the_key_in_the_body() {
+        let payload = serde_json::json!({ "order": { "id": 42 }, "shop": "riyadh", "empty": "" });
+        assert_eq!(
+            ordering_value(Some("/order/id"), &payload),
+            Some("42".into())
+        );
+        assert_eq!(
+            ordering_value(Some("/shop"), &payload),
+            Some("riyadh".into())
+        );
+        assert_eq!(ordering_value(Some("/empty"), &payload), None);
+        assert_eq!(ordering_value(Some("/missing"), &payload), None);
+        assert_eq!(ordering_value(None, &payload), None);
+    }
 
     #[test]
     fn inbound_hook_record_body_reads_json_pointers() {

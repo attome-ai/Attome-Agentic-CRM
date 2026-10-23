@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Inbound hooks acknowledge fast (M14-T3). A verified call is written to the hook's inbox
+  (`inbound_hook_event`, unique by event id) with a processing job, and answered 202 with its
+  `event_id`. A duplicate delivery is acknowledged with `duplicate: true` and processed once. With
+  the hook's new `ordering_key` (a JSON pointer), events of one key are processed in arrival
+  order. A failing event is retried five times, then marked failed and left in the dead-letter
+  inbox; a replay from there starts it again. Migration 0218.
 - Builder-defined inbound endpoints (M14-T1). Administrators define hooks under
   `/api/v1/admin/inbound-hooks`; each change is audited and the secret is sealed and never
   returned. Providers call the public `POST /api/v1/hooks/{name}`. Authentication is HMAC, with
