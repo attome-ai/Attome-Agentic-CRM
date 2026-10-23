@@ -522,6 +522,114 @@ impl AuthorizationPolicy for SelfService {
     }
 }
 
+// ── Administration areas (Q12-T1) ──────────────────────────────────────────
+
+/// One of the twelve areas administration is delegated by (Q12). Each is a
+/// flat privilege `admin.<area>`; `system.admin` holds every area. A route
+/// that belongs to an area takes `Authorized<Privilege<area::X>>` instead of
+/// `Authorized<Admin>`, so a delegated administrator of that area passes and
+/// a full administrator still does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum AdminArea {
+    Users,
+    Roles,
+    Security,
+    DataModel,
+    Automation,
+    Ai,
+    Integrations,
+    Communication,
+    Reports,
+    Compliance,
+    Audit,
+    Deployment,
+}
+
+impl AdminArea {
+    pub const ALL: [Self; 12] = [
+        Self::Users,
+        Self::Roles,
+        Self::Security,
+        Self::DataModel,
+        Self::Automation,
+        Self::Ai,
+        Self::Integrations,
+        Self::Communication,
+        Self::Reports,
+        Self::Compliance,
+        Self::Audit,
+        Self::Deployment,
+    ];
+
+    /// The area's privilege key.
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::Users => "admin.users",
+            Self::Roles => "admin.roles",
+            Self::Security => "admin.security",
+            Self::DataModel => "admin.data_model",
+            Self::Automation => "admin.automation",
+            Self::Ai => "admin.ai",
+            Self::Integrations => "admin.integrations",
+            Self::Communication => "admin.communication",
+            Self::Reports => "admin.reports",
+            Self::Compliance => "admin.compliance",
+            Self::Audit => "admin.audit",
+            Self::Deployment => "admin.deployment",
+        }
+    }
+
+    /// The area a privilege key names.
+    pub fn parse(key: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|a| a.key() == key)
+    }
+
+    /// Whether `ctx` administers this area: `system.admin`, or the area's
+    /// own privilege.
+    pub fn held_by(self, ctx: &SecurityContext) -> bool {
+        ctx.is_admin || ctx.privileges.contains(self.key())
+    }
+
+    /// Every area `ctx` administers.
+    pub fn held(ctx: &SecurityContext) -> Vec<Self> {
+        Self::ALL.into_iter().filter(|a| a.held_by(ctx)).collect()
+    }
+}
+
+/// The [`PrivilegeKey`] markers of the [`AdminArea`]s, for
+/// `Authorized<Privilege<area::DataModel>>`.
+pub mod area {
+    use super::{AdminArea, PrivilegeKey};
+
+    macro_rules! area_key {
+        ($($marker:ident => $area:ident),* $(,)?) => {
+            $(
+                #[doc = concat!("The `", stringify!($area), "` administration area.")]
+                #[derive(Debug)]
+                pub struct $marker;
+                impl PrivilegeKey for $marker {
+                    const KEY: &'static str = AdminArea::$area.key();
+                }
+            )*
+        };
+    }
+
+    area_key! {
+        Users => Users,
+        Roles => Roles,
+        Security => Security,
+        DataModel => DataModel,
+        Automation => Automation,
+        Ai => Ai,
+        Integrations => Integrations,
+        Communication => Communication,
+        Reports => Reports,
+        Compliance => Compliance,
+        Audit => Audit,
+        Deployment => Deployment,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::{HashMap, HashSet};
@@ -623,6 +731,48 @@ mod tests {
         ));
         let (mut parts, _) = req.into_parts();
         Authorized::<P>::from_request_parts(&mut parts, &()).await
+    }
+
+    // ── Q12-T1 administration areas ─────────────────────────────────────────
+
+    #[test]
+    fn admin_areas_are_twelve_distinct_keys_that_round_trip() {
+        let keys: HashSet<&str> = AdminArea::ALL.iter().map(|a| a.key()).collect();
+        assert_eq!(keys.len(), 12);
+        for area in AdminArea::ALL {
+            assert!(area.key().starts_with("admin."), "{area:?}");
+            assert_eq!(AdminArea::parse(area.key()), Some(area));
+        }
+        assert_eq!(AdminArea::parse("system.admin"), None);
+        assert_eq!(<area::DataModel as PrivilegeKey>::KEY, "admin.data_model");
+    }
+
+    #[test]
+    fn admin_areas_system_admin_holds_every_area_a_delegate_only_theirs() {
+        assert_eq!(AdminArea::held(&ctx(true, &[])), AdminArea::ALL.to_vec());
+        let delegate = ctx(false, &["admin.reports", "admin.audit", "account.read"]);
+        assert_eq!(
+            AdminArea::held(&delegate),
+            vec![AdminArea::Reports, AdminArea::Audit]
+        );
+        assert!(!AdminArea::Roles.held_by(&delegate));
+    }
+
+    #[tokio::test]
+    async fn admin_areas_extractor_admits_the_area_and_admin_only() {
+        assert!(
+            extract::<Privilege<area::Reports>>(Some(ctx(false, &["admin.reports"])))
+                .await
+                .is_ok()
+        );
+        assert!(
+            extract::<Privilege<area::Reports>>(Some(ctx(true, &[])))
+                .await
+                .is_ok(),
+            "system.admin holds every area"
+        );
+        let other = extract::<Privilege<area::Roles>>(Some(ctx(false, &["admin.reports"]))).await;
+        assert!(matches!(other, Err(AppError::Forbidden)), "{other:?}");
     }
 
     // ── D-766 entity ceiling ────────────────────────────────────────────────

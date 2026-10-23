@@ -1,0 +1,73 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "privileges": [
+    {
+      "key": "admin.users",
+      "name": "Administer Users",
+      "description": "Create, disable and reset users and their sign-in methods (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.roles",
+      "name": "Administer Roles",
+      "description": "Define roles and grant them, within what the administrator holds (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.security",
+      "name": "Administer Security",
+      "description": "Security policies: passwords, MFA, sessions, IP and login-hour rules, keys (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.data_model",
+      "name": "Administer Data Model",
+      "description": "Entities, attributes, relationships, views, forms and their changesets (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.automation",
+      "name": "Administer Automation",
+      "description": "Flows, business rules, schedules and jobs (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.ai",
+      "name": "Administer AI",
+      "description": "AI providers, models, agents, budgets and policies (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.integrations",
+      "name": "Administer Integrations",
+      "description": "Integration systems, connectors, webhooks and machine clients (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.communication",
+      "name": "Administer Communication",
+      "description": "Email, SMS and notification channels, templates and senders (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.reports",
+      "name": "Administer Reports",
+      "description": "Reports, dashboards, metrics and their schedules (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.compliance",
+      "name": "Administer Compliance",
+      "description": "Retention, legal holds, consent, data subject requests and governance (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.audit",
+      "name": "Administer Audit",
+      "description": "Search and export the audit trail and its evidence (Q12). system.admin holds every area."
+    },
+    {
+      "key": "admin.deployment",
+      "name": "Administer Deployment",
+      "description": "Settings, licence, backups, releases and operations (Q12). system.admin holds every area."
+    }
+  ],
+  "entities": []
+}

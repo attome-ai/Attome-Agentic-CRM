@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Administration areas (Q12-T1): twelve privileges `admin.users`, `admin.roles`, `admin.security`,
+  `admin.data_model`, `admin.automation`, `admin.ai`, `admin.integrations`, `admin.communication`,
+  `admin.reports`, `admin.compliance`, `admin.audit` and `admin.deployment` (platform changeset 0071),
+  with `attome_server::authz::AdminArea` and `Privilege<area::X>` extractors; `system.admin` holds
+  every area. Routes move to them in Q12-T2.
 - Incremental data quality (L2-T3): entities are scored as their records change, off the change
   feed (every minute), with per-record scores when `quality_target.record_scoring` is on; a change
   to an entity's rules, weights, threshold or required attributes queues a resumable keyset rescan

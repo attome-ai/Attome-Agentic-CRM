@@ -380,23 +380,17 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
     PlatformChangeset {
         file: "0066-attome-ai-lead-agent.json",
         name: "attome-ai-lead-agent",
-        json: include_str!(
-            "../../../../../changesets/platform/0066-attome-ai-lead-agent.json"
-        ),
+        json: include_str!("../../../../../changesets/platform/0066-attome-ai-lead-agent.json"),
     },
     PlatformChangeset {
         file: "0067-attome-ai-inbox-agent.json",
         name: "attome-ai-inbox-agent",
-        json: include_str!(
-            "../../../../../changesets/platform/0067-attome-ai-inbox-agent.json"
-        ),
+        json: include_str!("../../../../../changesets/platform/0067-attome-ai-inbox-agent.json"),
     },
     PlatformChangeset {
         file: "0068-attome-ai-ops-agent.json",
         name: "attome-ai-ops-agent",
-        json: include_str!(
-            "../../../../../changesets/platform/0068-attome-ai-ops-agent.json"
-        ),
+        json: include_str!("../../../../../changesets/platform/0068-attome-ai-ops-agent.json"),
     },
     PlatformChangeset {
         file: "0069-attome-dashboard-decision-outcomes.json",
@@ -410,6 +404,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
         name: "attome-records-bulk-quiet",
         json: include_str!(
             "../../../../../changesets/platform/0070-attome-records-bulk-quiet.json"
+        ),
+    },
+    PlatformChangeset {
+        file: "0071-attome-security-admin-areas.json",
+        name: "attome-security-admin-areas",
+        json: include_str!(
+            "../../../../../changesets/platform/0071-attome-security-admin-areas.json"
         ),
     },
 ];

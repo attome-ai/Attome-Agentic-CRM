@@ -1,0 +1,202 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:222bb446a3e13df0c68cabc60d1021d8df7f3823fe36409f49e33ebdd2e4e00e",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-security-admin-areas.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "7caab74c-f459-712a-a44d-6425c9998269",
+  "layer": "platform",
+  "name": "attome-security-admin-areas",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "AI providers, models, agents, budgets and policies (Q12). system.admin holds every area.",
+          "key": "admin.ai",
+          "name": "Administer AI"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "admin.ai"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Search and export the audit trail and its evidence (Q12). system.admin holds every area.",
+          "key": "admin.audit",
+          "name": "Administer Audit"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "admin.audit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Flows, business rules, schedules and jobs (Q12). system.admin holds every area.",
+          "key": "admin.automation",
+          "name": "Administer Automation"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "admin.automation"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Email, SMS and notification channels, templates and senders (Q12). system.admin holds every area.",
+          "key": "admin.communication",
+          "name": "Administer Communication"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "admin.communication"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Retention, legal holds, consent, data subject requests and governance (Q12). system.admin holds every area.",
+          "key": "admin.compliance",
+          "name": "Administer Compliance"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "admin.compliance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Entities, attributes, relationships, views, forms and their changesets (Q12). system.admin holds every area.",
+          "key": "admin.data_model",
+          "name": "Administer Data Model"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "admin.data_model"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Settings, licence, backups, releases and operations (Q12). system.admin holds every area.",
+          "key": "admin.deployment",
+          "name": "Administer Deployment"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "admin.deployment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Integration systems, connectors, webhooks and machine clients (Q12). system.admin holds every area.",
+          "key": "admin.integrations",
+          "name": "Administer Integrations"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "admin.integrations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Reports, dashboards, metrics and their schedules (Q12). system.admin holds every area.",
+          "key": "admin.reports",
+          "name": "Administer Reports"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "admin.reports"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Define roles and grant them, within what the administrator holds (Q12). system.admin holds every area.",
+          "key": "admin.roles",
+          "name": "Administer Roles"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "admin.roles"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Security policies: passwords, MFA, sessions, IP and login-hour rules, keys (Q12). system.admin holds every area.",
+          "key": "admin.security",
+          "name": "Administer Security"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "admin.security"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Create, disable and reset users and their sign-in methods (Q12). system.admin holds every area.",
+          "key": "admin.users",
+          "name": "Administer Users"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "admin.users"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 71,
+  "title": "Platform definitions: attome-security-admin-areas"
+}

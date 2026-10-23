@@ -1185,6 +1185,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-dashboard-decision-outcomes",
         // B5-T3: the privilege to bulk edit without automation.
         "attome-records-bulk-quiet",
+        // Q12-T1: the twelve administration-area privileges.
+        "attome-security-admin-areas",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }
