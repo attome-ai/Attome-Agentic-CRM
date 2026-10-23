@@ -82,7 +82,7 @@ async fn domain_exists(state: &EngineState, domain: Uuid) -> Result<bool, AppErr
 }
 
 /// The caller edits `domain`: `system.admin`, or its owner or steward.
-async fn require_domain_editor(
+pub(crate) async fn require_domain_editor(
     state: &EngineState,
     ctx: &SecurityContext,
     domain: Uuid,
@@ -542,7 +542,18 @@ async fn create_policy(
     ctx: Authorized<SelfService>,
     Json(body): Json<CreatePolicyBody>,
 ) -> Result<(StatusCode, Json<GovernancePolicy>), AppError> {
-    require_domain_editor(&state, &ctx, body.domain_ref).await?;
+    Ok((StatusCode::CREATED, Json(create(&state, &ctx, body).await?)))
+}
+
+/// Writes a governance policy as `ctx`: the domain's owner or steward, or
+/// `system.admin`. The route and the agent's approved `draft_policy` both
+/// write through it.
+pub async fn create(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    body: CreatePolicyBody,
+) -> Result<GovernancePolicy, AppError> {
+    require_domain_editor(state, ctx, body.domain_ref).await?;
     let name = body.name_en.trim();
     if name.is_empty() {
         return Err(AppError::Validation("name_en is required".into()));
@@ -571,7 +582,7 @@ async fn create_policy(
     write_enforcements(&mut tx, id, &body.enforcements).await?;
     event(
         &mut tx,
-        &state,
+        state,
         ctx.user_id,
         AuditOperation::Create,
         ("governance_policy", id),
@@ -580,7 +591,7 @@ async fn create_policy(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    Ok((StatusCode::CREATED, Json(load_policy(&state, id).await?)))
+    load_policy(state, id).await
 }
 
 /// Reads a governance policy.
@@ -1001,6 +1012,75 @@ pub async fn approve_exception(
     .await?;
     attome_db::tx::commit(tx).await?;
     Ok(json!({ "exception_id": id, "status": "approved" }))
+}
+
+// ── Agent proposals ──────────────────────────────────────────────────────
+
+/// L3-T8: the recording an approved agent proposal writes under: a request
+/// by the person the agent acted for, so it records into a changeset like
+/// that person's own admin request would.
+pub fn agent_recording(
+    state: &EngineState,
+    actor: Uuid,
+    action: &str,
+) -> attome_core::changeset::Recording {
+    let config = state.base.config.as_ref();
+    let profile = config.app.deployment_profile.as_str();
+    attome_core::changeset::Recording::for_request(attome_core::changeset::RequestContext {
+        header: None,
+        actor: Some(actor),
+        actor_label: format!("user:{actor}"),
+        request_id: None,
+        route: format!("agent {action}"),
+        mode: config.metadata.changesets.effective_mode(profile),
+        auto_layer: config.metadata.changesets.auto_layer,
+        break_glass: false,
+    })
+}
+
+/// L3-T8: assigns entities that have no domain to `domain`, as `ctx` (the
+/// domain's owner or steward, or `system.admin`). An entity that already
+/// has a domain is refused: a proposal only fills gaps.
+pub async fn assign_unowned(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    recording: &attome_core::changeset::Recording,
+    domain: Uuid,
+    entities: &[String],
+) -> Result<(), AppError> {
+    require_domain_editor(state, ctx, domain).await?;
+    let owned: Vec<String> = sqlx::query_scalar(
+        "SELECT logicalname FROM entity_info WHERE logicalname = ANY($1) AND domain_ref IS NOT NULL",
+    )
+    .bind(entities)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !owned.is_empty() {
+        return Err(AppError::Validation(format!(
+            "already in a domain: {}",
+            owned.join(", ")
+        )));
+    }
+    crate::governance_admin::set_entity_domain(
+        state,
+        recording,
+        Some(domain),
+        entities,
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "data_domain",
+            Some(domain),
+        )
+        .named("governance_domain.assign_proposed")
+        .comment(format!(
+            "{} assigned by an approved proposal",
+            entities.join(", ")
+        )),
+    )
+    .await
 }
 
 // ── Certifications ───────────────────────────────────────────────────────

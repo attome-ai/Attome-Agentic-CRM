@@ -16,6 +16,8 @@
 pub mod adapt_flow_template;
 /// L5-T8: lineage.downstream, lineage.upstream, lineage.impact.
 pub mod lineage;
+/// L3-T8: governance.list_overdue, governance.propose_domains, governance.draft_policy.
+pub mod governance;
 pub mod agent_playground;
 pub mod agent_stats;
 pub mod agent_supervise;
@@ -105,6 +107,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(sentiment::descriptor());
     all.push(adapt_flow_template::descriptor());
     all.extend(lineage::descriptors());
+    all.extend(governance::descriptors());
     all.push(extract_document::descriptor());
     all.push(ai_field::descriptor());
     all.extend(crate::mcp_client::descriptors());
@@ -180,6 +183,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(sentiment::TextSentiment));
     all.push(Box::new(adapt_flow_template::FlowTemplateAdapt));
     all.extend(lineage::executors());
+    all.extend(governance::executors());
     all.push(Box::new(extract_document::DocumentExtract));
     all.push(Box::new(ai_field::RecordAiField));
     all.extend(crate::mcp_client::executors());

@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Proposal-only governance agent tools (L3-T8): `governance.list_overdue` reads overdue exceptions,
+  stale certifications and unowned entities; `governance.propose_domains` and
+  `governance.draft_policy` are Consequential, so an agent's call waits for a person's approval and
+  then runs as the person it acted for, through the governance routes' own functions.
 - Export-to-stream handover (L7-T5): a completed export's status carries `stream_token`, a
   change-stream cursor built from the export statement's own snapshot. Reading a subscription
   from it yields exactly the changes the export did not see: nothing is lost or doubled.
