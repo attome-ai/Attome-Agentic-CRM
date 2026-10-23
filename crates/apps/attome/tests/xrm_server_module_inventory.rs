@@ -181,6 +181,8 @@ const BASELINE: &[&str] = &[
     "schedules_admin",
     // M14-T1: builder-defined inbound endpoints.
     "inbound_hooks",
+    // L7-T3: change-stream subscriptions read by S2S identities.
+    "change_stream",
     "seed_support",
     // M7-T2/T3: stage processes read for forms and measured from stage_move.
     "stage_process_api",

@@ -1649,6 +1649,18 @@ async fn role_grant(fx: &Fx, role_id: Uuid, privilege_key: &str) -> Uuid {
     )
 }
 
+/// L7-T3: a subscription of a fresh S2S client to the fixture entity.
+async fn change_stream_fixture(fx: &Fx) -> Value {
+    let client = s2s_client(fx).await;
+    admin(
+        fx,
+        "POST",
+        "/api/v1/change-stream/subscriptions",
+        Some(json!({"name": uniq("stream"), "client_ref": client, "entities": [fx.entity]})),
+    )
+    .await
+}
+
 async fn s2s_client(fx: &Fx) -> Uuid {
     let (service_user, _) = seed_user(&fx.base, "s2s-service").await;
     id_of(
@@ -2599,6 +2611,39 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             req.extensions_mut()
                 .insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 9], 40_009))));
             req
+        }
+        // L7-T3: change-stream subscriptions.
+        "POST /api/v1/change-stream/subscriptions" => {
+            let client = s2s_client(fx).await;
+            request(
+                "POST",
+                "/api/v1/change-stream/subscriptions",
+                t,
+                Some(
+                    json!({"name": uniq("stream"), "client_ref": client, "entities": [fx.entity]}),
+                ),
+            )
+        }
+        "PATCH /api/v1/change-stream/subscriptions/{id}" => {
+            let sub = change_stream_fixture(fx).await;
+            request(
+                "PATCH",
+                &format!("/api/v1/change-stream/subscriptions/{}", id_of(&sub)),
+                t,
+                Some(json!({"row_version": 0, "payload": "changes"})),
+            )
+        }
+        "DELETE /api/v1/change-stream/subscriptions/{id}" => {
+            let sub = change_stream_fixture(fx).await;
+            request(
+                "DELETE",
+                &format!(
+                    "/api/v1/change-stream/subscriptions/{}?row_version=0",
+                    id_of(&sub)
+                ),
+                t,
+                None,
+            )
         }
         "POST /api/v1/admin/s2s/clients" => {
             let (service_user, _) = seed_user(&fx.base, "s2s-service").await;

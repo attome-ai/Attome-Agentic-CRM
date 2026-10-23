@@ -586,6 +586,13 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // L7-T3: change-stream subscriptions and their reads.
+                crate::change_stream::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // M7-T2/T3: stage processes for forms and reports.
                 crate::stage_process_api::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),

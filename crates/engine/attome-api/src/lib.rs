@@ -229,6 +229,8 @@ mod schema;
 mod seed_support;
 mod service_public;
 pub mod inbound_hooks;
+/// L7-T3: change-stream subscriptions for integration identities.
+pub mod change_stream;
 pub mod schedules_admin;
 pub mod stage_process_api;
 pub mod settings_admin;

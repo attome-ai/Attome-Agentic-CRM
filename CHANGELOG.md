@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Change-stream subscriptions (L7-T3): an administrator subscribes an S2S client to entities
+  (`/api/v1/change-stream/subscriptions`) with operation, changed-attribute and rule-condition
+  filters and a payload level (`id`, `changes`, `record`). The client reads its events in commit
+  order with its own cursor at `GET /api/v1/change-stream/{subscription}/events`, or as
+  server-sent events at `.../sse`, through its service user's record and field permissions
+  (sensitive attributes never, personal ones only when allowed). A cursor older than the feed
+  keeps answers `410 resync_needed`.
 - Governance roles, policies, exceptions and certifications (L3-T2) under
   `/api/v1/admin/governance/`: `domains/{id}/roles` (GET, PUT, DELETE), `policies` (CRUD; every edit
   raises the version, with enforcement links), `policies/{id}/exceptions` (a request goes to the

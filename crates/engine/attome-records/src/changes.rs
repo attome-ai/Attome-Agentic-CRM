@@ -92,7 +92,7 @@ fn open_position(sealed: &str) -> Result<CursorPosition, AppError> {
 }
 
 /// The ids among `ids` that are live and that `ctx` may read in `entity`.
-async fn readable_ids(
+pub async fn readable_ids(
     state: &EngineState,
     ctx: &SecurityContext,
     entity_id: Uuid,
