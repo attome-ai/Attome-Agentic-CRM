@@ -1,100 +1,137 @@
 <div class="audit-search">
-  <h2>Audit Search</h2>
+  <h2>{{ 'auditSearch.title' | translate }}</h2>
 
   <form class="filters" (ngSubmit)="search()">
     <label>
-      Entity
+      {{ 'auditSearch.entity' | translate }}
       <input type="text" name="entityName" [ngModel]="entityName()" (ngModelChange)="entityName.set($event)" />
     </label>
     <label>
-      Record ID
+      {{ 'auditSearch.recordId' | translate }}
       <input type="text" name="recordId" [ngModel]="recordId()" (ngModelChange)="recordId.set($event)" />
     </label>
     <label>
-      User ID
+      {{ 'auditSearch.userId' | translate }}
       <input type="text" name="userId" [ngModel]="userId()" (ngModelChange)="userId.set($event)" />
     </label>
     <label>
-      User email
+      {{ 'auditSearch.userEmail' | translate }}
       <input type="text" name="userEmail" [ngModel]="userEmail()" (ngModelChange)="userEmail.set($event)" />
     </label>
     <label>
-      Operation
+      {{ 'auditSearch.operation' | translate }}
       <select name="operation" [ngModel]="operation()" (ngModelChange)="operation.set($event)">
-        <option value="">Any</option>
-        <option value="0">Create</option>
-        <option value="1">Update</option>
-        <option value="2">Soft delete</option>
-        <option value="3">Hard delete</option>
-        <option value="4">Restore</option>
-        <option value="9">Login</option>
-        <option value="10">Logout</option>
-        <option value="11">Failed login</option>
-        <option value="12">Permission change</option>
-        <option value="13">Role change</option>
-        <option value="14">Owner change</option>
-        <option value="23">Account disabled</option>
-        <option value="24">Account enabled</option>
+        <option value="">{{ 'auditSearch.anyOperation' | translate }}</option>
+        @for (op of operations; track op.value) {
+          <option [value]="op.value">{{ 'auditSearch.op.' + op.key | translate }}</option>
+        }
       </select>
     </label>
     <label>
-      Field
+      {{ 'auditSearch.field' | translate }}
       <input type="text" name="fieldName" [ngModel]="fieldName()" (ngModelChange)="fieldName.set($event)" />
     </label>
     <label>
-      From
+      {{ 'auditSearch.from' | translate }}
       <input type="datetime-local" name="dateFrom" [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)" />
     </label>
     <label>
-      To
+      {{ 'auditSearch.to' | translate }}
       <input type="datetime-local" name="dateTo" [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)" />
     </label>
-    <button type="submit">Search</button>
+    <button type="submit">{{ 'auditSearch.search' | translate }}</button>
   </form>
 
+  <section class="saved" [attr.aria-label]="'auditSearch.savedSearches' | translate">
+    <h3>{{ 'auditSearch.savedSearches' | translate }}</h3>
+    <form class="saved__new" (ngSubmit)="saveSearch()">
+      <input
+        type="text"
+        name="saveName"
+        [attr.aria-label]="'auditSearch.saveName' | translate"
+        [placeholder]="'auditSearch.saveName' | translate"
+        [ngModel]="saveName()"
+        (ngModelChange)="saveName.set($event)"
+      />
+      <button type="submit" [disabled]="!saveName().trim()">{{ 'auditSearch.save' | translate }}</button>
+    </form>
+    @if (saved().length === 0) {
+      <p class="saved__empty">{{ 'auditSearch.noSaved' | translate }}</p>
+    } @else {
+      <ul class="saved__list">
+        @for (s of saved(); track s.name) {
+          <li>
+            <button type="button" class="saved__apply" (click)="applySaved(s)">{{ s.name }}</button>
+            <button
+              type="button"
+              class="saved__remove"
+              [attr.aria-label]="'auditSearch.remove' | translate"
+              (click)="removeSaved(s.name)"
+            >
+              <i class="las la-times" aria-hidden="true"></i>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
   <div class="export-bar">
-    <span>Export:</span>
+    <span>{{ 'auditSearch.export' | translate }}</span>
     <a [href]="exportHref('csv')" target="_blank" rel="noopener">CSV</a>
     <a [href]="exportHref('jsonl')" target="_blank" rel="noopener">JSONL</a>
     <a [href]="exportHref('cef')" target="_blank" rel="noopener">CEF</a>
+    <button type="button" (click)="downloadEvidencePack()" [disabled]="!canBuildPack() || packBusy()">
+      {{ 'auditSearch.evidencePack' | translate }}
+    </button>
+    @if (!canBuildPack()) {
+      <span class="export-bar__hint">{{ 'auditSearch.evidencePackHint' | translate }}</span>
+    }
+    @if (packError(); as msg) {
+      <span class="error">{{ msg }}</span>
+    }
   </div>
 
   @if (loading()) {
-    <p>Loading…</p>
-  } @else if (error()) {
-    <p class="error">{{ error() }}</p>
+    <p>{{ 'auditSearch.loading' | translate }}</p>
+  } @else if (error(); as key) {
+    <p class="error">{{ key | translate }}</p>
   } @else {
     <table class="results">
       <thead>
         <tr>
-          <th>When</th>
-          <th>Entity</th>
-          <th>Record</th>
-          <th>Operation</th>
-          <th>User</th>
-          <th>Event</th>
+          <th scope="col">{{ 'auditSearch.when' | translate }}</th>
+          <th scope="col">{{ 'auditSearch.entity' | translate }}</th>
+          <th scope="col">{{ 'auditSearch.record' | translate }}</th>
+          <th scope="col">{{ 'auditSearch.operation' | translate }}</th>
+          <th scope="col">{{ 'auditSearch.user' | translate }}</th>
+          <th scope="col">{{ 'auditSearch.event' | translate }}</th>
         </tr>
       </thead>
       <tbody>
         @for (row of rows(); track row.id) {
           <tr>
-            <td>{{ row.created_at }}</td>
+            <td>{{ row.created_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</td>
             <td>{{ row.entity_name }}</td>
             <td>{{ row.record_id }}</td>
-            <td>{{ row.operation }}</td>
+            <td>{{ operationKey(row.operation) | translate }}</td>
             <td>{{ row.user_name }} ({{ row.user_email }})</td>
             <td>{{ row.event_name }}</td>
           </tr>
         } @empty {
-          <tr><td colspan="6">No matching audit events.</td></tr>
+          <tr><td colspan="6">{{ 'auditSearch.empty' | translate }}</td></tr>
         }
       </tbody>
     </table>
 
     <div class="pager">
-      <button type="button" (click)="goToPage(page() - 1)" [disabled]="page() <= 1">Previous</button>
-      <span>Page {{ page() }} of {{ totalPages() }} ({{ total() }} total)</span>
-      <button type="button" (click)="goToPage(page() + 1)" [disabled]="page() >= totalPages()">Next</button>
+      <button type="button" (click)="goToPage(page() - 1)" [disabled]="page() <= 1">
+        {{ 'auditSearch.previous' | translate }}
+      </button>
+      <span>{{ 'auditSearch.pageOf' | translate: { page: page(), pages: totalPages(), total: total() } }}</span>
+      <button type="button" (click)="goToPage(page() + 1)" [disabled]="page() >= totalPages()">
+        {{ 'auditSearch.next' | translate }}
+      </button>
     </div>
   }
 </div>

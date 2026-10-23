@@ -11,6 +11,9 @@ import { ApiComponents, ApiService, ATTOME_CONFIG } from '@attome/base';
  * Rust struct name and its `PaginatedResponse<T>` wrapper respectively.
  */
 export type AuditSearchRow = ApiComponents['schemas']['AuditSearchRow'];
+/** Q17-T1: what an evidence pack covers — a time range or one record. */
+export type EvidencePackRequest = ApiComponents['schemas']['EvidencePackRequest'];
+export type EvidencePack = ApiComponents['schemas']['EvidencePack'];
 export type AuditSearchResponse =
   ApiComponents['schemas']['PaginatedResponse_AuditSearchRow'];
 
@@ -43,6 +46,15 @@ export class AuditSearchService {
     params['page'] = String(page);
     params['page_size'] = String(pageSize);
     return this.api.get<AuditSearchResponse>('/api/v1/admin/audit/search', params);
+  }
+
+  /**
+   * Q17-T1 / Q16: the sealed events of a range or record with their
+   * inclusion proofs and the public keys to verify them offline
+   * (`POST /api/v1/admin/audit/evidence-packs`, at most 2,000 events).
+   */
+  evidencePack(body: EvidencePackRequest): Observable<EvidencePack> {
+    return this.api.post<EvidencePack>('/api/v1/admin/audit/evidence-packs', body);
   }
 
   /**

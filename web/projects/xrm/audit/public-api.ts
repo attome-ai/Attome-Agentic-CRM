@@ -6,11 +6,18 @@ export { registerAuditEntityForms } from './provide-audit-entity-forms';
 
 // M19 gap list — the dedicated audit search page + its service
 // (`GET /api/v1/admin/audit/search` / `/export`).
-export { AuditSearchComponent } from './search/audit-search/audit-search.component';
+export {
+  AuditSearchComponent,
+  OPERATIONS as AUDIT_OPERATIONS,
+  SAVED_SEARCHES_KEY as AUDIT_SAVED_SEARCHES_KEY,
+  type SavedAuditSearch,
+} from './search/audit-search/audit-search.component';
 export {
   AuditSearchService,
   type AuditExportFormat,
   type AuditSearchFilters,
   type AuditSearchResponse,
   type AuditSearchRow,
+  type EvidencePack,
+  type EvidencePackRequest,
 } from './search/data/audit-search.service';
