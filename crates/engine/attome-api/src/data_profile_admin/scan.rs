@@ -73,6 +73,7 @@ pub struct FieldStats {
     min_text: Option<String>,
     max_text: Option<String>,
     patterns: Option<super::patterns::PatternStats>,
+    pii: Option<super::pii::PiiStats>,
 }
 
 impl FieldStats {
@@ -89,7 +90,19 @@ impl FieldStats {
             min_text: None,
             max_text: None,
             patterns: None,
+            pii: None,
         }
+    }
+
+    /// L6-T4: also runs the personal-data detectors on every value.
+    pub fn with_pii(mut self) -> Self {
+        self.pii = Some(super::pii::PiiStats::default());
+        self
+    }
+
+    /// L6-T4: the detector counts, when they ran.
+    pub fn take_pii(&mut self) -> Option<super::pii::PiiStats> {
+        self.pii.take()
     }
 
     /// L6-T3: also counts shapes and Arabic measures of every value.
@@ -110,6 +123,9 @@ impl FieldStats {
         }
         if let Some(patterns) = &mut self.patterns {
             patterns.push(value);
+        }
+        if let Some(pii) = &mut self.pii {
+            pii.push(value);
         }
         if let Some(count) = self.counts.get_mut(value) {
             *count += 1;

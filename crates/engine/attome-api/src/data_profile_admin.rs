@@ -45,6 +45,9 @@ mod patterns;
 /// L6-T5: drift between snapshots, scheduled profiles, retention.
 pub mod drift;
 
+/// L6-T4: personal data found in unlabelled attributes.
+mod pii;
+
 /// How long the profile scan may run.
 const SCAN_TIMEOUT: &str = "120s";
 
@@ -254,6 +257,160 @@ async fn get_profile(
     Ok(Json(row.ok_or(AppError::NotFound)?))
 }
 
+/// L6-T4: writes this profile's label proposals, counts only. An open
+/// proposal of the same attribute and detector is updated in place; an open
+/// one this profile no longer finds (the attribute was labelled, or its
+/// values changed) is resolved.
+async fn store_proposals(
+    state: &EngineState,
+    entity: &str,
+    profile_id: Uuid,
+    found: &[(String, Vec<pii::Proposal>)],
+) -> Result<(), AppError> {
+    let keys: Vec<String> = found
+        .iter()
+        .flat_map(|(attribute, proposals)| {
+            proposals
+                .iter()
+                .map(move |p| format!("{attribute}:{}", p.detector.as_str()))
+        })
+        .collect();
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query(
+        "UPDATE data_label_proposal SET status = 'resolved', resolved_at = now() \
+          WHERE entity_logicalname = $1 AND status = 'open' \
+            AND NOT (attribute || ':' || detector = ANY($2))",
+    )
+    .bind(entity)
+    .bind(&keys)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    for (attribute, proposals) in found {
+        for p in proposals {
+            sqlx::query(
+                "INSERT INTO data_label_proposal \
+                     (entity_logicalname, attribute, detector, proposed_label, matches, sampled, \
+                      share_pct, profile_ref) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
+                 ON CONFLICT (entity_logicalname, attribute, detector) WHERE status = 'open' \
+                 DO UPDATE SET matches = EXCLUDED.matches, sampled = EXCLUDED.sampled, \
+                               share_pct = EXCLUDED.share_pct, profile_ref = EXCLUDED.profile_ref, \
+                               updated_at = now()",
+            )
+            .bind(entity)
+            .bind(attribute)
+            .bind(p.detector.as_str())
+            .bind(pii::PROPOSED_LABEL)
+            .bind(i64::try_from(p.matches).unwrap_or(i64::MAX))
+            .bind(i64::try_from(p.sampled).unwrap_or(i64::MAX))
+            .bind(p.share_pct)
+            .bind(profile_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+        }
+    }
+    attome_db::tx::commit(tx).await?;
+    Ok(())
+}
+
+/// L6-T4: one label proposal. Counts only, never a matched value.
+#[derive(Serialize, sqlx::FromRow, ToSchema)]
+struct LabelProposalRow {
+    id: Uuid,
+    entity_logicalname: String,
+    attribute: String,
+    /// `saudi_national_id`, `iqama`, `iban`, `phone` or `email`.
+    detector: String,
+    /// The label proposed for a builder to decide on.
+    proposed_label: String,
+    matches: i64,
+    sampled: i64,
+    share_pct: f64,
+    /// `open` until the profile no longer finds it (`resolved`).
+    status: String,
+    profile_ref: Uuid,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    resolved_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Deserialize, IntoParams)]
+struct ListProposalsQuery {
+    entity: Option<String>,
+    /// `open` (the default) or `resolved`.
+    status: Option<String>,
+    /// One-based: page 1 is the first page.
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+/// Lists personal-data label proposals.
+///
+/// L6-T4: a profile proposes the `personal` label for an unlabelled text
+/// attribute when more than 5% of its sampled values look like a Saudi
+/// national ID, an Iqama, an IBAN, a phone or an email address. Only the
+/// counts are kept. Nothing is labelled automatically: a builder sets the
+/// label on the attribute, and the next profile resolves the proposal.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/label-proposals",
+    tag = "admin",
+    params(ListProposalsQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<LabelProposalRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Unknown status", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_label_proposals(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(query): Query<ListProposalsQuery>,
+) -> Result<Json<PaginatedResponse<LabelProposalRow>>, AppError> {
+    let status = query.status.as_deref().unwrap_or("open");
+    if !matches!(status, "open" | "resolved") {
+        return Err(AppError::Validation("status is open or resolved".into()));
+    }
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+    } = PageWindow::resolve(
+        query.page,
+        query.page_size,
+        PageBase::One,
+        DEFAULT_PAGE_SIZE,
+    );
+    let items: Vec<LabelProposalRow> = sqlx::query_as(
+        "SELECT id, entity_logicalname, attribute, detector, proposed_label, matches, sampled, \
+                share_pct, status, profile_ref, created_at, updated_at, resolved_at \
+           FROM data_label_proposal \
+          WHERE status = $1 AND ($2::text IS NULL OR entity_logicalname = $2) \
+          ORDER BY share_pct DESC, id LIMIT $3 OFFSET $4",
+    )
+    .bind(status)
+    .bind(&query.entity)
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM data_label_proposal \
+          WHERE status = $1 AND ($2::text IS NULL OR entity_logicalname = $2)",
+    )
+    .bind(status)
+    .bind(&query.entity)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
+}
+
 async fn mark_failed(state: &EngineState, profile_id: Uuid, message: &str) -> Result<(), AppError> {
     sqlx::query(
         "UPDATE data_profile SET status = 'failed', error = $2, completed_at = NOW(), \
@@ -320,7 +477,15 @@ pub async fn process(
             return Ok(());
         }
     };
-    let (sample_size, stats) = scanned;
+    let (sample_size, mut stats) = scanned;
+    let found: Vec<(String, Vec<pii::Proposal>)> = stats
+        .iter_mut()
+        .zip(&attrs)
+        .filter_map(|(s, attr)| {
+            s.take_pii()
+                .map(|p| (attr.logicalname.clone(), p.proposals()))
+        })
+        .collect();
     let fields: Vec<Value> = stats
         .into_iter()
         .zip(&attrs)
@@ -341,6 +506,12 @@ pub async fn process(
     .execute(&state.base.db)
     .await
     .map_err(AppError::internal)?;
+
+    // L6-T4: label proposals for personal data found. A failure here never
+    // fails the profile itself.
+    if let Err(error) = store_proposals(state, &entity_name, profile_id, &found).await {
+        tracing::warn!(%profile_id, entity = %entity_name, %error, "data label proposals failed");
+    }
 
     // L6-T5: compare with the previous snapshot and alert on drift. A
     // failure here never fails the profile itself.
@@ -368,10 +539,15 @@ async fn one_scan(
             let kind = scan::FieldKind::of_cast(sql_cast(a));
             let stats = scan::FieldStats::new(kind);
             if kind == scan::FieldKind::Text {
-                stats.with_patterns(patterns::PatternStats::new(
+                let stats = stats.with_patterns(patterns::PatternStats::new(
                     attome_field::format_matcher(a.options.as_ref()),
                     a.logicalname.contains("name"),
-                ))
+                ));
+                if is_labelled(a) {
+                    stats
+                } else {
+                    stats.with_pii()
+                }
             } else {
                 stats
             }
@@ -452,12 +628,16 @@ pub fn routes() -> Router<EngineState> {
             post(enqueue_profile).get(list_profiles),
         )
         .route("/api/v1/admin/data/profile/{id}", get(get_profile))
+        .route(
+            "/api/v1/admin/data/label-proposals",
+            get(list_label_proposals),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(enqueue_profile, list_profiles, get_profile))]
+#[openapi(paths(enqueue_profile, list_profiles, get_profile, list_label_proposals))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

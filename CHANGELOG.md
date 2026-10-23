@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Personal data detection in data profiles (L6-T4). A profile checks the sampled values of every
+  unlabelled text attribute for Saudi national IDs and Iqamas (with the ID checksum), IBANs
+  (mod 97), phones and email addresses. Above 5% it proposes the `personal` label, listed at
+  `GET /api/v1/admin/data/label-proposals` with counts only; a builder decides.
 - Inbound hook handlers route and upsert (M14-T4). A record handler with a `key` attribute updates
   the record holding the event's value for it (an external id) and creates one only when none
   does. An `events` handler picks a record or flow handler by the event type at a JSON pointer,
