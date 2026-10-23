@@ -106,6 +106,16 @@ pub async fn drain_tick(state: &EngineState) -> Result<Option<DrainStats>, AppEr
     };
 
     let stats = drain_once(db, &project).await?;
+    // N15-T2: the same tick re-chunks changed records, timelines and
+    // documents, through its own cursor.
+    let chunks = crate::corpus::record_chunks::drain_once(db, &registry).await?;
+    if chunks.written + chunks.removed > 0 {
+        tracing::debug!(
+            written = chunks.written,
+            removed = chunks.removed,
+            "record chunk pass"
+        );
+    }
 
     // Committed even on an empty batch: the transaction exists to scope the
     // lock, and the cursor advance inside `drain_once` runs on its own
@@ -221,6 +231,20 @@ async fn run_embedding_passes(db: &PgPool, client: &attome_inference::EmbeddingC
                 tracing::warn!(
                     error = %e,
                     "knowledge embedding pass failed; chunks stay lexical-only until a later tick"
+                );
+                break;
+            }
+        }
+    }
+    // N15-T2: record, timeline and document passages, the same way.
+    for _ in 0..EMBED_BATCHES_PER_TICK {
+        match crate::corpus::record_chunks::embed_pending(db, client, EMBED_BATCH).await {
+            Ok(written) if written < EMBED_BATCH as u64 => break,
+            Ok(_) => {}
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "record chunk embedding pass failed; passages stay lexical-only until a later tick"
                 );
                 break;
             }

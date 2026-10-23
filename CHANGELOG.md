@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Record passages for retrieval (N15-T2). A second change-feed consumer
+  (`attome-search/record-chunks`) runs on the search drain's tick. It chunks long text and
+  rich-text fields (400 characters or more), timeline items (notes, communications, activities)
+  and documents' extracted text into `record_chunk` (migration 0216), splitting by headings, then
+  paragraphs, then sentences, with each field as a heading. Changed chunks lose their vector,
+  and the embedding loop refills it. Sensitive fields are never chunked, and a timeline item's
+  passages keep both their own record and the record they are attached to.
 - Stage bar and stage metrics (M7-T2, M7-T3). `GET /api/v1/stage-processes/for/{entity}` returns an
   entity's published stage process. Record forms of an entity with a `stage` show a stage bar: the
   stages, the current one, its checklist, and a button per allowed next stage that names the

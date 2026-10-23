@@ -37,6 +37,7 @@
 //! uniqueness reaches the metadata, this is the single place to widen.
 
 pub mod knowledge;
+pub mod record_chunks;
 pub mod memory;
 
 /// Polymorphic child entities (basic-units plan B-R1, U1): a note,
