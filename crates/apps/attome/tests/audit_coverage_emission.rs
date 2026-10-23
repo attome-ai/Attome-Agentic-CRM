@@ -5607,6 +5607,18 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"user_id": fx.admin_id, "role": "steward"})),
             )
         }
+        "PUT /api/v1/admin/governance/domains/{id}/governed-change" => {
+            let domain = governance_domain_fixture(fx).await;
+            request(
+                "PUT",
+                &format!(
+                    "/api/v1/admin/governance/domains/{}/governed-change",
+                    id_of(&domain)
+                ),
+                t,
+                Some(json!({"governed_change": true})),
+            )
+        }
         "DELETE /api/v1/admin/governance/domains/{id}/roles" => {
             let domain = governance_domain_fixture(fx).await;
             let id = id_of(&domain);

@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Governed change at publish (L3-T5): with `PUT /api/v1/admin/governance/domains/{id}/governed-change`
+  on, a changeset apply that changes the domain's entities waits for approval by its owners or
+  stewards, with the lineage impact of every deleted, retyped or renamed field attached; approved,
+  it goes on as before. After each apply, certified entities whose definition changed are marked
+  `stale`. Applies touching no governed domain are unchanged.
 - Profile a staged import before applying it (L6-T6): `POST /api/v1/data/profile:file` profiles an
   import's staged rows in a job with the entity profile's statistics, shapes and masking. Data
   profiles are now readable with the new `metadata.read` privilege, not only `system.admin`, for

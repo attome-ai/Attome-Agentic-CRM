@@ -338,6 +338,20 @@ async fn apply_changesets(
     check_apply(&state, &body).await?;
     // Z15-T14: with the guard on, blocking customer tests pass first.
     attome_records::customer_tests::publish_guard(&state, &ctx).await?;
+    // L3-T5: a change to a governed domain's entities waits for its owners'
+    // or stewards' approval first.
+    if let Some(governed) = super::governance_gate::check(&state, &body, ctx.user_id).await? {
+        let request = super::governance_gate::submit(&state, &body, ctx.user_id, governed).await?;
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(ApplyChangesetsAccepted {
+                status: ApplyStatus::Planned.as_str().to_owned(),
+                apply_ids: body.apply_ids,
+                approval_pending: true,
+                approval_request_id: Some(request.id),
+            }),
+        ));
+    }
     let payload = serde_json::to_value(&body).map_err(AppError::internal)?;
     if let Some(request) =
         crate::approval_admin::gate(&state, super::ACTION_CHANGESET_APPLY, payload, ctx.user_id)

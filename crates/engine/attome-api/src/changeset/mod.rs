@@ -41,6 +41,8 @@ pub mod boot;
 /// Solution 7 Phase 2 (D-787 rule 7) — business keys in the planner and applier.
 pub mod business_key;
 pub mod close;
+/// L3-T5: governed change at publish.
+pub mod governance_gate;
 pub mod jcs;
 pub mod layers;
 pub mod ledger;

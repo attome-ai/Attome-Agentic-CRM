@@ -320,6 +320,65 @@ async fn delete_role(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct GovernedChange {
+    /// Changes to the domain's entities wait for its owners' or stewards'
+    /// approval at publish.
+    pub governed_change: bool,
+}
+
+/// Turns governed change on or off for a domain.
+///
+/// L3-T5: with it on, a changeset apply that changes one of the domain's
+/// entities or their attributes waits for approval by the domain's owners
+/// or stewards, with the change's lineage impact attached.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/governance/domains/{id}/governed-change",
+    tag = "admin",
+    operation_id = "governance_put_governed_change",
+    params(("id" = Uuid, Path)),
+    request_body = GovernedChange,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Set", body = GovernedChange),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller is not the domain's owner or steward", body = ErrorResponse),
+        (status = 404, description = "Domain not found", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn put_governed_change(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(domain): Path<Uuid>,
+    Json(body): Json<GovernedChange>,
+) -> Result<Json<GovernedChange>, AppError> {
+    require_domain_editor(&state, &ctx, domain).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query("UPDATE data_domain SET governed_change = $2, updated_at = now() WHERE id = $1")
+        .bind(domain)
+        .bind(body.governed_change)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    event(
+        &mut tx,
+        &state,
+        ctx.user_id,
+        AuditOperation::Update,
+        ("data_domain", domain),
+        "governance_domain.governed_change",
+        format!(
+            "governed change {}",
+            if body.governed_change { "on" } else { "off" }
+        ),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Json(body))
+}
+
 // ── Policies ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, ToSchema, PartialEq, Eq)]
@@ -1284,6 +1343,10 @@ pub fn routes() -> Router<EngineState> {
             get(list_roles).put(put_role).delete(delete_role),
         )
         .route(
+            "/api/v1/admin/governance/domains/{id}/governed-change",
+            axum::routing::put(put_governed_change),
+        )
+        .route(
             "/api/v1/admin/governance/policies",
             get(list_policies).post(create_policy),
         )
@@ -1306,6 +1369,7 @@ pub fn routes() -> Router<EngineState> {
     list_roles,
     put_role,
     delete_role,
+    put_governed_change,
     list_policies,
     create_policy,
     get_policy,

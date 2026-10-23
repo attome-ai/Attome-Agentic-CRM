@@ -175,7 +175,9 @@ pub enum RunOutcome {
 /// failed or unqueued).
 pub async fn run_apply_job(state: &EngineState, apply_ids: &[Uuid]) -> Result<(), AppError> {
     let Some(report_id) = open_report(state, apply_ids).await else {
-        run_rows(state, apply_ids).await?;
+        if run_rows(state, apply_ids).await? {
+            super::governance_gate::lapse_certifications(state).await;
+        }
         return Ok(());
     };
     let all_done = rr::scope(
@@ -188,6 +190,8 @@ pub async fn run_apply_job(state: &EngineState, apply_ids: &[Uuid]) -> Result<()
     .await?;
     if all_done {
         close_report(state, report_id).await;
+        // L3-T5: certifications of entities this changed lapse.
+        super::governance_gate::lapse_certifications(state).await;
     }
     Ok(())
 }

@@ -171,6 +171,8 @@ fn has_execution_handler(action_type: &str) -> bool {
         || action_type == attome_records::approval_lock::APPROVAL_CHANGE_ACTION
         // L3-T2: opened by an exception request, never by `gate()`.
         || action_type == attome_compliance::governance_policy::ACTION_POLICY_EXCEPTION
+        // L3-T5: opened by a changeset apply touching a governed domain.
+        || action_type == crate::changeset::governance_gate::ACTION_GOVERNED_CHANGE
 }
 
 /// The mandatory production approval baseline (closes the follow-up
@@ -948,6 +950,32 @@ async fn dispatch_approved(
             let accepted =
                 crate::bundle::do_apply_plan(state, payload.plan_id, Some(request.id)).await?;
             serde_json::to_value(&accepted).map_err(AppError::internal)?
+        }
+        crate::changeset::governance_gate::ACTION_GOVERNED_CHANGE => {
+            // L3-T5: the governed domains approved; the apply now goes the
+            // way the route would have taken it.
+            let body: crate::changeset::apply_routes::ApplyChangesetsBody =
+                serde_json::from_value(request.payload["apply"].clone())
+                    .map_err(AppError::internal)?;
+            let apply_payload = serde_json::to_value(&body).map_err(AppError::internal)?;
+            match gate(
+                state,
+                crate::changeset::ACTION_CHANGESET_APPLY,
+                apply_payload,
+                request.requested_by,
+            )
+            .await?
+            {
+                Some(next) => serde_json::json!({
+                    "approval_pending": true,
+                    "approval_request_id": next.id,
+                }),
+                None => serde_json::to_value(
+                    crate::changeset::apply_routes::do_apply(state, &body, Some(request.id))
+                        .await?,
+                )
+                .map_err(AppError::internal)?,
+            }
         }
         crate::changeset::ACTION_CHANGESET_APPLY => {
             // Solution 7 (design §5.3): the payload is the apply request the

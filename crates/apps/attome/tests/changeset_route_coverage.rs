@@ -314,6 +314,11 @@ const EXCLUDED: &[(&str, &str)] = &[
          carries user ids (audited as a Configuration event)",
     ),
     (
+        "PUT /api/v1/admin/governance/domains/{id}/governed-change",
+        "L3-T5: whether the domain's changes wait for approval; a deployment's governance \
+         switch, not promoted metadata (audited as a Configuration event)",
+    ),
+    (
         "DELETE /api/v1/admin/governance/domains/{id}/roles",
         "L3-T2: takes a person's governance role away; deployment data, not metadata",
     ),
