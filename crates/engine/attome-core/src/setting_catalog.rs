@@ -446,6 +446,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(10),
         ),
+        // R11-T1: the evidence collectors' administrator ceiling.
+        SettingDescriptor::new(
+            "grc.max_admins",
+            "The most active administrators the admin_count evidence collector accepts; more, or \
+         none, opens a finding (R11-T1).",
+            || json!({"type": "integer", "minimum": 1, "maximum": 1000}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(5),
+        ),
         // L1-T7: golden-record changes sent only once certified.
         SettingDescriptor::new(
             "master.certified_only",

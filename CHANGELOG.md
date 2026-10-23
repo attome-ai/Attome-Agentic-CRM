@@ -188,6 +188,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Evidence collectors (R11-T1): the daily `grc_evidence_collect` job writes a `grc_evidence` record
+  per check: administrators with a confirmed second factor, the administrator count (at most
+  `grc.max_admins`, default 5), undecided accesses in completed access reviews, the newest restore
+  drill (passed, at most 35 days old), every organization's newest audit chain verification (passed,
+  at most 8 days old) and the running release. A failing check opens one high-severity finding,
+  not another while it is still open.
 - Policy reviews, attestations and exceptions (R9-T1): the new grc pack adds a review date and
   cadence to policies, attestation campaigns (a policy, a role, a due date) and policy exceptions
   (requested, approved, rejected, expired). The daily `grc_policy_sweep` job reminds a policy's

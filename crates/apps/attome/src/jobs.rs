@@ -2955,6 +2955,8 @@ const DEDUP_KEY_MAINTENANCE: &str = "maintenance-generation";
 const DEDUP_KEY_DEVICE_READINGS: &str = "device-readings";
 /// R9-T1: policy reviews, attestations and exceptions (a registered job type).
 const DEDUP_KEY_GRC_POLICY_SWEEP: &str = "grc-policy-sweep";
+/// R11-T1: evidence collectors (a registered job type).
+const DEDUP_KEY_GRC_EVIDENCE: &str = "grc-evidence-collect";
 /// I10-T2: warranty expiry reminders (a registered job type).
 const DEDUP_KEY_WARRANTY_REMINDER: &str = "warranty-expiry-reminder";
 /// H8-T1: status page notices from the change feed (a registered job type).
@@ -3219,6 +3221,10 @@ pub const DEVICE_READINGS: attome_jobs::JobType =
 /// and expired exceptions.
 pub const GRC_POLICY_SWEEP: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_grc::policy::JOB, 1);
+
+/// R11-T1: evidence collectors writing evidence and, on failure, findings.
+pub const GRC_EVIDENCE_COLLECT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_grc::collectors::JOB, 1);
 
 /// I10-T2: warranty owners told 30 days before a warranty ends, once per
 /// end date.
@@ -4068,6 +4074,32 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            GRC_EVIDENCE_COLLECT,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_GRC) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let inputs = attome_grc::collectors::Inputs {
+                    last_drill: crate::backup::last_drill(&state.base.config)
+                        .await
+                        .map(|d| (d.at, d.passed, d.detail)),
+                    release_version: env!("CARGO_PKG_VERSION").to_owned(),
+                };
+                let run = attome_grc::collectors::collect(&state, &inputs)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(
+                    collected = run.collected,
+                    failed = run.failed,
+                    findings = run.findings_opened,
+                    "grc evidence collected"
+                );
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             GRC_POLICY_SWEEP,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_GRC) {
@@ -4540,6 +4572,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == DEVICE_READINGS.name => DEDUP_KEY_DEVICE_READINGS,
         EngineJob::Registered(job) if job.name == GRC_POLICY_SWEEP.name => {
             DEDUP_KEY_GRC_POLICY_SWEEP
+        }
+        EngineJob::Registered(job) if job.name == GRC_EVIDENCE_COLLECT.name => {
+            DEDUP_KEY_GRC_EVIDENCE
         }
         EngineJob::Registered(job) if job.name == COMPLIANCE_EXPIRY.name => {
             DEDUP_KEY_COMPLIANCE_EXPIRY
@@ -5485,6 +5520,21 @@ pub fn spawn_device_readings_scheduler(db: DbPool, interval: std::time::Duration
             "device readings",
         ),
         Err(error) => tracing::error!(%error, "device readings: not scheduled"),
+    }
+}
+
+/// R11-T1: daily, the evidence collectors.
+pub fn spawn_grc_evidence_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(GRC_EVIDENCE_COLLECT.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_GRC_EVIDENCE,
+            "grc evidence collection",
+        ),
+        Err(error) => tracing::error!(%error, "grc evidence collection: not scheduled"),
     }
 }
 

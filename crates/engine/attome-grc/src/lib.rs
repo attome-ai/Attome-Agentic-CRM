@@ -20,6 +20,8 @@
 //! reminders, the acknowledgement-expiry sweep, and `policy_rule` (blocked on
 //! M45 Phase 2/3, which has not shipped).
 pub mod auth;
+/// R11-T1: evidence collectors writing evidence and findings.
+pub mod collectors;
 pub mod lifecycle;
 pub mod mapping;
 pub mod model;

@@ -185,6 +185,20 @@ pub async fn run_drill(config: &AppConfig) -> Result<DrillRecord, String> {
     Ok(record)
 }
 
+/// R11-T1: the newest restore drill recorded in [`DRILLS_FILE`], if any.
+pub async fn last_drill(config: &AppConfig) -> Option<DrillRecord> {
+    let path = backup_dir(config).join(DRILLS_FILE);
+    let text = tokio::fs::read_to_string(&path).await.ok()?;
+    last_drill_in(&text)
+}
+
+/// The newest well-formed drill line of a drills file. Pure.
+pub fn last_drill_in(text: &str) -> Option<DrillRecord> {
+    text.lines()
+        .rev()
+        .find_map(|line| serde_json::from_str::<DrillRecord>(line).ok())
+}
+
 /// Whether today's run also drills: the first day of each month.
 pub fn drill_due(now: DateTime<Utc>) -> bool {
     use chrono::Datelike;

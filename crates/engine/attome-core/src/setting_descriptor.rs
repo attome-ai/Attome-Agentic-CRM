@@ -246,6 +246,9 @@ pub fn area(key: &str) -> &'static str {
         Some("notification") => "channels",
         Some("approval" | "jobs") => "operations",
         Some("data_profile") => "data",
+        Some("quality" | "master" | "lineage") => "data",
+        Some("revrec") => "sales",
+        Some("grc") => "security",
         _ => "other",
     }
 }
@@ -464,6 +467,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "revrec.contracts" => {
             "هل يحصل الطلب المؤكد أو الاشتراك الفعّال على عقد إيراد والتزامات أداء تُنشأ في الخلفية بعد التغيير. معطّل افتراضيًا."
+        }
+        "grc.max_admins" => {
+            "أكبر عدد من المسؤولين النشطين يقبله فحص الأدلة؛ يفتح تجاوزه أو غياب أي مسؤول ملاحظة."
         }
         "master.certified_only" => {
             "الكيانات الرئيسية التي لا تُرسل تغييرات سجلاتها الذهبية إلى المشتركين إلا وهي معتمدة؛ لا تُرسل تغييرات السجل المسودة أو المتقاعد."
