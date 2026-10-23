@@ -101,6 +101,17 @@ fn checked_target_auth(
     Ok(Some((name.to_owned(), value.to_owned())))
 }
 
+/// L1-T7: a subscriber's system name, trimmed: up to 100 characters.
+fn checked_external_system(s: Option<&str>) -> Result<Option<String>, AppError> {
+    match s.map(str::trim).filter(|s| !s.is_empty()) {
+        None => Ok(None),
+        Some(s) if s.chars().count() <= 100 => Ok(Some(s.to_owned())),
+        Some(_) => Err(AppError::Validation(
+            "external_system is at most 100 characters".into(),
+        )),
+    }
+}
+
 fn checked_payload_shape(s: &str) -> Result<&'static str, AppError> {
     crate::payload::PayloadShape::parse(s)
         .map(crate::payload::PayloadShape::as_str)
@@ -148,6 +159,10 @@ struct CreateSubscriptionBody {
     /// M13-T3: send one record's events one at a time, in order.
     #[serde(default)]
     ordered: bool,
+    /// L1-T7: the system this subscriber is, as master-data contributions
+    /// name it; a golden-record change then carries its own external id.
+    #[serde(default)]
+    external_system: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -186,6 +201,9 @@ struct UpdateSubscriptionBody {
     /// M13-T3: omitting it keeps the current one.
     #[serde(default)]
     ordered: Option<bool>,
+    /// L1-T7: omitting it keeps the current one; an empty one removes it.
+    #[serde(default)]
+    external_system: Option<String>,
     row_version: i64,
 }
 
@@ -211,6 +229,8 @@ struct SubscriptionDetail {
     target_auth_header: Option<String>,
     /// M13-T3: one record's events are sent one at a time, in order.
     ordered: bool,
+    /// L1-T7: the system this subscriber is, for its own external ids.
+    external_system: Option<String>,
     /// M13-T3: when and why the endpoint's failures turned it off.
     paused_at: Option<DateTime<Utc>>,
     paused_reason: Option<String>,
@@ -410,6 +430,7 @@ async fn create_subscription(
         .unwrap_or_else(|| delivery::default_max_attempts(&retry_class))
         .clamp(1, MAX_ATTEMPTS_CEILING);
     let payload_shape = checked_payload_shape(body.payload_shape.as_deref().unwrap_or("full"))?;
+    let external_system = checked_external_system(body.external_system.as_deref())?;
     let target_auth = checked_target_auth(
         body.target_auth_header.as_deref(),
         body.target_auth_value.as_deref(),
@@ -466,8 +487,9 @@ async fn create_subscription(
             (id, name, kind, filter_entity_logicalnames, filter_operations, filter_event_names, \
              filter_expression, target_url, webhook_secret_encrypted, retry_class, \
              max_attempts, owner_ref, created_by, payload_shape, target_auth_header, \
-             target_auth_value_encrypted, ordered) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) \
+             target_auth_value_encrypted, ordered, external_system) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, \
+                 $18) \
          RETURNING id, name, kind, created_at",
     )
     .bind(new_id)
@@ -487,6 +509,7 @@ async fn create_subscription(
     .bind(&auth_header)
     .bind(&auth_encrypted)
     .bind(body.ordered)
+    .bind(&external_system)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -600,6 +623,12 @@ async fn update_subscription(
         .unwrap_or(cur.8)
         .clamp(1, MAX_ATTEMPTS_CEILING);
     let new_payload_shape = checked_payload_shape(body.payload_shape.as_deref().unwrap_or(&cur.9))?;
+    // L1-T7: `None` keeps the subscriber's system, `Some(None)` removes it.
+    let system_change: Option<Option<String>> = match body.external_system.as_deref() {
+        None => None,
+        Some(s) if s.trim().is_empty() => Some(None),
+        Some(s) => Some(checked_external_system(Some(s))?),
+    };
     // M13-T2: `None` keeps the target auth header, `Some(None)` removes it.
     let auth_change: Option<Option<(String, String)>> = match (
         body.target_auth_header.as_deref(),
@@ -653,6 +682,7 @@ async fn update_subscription(
                 target_auth_value_encrypted = \
                     CASE WHEN $13 THEN $15 ELSE target_auth_value_encrypted END, \
                 ordered = COALESCE($16, ordered), \
+                external_system = CASE WHEN $17 THEN $18 ELSE external_system END, \
                 paused_at = CASE WHEN $3 THEN NULL ELSE paused_at END, \
                 paused_reason = CASE WHEN $3 THEN NULL ELSE paused_reason END, \
                 updated_at = NOW(), row_version = row_version + 1 \
@@ -674,6 +704,8 @@ async fn update_subscription(
     .bind(&auth_header)
     .bind(&auth_encrypted)
     .bind(body.ordered)
+    .bind(system_change.is_some())
+    .bind(system_change.flatten())
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?
@@ -913,8 +945,8 @@ async fn fetch_detail(
     sqlx::query_as(
         "SELECT id, name, kind, is_active, filter_entity_logicalnames, filter_operations, \
                 filter_event_names, filter_expression, target_url, retry_class, max_attempts, \
-                owner_ref, payload_shape, target_auth_header, ordered, paused_at, paused_reason, \
-                row_version, created_at, updated_at \
+                owner_ref, payload_shape, target_auth_header, ordered, external_system, \
+                paused_at, paused_reason, row_version, created_at, updated_at \
          FROM event_subscription WHERE id = $1 AND is_deleted = FALSE",
     )
     .bind(id)

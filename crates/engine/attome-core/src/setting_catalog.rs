@@ -446,6 +446,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(10),
         ),
+        // L1-T7: golden-record changes sent only once certified.
+        SettingDescriptor::new(
+            "master.certified_only",
+            "Master entities whose golden-record changes are sent to subscribers only while the \
+         golden record is certified; a draft or retired one's changes are not sent (L1-T7).",
+            || json!({"type": "array", "maxItems": 200, "items": {"type": "string", "maxLength": 63}}),
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
         SettingDescriptor::new(
             "quality.max_issues_per_entity",
             "The most data quality issue rows one entity gets in a scoring run, so one entity \

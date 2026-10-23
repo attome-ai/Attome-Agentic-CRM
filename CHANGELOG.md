@@ -188,6 +188,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Golden-record changes for subscribers (L1-T7): a master-data rebuild that changes a golden record
+  writes a `master.golden_changed` change event naming the changed attributes, in the rebuild's own
+  transaction. An event subscription can name its `external_system` (migration 0239), and its webhook
+  body then carries `master`: the golden record's certification and that system's own external id
+  for the record. Entities listed in the `master.certified_only` setting send changes only while the
+  golden record is certified.
 - Data steward routes over master data (L1-T5): `POST /api/v1/master/{entity}/{id}/pins` pins an
   attribute of a golden record (optionally setting its value first), so survivorship rebuilds leave it
   alone, and `DELETE .../pins/{attribute}` unpins it and queues a rebuild;

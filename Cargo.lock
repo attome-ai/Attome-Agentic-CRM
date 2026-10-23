@@ -2185,6 +2185,7 @@ dependencies = [
  "attome-docgen",
  "attome-document",
  "attome-einvoice",
+ "attome-events",
  "attome-integration",
  "attome-jobs",
  "attome-ledger",

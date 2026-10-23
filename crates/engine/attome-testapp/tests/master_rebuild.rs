@@ -168,3 +168,122 @@ fn rebuild_follows_ranks_and_held_changes_nothing() {
         );
     });
 }
+
+async fn golden_changed_events(app: &TestApp, id: Uuid) -> i64 {
+    sqlx::query_scalar(
+        "SELECT count(*) FROM entity_change_event \
+          WHERE record_id = $1 AND event_name = 'master.golden_changed'",
+    )
+    .bind(id)
+    .fetch_one(app.db())
+    .await
+    .unwrap()
+}
+
+// feature: L1
+#[test]
+fn certified_change_emits_event_draft_does_not() {
+    use axum::http::{Method, StatusCode};
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app, "crm").await;
+        attome_metadata::provision::master::ensure_master_tables(app.db(), "account")
+            .await
+            .expect("master tables");
+        let (status, body) = app
+            .request(
+                Method::PUT,
+                "/api/v1/admin/settings/master.certified_only",
+                Some(json!({"scope": "deployment", "value": ["account"]})),
+            )
+            .await;
+        assert!(status.is_success(), "{status} {body}");
+        let owner = app.admin.id;
+        let ctx = app.state.base.security.resolve(owner).await.expect("ctx");
+        let tag = Uuid::now_v7().simple().to_string();
+        let send = |system: &'static str, phone: &'static str| {
+            let ctx = ctx.clone();
+            let app = &app;
+            let tag = tag.clone();
+            async move {
+                let prefix = if system == "crm" { "C" } else { "E" };
+                master::ingest(
+                    &app.state,
+                    &ctx,
+                    "account",
+                    system,
+                    &format!("{prefix}-{tag}"),
+                    &obj(json!({"name": format!("Certified Co {tag}"), "phone": phone})),
+                )
+                .await
+                .expect("contribution")
+            }
+        };
+        let Ingested::Attached { golden: id, .. } = send("crm", "+966 11 100 0001").await else {
+            panic!("the CRM version is valid");
+        };
+        sqlx::query(
+            "INSERT INTO external_id_link (entity, record_id, system, external_id) \
+             VALUES ('account', $1, 'erp', $2)",
+        )
+        .bind(id)
+        .bind(format!("E-{tag}"))
+        .execute(app.db())
+        .await
+        .unwrap();
+
+        // A draft golden record's change is not sent.
+        send("erp", "+966 11 100 0002").await;
+        let rebuilt = master::rebuild(&app.state, "account", id, owner)
+            .await
+            .expect("rebuild");
+        assert!(rebuilt.changed.contains(&"phone".to_owned()), "{rebuilt:?}");
+        assert_eq!(golden_changed_events(&app, id).await, 0, "draft: no event");
+
+        // Certified: one event per changing rebuild, naming what changed.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/master/account/{id}/certify"),
+                Some(json!({"status": "certified"})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        send("erp", "+966 11 100 0003").await;
+        master::rebuild(&app.state, "account", id, owner)
+            .await
+            .expect("rebuild");
+        assert_eq!(golden_changed_events(&app, id).await, 1);
+        let changed: Vec<String> = sqlx::query_scalar(
+            "SELECT changed_attributes FROM entity_change_event \
+              WHERE record_id = $1 AND event_name = 'master.golden_changed'",
+        )
+        .bind(id)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(changed, vec!["phone".to_owned()]);
+        // A rebuild that changes nothing sends nothing.
+        master::rebuild(&app.state, "account", id, owner)
+            .await
+            .expect("rebuild");
+        assert_eq!(golden_changed_events(&app, id).await, 1);
+
+        // Each subscriber gets its own id for the record.
+        let erp = attome_events::master::block(app.db(), "account", id, Some("erp"))
+            .await
+            .expect("erp block");
+        assert_eq!(erp["external_id"], json!(format!("E-{tag}")));
+        assert_eq!(erp["certification"], "certified");
+        let crm = attome_events::master::block(app.db(), "account", id, Some("crm"))
+            .await
+            .expect("crm block");
+        assert_eq!(crm["external_id"], json!(format!("C-{tag}")));
+        let stranger = attome_events::master::block(app.db(), "account", id, Some("wms"))
+            .await
+            .expect("wms block");
+        assert_eq!(stranger["external_id"], Value::Null);
+    });
+}

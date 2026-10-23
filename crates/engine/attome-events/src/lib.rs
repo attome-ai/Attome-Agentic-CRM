@@ -48,5 +48,7 @@ pub mod dead_letter_source;
 pub mod delivery;
 pub mod dispatch;
 pub mod filter;
+/// L1-T7: the `master` object of a golden-record change's webhook body.
+pub mod master;
 pub mod payload;
 pub mod telemetry;

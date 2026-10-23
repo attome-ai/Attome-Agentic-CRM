@@ -185,13 +185,72 @@ pub async fn rebuild(
         .map_err(AppError::internal)?;
         out.provenance += 1;
     }
+    if !out.changed.is_empty() {
+        distribute(state, &mut tx, entity, golden, &out.changed).await?;
+    }
     attome_db::tx::commit(tx).await?;
     Ok(out)
+}
+
+/// L1-T7: the event name of a golden record's change.
+pub const GOLDEN_CHANGED: &str = "master.golden_changed";
+/// L1-T7: the setting naming the entities sent only while certified.
+pub const CERTIFIED_ONLY: &str = "master.certified_only";
+
+/// Whether `entity`'s golden-record changes wait for certification. Pure.
+pub fn certified_only(setting: &Value, entity: &str) -> bool {
+    setting
+        .as_array()
+        .is_some_and(|list| list.iter().any(|e| e.as_str() == Some(entity)))
+}
+
+/// L1-T7: queues `master.golden_changed` for subscribers in the rebuild's
+/// transaction, naming the attributes that changed; skipped for a golden
+/// record that is not certified when the entity is sent only certified.
+/// Each webhook subscriber resolves its own external id when the event is
+/// delivered (`attome_events::delivery`).
+async fn distribute(
+    state: &EngineState,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    entity: &str,
+    golden: Uuid,
+    changed: &[String],
+) -> Result<(), AppError> {
+    let setting = attome_core::setting_registry()
+        .get(CERTIFIED_ONLY)
+        .map(|d| state.settings.load().resolve(d, None, None).0)
+        .unwrap_or(Value::Null);
+    if certified_only(&setting, entity)
+        && super::steward::certification(&mut **tx, entity, golden).await?
+            != super::steward::Certification::Certified
+    {
+        return Ok(());
+    }
+    attome_core::change_feed::emit_with(
+        &mut **tx,
+        entity,
+        golden,
+        attome_core::change_feed::ChangeOperation::Update,
+        Some(GOLDEN_CHANGED),
+        &attome_core::change_feed::ChangePayload {
+            changed_attributes: changed.to_vec(),
+            ..Default::default()
+        },
+    )
+    .await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn master_certified_only_names_entities() {
+        let setting = serde_json::json!(["account", "product"]);
+        assert!(certified_only(&setting, "account"));
+        assert!(!certified_only(&setting, "contact"));
+        assert!(!certified_only(&Value::Null, "account"));
+    }
 
     #[test]
     fn master_newest_takes_the_latest_filled_value() {

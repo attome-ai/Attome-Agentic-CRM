@@ -187,6 +187,7 @@ struct SubscriptionRow {
     target_auth_header: Option<String>,
     target_auth_value_encrypted: Option<String>,
     ordered: bool,
+    external_system: Option<String>,
 }
 
 /// Delivers (or terminally fails) one `event_delivery` row.
@@ -332,7 +333,17 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
         let owner_ctx = state.base.security.resolve(sub.owner_ref).await?;
         let read_pool = state.base.read_pool(sub.owner_ref).await;
         let shape = crate::payload::PayloadShape::from_stored(&sub.payload_shape);
-        let body = build_body(read_pool, &owner_ctx, &delivery, shape).await?;
+        let mut body = build_body(read_pool, &owner_ctx, &delivery, shape).await?;
+        // L1-T7: a golden-record change names the subscriber's own id for it.
+        if delivery.event_name.as_deref() == Some(crate::master::GOLDEN_CHANGED) {
+            body["master"] = crate::master::block(
+                &state.base.db,
+                &delivery.event_entity_logicalname,
+                delivery.event_record_id,
+                sub.external_system.as_deref(),
+            )
+            .await?;
+        }
         serde_json::to_vec(&body).map_err(AppError::internal)?
     };
 
@@ -576,7 +587,7 @@ async fn load_subscription(
     sqlx::query_as(
         "SELECT kind, is_active, is_deleted, target_url, webhook_secret_encrypted, \
                 max_attempts, owner_ref, payload_shape, target_auth_header, \
-                target_auth_value_encrypted, ordered \
+                target_auth_value_encrypted, ordered, external_system \
          FROM event_subscription WHERE id = $1",
     )
     .bind(subscription_id)
