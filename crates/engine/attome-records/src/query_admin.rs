@@ -1957,11 +1957,14 @@ async fn write_catalog_lineage(
     name: &str,
     relations: &[String],
 ) -> Result<(), AppError> {
-    let refs: Vec<attome_core::MetadataReferenceInput> = relations
-        .iter()
-        .map(attome_core::MetadataReferenceInput::entity)
-        .collect();
-    attome_core::replace_references(tx, "query", query_id, name, &refs).await
+    // L5-T2: raw SQL has no column lineage yet (P2), so each relation is an
+    // `entity_only` read edge, under a new graph version.
+    use attome_core::lineage::EdgeSource;
+    let edges = attome_core::lineage::capture::QueryTreeSource
+        .edges(&serde_json::json!({ "sql": "", "relations": relations }));
+    attome_core::lineage::write_edges(tx, "query", query_id, name, edges)
+        .await
+        .map(|_| ())
 }
 
 /// M18 Data Catalog Phase 1 (D-466) — `EngineJob::CatalogLineageBackfill`'s

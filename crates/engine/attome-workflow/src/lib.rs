@@ -11,6 +11,8 @@ pub mod escalation;
 pub mod graph;
 pub mod instance_admin;
 pub mod instance_control;
+/// L5-T2: a flow's lineage edges.
+pub mod lineage_source;
 pub mod model;
 pub mod node_types;
 pub mod retention;

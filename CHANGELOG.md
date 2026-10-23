@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Lineage edges captured at publish (L5-T2). `attome_core::lineage` has an `EdgeSource` trait and
+  parsers for expressions (the fields a formula, rollup or rule reads), structured query trees
+  (select, filter, sort, group), view and form attribute lists, and agent triggers; flows implement
+  it in `attome-workflow`. Each edge says whether the definition triggers on, reads, derives from
+  or writes its target. A definition that cannot be parsed, such as raw SQL, gets `entity_only`
+  edges; attributes are never guessed. Flow publishes and stored queries now write their edges in
+  the publish's transaction under a new `lineage_version`.
 - Data profile drift, schedules and retention (L6-T5). Each completed profile is compared with the
   entity's previous one: a null share up 10 points or more, a new most-frequent value, or a
   changed top pattern shape. Any drift is stored on the profile (`drift`) and sent once per run to

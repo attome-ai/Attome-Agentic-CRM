@@ -1047,15 +1047,16 @@ async fn publish_version(
     // M18 Data Catalog Phase 1 (D-466): keyed by the STABLE definition id
     // (not `version_id`), same reasoning `query_admin::write_catalog_lineage`
     // documents — a later republish replaces this same object's reference
-    // set rather than leaving the prior version's rows orphaned.
-    attome_core::replace_references(
-        &mut tx,
-        "workflow",
-        definition_id,
-        &own_name,
-        &crate::trigger_index::collect_entity_lineage(&graph),
-    )
-    .await?;
+    // set rather than leaving the prior version's rows orphaned. L5-T2: the
+    // edges are attribute level where the graph names fields, with what the
+    // flow does to each, under a new graph version.
+    {
+        use attome_core::lineage::EdgeSource;
+        let edges = crate::lineage_source::FlowSource
+            .edges(&serde_json::to_value(&graph).map_err(AppError::internal)?);
+        attome_core::lineage::write_edges(&mut tx, "workflow", definition_id, &own_name, edges)
+            .await?;
+    }
 
     attome_audit::security::write_security_event(
         &mut tx,

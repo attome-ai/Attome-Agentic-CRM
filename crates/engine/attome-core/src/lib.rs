@@ -64,6 +64,8 @@ pub mod quiet_scope;
 /// change-feed writers.
 pub mod provenance_scope;
 pub mod quiet_window;
+/// L5-T2: lineage edges captured at publish.
+pub mod lineage;
 /// C11 B5 (P-5) — the runtime AI switch's read side: `config AND runtime`,
 /// failing closed, consulted by every AI surface.
 pub mod ai_runtime_switch;
