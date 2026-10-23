@@ -16,6 +16,8 @@ pub mod admin;
 pub mod connection;
 pub mod connector;
 pub mod credential;
+/// L9-T1: the enrichment runner: proposals with provenance, per-provider budgets.
+pub mod enrich;
 mod crypto;
 pub mod guard;
 /// M14-T1: checks a builder-defined inbound hook's call passes.

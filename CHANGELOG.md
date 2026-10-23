@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Enrichment runner (L9-T1): `attome_integration::enrich` asks a configured source about records
+  within its provider's daily budget and stores field proposals with their source and fetch time
+  (`enrichment_proposal`); empty fields get `fill` proposals, filled ones that differ `review`
+  ones, and no record is written.
 - Governed change at publish (L3-T5): with `PUT /api/v1/admin/governance/domains/{id}/governed-change`
   on, a changeset apply that changes the domain's entities waits for approval by its owners or
   stewards, with the lineage impact of every deleted, retyped or renamed field attached; approved,
