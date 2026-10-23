@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Quote submission under a discount policy (F2-T1): `POST /api/v1/sales/quotes/{id}/submit`. The
+  setting `sales.discount_policy` holds thresholds by product family, role and deal size. A quote
+  within all of them is sent; one over a threshold goes to the approval process the strictest
+  names and stays a draft, and once that process approves it at no lower discounts, submitting
+  sends it.
 - Lineage edges captured at publish (L5-T2). `attome_core::lineage` has an `EdgeSource` trait and
   parsers for expressions (the fields a formula, rollup or rule reads), structured query trees
   (select, filter, sort, group), view and form attribute lists, and agent triggers; flows implement

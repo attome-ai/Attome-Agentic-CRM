@@ -37,6 +37,8 @@ pub mod quote;
 /// D9-T3: quote acceptance by guest link.
 pub mod quote_accept;
 pub mod quote_sync;
+/// F2-T1: quote submission under the discount policy.
+pub mod quote_submit;
 pub mod schedules;
 pub mod scoring;
 pub mod scoring_run;
@@ -68,6 +70,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<schedules::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<quote_sync::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<quote::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<quote_submit::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<order::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<undo::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::outcome::ApiDocFragment as utoipa::OpenApi>::openapi());

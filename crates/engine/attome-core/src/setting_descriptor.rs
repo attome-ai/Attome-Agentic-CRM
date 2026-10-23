@@ -235,6 +235,7 @@ pub fn area(key: &str) -> &'static str {
         Some("ops") => "operations",
         Some("commission") => "sales",
         Some("billing") => "sales",
+        Some("sales") => "sales",
         Some("records") => "data",
         Some("customer_tests") => "data",
         Some("limits") => "operations",
@@ -520,6 +521,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "billing.seller_postal_zone" => "الرمز البريدي للبائع من خمسة أرقام (العنوان الوطني).",
         "billing.write_off_approval_threshold" => {
             "الشطب الذي يتجاوز هذا المبلغ ينتظر موافقة قبل تنفيذه؛ صفر يعني الشطب بلا موافقة."
+        }
+        "sales.discount_policy" => {
+            "حدود الخصم التي يُفحص بها عرض السعر عند إرساله، حسب عائلة المنتج والدور وحجم الصفقة؛ العرض الذي يتجاوز حدًا يُرسل إلى عملية الموافقة التي يسميها أشد الحدود، والعرض ضمن كل الحدود يُرسل مباشرة. لا شيء افتراضيًا."
         }
         "commission.clawback_days" => {
             "عدد الأيام بعد احتساب العمولة التي يظل فيها الإشعار الدائن أو الاسترداد يسترجعها؛ العمولة الأقدم تبقى."

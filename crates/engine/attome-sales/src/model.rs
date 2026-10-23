@@ -148,6 +148,10 @@ impl EngineModel for SalesModel {
                 post(crate::quote::post_sales_quote_reprice),
             )
             .route(
+                "/api/v1/sales/quotes/{id}/submit",
+                post(crate::quote_submit::post_sales_quote_submit),
+            )
+            .route(
                 "/api/v1/sales/quotes/{id}/versions",
                 post(crate::quote::post_sales_quote_version),
             )

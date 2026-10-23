@@ -608,7 +608,7 @@ pub async fn make_primary(
     })
 }
 
-fn if_match(headers: &axum::http::HeaderMap) -> Result<i64, AppError> {
+pub(crate) fn if_match(headers: &axum::http::HeaderMap) -> Result<i64, AppError> {
     headers
         .get(axum::http::header::IF_MATCH)
         .and_then(|v| v.to_str().ok())

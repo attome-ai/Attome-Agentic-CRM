@@ -55,14 +55,31 @@ fn discount_pct(list: Decimal, net: Decimal) -> Decimal {
 
 /// Evaluates `lines` for a submitter with `role`.
 pub fn evaluate(thresholds: &[Threshold], lines: &[QuoteLine], role: &str) -> PolicyResult {
+    evaluate_with(thresholds, lines, |r| r == role)
+}
+
+/// Evaluates `lines` for a submitter holding `roles`: a role-specific
+/// threshold applies when the submitter holds that role.
+pub fn evaluate_for_roles(
+    thresholds: &[Threshold],
+    lines: &[QuoteLine],
+    roles: &[String],
+) -> PolicyResult {
+    evaluate_with(thresholds, lines, |r| roles.iter().any(|held| held == r))
+}
+
+fn evaluate_with(
+    thresholds: &[Threshold],
+    lines: &[QuoteLine],
+    holds: impl Fn(&str) -> bool,
+) -> PolicyResult {
     let list: Decimal = lines.iter().map(|l| l.list_total).sum();
     let net: Decimal = lines.iter().map(|l| l.net_total).sum();
     let total_pct = discount_pct(list, net);
     let line_pct = |l: &QuoteLine| discount_pct(l.list_total, l.net_total);
     let max_line = lines.iter().map(line_pct).max().unwrap_or_default();
 
-    let applies =
-        |t: &&Threshold| t.role.as_deref().is_none_or(|r| r == role) && net >= t.min_deal_total;
+    let applies = |t: &&Threshold| t.role.as_deref().is_none_or(&holds) && net >= t.min_deal_total;
     let exceeded = thresholds.iter().filter(applies).filter(|t| {
         let line_over = lines
             .iter()
@@ -138,6 +155,31 @@ mod tests {
         assert_eq!(r.approval_process, None);
         assert!(!r.lock_quote);
         assert_eq!(r.max_line_discount_pct, dec("5"));
+    }
+
+    #[test]
+    fn a_role_threshold_applies_to_any_role_held() {
+        let policy = vec![threshold(
+            None,
+            Some("partner"),
+            "0",
+            "5",
+            "5",
+            "partner_approval",
+            1,
+        )];
+        let lines = [line(1, "1000", "900")];
+        let held = ["sales_rep".to_owned(), "partner".to_owned()];
+        assert_eq!(
+            evaluate_for_roles(&policy, &lines, &held)
+                .approval_process
+                .as_deref(),
+            Some("partner_approval")
+        );
+        assert_eq!(
+            evaluate_for_roles(&policy, &lines, &held[..1]).approval_process,
+            None
+        );
     }
 
     #[test]

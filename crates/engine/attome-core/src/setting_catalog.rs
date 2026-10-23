@@ -640,6 +640,39 @@ fn commission_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(180),
         ),
+        // F2-T1: the discount policy quotes are submitted under.
+        SettingDescriptor::new(
+            "sales.discount_policy",
+            "Discount thresholds a quote is checked against when it is submitted, as \
+             [{\"family\": <product family id or null>, \"role\": <role name or null>, \
+             \"min_deal_total\": \"0\", \"max_line_discount_pct\": \"10\", \
+             \"max_total_discount_pct\": \"10\", \"approval_process\": \"Manager discount\", \
+             \"level\": 1}]. A quote over a threshold goes to the approval process the strictest \
+             one names (an active process for quotes that starts on submit); within all of them \
+             it is sent. None by default (F2-T1).",
+            || {
+                json!({
+                    "type": "array",
+                    "maxItems": 200,
+                    "items": {
+                        "type": "object",
+                        "required": ["max_line_discount_pct", "max_total_discount_pct", "approval_process"],
+                        "properties": {
+                            "family": {"type": ["string", "null"], "format": "uuid"},
+                            "role": {"type": ["string", "null"], "maxLength": 200},
+                            "min_deal_total": {"type": ["string", "number"]},
+                            "max_line_discount_pct": {"type": ["string", "number"]},
+                            "max_total_discount_pct": {"type": ["string", "number"]},
+                            "approval_process": {"type": "string", "minLength": 1, "maxLength": 200},
+                            "level": {"type": "integer", "minimum": 1, "maximum": 100}
+                        }
+                    }
+                })
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
     ]
 }
 
