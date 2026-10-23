@@ -497,6 +497,15 @@ impl EngineSystem {
                 ),
             )
             .merge(
+                // L3-T2: roles, policies, exceptions, certifications.
+                attome_compliance::governance_policy::routes().layer(
+                    middleware::from_fn_with_state(
+                        self.state.clone(),
+                        attome_security::strict_authz::strict_authz,
+                    ),
+                ),
+            )
+            .merge(
                 attome_compliance::rewrap_admin::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),
                     attome_security::strict_authz::strict_authz,

@@ -169,6 +169,8 @@ fn has_execution_handler(action_type: &str) -> bool {
         // M9-T2: opened by an approval process from its watched attributes,
         // never by `gate()`, so not in `KNOWN_ACTION_TYPES` either.
         || action_type == attome_records::approval_lock::APPROVAL_CHANGE_ACTION
+        // L3-T2: opened by an exception request, never by `gate()`.
+        || action_type == attome_compliance::governance_policy::ACTION_POLICY_EXCEPTION
 }
 
 /// The mandatory production approval baseline (closes the follow-up
@@ -624,6 +626,14 @@ async fn dispatch_approved(
             )
             .await?;
             serde_json::to_value(&published).map_err(AppError::internal)?
+        }
+        attome_compliance::governance_policy::ACTION_POLICY_EXCEPTION => {
+            attome_compliance::governance_policy::approve_exception(
+                state,
+                &request.payload,
+                approver_id,
+            )
+            .await?
         }
         attome_compliance::retention_admin::ACTION_RETENTION_APPROVE => {
             #[derive(serde::Deserialize)]

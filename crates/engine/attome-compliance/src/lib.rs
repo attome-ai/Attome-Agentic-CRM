@@ -52,6 +52,8 @@ pub mod dsr_restriction;
 pub mod erasure_admin;
 pub mod erasure_replay;
 pub mod governance_admin;
+/// L3-T2: governance roles, policies, exceptions and certifications.
+pub mod governance_policy;
 pub mod legal_hold_admin;
 pub mod legal_matter_admin;
 pub mod model;

@@ -579,3 +579,157 @@ fn assign_validates_entities_and_unassign_checks_domain_ownership() {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
     })
 }
+
+async fn seed_plain_user(db: &attome_db::DbPool, label: &str) -> (Uuid, String) {
+    let user_id = Uuid::now_v7();
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
+        .bind(user_id)
+        .bind(format!("governance-{label}-{user_id}"))
+        .execute(db)
+        .await
+        .expect("insert throwaway user_account");
+    (user_id, session_cookie(user_id))
+}
+
+/// L3-T2: a consumer of a domain reads its policy but may not edit it, and
+/// the exception it asks for waits for the domain steward's approval.
+#[test]
+fn consumer_cannot_edit_policy_and_exception_waits_for_approval() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let (_, admin_cookie) = seed_admin(&db).await;
+        let (steward, steward_cookie) = seed_plain_user(&db, "steward").await;
+        let (consumer, consumer_cookie) = seed_plain_user(&db, "consumer").await;
+        let (_, outsider_cookie) = seed_plain_user(&db, "outsider").await;
+        let app = full_app(system);
+        let call = |method: &'static str, uri: String, cookie: String, body: Option<Value>| {
+            let app = app.clone();
+            async move {
+                let resp = app
+                    .oneshot(req_json(method, &uri, &cookie, body))
+                    .await
+                    .unwrap();
+                let status = resp.status();
+                (status, body_json(resp).await)
+            }
+        };
+
+        let (status, domain) = call(
+            "POST",
+            "/api/v1/admin/governance/domains".into(),
+            admin_cookie.clone(),
+            Some(json!({ "name": format!("Policy Domain {}", Uuid::now_v7()) })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{domain}");
+        let domain_id = domain["id"].as_str().unwrap().to_owned();
+        for (user, role) in [(steward, "steward"), (consumer, "consumer")] {
+            let (status, body) = call(
+                "PUT",
+                format!("/api/v1/admin/governance/domains/{domain_id}/roles"),
+                admin_cookie.clone(),
+                Some(json!({ "user_id": user, "role": role })),
+            )
+            .await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+        }
+
+        // The steward writes the policy (no system.admin needed).
+        let (status, policy) = call(
+            "POST",
+            "/api/v1/admin/governance/policies".into(),
+            steward_cookie.clone(),
+            Some(json!({
+                "domain_ref": domain_id,
+                "name_en": "Keep invoices ten years",
+                "name_ar": "حفظ الفواتير عشر سنوات",
+                "enforcements": [{ "kind": "retention", "target_ref": "invoice" }]
+            })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{policy}");
+        assert_eq!(policy["version"], 1);
+        let policy_id = policy["id"].as_str().unwrap().to_owned();
+
+        // The consumer reads it but may not edit it; an outsider sees nothing.
+        let (status, _) = call(
+            "GET",
+            format!("/api/v1/admin/governance/policies/{policy_id}"),
+            consumer_cookie.clone(),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let (status, _) = call(
+            "PATCH",
+            format!("/api/v1/admin/governance/policies/{policy_id}"),
+            consumer_cookie.clone(),
+            Some(json!({ "row_version": policy["row_version"], "body_en": "relaxed" })),
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "a consumer may not edit a policy"
+        );
+        let (status, _) = call(
+            "GET",
+            format!("/api/v1/admin/governance/policies/{policy_id}"),
+            outsider_cookie.clone(),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+
+        // The steward's edit raises the version.
+        let (status, edited) = call(
+            "PATCH",
+            format!("/api/v1/admin/governance/policies/{policy_id}"),
+            steward_cookie.clone(),
+            Some(
+                json!({ "row_version": policy["row_version"], "body_en": "Ten years from issue." }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{edited}");
+        assert_eq!(edited["version"], 2);
+
+        // The consumer's exception waits for approval by the steward.
+        let (status, exception) = call(
+            "POST",
+            format!("/api/v1/admin/governance/policies/{policy_id}/exceptions"),
+            consumer_cookie.clone(),
+            Some(json!({ "target_ref": "invoice", "reason": "Legacy archive moves next year" })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{exception}");
+        assert_eq!(exception["status"], "requested");
+        let request_id: Uuid = exception["approval_request_ref"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let (status, plan): (String, Value) =
+            sqlx::query_as("SELECT status, plan FROM approval_request WHERE id = $1")
+                .bind(request_id)
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        assert_eq!(status, "pending");
+        assert_eq!(
+            plan["steps"][0]["approvers"],
+            json!([format!("user:{steward}")])
+        );
+        let (status, list) = call(
+            "GET",
+            format!("/api/v1/admin/governance/policies/{policy_id}/exceptions"),
+            steward_cookie,
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(list["items"][0]["status"], "requested", "{list}");
+    })
+}

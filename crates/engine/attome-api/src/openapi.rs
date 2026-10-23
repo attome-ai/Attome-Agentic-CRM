@@ -109,6 +109,10 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
             attome_compliance::governance_admin::openapi_fragment(),
             "core",
         ),
+        (
+            attome_compliance::governance_policy::openapi_fragment(),
+            "core",
+        ),
         (attome_compliance::rewrap_admin::openapi_fragment(), "core"),
         (attome_compliance::config_admin::openapi_fragment(), "core"),
         (attome_compliance::consent_admin::openapi_fragment(), "core"),

@@ -786,6 +786,7 @@ dependencies = [
 name = "attome-compliance"
 version = "0.1.0"
 dependencies = [
+ "attome-approval",
  "attome-audit",
  "attome-auth",
  "attome-config",

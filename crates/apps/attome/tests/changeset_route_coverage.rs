@@ -309,6 +309,15 @@ const RECORDED: &[(&str, &[&str])] = &[
 /// §1.3 and §7).
 const EXCLUDED: &[(&str, &str)] = &[
     (
+        "PUT /api/v1/admin/governance/domains/{id}/roles",
+        "L3-T2: a governance role names a person of this deployment; promoted metadata never \
+         carries user ids (audited as a Configuration event)",
+    ),
+    (
+        "DELETE /api/v1/admin/governance/domains/{id}/roles",
+        "L3-T2: takes a person's governance role away; deployment data, not metadata",
+    ),
+    (
         "DELETE /api/v1/{entity}/{id}",
         "a generic record delete: the reference-data recorder records creates and updates \
          (upsert_record, D-787 rule 7); a delete of a reference record is not a changeset op",

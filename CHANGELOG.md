@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Governance roles, policies, exceptions and certifications (L3-T2) under
+  `/api/v1/admin/governance/`: `domains/{id}/roles` (GET, PUT, DELETE), `policies` (CRUD; every edit
+  raises the version, with enforcement links), `policies/{id}/exceptions` (a request goes to the
+  domain's owners and stewards for approval) and `certifications` (an entity's definition hash;
+  read back as `stale` once it changes). A domain's owner or steward edits without
+  `system.admin`; any role holder reads.
 - One lineage impact engine (L5-T3): `attome_core::lineage::impact` walks the lineage graph
   downstream of a draft change (up to 10 edges, through metrics to the dashboards that show
   them). Deleting or retyping a field that a dashboard, metric or model definition reads is now

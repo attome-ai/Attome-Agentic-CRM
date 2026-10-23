@@ -966,7 +966,18 @@ fn policy_in_params(params: &str) -> Option<Policy> {
     Some(Policy { outer, arg })
 }
 
-const AUTHZ_CALLS: &[&str] = &["require_admin", "require_key", "require"];
+/// L3-T2: `require_domain_editor` / `require_domain_reader`
+/// (`attome-compliance` `governance_policy.rs`) are enforcing checks too: a
+/// domain's owner or steward edits its governance records without
+/// `system.admin`, and everyone else is refused, so those admin routes are
+/// gated by the caller's governance role, read from the database.
+const AUTHZ_CALLS: &[&str] = &[
+    "require_admin",
+    "require_key",
+    "require",
+    "require_domain_editor",
+    "require_domain_reader",
+];
 
 fn body_has_direct_check(body: &str) -> bool {
     let chars: Vec<char> = body.chars().collect();

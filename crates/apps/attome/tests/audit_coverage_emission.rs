@@ -5507,6 +5507,107 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             t,
             Some(json!({"name": uniq("domain")})),
         ),
+        // L3-T2: governance roles, policies, exceptions, certifications.
+        "PUT /api/v1/admin/governance/domains/{id}/roles" => {
+            let domain = governance_domain_fixture(fx).await;
+            let id = id_of(&domain);
+            request(
+                "PUT",
+                &format!("/api/v1/admin/governance/domains/{id}/roles"),
+                t,
+                Some(json!({"user_id": fx.admin_id, "role": "steward"})),
+            )
+        }
+        "DELETE /api/v1/admin/governance/domains/{id}/roles" => {
+            let domain = governance_domain_fixture(fx).await;
+            let id = id_of(&domain);
+            admin(
+                fx,
+                "PUT",
+                &format!("/api/v1/admin/governance/domains/{id}/roles"),
+                Some(json!({"user_id": fx.admin_id, "role": "consumer"})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!(
+                    "/api/v1/admin/governance/domains/{id}/roles?user_id={}&role=consumer",
+                    fx.admin_id
+                ),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/governance/policies" => {
+            let domain = governance_domain_fixture(fx).await;
+            request(
+                "POST",
+                "/api/v1/admin/governance/policies",
+                t,
+                Some(json!({"domain_ref": id_of(&domain), "name_en": uniq("policy")})),
+            )
+        }
+        "PATCH /api/v1/admin/governance/policies/{id}" => {
+            let policy = governance_policy_fixture(fx).await;
+            request(
+                "PATCH",
+                &format!("/api/v1/admin/governance/policies/{}", id_of(&policy)),
+                t,
+                Some(json!({"row_version": policy["row_version"], "body_en": uniq("body")})),
+            )
+        }
+        "DELETE /api/v1/admin/governance/policies/{id}" => {
+            let policy = governance_policy_fixture(fx).await;
+            request(
+                "DELETE",
+                &format!(
+                    "/api/v1/admin/governance/policies/{}?row_version={}",
+                    id_of(&policy),
+                    policy["row_version"]
+                ),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/governance/policies/{id}/exceptions" => {
+            let policy = governance_policy_fixture(fx).await;
+            // An approver other than the requesting admin.
+            let steward = Uuid::now_v7();
+            sqlx::query(
+                "INSERT INTO user_account (id, user_name, email, is_active) \
+                 VALUES ($1, $2, $2 || '@test.invalid', true)",
+            )
+            .bind(steward)
+            .bind(uniq("steward"))
+            .execute(&fx.base.db)
+            .await
+            .expect("seed steward");
+            admin(
+                fx,
+                "PUT",
+                &format!(
+                    "/api/v1/admin/governance/domains/{}/roles",
+                    policy["domain_ref"].as_str().unwrap()
+                ),
+                Some(json!({"user_id": steward, "role": "steward"})),
+            )
+            .await;
+            request(
+                "POST",
+                &format!(
+                    "/api/v1/admin/governance/policies/{}/exceptions",
+                    id_of(&policy)
+                ),
+                t,
+                Some(json!({"target_ref": fx.entity, "reason": uniq("reason")})),
+            )
+        }
+        "POST /api/v1/admin/governance/certifications" => request(
+            "POST",
+            "/api/v1/admin/governance/certifications",
+            t,
+            Some(json!({"asset_kind": "entity", "asset_ref": fx.entity})),
+        ),
         "PATCH /api/v1/admin/governance/domains/{id}" => {
             let domain = governance_domain_fixture(fx).await;
             let id = id_of(&domain);
@@ -6367,6 +6468,18 @@ async fn event_subscription_fixture(fx: &Fx) -> Value {
             "target_url": SAFE_WEBHOOK_URL,
             "owner_ref": fx.admin_id,
         })),
+    )
+    .await
+}
+
+/// L3-T2: a policy in a fresh domain.
+async fn governance_policy_fixture(fx: &Fx) -> Value {
+    let domain = governance_domain_fixture(fx).await;
+    admin(
+        fx,
+        "POST",
+        "/api/v1/admin/governance/policies",
+        Some(json!({"domain_ref": id_of(&domain), "name_en": uniq("policy")})),
     )
     .await
 }
