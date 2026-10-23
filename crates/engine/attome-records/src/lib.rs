@@ -38,6 +38,8 @@ pub mod bulk;
 /// B5-T1: `POST /api/v1/{entity}/bulk-edit`, per-attribute operations over
 /// many records, applied by the bulk engine.
 pub mod bulk_edit;
+/// L2-T5: the data-quality fix transforms bulk edit's `fix` applies.
+pub mod quality_fix;
 mod bulk_graph;
 pub mod business_rules;
 /// AA7-T4: `POST /api/v1/query/changes`, what changed since a cursor.

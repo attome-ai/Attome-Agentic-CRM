@@ -1125,8 +1125,146 @@ async fn delete_target(
     Ok(StatusCode::NO_CONTENT)
 }
 
+// ── L2-T5: bulk fixes with preview and undo ──────────────────────────────
+
+/// A data-quality fix over many records.
+#[derive(Deserialize, ToSchema)]
+struct QualityFixBody {
+    entity: String,
+    /// The text attribute to fix.
+    attribute: String,
+    /// `trim_spaces`, `title_case`, `digits_to_western`, `phone_e164`, or
+    /// `{"fix": "phone_e164", "country": "AE"}`.
+    #[schema(value_type = Object)]
+    fix: serde_json::Value,
+    /// The records, at most 500; give `ids` or `filters`.
+    #[serde(default)]
+    ids: Vec<Uuid>,
+    /// The records by a list's filters; at most 500 may match.
+    #[serde(default)]
+    filters: Vec<attome_core::filter::Filter>,
+}
+
+impl QualityFixBody {
+    fn as_bulk_edit(&self) -> attome_records::bulk_edit::BulkEditRequest {
+        attome_records::bulk_edit::BulkEditRequest {
+            ids: self.ids.clone(),
+            filters: self.filters.clone(),
+            operations: vec![attome_records::bulk_edit::EditOperation {
+                attribute: self.attribute.clone(),
+                op: "fix".into(),
+                value: Some(self.fix.clone()),
+            }],
+            quiet: false,
+        }
+    }
+}
+
+/// `POST /api/v1/admin/data/quality/fixes/preview`: what a fix would change.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/quality/fixes/preview",
+    operation_id = "quality_fix_preview",
+    tag = "admin",
+    request_body = QualityFixBody,
+    responses(
+        (status = 200, description = "Counts and the first 20 records before and after", body = attome_records::bulk_edit::BulkEditPreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Not an administrator", body = ErrorResponse),
+        (status = 422, description = "Unknown fix, not a text attribute, or too many records", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "L2-T5: computes what a data-quality fix would change and writes nothing"
+    )))),
+)]
+/// Previews a data-quality fix over many records.
+///
+/// Counts the picked records the caller can read, those the fix would
+/// change and those already clean, and shows the first 20 before and
+/// after. Nothing is written.
+async fn preview_fix(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<QualityFixBody>,
+) -> Result<Json<attome_records::bulk_edit::BulkEditPreview>, AppError> {
+    let plan =
+        attome_records::bulk_edit::plan_bulk_edit(&state, &ctx, &body.entity, &body.as_bulk_edit())
+            .await?;
+    Ok(Json(attome_records::bulk_edit::BulkEditPreview {
+        matched: plan.matched,
+        to_change: plan.items.len(),
+        unchanged: plan.unchanged,
+        samples: plan.samples,
+    }))
+}
+
+/// `POST /api/v1/admin/data/quality/fixes/apply`: runs a fix as one bulk
+/// update.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/quality/fixes/apply",
+    operation_id = "quality_fix_apply",
+    tag = "admin",
+    request_body = QualityFixBody,
+    responses(
+        (status = 200, description = "No record needed the fix", body = attome_records::bulk_edit::BulkEditSubmitted),
+        (status = 202, description = "The fix runs as one bulk update; `undo` puts it back", body = attome_records::bulk_edit::BulkEditSubmitted),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Not an administrator", body = ErrorResponse),
+        (status = 422, description = "Unknown fix, not a text attribute, or too many records", body = ErrorResponse),
+        (status = 503, description = "No batch worker can run the fix", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::BulkAccepted)])))),
+)]
+/// Applies a data-quality fix to many records as one bulk update.
+///
+/// Each record goes through the normal update path (validation, rules,
+/// access, audit) with its row version, so one changed since the preview is
+/// reported, not overwritten. The answer's `undo` list, sent to
+/// `POST /api/v1/{entity}/bulk-edit/undo`, puts the batch back. The fixed
+/// records leave the A3 clean-up queues; a record still failing a rule
+/// returns at that rule's next scan.
+async fn apply_fix(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    _jobs: attome_server::capability::Available<attome_server::capability::BatchJobs>,
+    Json(body): Json<QualityFixBody>,
+) -> Result<
+    (
+        StatusCode,
+        Json<attome_records::bulk_edit::BulkEditSubmitted>,
+    ),
+    AppError,
+> {
+    let (status, submitted) = attome_records::bulk_edit::submit_bulk_edit(
+        &state,
+        &ctx,
+        &body.entity,
+        &body.as_bulk_edit(),
+    )
+    .await?;
+    if submitted.id.is_some() && !submitted.record_ids.is_empty() {
+        sqlx::query("DELETE FROM validation_cleanup WHERE entity = $1 AND record_id = ANY($2)")
+            .bind(&body.entity)
+            .bind(&submitted.record_ids)
+            .execute(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    }
+    Ok((status, Json(submitted)))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route(
+            "/api/v1/admin/data/quality/fixes/preview",
+            post(preview_fix),
+        )
+        .route("/api/v1/admin/data/quality/fixes/apply", post(apply_fix))
         .route("/api/v1/admin/data/quality/scores", get(list_scores))
         .route(
             "/api/v1/admin/data/quality/scores/history",
@@ -1174,7 +1312,9 @@ pub fn routes() -> Router<EngineState> {
     delete_rule,
     list_targets,
     put_target,
-    delete_target
+    delete_target,
+    preview_fix,
+    apply_fix
 ))]
 struct ApiDocFragment;
 

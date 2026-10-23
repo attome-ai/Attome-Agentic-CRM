@@ -188,6 +188,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Bulk data-quality fixes (L2-T5): bulk edit gains a `fix` operation (`trim_spaces`, `title_case`,
+  `digits_to_western`, `phone_e164`, read in the deployment's `core.country` or a named one) that
+  transforms each picked record's own value; `POST /api/v1/admin/data/quality/fixes/preview` shows the
+  counts and 20 records before and after, and `.../fixes/apply` runs the fix as one undoable bulk
+  update (its `undo` list goes to `POST /api/v1/{entity}/bulk-edit/undo`) and takes the fixed records
+  out of the A3 clean-up queues.
 - Rule-change and flow-change scenarios (O9-T1): `POST /api/v1/scenarios/{id}/simulations` runs the
   A3 business-rule preview (`rule_change`: the stored records the rule would refuse) or the M4 replay
   of a flow version (`flow_change`: the past runs that would go differently) and stores the result

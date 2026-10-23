@@ -1,6 +1,7 @@
 //! Bulk edit (roadmap B5-T1): change the same attributes on many records,
 //! picked by id or by the view's filters, with per-attribute operations
-//! (`set`, `clear`, `add`, `remove`, `increment`).
+//! (`set`, `clear`, `add`, `remove`, `increment`, and L2-T5's `fix`, a
+//! data-quality transform of each record's own value).
 //!
 //! The edit is planned here and applied by the bulk engine: the records are
 //! read with the caller's read access (a record they cannot read is not
@@ -35,6 +36,7 @@ use uuid::Uuid;
 
 use crate::bulk::{BulkItem, submit_bulk};
 use crate::entity_crud::{POLYMORPHIC_AUDIT_ENTITIES, POLYMORPHIC_CHILD_ENTITIES, resolve_entity};
+use crate::quality_fix::Fix;
 
 /// The most records one bulk edit may change, the bulk engine's own cap.
 pub const MAX_BULK_EDIT_RECORDS: usize = 500;
@@ -66,7 +68,10 @@ pub struct EditOperation {
     pub attribute: String,
     /// `set` (to `value`), `clear`, `add` or `remove` (values of a
     /// multi-select choice), `increment` (a number by `value`, may be
-    /// negative).
+    /// negative), or `fix` (L2-T5: a text value transformed, `value` naming
+    /// the fix: `trim_spaces`, `title_case`, `digits_to_western`,
+    /// `phone_e164`, or `{"fix": "phone_e164", "country": "AE"}`; a phone is
+    /// read in the deployment's `core.country`, else Saudi Arabia).
     pub op: String,
     #[serde(default)]
     pub value: Option<Value>,
@@ -299,9 +304,30 @@ fn check_operation(op: &EditOperation, shape: Shape) -> Result<(), AppError> {
                 op.attribute
             )));
         }
+        "fix" if shape == Shape::Other => {
+            if op
+                .value
+                .as_ref()
+                .and_then(|v| Fix::parse(v, DEFAULT_PHONE_COUNTRY))
+                .is_none()
+            {
+                return Err(AppError::Validation(format!(
+                    "{}: fix names trim_spaces, title_case, digits_to_western or phone_e164 \
+                     (with a country it has a numbering rule for)",
+                    op.attribute
+                )));
+            }
+            true
+        }
+        "fix" => {
+            return Err(AppError::Validation(format!(
+                "{}: fix is for a text value",
+                op.attribute
+            )));
+        }
         other => {
             return Err(AppError::Validation(format!(
-                "{}: unknown operation `{other}`; use set, clear, add, remove or increment",
+                "{}: unknown operation `{other}`; use set, clear, add, remove, increment or fix",
                 op.attribute
             )));
         }
@@ -363,9 +389,52 @@ fn apply_operation(current: &Value, op: &EditOperation) -> Value {
                 }
             }
         }
+        // L2-T5: the record's own text, fixed; a value the fix leaves alone
+        // (already clean, unreadable, or not text) stays as it is.
+        "fix" => {
+            let fixed = op
+                .value
+                .as_ref()
+                .and_then(|v| Fix::parse(v, DEFAULT_PHONE_COUNTRY))
+                .zip(current.as_str())
+                .and_then(|(fix, text)| fix.apply(text));
+            fixed.map_or_else(|| current.clone(), Value::String)
+        }
         // "clear"
         _ => Value::Null,
     }
+}
+
+/// L2-T5: the country a phone fix reads national numbers in when neither the
+/// operation nor `core.country` names one.
+const DEFAULT_PHONE_COUNTRY: &str = "SA";
+
+/// L2-T5: the operations with each bare `phone_e164` fix bound to the
+/// deployment's country, so the plan reads numbers where the deployment is.
+fn bind_fix_country(operations: &[EditOperation], country: &str) -> Vec<EditOperation> {
+    operations
+        .iter()
+        .map(|op| {
+            if op.op == "fix" && op.value.as_ref().and_then(Value::as_str) == Some("phone_e164") {
+                EditOperation {
+                    value: Some(json!({"fix": "phone_e164", "country": country})),
+                    ..op.clone()
+                }
+            } else {
+                op.clone()
+            }
+        })
+        .collect()
+}
+
+/// The deployment's `core.country` when it has a phone numbering rule.
+fn phone_country(state: &EngineState) -> String {
+    attome_core::setting_registry()
+        .get("core.country")
+        .map(|d| state.settings.load().resolve(d, None, None).0)
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .filter(|c| Fix::parse(&Value::String("phone_e164".into()), c).is_some())
+        .unwrap_or_else(|| DEFAULT_PHONE_COUNTRY.to_owned())
 }
 
 /// One record's patch: only the attributes whose value changes.
@@ -553,6 +622,7 @@ pub async fn plan_bulk_edit(
     }
 
     let matched = rows.len();
+    let operations = bind_fix_country(&request.operations, &phone_country(state));
     let mut items = Vec::new();
     let mut samples = Vec::new();
     let mut undo = Vec::new();
@@ -565,7 +635,7 @@ pub async fn plan_bulk_edit(
         else {
             continue;
         };
-        let patch = patch_for(&row, &request.operations);
+        let patch = patch_for(&row, &operations);
         if patch.is_empty() {
             continue;
         }
@@ -621,6 +691,21 @@ async fn bulk_edit(
     Path(entity): Path<String>,
     Json(request): Json<BulkEditRequest>,
 ) -> Result<(StatusCode, Json<BulkEditSubmitted>), AppError> {
+    let (status, submitted) = submit_bulk_edit(&state, &ctx, &entity, &request).await?;
+    Ok((status, Json(submitted)))
+}
+
+/// Plans and submits a bulk edit as `ctx` (who already holds the entity's
+/// bulk privilege): `200` when no record needed a change, else `202`, the
+/// edit running as a bulk update or waiting on its approval. L2-T5's data
+/// quality fixes submit through it too.
+pub async fn submit_bulk_edit(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity: &str,
+    request: &BulkEditRequest,
+) -> Result<(StatusCode, BulkEditSubmitted), AppError> {
+    let entity = entity.to_owned();
     if request.quiet {
         ctx.require_key(attome_core::quiet_scope::QUIET_PRIVILEGE)?;
     }
@@ -630,11 +715,11 @@ async fn bulk_edit(
         unchanged,
         undo,
         ..
-    } = plan_bulk_edit(&state, &ctx, &entity, &request).await?;
+    } = plan_bulk_edit(state, ctx, &entity, request).await?;
     if items.is_empty() {
         return Ok((
             StatusCode::OK,
-            Json(BulkEditSubmitted {
+            BulkEditSubmitted {
                 id: None,
                 total: 0,
                 matched,
@@ -642,12 +727,12 @@ async fn bulk_edit(
                 undo: Vec::new(),
                 approval_request_id: None,
                 record_ids: Vec::new(),
-            }),
+            },
         ));
     }
     let record_ids: Vec<Uuid> = items.iter().filter_map(|i| i.id).collect();
     // B5-T3: above the approval count the edit waits on an approval.
-    let threshold = approval_count(&state);
+    let threshold = approval_count(state);
     if threshold > 0 && items.len() > threshold {
         let total = i32::try_from(items.len()).unwrap_or(i32::MAX);
         let payload = BulkEditApprovalPayload {
@@ -665,7 +750,7 @@ async fn bulk_edit(
         };
         let value = serde_json::to_value(&payload).map_err(AppError::internal)?;
         let request = attome_audit::approval::gate_regarding_required(
-            &state,
+            state,
             ACTION_BULK_EDIT,
             value,
             ctx.user_id,
@@ -674,7 +759,7 @@ async fn bulk_edit(
         .await?;
         return Ok((
             StatusCode::ACCEPTED,
-            Json(BulkEditSubmitted {
+            BulkEditSubmitted {
                 id: None,
                 total,
                 matched,
@@ -682,14 +767,13 @@ async fn bulk_edit(
                 undo,
                 approval_request_id: Some(request.id),
                 record_ids,
-            }),
+            },
         ));
     }
-    let submitted =
-        submit_bulk(&state, &ctx, &entity, "update", items, false, request.quiet).await?;
+    let submitted = submit_bulk(state, ctx, &entity, "update", items, false, request.quiet).await?;
     Ok((
         StatusCode::ACCEPTED,
-        Json(BulkEditSubmitted {
+        BulkEditSubmitted {
             id: Some(submitted.id),
             total: submitted.total,
             matched,
@@ -697,7 +781,7 @@ async fn bulk_edit(
             undo,
             approval_request_id: None,
             record_ids,
-        }),
+        },
     ))
 }
 
@@ -945,5 +1029,35 @@ mod tests {
         assert!(check_operation(&op("t", "set", None), Shape::Other).is_err());
         assert!(check_operation(&op("t", "clear", None), Shape::Other).is_ok());
         assert!(check_operation(&op("t", "rename", None), Shape::Other).is_err());
+    }
+
+    #[test]
+    fn fix_changes_only_records_that_need_it() {
+        assert!(check_operation(&op("t", "fix", Some(json!("trim_spaces"))), Shape::Other).is_ok());
+        assert!(check_operation(&op("t", "fix", Some(json!("shout"))), Shape::Other).is_err());
+        assert!(
+            check_operation(&op("n", "fix", Some(json!("trim_spaces"))), Shape::Number).is_err()
+        );
+        let messy = json!({"name": "  acme   trading "})
+            .as_object()
+            .cloned()
+            .unwrap();
+        let patch = patch_for(&messy, &[op("name", "fix", Some(json!("trim_spaces")))]);
+        assert_eq!(patch.get("name"), Some(&json!("acme trading")));
+        let clean = json!({"name": "acme trading"})
+            .as_object()
+            .cloned()
+            .unwrap();
+        assert!(patch_for(&clean, &[op("name", "fix", Some(json!("trim_spaces")))]).is_empty());
+        // A bare phone fix reads numbers in the deployment's country.
+        let bound = bind_fix_country(&[op("phone", "fix", Some(json!("phone_e164")))], "AE");
+        let row = json!({"phone": "050 123 4567"})
+            .as_object()
+            .cloned()
+            .unwrap();
+        assert_eq!(
+            patch_for(&row, &bound).get("phone"),
+            Some(&json!("+971501234567"))
+        );
     }
 }
