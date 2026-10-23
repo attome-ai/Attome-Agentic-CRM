@@ -231,6 +231,31 @@ async fn create_target(
     .await
     .map_err(AppError::internal)?;
 
+    // K6-T8: letting a source reach an intranet host, or sign in, is a
+    // security choice: audited in the same transaction (the routes are
+    // administrator-only).
+    let non_empty = |v: &Option<String>| v.as_deref().is_some_and(|s| !s.trim().is_empty());
+    if non_empty(&body.allow_host) || non_empty(&body.credential_ref) {
+        attome_audit::security::write_security_event(
+            &mut tx,
+            &attome_audit::audit_service(&state),
+            attome_audit::security::SecurityEvent::new(
+                attome_audit::security::MandatoryCategory::Configuration,
+                attome_audit::AuditOperation::Update,
+                ctx.user_id,
+                "webcrawl_target",
+                Some(row.id),
+            )
+            .named("webcrawl_target.network_access")
+            .comment(format!(
+                "allow_host={} credential_ref={}",
+                body.allow_host.as_deref().unwrap_or(""),
+                body.credential_ref.as_deref().unwrap_or("")
+            )),
+        )
+        .await?;
+    }
+
     tx.commit().await.map_err(AppError::internal)?;
 
     write_business_event(

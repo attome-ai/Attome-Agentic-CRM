@@ -53,6 +53,8 @@ pub struct RealFetcher {
     pub client: attome_server::ssrf_guard::GuardedClient,
     pub max_bytes: usize,
     pub user_agent: String,
+    /// K6-T8: the source's intranet host and sign-in.
+    pub access: safety::SourceAccess,
 }
 
 impl std::fmt::Debug for RealFetcher {
@@ -63,9 +65,17 @@ impl std::fmt::Debug for RealFetcher {
 
 impl Fetcher for RealFetcher {
     async fn fetch(&self, url: &Url) -> Result<FetchedPage, String> {
-        safety::fetch_safely(&self.client, url, self.max_bytes, &self.user_agent)
-            .await
-            .map_err(|e| e.to_string())
+        safety::fetch_conditional(
+            &self.client,
+            url,
+            self.max_bytes,
+            &self.user_agent,
+            None,
+            None,
+            &self.access,
+        )
+        .await
+        .map_err(|e| e.to_string())
     }
 
     async fn fetch_conditional(
@@ -81,6 +91,7 @@ impl Fetcher for RealFetcher {
             &self.user_agent,
             etag,
             last_modified,
+            &self.access,
         )
         .await
         .map_err(|e| e.to_string())
@@ -692,7 +703,45 @@ async fn set_target_status(
     Ok(())
 }
 
-type TargetRow = (String, i16, String, String, Option<String>, bool);
+type TargetRow = (
+    String,
+    i16,
+    String,
+    String,
+    Option<String>,
+    bool,
+    String,
+    Option<String>,
+);
+
+/// K6-T8: the sign-in headers of the integration connection named `name`
+/// (its stored credential: basic, header, bearer or OAuth), computed once for
+/// the crawl. A body-signed (`hmac`) connection cannot sign a crawl.
+async fn source_headers(
+    state: &EngineState,
+    name: &str,
+    root: &Url,
+) -> Result<Vec<(reqwest::header::HeaderName, reqwest::header::HeaderValue)>, AppError> {
+    let connection =
+        attome_integration::connection::Connection::resolve(&state.base.db, name).await?;
+    if connection.auth_type == "hmac" {
+        return Err(AppError::Validation(
+            "a body-signed connection cannot sign a crawl".into(),
+        ));
+    }
+    let ring = state.base.secrets.load().integration_credential_key.clone();
+    let probe = reqwest::Client::new().get(root.clone());
+    let signed = connection
+        .apply_auth(&state.base.db, &ring, probe, b"")
+        .await?
+        .build()
+        .map_err(AppError::internal)?;
+    Ok(signed
+        .headers()
+        .iter()
+        .map(|(n, v)| (n.clone(), v.clone()))
+        .collect())
+}
 
 /// The job body for `EngineJob::CrawlWebsite`. Never fails the whole job
 /// on a crawl-domain failure (unreachable host, SSRF-rejected address,
@@ -707,14 +756,25 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
     let cfg = state.base.config.webcrawl.clone();
 
     let row: Option<TargetRow> = sqlx::query_as(
-        "SELECT url, max_depth, include_patterns, exclude_patterns, sitemap_url, watch_only \
+        "SELECT url, max_depth, include_patterns, exclude_patterns, sitemap_url, watch_only, \
+                allow_host, credential_ref \
          FROM webcrawl_target WHERE id = $1 AND is_deleted = FALSE",
     )
     .bind(target_id)
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let Some((url_str, max_depth, include, exclude, sitemap_url, watch_only)) = row else {
+    let Some((
+        url_str,
+        max_depth,
+        include,
+        exclude,
+        sitemap_url,
+        watch_only,
+        allow_host,
+        credential_ref,
+    )) = row
+    else {
         tracing::info!(target_id = %target_id, "webcrawl: target no longer exists, skipping");
         return Ok(());
     };
@@ -725,7 +785,32 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
 
     set_target_status(db, target_id, "crawling", None).await?;
 
-    let client = match safety::build_client(cfg.request_timeout_secs) {
+    // K6-T8: the source's intranet host and its sign-in headers, sent only
+    // to the source's own host.
+    let headers = match credential_ref.as_deref().filter(|r| !r.trim().is_empty()) {
+        Some(name) => match source_headers(state, name, &root).await {
+            Ok(headers) => headers,
+            Err(e) => {
+                tracing::warn!(%target_id, error = %e, "webcrawl: the source's credential could not be used");
+                set_target_status(
+                    db,
+                    target_id,
+                    "failed",
+                    Some("the source's credential could not be used"),
+                )
+                .await?;
+                return Ok(());
+            }
+        },
+        None => Vec::new(),
+    };
+    let access = safety::SourceAccess {
+        allow_host: Some(allow_host).filter(|h| !h.is_empty()),
+        headers,
+        credential_host: root.host_str().map(str::to_owned),
+    };
+
+    let client = match safety::build_client_for(cfg.request_timeout_secs, &access) {
         Ok(c) => c,
         Err(e) => {
             set_target_status(db, target_id, "failed", Some(&e.to_string())).await?;
@@ -734,11 +819,12 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
     };
 
     let agent = user_agent();
-    let robots = safety::fetch_robots_rules(&client, &root, &agent).await;
+    let robots = safety::fetch_robots_rules(&client, &root, &agent, &access).await;
     let fetcher = RealFetcher {
         client,
         max_bytes: cfg.max_page_bytes,
         user_agent: agent,
+        access,
     };
     let known: HashMap<String, KnownPage> =
         sqlx::query_as::<_, (String, Option<String>, Option<String>, Option<String>)>(

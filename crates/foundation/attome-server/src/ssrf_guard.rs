@@ -64,8 +64,9 @@
 
 pub use attome_outbound::http::guard::{
     GuardedResolver, HostLookup, SsrfGuardError, SystemLookup, build_client,
-    build_client_with_lookup, is_globally_routable, is_metadata_address,
-    refuse_non_routable_literal, validate_scheme_and_host, validate_url,
+    build_client_with_lookup, build_client_with_private_hosts, host_is_listed,
+    is_globally_routable, is_metadata_address, refuse_non_routable_literal,
+    validate_scheme_and_host, validate_url,
 };
 use reqwest::Url;
 
@@ -78,6 +79,8 @@ use reqwest::Url;
 #[derive(Clone, Debug)]
 pub struct GuardedClient {
     inner: reqwest::Client,
+    /// K6-T8: hosts this client may reach on a private address.
+    private_hosts: std::sync::Arc<[String]>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -98,9 +101,39 @@ impl GuardedClient {
         request_timeout_secs: u64,
         lookup: L,
     ) -> Result<Self, reqwest::Error> {
+        Self::with_private_hosts(request_timeout_secs, lookup, std::sync::Arc::from([]))
+    }
+
+    /// K6-T8: a client that may also reach `private_hosts` (exact names, an
+    /// administrator's choice) on a private address; a metadata address and
+    /// every other private host stay refused.
+    pub fn with_private_hosts<L: HostLookup>(
+        request_timeout_secs: u64,
+        lookup: L,
+        private_hosts: std::sync::Arc<[String]>,
+    ) -> Result<Self, reqwest::Error> {
         Ok(Self {
-            inner: build_client_with_lookup(request_timeout_secs, lookup)?,
+            inner: build_client_with_private_hosts(
+                request_timeout_secs,
+                lookup,
+                private_hosts.clone(),
+            )?,
+            private_hosts,
         })
+    }
+
+    /// The literal check, letting a listed host's private literal through
+    /// (never a metadata address).
+    fn refuse_literal(&self, url: &Url) -> Result<(), SsrfGuardError> {
+        let (host, _) = validate_scheme_and_host(url)?;
+        if host_is_listed(&self.private_hosts, host) {
+            let bare = host.trim_start_matches('[').trim_end_matches(']');
+            return match bare.parse::<std::net::IpAddr>() {
+                Ok(ip) if is_metadata_address(ip) => Err(SsrfGuardError::AddressNotRoutable),
+                _ => Ok(()),
+            };
+        }
+        refuse_non_routable_literal(url)
     }
 
     /// Z5-T9: the request carries the current trace (`traceparent`) and the
@@ -113,7 +146,7 @@ impl GuardedClient {
         method: reqwest::Method,
         url: Url,
     ) -> Result<reqwest::RequestBuilder, SsrfGuardError> {
-        refuse_non_routable_literal(&url)?;
+        self.refuse_literal(&url)?;
         let mut builder = self.inner.request(method, url);
         for (name, value) in correlation_headers() {
             builder = builder.header(name, value);
@@ -134,7 +167,7 @@ impl GuardedClient {
         &self,
         request: reqwest::Request,
     ) -> Result<reqwest::Response, GuardedRequestError> {
-        refuse_non_routable_literal(request.url())?;
+        self.refuse_literal(request.url())?;
         Ok(self.inner.execute(request).await?)
     }
 }
@@ -243,6 +276,34 @@ mod tests {
         assert!(matches!(
             client.get(Url::parse("ftp://93.184.216.34/").unwrap()),
             Err(SsrfGuardError::UnsupportedScheme)
+        ));
+    }
+
+    /// K6-T8: only the listed host's private literal passes; the metadata
+    /// address never does.
+    #[test]
+    fn a_listed_private_host_is_the_only_private_literal_let_through() {
+        let client =
+            GuardedClient::with_private_hosts(1, SystemLookup, Arc::from(["10.0.0.5".to_owned()]))
+                .expect("client");
+        assert!(
+            client
+                .get(Url::parse("http://10.0.0.5/wiki").unwrap())
+                .is_ok()
+        );
+        assert!(matches!(
+            client.get(Url::parse("http://10.0.0.6/").unwrap()),
+            Err(SsrfGuardError::AddressNotRoutable)
+        ));
+        let metadata = GuardedClient::with_private_hosts(
+            1,
+            SystemLookup,
+            Arc::from(["169.254.169.254".to_owned()]),
+        )
+        .expect("client");
+        assert!(matches!(
+            metadata.get(Url::parse("http://169.254.169.254/").unwrap()),
+            Err(SsrfGuardError::AddressNotRoutable)
         ));
     }
 }

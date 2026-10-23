@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Crawl one intranet host per source (K6-T8): a website source's `allow_host` (exact host name,
+  audited when set) may resolve to a private address through the same guarded resolver; a
+  metadata address and every other private host stay refused, and each redirect hop is checked
+  again. `credential_ref` names an integration connection whose stored credential (basic, header,
+  bearer or OAuth) signs the crawl's requests to the source's own host only; credentials never
+  follow a redirect off it and are never logged.
 - Data profiles in one sampled scan (L6-T2): `POST /api/v1/admin/data/profile` reads every attribute
   in one query, sampling a table of more than 100,000 rows (`TABLESAMPLE SYSTEM`, about 100,000
   rows) unless `full_scan` is set, under a 120 s statement timeout. Each field now reports nulls,

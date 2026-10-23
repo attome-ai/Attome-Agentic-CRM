@@ -2250,6 +2250,7 @@ dependencies = [
  "attome-core",
  "attome-db",
  "attome-html",
+ "attome-integration",
  "attome-jobs",
  "attome-metadata",
  "attome-server",

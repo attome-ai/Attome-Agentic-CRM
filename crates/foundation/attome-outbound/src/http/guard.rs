@@ -369,13 +369,27 @@ pub fn build_client_with_lookup<L: HostLookup>(
     request_timeout_secs: u64,
     lookup: L,
 ) -> Result<reqwest::Client, reqwest::Error> {
+    build_client_with_private_hosts(request_timeout_secs, lookup, Arc::from([]))
+}
+
+/// K6-T8: [`build_client_with_lookup`] whose resolver also lets
+/// `private_hosts` resolve to a private address (never a metadata one). The
+/// names come from what an administrator saved, never from a request.
+pub fn build_client_with_private_hosts<L: HostLookup>(
+    request_timeout_secs: u64,
+    lookup: L,
+    private_hosts: Arc<[String]>,
+) -> Result<reqwest::Client, reqwest::Error> {
     reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         // B14: an HTTP_PROXY/HTTPS_PROXY/ALL_PROXY in the environment would
         // otherwise make reqwest hand the target hostname to the proxy
         // unresolved, skipping `GuardedResolver` entirely.
         .no_proxy()
-        .dns_resolver(Arc::new(GuardedResolver::with_lookup(lookup)))
+        .dns_resolver(Arc::new(GuardedResolver::with_private_hosts(
+            lookup,
+            private_hosts,
+        )))
         .connect_timeout(Duration::from_secs(10))
         .timeout(Duration::from_secs(request_timeout_secs))
         .build()

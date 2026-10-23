@@ -43,6 +43,14 @@
 //! crawler-shape-specific: the redirect-following loop, the body-size cap,
 //! content-type filtering, and robots.txt.
 //!
+//! **K6-T8: one intranet host per source.** A source may name `allow_host`:
+//! exactly that host (an administrator's choice, audited) may resolve to a
+//! private address, through the same guarded resolver; a metadata address
+//! and every other private host stay refused, and each redirect hop is
+//! checked again, so a hop off the allowed host to another private address
+//! is refused. The source's credential headers ([`SourceAccess`]) go only to
+//! the source's own host and are never logged.
+//!
 //! No test-only bypass of any of the above lives in this module — the crawl
 //! algorithm in `crate::crawl` is tested against a fake in-memory `Fetcher`
 //! instead (see that module), so nothing here needs an escape hatch.
@@ -103,6 +111,78 @@ impl std::fmt::Debug for FetchedPage {
 
 const MAX_REDIRECTS: u8 = 5;
 
+/// K6-T8: what one source may reach and sign in with.
+#[derive(Clone, Default)]
+pub struct SourceAccess {
+    /// The one host this source may reach on a private address.
+    pub allow_host: Option<String>,
+    /// Sign-in headers, sent only to `credential_host`.
+    pub headers: Vec<(reqwest::header::HeaderName, reqwest::header::HeaderValue)>,
+    /// The source's own host.
+    pub credential_host: Option<String>,
+}
+
+impl std::fmt::Debug for SourceAccess {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SourceAccess")
+            .field("allow_host", &self.allow_host)
+            .finish_non_exhaustive()
+    }
+}
+
+impl SourceAccess {
+    fn host_is(expected: Option<&str>, url: &Url) -> bool {
+        match (expected, url.host_str()) {
+            (Some(expected), Some(host)) => {
+                ssrf_guard::host_is_listed(&[expected.to_owned()], host)
+            }
+            _ => false,
+        }
+    }
+
+    /// Whether `url` is on the allowed intranet host.
+    pub fn allows_private(&self, url: &Url) -> bool {
+        Self::host_is(self.allow_host.as_deref(), url)
+    }
+
+    /// Whether `url` gets the sign-in headers.
+    pub fn signs(&self, url: &Url) -> bool {
+        !self.headers.is_empty() && Self::host_is(self.credential_host.as_deref(), url)
+    }
+}
+
+/// K6-T8: [`validate_url`], except that the source's allowed host passes
+/// with only its scheme and host checked; the client's resolver and literal
+/// check still refuse a metadata address there.
+pub async fn validate_url_for(url: &Url, access: &SourceAccess) -> Result<(), FetchError> {
+    if access.allows_private(url) {
+        ssrf_guard::validate_scheme_and_host(url)?;
+        return Ok(());
+    }
+    validate_url(url).await
+}
+
+/// K6-T8: the client for a source: [`build_client`], also letting the
+/// source's allowed host resolve to a private address.
+pub fn build_client_for(
+    request_timeout_secs: u64,
+    access: &SourceAccess,
+) -> Result<ssrf_guard::GuardedClient, reqwest::Error> {
+    let hosts: std::sync::Arc<[String]> = access.allow_host.iter().cloned().collect();
+    ssrf_guard::GuardedClient::with_private_hosts(
+        request_timeout_secs,
+        ssrf_guard::SystemLookup,
+        hosts,
+    )
+}
+
+/// A redirect's next URL.
+fn redirect_target(current: &Url, location: &str) -> Result<Url, FetchError> {
+    current
+        .join(location)
+        .map_err(|_| FetchError::InvalidRedirect)
+}
+
 /// Validates `url` (scheme + DNS/IP-range check) without fetching it — used
 /// both by [`fetch_safely`] before every hop and by the admin API's
 /// `POST /targets` handler for fast client feedback on an obviously-unsafe
@@ -123,7 +203,16 @@ pub async fn fetch_safely(
     max_bytes: usize,
     user_agent: &str,
 ) -> Result<FetchedPage, FetchError> {
-    fetch_conditional(client, url, max_bytes, user_agent, None, None).await
+    fetch_conditional(
+        client,
+        url,
+        max_bytes,
+        user_agent,
+        None,
+        None,
+        &SourceAccess::default(),
+    )
+    .await
 }
 
 /// [`fetch_safely`] with the validators from the last crawl (K6-T2): a 304
@@ -135,14 +224,20 @@ pub async fn fetch_conditional(
     user_agent: &str,
     etag: Option<&str>,
     last_modified: Option<&str>,
+    access: &SourceAccess,
 ) -> Result<FetchedPage, FetchError> {
     let mut current = url.clone();
     for _ in 0..=MAX_REDIRECTS {
-        validate_url(&current).await?;
+        validate_url_for(&current, access).await?;
 
         let mut request = client
             .get(current.clone())?
             .header(reqwest::header::USER_AGENT, user_agent);
+        if access.signs(&current) {
+            for (name, value) in &access.headers {
+                request = request.header(name.clone(), value.clone());
+            }
+        }
         if let Some(tag) = etag {
             request = request.header(reqwest::header::IF_NONE_MATCH, tag);
         }
@@ -166,9 +261,7 @@ pub async fn fetch_conditional(
                 .get(reqwest::header::LOCATION)
                 .and_then(|v| v.to_str().ok())
                 .ok_or(FetchError::InvalidRedirect)?;
-            current = current
-                .join(location)
-                .map_err(|_| FetchError::InvalidRedirect)?;
+            current = redirect_target(&current, location)?;
             continue;
         }
 
@@ -298,11 +391,22 @@ pub async fn fetch_robots_rules(
     client: &ssrf_guard::GuardedClient,
     origin: &Url,
     user_agent: &str,
+    access: &SourceAccess,
 ) -> RobotsRules {
     let Ok(robots_url) = origin.join("/robots.txt") else {
         return RobotsRules::default();
     };
-    match fetch_safely(client, &robots_url, 1_000_000, user_agent).await {
+    match fetch_conditional(
+        client,
+        &robots_url,
+        1_000_000,
+        user_agent,
+        None,
+        None,
+        access,
+    )
+    .await
+    {
         Ok(page) => RobotsRules::parse(&page.body),
         Err(_) => RobotsRules::default(),
     }
@@ -384,5 +488,72 @@ mod tests {
             RobotsRules::parse("# a comment\n\nUser-agent: *\n# another comment\nDisallow: /x\n");
         assert!(!rules.allows("/x"));
         assert!(rules.allows("/y"));
+    }
+
+    fn intranet() -> SourceAccess {
+        SourceAccess {
+            allow_host: Some("10.0.0.5".to_owned()),
+            headers: vec![(
+                reqwest::header::AUTHORIZATION,
+                reqwest::header::HeaderValue::from_static("Basic c2VjcmV0"),
+            )],
+            credential_host: Some("10.0.0.5".to_owned()),
+        }
+    }
+
+    #[tokio::test]
+    async fn allow_host_only_named_host_reachable() {
+        let access = intranet();
+        let url = Url::parse("http://10.0.0.5/wiki/start").unwrap();
+        assert!(validate_url_for(&url, &access).await.is_ok());
+        let client = build_client_for(1, &access).expect("client");
+        assert!(client.get(url.clone()).is_ok());
+        assert!(access.signs(&url), "the source's own host gets its sign-in");
+        let none = SourceAccess::default();
+        assert!(matches!(
+            validate_url_for(&url, &none).await,
+            Err(FetchError::AddressNotRoutable)
+        ));
+    }
+
+    #[tokio::test]
+    async fn allow_host_other_private_refused() {
+        let access = intranet();
+        for other in [
+            "http://10.0.0.6/",
+            "http://127.0.0.1/",
+            "http://169.254.169.254/",
+        ] {
+            let url = Url::parse(other).unwrap();
+            assert!(
+                matches!(
+                    validate_url_for(&url, &access).await,
+                    Err(FetchError::AddressNotRoutable)
+                ),
+                "{other} stays refused"
+            );
+            let client = build_client_for(1, &access).expect("client");
+            assert!(
+                client.get(url).is_err(),
+                "{other} is refused by the client too"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn allow_host_redirect_off_host_refused() {
+        let access = intranet();
+        let current = Url::parse("http://10.0.0.5/wiki").unwrap();
+        let hop = redirect_target(&current, "http://10.0.0.9/admin").unwrap();
+        assert!(matches!(
+            validate_url_for(&hop, &access).await,
+            Err(FetchError::AddressNotRoutable)
+        ));
+        assert!(
+            !access.signs(&hop),
+            "credentials never follow a hop off the host"
+        );
+        let same = redirect_target(&current, "/wiki/next").unwrap();
+        assert!(validate_url_for(&same, &access).await.is_ok());
     }
 }
