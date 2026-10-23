@@ -391,7 +391,7 @@ describe('WorkflowGraphEditorComponent node-type picker', () => {
 
     dblclick(c);
     expect(c.typeMenu()).not.toBeNull();
-    expect(c.menuOptions().length).toBe(16);   // every node type, nothing wired yet (incl. M06's split/join, A18's restore, A15's duplicate check, M11's assign, E8-T2's module step)
+    expect(c.menuOptions().length).toBe(17);   // every node type, nothing wired yet (incl. M06's split/join, A18's restore, A15's duplicate check, M11's assign, E8-T2's module step, M1-T4's for each)
 
     c.chooseType('condition');
 
