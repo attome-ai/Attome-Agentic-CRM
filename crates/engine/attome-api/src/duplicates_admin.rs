@@ -629,11 +629,16 @@ async fn delete_match_rule(
 
 // ── Survivorship rules ──────────────────────────────────────────────────────
 
-const SURVIVORSHIP_STRATEGIES: &[&str] =
-    &["most_recent", "most_complete", "source_priority", "manual"];
+const SURVIVORSHIP_STRATEGIES: &[&str] = &[
+    "most_recent",
+    "most_complete",
+    "source_priority",
+    "manual",
+    "source_system_rank",
+];
 
 const SURVIVORSHIP_COLUMNS: &str = "id, entity_logicalname, field_logicalname, strategy, \
-     priority_owner_ids, row_version, created_at, updated_at, created_by";
+     priority_owner_ids, config, row_version, created_at, updated_at, created_by";
 
 #[derive(sqlx::FromRow, Serialize, ToSchema)]
 struct SurvivorshipRuleView {
@@ -642,6 +647,9 @@ struct SurvivorshipRuleView {
     field_logicalname: String,
     strategy: String,
     priority_owner_ids: Option<Vec<Uuid>>,
+    /// L1-T3: a `source_system_rank` rule's trust per system per attribute.
+    #[schema(value_type = Option<Object>)]
+    config: Option<Value>,
     row_version: i64,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -711,6 +719,12 @@ struct CreateSurvivorshipRuleBody {
     strategy: String,
     #[serde(default)]
     priority_owner_ids: Vec<Uuid>,
+    /// L1-T3: for `source_system_rank`, `{"ranks": {"<attribute>" | "*":
+    /// ["<system>", ...]}, "tie_break": "recency" | "completeness",
+    /// "validated_only": bool}`; absent for the other strategies.
+    #[serde(default)]
+    #[schema(value_type = Option<Object>)]
+    config: Option<Value>,
 }
 
 /// `POST /api/v1/admin/data/survivorship-rules` — `system.admin` only.
@@ -743,6 +757,8 @@ async fn create_survivorship_rule(
             SURVIVORSHIP_STRATEGIES.join(", ")
         )));
     }
+    entity_crud::check_rule_config(&body.strategy, body.config.as_ref())
+        .map_err(AppError::Validation)?;
     let (_, entity_name, attrs, _) = entity_crud::resolve_entity(&state, &body.entity).await?;
     if !attrs.iter().any(|a| a.logicalname == body.field) {
         return Err(AppError::Validation(format!(
@@ -755,8 +771,9 @@ async fn create_survivorship_rule(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let row: SurvivorshipRuleView = sqlx::query_as(&format!(
         "INSERT INTO survivorship_rule \
-             (id, entity_logicalname, field_logicalname, strategy, priority_owner_ids, row_version, created_by) \
-         VALUES ($1, $2, $3, $4, $5, 0, $6) \
+             (id, entity_logicalname, field_logicalname, strategy, priority_owner_ids, config, \
+              row_version, created_by) \
+         VALUES ($1, $2, $3, $4, $5, $7, 0, $6) \
          RETURNING {SURVIVORSHIP_COLUMNS}"
     ))
     .bind(rule_id)
@@ -765,11 +782,14 @@ async fn create_survivorship_rule(
     .bind(&body.strategy)
     .bind(&body.priority_owner_ids)
     .bind(ctx.user_id)
+    .bind(&body.config)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
         if attome_db::is_unique_violation(&e) {
-            AppError::Conflict("an active survivorship rule for this (entity, field) already exists")
+            AppError::Conflict(
+                "an active survivorship rule for this (entity, field) already exists",
+            )
         } else {
             AppError::internal(e)
         }

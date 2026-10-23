@@ -69,6 +69,7 @@ export { DuplicatesService, MATCH_COMPARATORS, ON_SAVE_MODES } from './services/
 export type {
   MatchComparator, MatchField, MatchRule, MatchRulesPage, CreateMatchRuleBody,
   SurvivorshipStrategy, SurvivorshipRule, SurvivorshipRulesPage, CreateSurvivorshipRuleBody,
+  SourceSystemRankConfig,
   CandidateStatus, DuplicateCandidate, DuplicateCandidatesPage, MergeResponse,
   OnSave, DuplicateCheckResult, MergePicks, MergePreview, MergeUndone,
   FieldExplanation, CandidateExplanation, DuplicateStats, RulePreview, RuleProposal,

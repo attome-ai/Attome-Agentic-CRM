@@ -40,6 +40,10 @@ pub(crate) mod row_version_cache;
 /// holding it.
 pub mod scan;
 mod survivorship;
+/// L1-T3: the source-system rank survivorship strategy.
+pub use survivorship::{
+    Contribution, SOURCE_SYSTEM_RANK, SourceSystemRank, TieBreak, check_rule_config,
+};
 pub mod tags;
 /// U3 (basic-units plan B-R4, D-601): `/{entity}/{id}/timeline`, the
 /// entity-generic record timeline. `pub` so `attome-service`'s ticket route is a

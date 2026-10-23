@@ -62,7 +62,15 @@ export interface CreateMatchRuleBody {
   on_save?: OnSave;
 }
 
-export type SurvivorshipStrategy = 'most_recent' | 'most_complete' | 'source_priority' | 'manual';
+export type SurvivorshipStrategy =
+  'most_recent' | 'most_complete' | 'source_priority' | 'manual' | 'source_system_rank';
+
+/** L1-T3: a `source_system_rank` rule's trust per system per attribute. */
+export interface SourceSystemRankConfig {
+  ranks:           Record<string, string[]>;
+  tie_break?:      'recency' | 'completeness';
+  validated_only?: boolean;
+}
 
 export interface SurvivorshipRule {
   id:                  string;
@@ -70,6 +78,7 @@ export interface SurvivorshipRule {
   field_logicalname:   string;
   strategy:            SurvivorshipStrategy;
   priority_owner_ids:  string[] | null;
+  config:              SourceSystemRankConfig | null;
   row_version:         number;
   created_at:          string;
   updated_at:          string;
@@ -85,6 +94,7 @@ export interface CreateSurvivorshipRuleBody {
   field:               string;
   strategy:            SurvivorshipStrategy;
   priority_owner_ids?: string[];
+  config?:             SourceSystemRankConfig;
 }
 
 export type CandidateStatus = 'open' | 'merged' | 'dismissed';

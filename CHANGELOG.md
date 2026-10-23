@@ -184,6 +184,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Source-system rank survivorship (L1-T3): a `source_system_rank` rule ranks source systems per
+  attribute (`config.ranks`), breaks ties by recency or completeness and can skip unvalidated
+  contributions; `survivorship_rule.config` (migration 0233) holds it, and the admin API accepts it.
 - Data profile agent tools (L6-T8): `profile.summary` returns the newest profile of an entity as
   masked statistics only (counts for every attribute, ranges only for non-sensitive ones, no top
   values or texts), and `profile.explain` adds one budgeted model call explaining it in words.
