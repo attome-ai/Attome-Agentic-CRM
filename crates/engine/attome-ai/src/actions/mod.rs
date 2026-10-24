@@ -49,6 +49,8 @@ pub mod knowledge_answer;
 pub mod lead_qualifier;
 /// L5-T8: lineage.downstream, lineage.upstream, lineage.impact.
 pub mod lineage;
+/// L1-T10: master.xref, master.preview_ranking, master.propose_release.
+pub mod master;
 pub mod meeting;
 pub mod memory;
 pub mod model_edit;
@@ -119,6 +121,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(profile::descriptors());
     all.extend(quality::descriptors());
     all.extend(governance::descriptors());
+    all.extend(master::descriptors());
     all.extend(identity_assist::descriptors());
     all.push(extract_document::descriptor());
     all.push(ai_field::descriptor());
@@ -199,6 +202,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(profile::executors());
     all.extend(quality::executors());
     all.extend(governance::executors());
+    all.extend(master::executors());
     all.extend(identity_assist::executors());
     all.push(Box::new(extract_document::DocumentExtract));
     all.push(Box::new(ai_field::RecordAiField));

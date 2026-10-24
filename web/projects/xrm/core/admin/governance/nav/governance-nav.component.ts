@@ -32,5 +32,6 @@ export class GovernanceNavComponent {
     { path: '/xrm/admin/changes',      key: 'governance.nav.changes',     icon: 'la-history' },
     { path: '/xrm/admin/state-models', key: 'governance.nav.stateModels', icon: 'la-project-diagram' },
     { path: '/xrm/admin/lineage',      key: 'governance.nav.lineage',     icon: 'la-sitemap' },
+    { path: '/xrm/admin/master-data',  key: 'governance.nav.masterData',  icon: 'la-fingerprint' },
   ] as const;
 }

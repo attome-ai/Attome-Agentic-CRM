@@ -168,3 +168,9 @@ export type {
   ArchiveReason, ArchiveRow, ArchiveFilter,
 } from './services/field-change.service';
 export { structureErrorText } from './services/structure-error-text';
+// L1-T9 — a golden record's provenance and system ids, the held queue, and the steward's actions.
+export { MasterDataService } from './services/master-data.service';
+export type {
+  MasterContributionStatus, MasterField, MasterHeldContribution, MasterProvenance, MasterRebuildQueued,
+  MasterSystemId, MasterXrefGolden,
+} from './services/master-data.service';

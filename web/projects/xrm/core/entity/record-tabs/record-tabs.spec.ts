@@ -5,7 +5,7 @@ import { RecordTimelineService } from '@attome/xrm/core/entity/record-activity';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { RecordTabPanelsComponent } from './record-tab-panels.component';
-import { recordTabDefs, RECORD_TAB_IDS } from './record-tabs';
+import { recordTabDefs, RECORD_TAB_IDS, withGoldenTab } from './record-tabs';
 import type { XrmFormTabDef } from '../base/xrm-form.base';
 
 const echo = (key: string) => key;
@@ -28,6 +28,15 @@ describe('recordTabDefs', () => {
     expect(recordTabDefs('tag_item', echo).map(t => t.id)).not.toContain('tags');
     expect(recordTabDefs('audit_consent', echo).map(t => t.id)).not.toContain('consent');
     expect(recordTabDefs('audit_consent_purpose', echo).map(t => t.id)).not.toContain('consent');
+  });
+
+  it('adds the golden record tab to a master entity with record tabs only (L1-T9)', () => {
+    const tabs = recordTabDefs('account', echo);
+    expect(withGoldenTab(tabs, true, echo).at(-1)).toEqual({ id: 'golden', label: 'xrmForm.tabs.golden', icon: 'las la-fingerprint' });
+    expect(withGoldenTab(tabs, false, echo)).toBe(tabs);
+    const general = [{ id: 'general', label: 'General', icon: 'las la-list-alt' }];
+    expect(withGoldenTab(general, true, echo)).toBe(general);
+    expect(RECORD_TAB_IDS).not.toContain('golden');
   });
 
   it('restricts to `include` but keeps the canonical order', () => {

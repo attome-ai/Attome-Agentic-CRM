@@ -141,3 +141,21 @@
     }
   </div>
 }
+
+@if (has('golden')) {
+  <div [id]="panelId('golden')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('golden')" [hidden]="activeTab() !== 'golden'"
+       data-testid="golden-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'golden') {
+        @if (masterData(); as m) {
+          <ng-container *ngComponentOutlet="m.GoldenRecordPanelComponent; inputs: activityInputs()" />
+        } @else if (masterDataLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'masterData.loadError' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeGolden' | translate }}</p>
+    }
+  </div>
+}

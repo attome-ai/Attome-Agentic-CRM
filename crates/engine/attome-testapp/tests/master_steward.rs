@@ -193,6 +193,7 @@ fn steward_routes_pin_release_detach_certify() {
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["previous"], "draft");
         assert_eq!(body["status"], "certified");
+        attome_testapp::drain_audit(&app).await;
         let events: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM audit_header WHERE record_id = $1 \
               AND event_name IN ('master.value_pinned', 'master.certification_set')",

@@ -68,6 +68,24 @@ SendGrid are not received yet.
 - **Data subject requests** (`/api/v1/admin/dsr`): access, correction and erasure requests with
   their legal deadlines.
 
+## Master data
+
+An entity marked as master data (an administrator sets it on the entity, which must belong to a data
+domain) keeps one golden record per real-world thing, built from what each source system sends.
+
+- **Golden record tab**: on the record's form, each value with the source system and id it came from,
+  when it arrived and the rule that chose it. A steward pins a value to keep it when sources change,
+  and unpins it to let the rules choose again; the contributions below can be detached.
+- **Master data screen** (`/xrm/admin/master-data`): find a golden record by a source system's id, and
+  work the held queue: contributions that failed the entity's validation wait there to be released
+  (validated again and attached) or rejected with a reason.
+- **Who may act**: anyone who can read the record sees its values and sources, never an attribute
+  their field security hides. Pinning, releasing, rejecting and detaching need an owner or steward of
+  the entity's data domain, or an administrator.
+- **API**: `GET /api/v1/master/{entity}/xref?system=&external_id=`, `GET .../{id}/xref`,
+  `GET .../{id}/provenance` and `GET .../{id}/as-of?at=` (the values held at a moment, from the change
+  history).
+
 ## AI
 
 AI is off until a model is approved. `/api/v1/admin/ai` holds the providers, the approved models,

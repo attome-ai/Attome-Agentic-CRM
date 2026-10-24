@@ -1,0 +1,74 @@
+/* L1-T9: the master-data panel, contributions, held queue and search.
+   Logical properties only, so every layout mirrors under dir="rtl". */
+
+.md-panel { display: flex; flex-direction: column; gap: 12px; }
+.md-hint { color: var(--color-text-secondary); margin: 0; }
+.md-error { color: var(--color-danger, #b42318); margin: 0; }
+.md-notice { color: var(--color-success, #067647); margin: 0; }
+.md-subtitle { font-size: 14px; margin-block: 8px 0; }
+.md-mono { font-family: var(--font-mono, monospace); }
+
+.md-rows, .md-list, .md-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.md-row {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding-block: 8px;
+  padding-inline: 12px;
+}
+.md-row__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.md-row__label { font-weight: 600; }
+.md-row__values { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-block-start: 4px; }
+.md-value--ar { font-family: var(--font-arabic, inherit); }
+.md-source { margin-block: 4px 0; margin-inline: 0; font-size: 12px; color: var(--color-text-secondary); }
+
+.md-pin {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--color-text-secondary);
+}
+.md-pin--on { color: var(--color-primary); }
+
+.md-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding-block: 6px;
+  border-block-end: 1px solid var(--color-border);
+}
+.md-item__main { display: flex; gap: 8px; flex: 1 1 12rem; }
+.md-item__date { font-size: 12px; color: var(--color-text-secondary); }
+
+.md-badge { font-size: 12px; padding-inline: 8px; border-radius: 999px; background: var(--color-bg-subtle, #f2f4f7); }
+.md-badge--attached { color: var(--color-success, #067647); }
+.md-badge--held { color: var(--color-warning, #8a5a00); }
+.md-badge--detached { color: var(--color-text-secondary); }
+
+.md-card {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.md-card__head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.md-card__reason { margin: 0; font-size: 13px; }
+.md-card__actions, .md-reject { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.md-reject label, .md-xref label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+
+.md-xref { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.md-xref input, .md-reject input {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 640px) {
+  .md-card__actions .btn, .md-xref .btn { flex: 1 1 auto; }
+}

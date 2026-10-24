@@ -13,6 +13,7 @@ import {
   computeFieldPolicies, fieldErrorsFromApiError, isEmptyFieldValue, writeWarnings,
   type FieldLockState, type FieldRuleMessage, type RuleWriteWarning,
 } from '../business-rules/field-policy';
+import { withGoldenTab } from '../record-tabs/record-tabs';
 import { EntityRecordResponse, EntityService } from '../services/entity.service';
 import { entityFormRoute, entityListRoute } from '../services/entity-url.utils';
 import { RecordChange, RecordChangeNotifier } from '../services/record-change-notifier.service';
@@ -177,7 +178,11 @@ export abstract class EngineFormBase implements OnInit {
   protected defineTabs(): XrmFormTabDef[] {
     return [{ id: 'general', label: 'General', icon: 'las la-list-alt' }];
   }
-  readonly tabs = computed<XrmFormTabDef[]>(() => this.defineTabs());
+  readonly tabs = computed<XrmFormTabDef[]>(() => withGoldenTab(
+    this.defineTabs(),
+    this.schema()?.is_master === true,
+    key => this.formInjector.get(LangService).translate(key),
+  ));
   readonly activeTab = signal('general');
 
   // ── Services ──────────────────────────────────────────────────────────────

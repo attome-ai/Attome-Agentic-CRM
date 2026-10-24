@@ -59,7 +59,7 @@ export { TeamRolesPanelComponent }      from './team-roles-panel/team-roles-pane
 // Consent, Relationships) as a tab-definition helper plus one panels
 // component, shared by EntityFormComponent and any hand-written
 // EngineFormBase subclass that wants the same tabs (the service ticket form).
-export { recordTabDefs, RECORD_TAB_IDS } from './record-tabs/record-tabs';
+export { recordTabDefs, RECORD_TAB_IDS, withGoldenTab } from './record-tabs/record-tabs';
 export type { RecordTabId }             from './record-tabs/record-tabs';
 export { RecordTabPanelsComponent }     from './record-tabs/record-tab-panels.component';
 // D-432 / M13 — the "possible duplicate" banner. Depends on

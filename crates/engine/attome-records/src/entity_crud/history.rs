@@ -1242,6 +1242,87 @@ pub(super) async fn search_history_route(
     Ok(Json(search_history(&state, &ctx, &query).await?))
 }
 
+/// L1-T6: a record's values as they stood at a moment.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ValuesAt {
+    /// The readable attributes and the values they held then.
+    pub values: Map<String, Value>,
+    /// Readable attributes that changed since, whose earlier value the
+    /// history withholds (sensitive or encrypted): left out of `values`.
+    pub withheld: Vec<String>,
+}
+
+/// One field's oldest change after the moment: its field, old value,
+/// sensitivity and value mode.
+type ChangedSince = (String, Option<String>, Option<bool>, Option<i16>);
+
+/// L1-T6: the values `record_id` held at `at`, as `ctx` may see them.
+///
+/// The record read decides access (a record the caller cannot read is
+/// `NotFound`) and the field filter: an attribute the caller cannot read is
+/// neither shown nor counted. Each attribute changed after `at` takes the
+/// old value of its first change after `at`; the rest keep their current
+/// value. A record created after `at` did not exist then: `NotFound`.
+pub async fn values_at(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    record_id: Uuid,
+    at: DateTime<Utc>,
+) -> Result<ValuesAt, AppError> {
+    let current = super::read_record(state, ctx, entity_input, record_id).await?;
+    let (_, entity_name, attrs, _) = resolve_entity(state, entity_input).await?;
+    let created: Option<DateTime<Utc>> = sqlx::query_scalar(&attome_db::tag_dynamic(
+        "entity.history",
+        &format!(
+            "SELECT created_at FROM {} WHERE id = $1",
+            quote_ident(&entity_name)
+        ),
+    ))
+    .bind(record_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .flatten();
+    if created.is_some_and(|c| c > at) {
+        return Err(AppError::NotFound);
+    }
+    let changed: Vec<ChangedSince> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.history",
+        "SELECT DISTINCT ON (d.field_name) d.field_name::text, d.old_value, d.is_sensitive, \
+                d.value_mode \
+           FROM audit_header h JOIN audit_detail d ON d.audit_ref = h.id \
+          WHERE h.entity_name = $1 AND h.record_id = $2 AND h.changed_on > $3 \
+          ORDER BY d.field_name, h.changed_on, h.id, d.id"
+    ))
+    .bind(&entity_name)
+    .bind(record_id)
+    .bind(at)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let mut values = current.data().as_object().cloned().unwrap_or_default();
+    let mut withheld = Vec::new();
+    for (field, old_value, row_sensitive, value_mode) in changed {
+        let Some(attr) = readable_attr(ctx, &entity_name, &attrs, &field) else {
+            continue;
+        };
+        if attr.is_sensitive || row_sensitive.unwrap_or(false) || value_withheld(state, value_mode)
+        {
+            values.remove(&field);
+            withheld.push(field);
+            continue;
+        }
+        let value = restore_value(
+            FieldType::from_int(attr.field_type_int),
+            old_value.as_deref(),
+        );
+        values.insert(field, value);
+    }
+    Ok(ValuesAt { values, withheld })
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(
     paths(get_record_history, restore_history_route, search_history_route),

@@ -275,6 +275,70 @@ pub async fn certification(
         .unwrap_or(Certification::Draft))
 }
 
+/// Whether `ctx` stewards `entity`'s golden records: an administrator, or an
+/// owner or steward of the entity's data domain (L3).
+pub async fn may_steward(
+    state: &attome_core::EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    entity: &str,
+) -> Result<bool, AppError> {
+    if ctx.is_admin {
+        return Ok(true);
+    }
+    let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    attome_core::lineage::manual::may_document(&mut conn, entity, ctx.user_id).await
+}
+
+/// Releases the held contribution `id` of `entity`: its payload (`payload`
+/// when given, else the stored one) is validated again and a valid one is
+/// attached to its golden record, whose rebuild is queued. Of two releases at
+/// once, one wins; an attach that fails holds it again. The golden record and
+/// whether a rebuild was queued. The steward route (L1-T5) and an agent's
+/// approved proposal (L1-T10) both release through here; the caller has
+/// checked [`may_steward`].
+pub async fn release_held(
+    state: &attome_core::EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    entity: &str,
+    id: Uuid,
+    payload: Option<Map<String, Value>>,
+) -> Result<(Uuid, bool), AppError> {
+    let db = &state.base.db;
+    let row = contribution(db, entity, id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    if row.status != "held" {
+        return Err(AppError::Conflict("the contribution is not held"));
+    }
+    let payload = payload.unwrap_or_else(|| row.payload_object());
+    if let Some(reason) = super::validation_failure(state, entity, &payload)? {
+        return Err(AppError::Validation(reason));
+    }
+    if !claim_release(db, entity, id, &payload).await? {
+        return Err(AppError::Conflict("the contribution is not held"));
+    }
+    let attached = super::attach(
+        state,
+        ctx,
+        entity,
+        super::Pending {
+            contribution: id,
+            golden: row.golden_id,
+            source_system: &row.source_system,
+            external_id: &row.external_id,
+            payload: &payload,
+        },
+    )
+    .await;
+    match attached {
+        Ok(done) => Ok(done),
+        Err(e) => {
+            hold(db, entity, id, "the release could not attach it").await?;
+            Err(e)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

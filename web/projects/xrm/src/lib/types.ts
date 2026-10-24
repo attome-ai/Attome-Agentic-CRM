@@ -144,6 +144,8 @@ export interface EntitySchema {
    * error) under a structured condition. UX only; the server enforces.
    */
   business_rules?: BusinessRuleClient[];
+  /** L1-T9: master data (golden records from source systems); absent when not. */
+  is_master?: boolean;
 }
 
 // M01 Core P3 gap (D-455) — one `relationship_info` row touching

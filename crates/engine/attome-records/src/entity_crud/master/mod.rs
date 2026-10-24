@@ -14,10 +14,16 @@
 //!   and records where each value came from (`<entity>__provenance`).
 //! - [`steward`] pins and unpins values, releases, rejects and detaches
 //!   contributions and certifies golden records (L1-T5).
+//! - [`xref`] finds the golden record of a source system's id and every
+//!   system id of a golden record (L1-T6).
+//! - [`preview`] counts what a proposed trust ranking would change, without
+//!   writing (L1-T10).
 
 pub mod ingest;
+pub mod preview;
 pub mod rebuild;
 pub mod steward;
+pub mod xref;
 
 pub use ingest::{Ingested, Pending, attach, ingest, is_master, queue_rebuild, validation_failure};
 pub use rebuild::{Rebuilt, rebuild};

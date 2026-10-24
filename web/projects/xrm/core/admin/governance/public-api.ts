@@ -19,3 +19,6 @@ export { CleanupListComponent }         from './lineage/cleanup-list.component';
 export { ImpactPanelComponent }         from './lineage/impact-panel.component';
 export { NODE_H, NODE_W, layoutLineage, walkTarget } from './lineage/lineage-layout';
 export type { LineageLayout, PlacedEdge, PlacedNode } from './lineage/lineage-layout';
+// L1-T9 — the steward's master-data page (its components are the
+// `governance/master-data` entry point, which the record form loads too).
+export { MasterDataPageComponent }      from './master-data-page/master-data-page.component';

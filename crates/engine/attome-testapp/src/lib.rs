@@ -135,6 +135,25 @@ pub fn session_cookie(user_id: Uuid) -> String {
     format!("{}={token}", attome_auth::cookie::session_cookie_name(true))
 }
 
+/// Moves every captured audit event into the hash chain, so a test can read
+/// `audit_header`/`audit_detail` (the record history) as the deployment's
+/// chainer would have written them.
+pub async fn drain_audit(app: &TestApp) {
+    for _ in 0..20 {
+        let done = attome_audit::chainer::run_once(
+            app.db(),
+            app.state.audit_signer.as_deref(),
+            1000,
+            None,
+        )
+        .await
+        .expect("chain the captured audit events");
+        if done.is_empty() {
+            break;
+        }
+    }
+}
+
 /// A user signed in for tests.
 #[derive(Debug, Clone)]
 pub struct TestUser {

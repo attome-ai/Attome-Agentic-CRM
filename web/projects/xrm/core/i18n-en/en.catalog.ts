@@ -171,13 +171,14 @@ export const xrmEn = {
     saveBeforeTimeline: 'Save the record to see its timeline.',
     saveBeforeHistory: 'Save the record to see its change history.',
     saveBeforeApprovals: 'Save the record to see its approvals.',
+    saveBeforeGolden: 'Save the record to see its golden record.',
     tabs: {
       // The generated entity forms' own "Details" tab and section
       // (scripts/bundle-to-form-component.mjs, SYSTEM-CHANGES.md Topic 14).
       details: 'Details',
       documents: 'Documents', communications: 'Communications', notes: 'Notes', activities: 'Activities',
       tags: 'Tags', consent: 'Consent', relationships: 'Relationships',
-      timeline: 'Timeline', history: 'History', approvals: 'Approvals',
+      timeline: 'Timeline', history: 'History', approvals: 'Approvals', golden: 'Golden record',
     },
     entity: {
       document: 'Document', note: 'Note', organization: 'Organization', privilege: 'Privilege',
@@ -1793,6 +1794,7 @@ export const xrmEn = {
       changes: 'Change feed',
       stateModels: 'State models',
       lineage: 'Lineage',
+      masterData: 'Master data',
     },
     lineage: {
       title: 'Lineage',
@@ -2386,6 +2388,59 @@ export const xrmEn = {
     reject: 'Reject this visit',
     refused: '{name} cannot take this job (checked: {rules}).',
     stale: 'Someone changed this job since the board loaded. The board has reloaded.',
+  },
+  // L1-T9 — master data: the golden record panel, contributions, the held
+  // queue and the cross-reference search.
+  masterData: {
+    title: 'Master data',
+    subtitle: 'Find a golden record by a source system\'s id, and release or reject held contributions.',
+    loading: 'Loading…',
+    loadError: 'The golden record panel could not be loaded.',
+    notSteward: 'Only a steward of this data, or an administrator, can do that.',
+    cancel: 'Cancel',
+    golden: {
+      title: 'Golden record',
+      empty: 'No value of this record has been chosen from a source system yet.',
+      pin: 'Pin {field}: keep this value when sources change',
+      unpin: 'Unpin {field}: let the rules choose again',
+      from: 'From {system} ({id})',
+      noSource: 'Set by a person',
+    },
+    rules: {
+      rank: 'trusted source first',
+      pinned: 'pinned',
+      recent: 'most recent',
+    },
+    contributions: {
+      title: 'Contributions',
+      empty: 'No source system has sent this record.',
+      detach: 'Detach',
+      detached: 'Detached the {system} version; the record is being rebuilt without it.',
+    },
+    status: {
+      attached: 'Attached',
+      held: 'Held',
+      detached: 'Detached',
+    },
+    held: {
+      title: 'Held contributions',
+      empty: 'Nothing is waiting.',
+      reason: 'Why it is rejected',
+      release: 'Release',
+      reject: 'Reject',
+      more: 'Show more',
+      released: 'Released {system} {id}.',
+      rejected: 'Rejected {system} {id}.',
+    },
+    xref: {
+      title: 'Find by source system id',
+      entity: 'Entity',
+      system: 'Source system',
+      externalId: 'Id in that system',
+      search: 'Find',
+      open: 'Open the golden record',
+      notFound: 'No golden record you can see has that id.',
+    },
   },
   // V4-T1 — the project booking board.
   bookingBoard: {

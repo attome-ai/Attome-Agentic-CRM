@@ -13,7 +13,7 @@ import type { XrmFormTabDef } from '../base/xrm-form.base';
  */
 export type RecordTabId =
   'documents' | 'communications' | 'notes' | 'activities' | 'tags' | 'consent' | 'relationships'
-  | 'timeline' | 'history' | 'approvals';
+  | 'timeline' | 'history' | 'approvals' | 'golden';
 
 /** Every record tab, in the order the generic form has always shown them. */
 export const RECORD_TAB_IDS: readonly RecordTabId[] = [
@@ -32,6 +32,7 @@ const ICONS: Record<RecordTabId, string> = {
   timeline:       'las la-stream',
   history:        'las la-history',
   approvals:      'las la-user-check',
+  golden:         'las la-fingerprint',
 };
 
 const LABEL_KEYS: Record<RecordTabId, string> = {
@@ -45,6 +46,7 @@ const LABEL_KEYS: Record<RecordTabId, string> = {
   timeline:       'xrmForm.tabs.timeline',
   history:        'xrmForm.tabs.history',
   approvals:      'xrmForm.tabs.approvals',
+  golden:         'xrmForm.tabs.golden',
 };
 
 /**
@@ -80,4 +82,21 @@ export function recordTabDefs(
   return RECORD_TAB_IDS
     .filter(id => include.includes(id) && !hiddenOn(id, entityName))
     .map(id => ({ id, label: translate(LABEL_KEYS[id]), icon: ICONS[id] }));
+}
+
+/**
+ * L1-T9: a master entity's form gains the Golden record tab (values with
+ * their sources, pins, contributions) after its record tabs. Not in
+ * `RECORD_TAB_IDS`: it depends on the entity being master data, which only
+ * the loaded schema says, so the form base adds it here. A form that shows
+ * no record tabs gets none.
+ */
+export function withGoldenTab(
+  tabs: XrmFormTabDef[],
+  isMaster: boolean,
+  translate: (key: string) => string,
+): XrmFormTabDef[] {
+  const hasRecordTabs = tabs.some(t => (RECORD_TAB_IDS as readonly string[]).includes(t.id));
+  if (!isMaster || !hasRecordTabs || tabs.some(t => t.id === 'golden')) return tabs;
+  return [...tabs, { id: 'golden', label: translate(LABEL_KEYS.golden), icon: ICONS.golden }];
 }

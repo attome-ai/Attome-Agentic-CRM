@@ -78,6 +78,11 @@ struct EntitySchemaDef {
     /// `error` attached to a field) under a structured condition. The form
     /// mirrors them for UX only; the server enforces every write.
     business_rules: Vec<BusinessRuleClient>,
+    /// L1-T9: the entity is master data (it has golden records built from
+    /// source systems), so its form shows the golden record panel. Sent only
+    /// when true.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    is_master: bool,
 }
 
 /// One business rule as the form evaluates it (design §5): `set_value`
@@ -393,6 +398,7 @@ async fn build_schema(
         .collect();
 
     let business_rules = client_business_rules(state, ctx, logicalname).await?;
+    let is_master = attome_records::entity_crud::master::is_master(state, logicalname).await?;
 
     Ok(EntitySchemaDef {
         id: entity_id,
@@ -401,6 +407,7 @@ async fn build_schema(
         fields,
         relationships,
         business_rules,
+        is_master,
     })
 }
 

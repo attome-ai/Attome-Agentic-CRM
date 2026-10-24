@@ -150,11 +150,12 @@ export const xrmAr = {
     saveBeforeTimeline: 'احفظ السجل لعرض الخط الزمني.',
     saveBeforeHistory: 'احفظ السجل لعرض سجل التغييرات.',
     saveBeforeApprovals: 'احفظ السجل لعرض موافقاته.',
+    saveBeforeGolden: 'احفظ السجل لعرض سجله الذهبي.',
     tabs: {
       details: 'التفاصيل',
       documents: 'المستندات', communications: 'المراسلات', notes: 'الملاحظات', activities: 'الأنشطة',
       tags: 'الوسوم', consent: 'الموافقة', relationships: 'العلاقات',
-      timeline: 'الخط الزمني', history: 'سجل التغييرات', approvals: 'الموافقات',
+      timeline: 'الخط الزمني', history: 'سجل التغييرات', approvals: 'الموافقات', golden: 'السجل الذهبي',
     },
     entity: {
       document: 'مستند', note: 'ملاحظة', organization: 'مؤسسة', privilege: 'صلاحية',
@@ -1715,6 +1716,7 @@ export const xrmAr = {
       changes: 'سجل التغييرات',
       stateModels: 'نماذج الحالات',
       lineage: 'تتبع البيانات',
+      masterData: 'البيانات الرئيسية',
     },
     lineage: {
       title: 'تتبع البيانات',
@@ -2308,6 +2310,59 @@ export const xrmAr = {
     reject: 'ارفض هذه الزيارة',
     refused: 'لا يستطيع {name} تولي هذه المهمة (فُحص: {rules}).',
     stale: 'غيّر أحدهم هذه المهمة بعد تحميل اللوحة. أُعيد تحميل اللوحة.',
+  },
+  // L1-T9 — master data: the golden record panel, contributions, the held
+  // queue and the cross-reference search.
+  masterData: {
+    title: 'البيانات الرئيسية',
+    subtitle: 'ابحث عن السجل الذهبي بمعرّف نظام المصدر، وأفرج عن المساهمات المعلّقة أو ارفضها.',
+    loading: 'جارٍ التحميل…',
+    loadError: 'تعذّر تحميل لوحة السجل الذهبي.',
+    notSteward: 'لا يستطيع ذلك إلا أمين هذه البيانات أو المسؤول.',
+    cancel: 'إلغاء',
+    golden: {
+      title: 'السجل الذهبي',
+      empty: 'لم تُختر بعد أي قيمة لهذا السجل من نظام مصدر.',
+      pin: 'تثبيت {field}: احتفظ بهذه القيمة عند تغيّر المصادر',
+      unpin: 'إلغاء تثبيت {field}: دع القواعد تختار من جديد',
+      from: 'من {system} ({id})',
+      noSource: 'حدّدها شخص',
+    },
+    rules: {
+      rank: 'المصدر الموثوق أولًا',
+      pinned: 'مثبّتة',
+      recent: 'الأحدث',
+    },
+    contributions: {
+      title: 'المساهمات',
+      empty: 'لم يرسل أي نظام مصدر هذا السجل.',
+      detach: 'فصل',
+      detached: 'فُصلت نسخة {system}، ويُعاد بناء السجل بدونها.',
+    },
+    status: {
+      attached: 'مرتبطة',
+      held: 'معلّقة',
+      detached: 'مفصولة',
+    },
+    held: {
+      title: 'المساهمات المعلّقة',
+      empty: 'لا شيء بانتظارك.',
+      reason: 'سبب الرفض',
+      release: 'إفراج',
+      reject: 'رفض',
+      more: 'عرض المزيد',
+      released: 'تم الإفراج عن {system} {id}.',
+      rejected: 'تم رفض {system} {id}.',
+    },
+    xref: {
+      title: 'البحث بمعرّف نظام المصدر',
+      entity: 'الكيان',
+      system: 'نظام المصدر',
+      externalId: 'المعرّف في ذلك النظام',
+      search: 'بحث',
+      open: 'فتح السجل الذهبي',
+      notFound: 'لا يوجد سجل ذهبي تستطيع رؤيته بهذا المعرّف.',
+    },
   },
   // V4-T1 — the project booking board.
   bookingBoard: {

@@ -35,6 +35,7 @@ import { TagsPanelComponent } from '../tags/tags-panel.component';
  */
 type RecordActivityModule = typeof import('@attome/xrm/core/entity/record-activity');
 type ApprovalsModule = typeof import('@attome/xrm/core/approvals');
+type MasterDataModule = typeof import('@attome/xrm/core/admin/governance/master-data');
 
 @Component({
   selector: 'xrm-record-tab-panels',
@@ -73,6 +74,11 @@ export class RecordTabPanelsComponent {
   readonly approvalsLoadFailed = signal(false);
   private approvalsRequested = false;
 
+  /** L1-T9: the master-data entry point, once the Golden record tab has asked for it. */
+  readonly masterData = signal<MasterDataModule | null>(null);
+  readonly masterDataLoadFailed = signal(false);
+  private masterDataRequested = false;
+
   constructor() {
     effect(() => {
       const tab = this.activeTab();
@@ -90,6 +96,15 @@ export class RecordTabPanelsComponent {
         import('@attome/xrm/core/approvals').then(
           m => this.approvals.set(m),
           () => this.approvalsLoadFailed.set(true),
+        );
+      }
+    });
+    effect(() => {
+      if (this.activeTab() === 'golden' && this.recordId() && !this.masterDataRequested) {
+        this.masterDataRequested = true;
+        import('@attome/xrm/core/admin/governance/master-data').then(
+          m => this.masterData.set(m),
+          () => this.masterDataLoadFailed.set(true),
         );
       }
     });

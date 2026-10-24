@@ -10,6 +10,13 @@
 //! - `POST /api/v1/master/{entity}/{id}/certify` sets the golden record's
 //!   certification: `draft`, `certified` or `retired`.
 //! - `GET /api/v1/master/held` lists held contributions, newest first.
+//! - L1-T6: `GET /api/v1/master/{entity}/xref?system=&external_id=` finds the
+//!   golden record of a source system's id, `GET .../{id}/xref` lists every
+//!   system id of a golden record, and `GET .../{id}/as-of?at=` returns the
+//!   golden values held at a moment, rebuilt from the field history (B2).
+//!   L1-T9: `GET .../{id}/provenance` says where each attribute's value came
+//!   from, for the golden record panel. These four are reads: anyone who can read the golden record may call
+//!   them, and only the attributes they can read appear.
 //!
 //! A steward of the entity's data domain (an owner or steward, L3) or an
 //! administrator may act; a steward's held queue holds only their domains'
@@ -20,7 +27,9 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
 use attome_core::lineage::manual;
-use attome_records::entity_crud::master::{self, Pending, steward};
+use attome_records::entity_crud::history::{ValuesAt, values_at};
+use attome_records::entity_crud::master::{self, steward, xref};
+use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, SelfService};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
@@ -33,7 +42,7 @@ use axum::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 /// The most master entities the held queue reads across.
@@ -134,6 +143,74 @@ pub struct HeldContribution {
     pub external_id: String,
     pub received_at: DateTime<Utc>,
     pub held_reason: Option<String>,
+}
+
+/// A source system's id to look up.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct XrefQuery {
+    /// The source system, as its contributions name it.
+    pub system: String,
+    /// The record's id in that system.
+    pub external_id: String,
+}
+
+/// The golden record a source system's id belongs to.
+#[derive(Debug, Serialize, ToSchema)]
+#[schema(as = MasterXrefGolden)]
+pub struct XrefGolden {
+    pub golden_id: Uuid,
+    /// The contribution's status: `attached`, `held` or `detached`.
+    pub status: String,
+}
+
+/// One source system's id of a golden record.
+#[derive(Debug, Serialize, ToSchema)]
+#[schema(as = MasterSystemId)]
+pub struct SystemIdItem {
+    /// The contribution's id, for a steward's detach.
+    pub contribution_id: Uuid,
+    pub source_system: String,
+    pub external_id: String,
+    /// `attached`, `held` or `detached`.
+    pub status: String,
+    pub received_at: DateTime<Utc>,
+}
+
+/// Where one attribute's golden value came from.
+#[derive(Debug, Serialize, ToSchema)]
+#[schema(as = MasterProvenance)]
+pub struct ProvenanceItem {
+    pub attribute: String,
+    /// The rule that chose the value: `source_system_rank`, `most_recent` or `pinned`.
+    pub rule: String,
+    pub chosen_at: DateTime<Utc>,
+    /// Whether a steward pinned it.
+    pub pinned: bool,
+    pub contribution_id: Option<Uuid>,
+    pub source_system: Option<String>,
+    pub external_id: Option<String>,
+    pub received_at: Option<DateTime<Utc>>,
+}
+
+/// The moment of a point-in-time view.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct AsOfQuery {
+    /// An RFC 3339 timestamp.
+    pub at: DateTime<Utc>,
+}
+
+/// A golden record's values at a moment.
+#[derive(Debug, Serialize, ToSchema)]
+#[schema(as = MasterAsOf)]
+pub struct AsOf {
+    pub golden_id: Uuid,
+    pub at: DateTime<Utc>,
+    /// The readable attributes and the values they held then.
+    pub values: Map<String, Value>,
+    /// Readable attributes whose earlier value the history withholds.
+    pub withheld: Vec<String>,
 }
 
 fn attribute_of(state: &EngineState, entity: &str, attribute: &str) -> Result<(), AppError> {
@@ -323,43 +400,12 @@ async fn release(
     Json(body): Json<ReleaseBody>,
 ) -> Result<Json<RebuildQueued>, AppError> {
     master_entity(&state, &ctx, &entity).await?;
-    let db = &state.base.db;
-    let row = steward::contribution(db, &entity, cid)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    if row.status != "held" {
-        return Err(AppError::Conflict("the contribution is not held"));
-    }
-    let payload = body.payload.unwrap_or_else(|| row.payload_object());
-    if let Some(reason) = master::validation_failure(&state, &entity, &payload)? {
-        return Err(AppError::Validation(reason));
-    }
-    if !steward::claim_release(db, &entity, cid, &payload).await? {
-        return Err(AppError::Conflict("the contribution is not held"));
-    }
-    let attached = master::attach(
-        &state,
-        &ctx,
-        &entity,
-        Pending {
-            contribution: cid,
-            golden: row.golden_id,
-            source_system: &row.source_system,
-            external_id: &row.external_id,
-            payload: &payload,
-        },
-    )
-    .await;
-    match attached {
-        Ok((golden_id, rebuild_queued)) => Ok(Json(RebuildQueued {
-            golden_id,
-            rebuild_queued,
-        })),
-        Err(e) => {
-            steward::hold(db, &entity, cid, "the release could not attach it").await?;
-            Err(e)
-        }
-    }
+    let (golden_id, rebuild_queued) =
+        steward::release_held(&state, &ctx, &entity, cid, body.payload).await?;
+    Ok(Json(RebuildQueued {
+        golden_id,
+        rebuild_queued,
+    }))
 }
 
 #[utoipa::path(
@@ -609,9 +655,216 @@ async fn held(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// `entity` exists, is master data, and the caller may read it.
+async fn readable_master(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity: &str,
+) -> Result<(), AppError> {
+    if state.entities.load().get(entity).is_none() {
+        return Err(AppError::NotFound);
+    }
+    ctx.require(entity, "read")?;
+    if !master::is_master(state, entity).await? {
+        return Err(AppError::Validation(format!("{entity} is not master data")));
+    }
+    Ok(())
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/master/{entity}/xref",
+    operation_id = "master_xref_lookup",
+    tag = "admin",
+    params(
+        ("entity" = String, Path, description = "The master entity"),
+        XrefQuery,
+    ),
+    responses(
+        (status = 200, description = "The golden record the system id belongs to", body = XrefGolden),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not read the entity", body = ErrorResponse),
+        (status = 404, description = "No such entity, an unknown system id, or a golden record the caller cannot read", body = ErrorResponse),
+        (status = 422, description = "Not master data, or no system or id", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// Finds the golden record of a source system's id.
+///
+/// One lookup on the contribution's unique key. A golden record the caller
+/// cannot read is not found.
+async fn xref_lookup(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(entity): Path<String>,
+    Query(query): Query<XrefQuery>,
+) -> Result<Json<XrefGolden>, AppError> {
+    readable_master(&state, &ctx, &entity).await?;
+    let (system, external_id) = (query.system.trim(), query.external_id.trim());
+    if system.is_empty() || external_id.is_empty() {
+        return Err(AppError::Validation(
+            "a lookup names the system and the external id".into(),
+        ));
+    }
+    let (golden_id, status) = xref::golden_for(&state.base.db, &entity, system, external_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    attome_records::entity_crud::read_record(&state, &ctx, &entity, golden_id).await?;
+    Ok(Json(XrefGolden { golden_id, status }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/master/{entity}/{id}/xref",
+    operation_id = "master_xref_list",
+    tag = "admin",
+    params(
+        ("entity" = String, Path, description = "The master entity"),
+        ("id" = Uuid, Path, description = "The golden record"),
+    ),
+    responses(
+        (status = 200, description = "Every source system id of the golden record", body = PaginatedResponse<SystemIdItem>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not read the entity", body = ErrorResponse),
+        (status = 404, description = "No such entity, or a golden record the caller cannot read", body = ErrorResponse),
+        (status = 422, description = "Not master data", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// Lists every source system id of a golden record.
+///
+/// By system, then id, up to 500: the whole capped list on one page.
+async fn xref_list(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path((entity, golden)): Path<(String, Uuid)>,
+) -> Result<Json<PaginatedResponse<SystemIdItem>>, AppError> {
+    readable_master(&state, &ctx, &entity).await?;
+    attome_records::entity_crud::read_record(&state, &ctx, &entity, golden).await?;
+    let items: Vec<SystemIdItem> = xref::system_ids(&state.base.db, &entity, golden)
+        .await?
+        .into_iter()
+        .map(|s| SystemIdItem {
+            contribution_id: s.id,
+            source_system: s.source_system,
+            external_id: s.external_id,
+            status: s.status,
+            received_at: s.received_at,
+        })
+        .collect();
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        1,
+        xref::MAX_SYSTEM_IDS,
+    )))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/master/{entity}/{id}/as-of",
+    operation_id = "master_as_of",
+    tag = "admin",
+    params(
+        ("entity" = String, Path, description = "The master entity"),
+        ("id" = Uuid, Path, description = "The golden record"),
+        AsOfQuery,
+    ),
+    responses(
+        (status = 200, description = "The golden values held at the moment", body = AsOf),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not read the entity", body = ErrorResponse),
+        (status = 404, description = "No such entity, a golden record the caller cannot read, or one created after the moment", body = ErrorResponse),
+        (status = 422, description = "Not master data, or a malformed moment", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// Returns a golden record's values at a moment.
+///
+/// Each attribute changed since takes the value it had before its first
+/// change after the moment, from the field history; the rest keep their
+/// current value. Attributes the caller cannot read never appear.
+async fn as_of(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path((entity, golden)): Path<(String, Uuid)>,
+    Query(query): Query<AsOfQuery>,
+) -> Result<Json<AsOf>, AppError> {
+    readable_master(&state, &ctx, &entity).await?;
+    let ValuesAt { values, withheld } = values_at(&state, &ctx, &entity, golden, query.at).await?;
+    Ok(Json(AsOf {
+        golden_id: golden,
+        at: query.at,
+        values,
+        withheld,
+    }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/master/{entity}/{id}/provenance",
+    operation_id = "master_provenance",
+    tag = "admin",
+    params(
+        ("entity" = String, Path, description = "The master entity"),
+        ("id" = Uuid, Path, description = "The golden record"),
+    ),
+    responses(
+        (status = 200, description = "Where each readable attribute's value came from", body = PaginatedResponse<ProvenanceItem>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not read the entity", body = ErrorResponse),
+        (status = 404, description = "No such entity, or a golden record the caller cannot read", body = ErrorResponse),
+        (status = 422, description = "Not master data", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// Says where each attribute's golden value came from.
+///
+/// The source system, its id and when it sent the value, the rule that chose
+/// it, and whether a steward pinned it. Attributes the caller cannot read are
+/// left out. The whole list on one page.
+async fn provenance(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path((entity, golden)): Path<(String, Uuid)>,
+) -> Result<Json<PaginatedResponse<ProvenanceItem>>, AppError> {
+    readable_master(&state, &ctx, &entity).await?;
+    attome_records::entity_crud::read_record(&state, &ctx, &entity, golden).await?;
+    let rows = xref::provenance(&state.base.db, &entity, golden).await?;
+    let registry = state.entities.load();
+    let meta = registry.get(&entity).ok_or(AppError::NotFound)?;
+    let items: Vec<ProvenanceItem> = rows
+        .into_iter()
+        .filter(|row| {
+            meta.attrs.iter().any(|a| {
+                a.logicalname == row.attribute
+                    && (!a.is_sensitive || ctx.has_field_read_grant(&entity, &a.logicalname))
+            })
+        })
+        .map(|row| ProvenanceItem {
+            pinned: row.pinned_by.is_some(),
+            attribute: row.attribute,
+            rule: row.rule,
+            chosen_at: row.chosen_at,
+            contribution_id: row.contribution_id,
+            source_system: row.source_system,
+            external_id: row.external_id,
+            received_at: row.received_at,
+        })
+        .collect();
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    let page_size = total.max(1);
+    Ok(Json(PaginatedResponse::new(items, total, 1, page_size)))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/master/held", get(held))
+        .route("/api/v1/master/{entity}/xref", get(xref_lookup))
+        .route("/api/v1/master/{entity}/{id}/xref", get(xref_list))
+        .route("/api/v1/master/{entity}/{id}/as-of", get(as_of))
+        .route("/api/v1/master/{entity}/{id}/provenance", get(provenance))
         .route("/api/v1/master/{entity}/{id}/pins", post(pin))
         .route(
             "/api/v1/master/{entity}/{id}/pins/{attribute}",
@@ -634,7 +887,19 @@ pub fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(pin, unpin, release, reject, detach, certify, held),
+    paths(
+        pin,
+        unpin,
+        release,
+        reject,
+        detach,
+        certify,
+        held,
+        xref_lookup,
+        xref_list,
+        as_of,
+        provenance
+    ),
     components(schemas(
         PinBody,
         ReleaseBody,
@@ -642,7 +907,11 @@ pub fn routes() -> Router<EngineState> {
         CertifyBody,
         RebuildQueued,
         Certified,
-        HeldContribution
+        HeldContribution,
+        XrefGolden,
+        SystemIdItem,
+        ProvenanceItem,
+        AsOf
     ))
 )]
 struct ApiDocFragment;

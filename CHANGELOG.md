@@ -694,6 +694,22 @@ that makes it; the release gate's contract step refuses a release that breaks th
   (default, up to three tries), `merge`, `stop` or `ask_person` (an approval request carrying the
   conflict; approved, the change is applied to the record as it is then). Agent record updates
   merge over a stale `row_version` when the attributes they send were not changed since.
+- Master-data cross-references and point-in-time view (L1-T6): `GET /api/v1/master/{entity}/xref?system=&external_id=`
+  finds the golden record of a source system's id, `GET /api/v1/master/{entity}/{id}/xref` lists every
+  system id of a golden record, and `GET /api/v1/master/{entity}/{id}/as-of?at=` returns the values it
+  held at a moment from the field history. Reads for anyone who can read the record; attributes the
+  caller cannot read never appear, and a readable sensitive value changed since is listed as withheld.
+- Golden record panel (L1-T9): a master entity's form gains a Golden record tab (each value with the
+  source system, date and rule that chose it, pin and unpin, the contributions with Detach), and
+  `/xrm/admin/master-data` holds the cross-reference search and the held queue (release, reject with a
+  reason). `GET /api/v1/master/{entity}/{id}/provenance` says where each readable value came from; the
+  entity schema carries `is_master` when true; the xref list carries each `contribution_id`.
+- Steward agent tools (L1-T10): `master.xref` answers cross-reference questions (the golden record of a
+  source system's id, or every system id of a golden record) under the record's own read check;
+  `master.preview_ranking` counts, per attribute, the golden values a proposed trust ranking would
+  change ("changes 1,240 city values"), pinned values left out, without writing anything; and
+  `master.propose_release` releases a held contribution only after a person approves it, through the
+  same release the steward route uses.
 - `POST /api/v1/query/run` (S4-T2 to S4-T8): one structured query, as a QuerySpec (`spec`) or its
   SQL-like text (`q`, parsed by the server, never sent to the database as text). Fields through up
   to three lookups (`primary_contact.team.name`), `exists` / `not_exists` over child rows or a
