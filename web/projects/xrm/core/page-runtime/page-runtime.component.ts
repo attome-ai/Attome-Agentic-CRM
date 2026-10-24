@@ -7,7 +7,7 @@ import { catchError, of } from 'rxjs';
 
 import { PageContext } from './page-context';
 import { PageDataService } from './page-data.service';
-import { PageDoc, deviceOf } from './page-model';
+import { Device, PageDoc, deviceOf } from './page-model';
 import { PageNodeComponent } from './page-node.component';
 
 /**
@@ -60,11 +60,15 @@ export class PageRuntimeComponent {
   /** On a record page: the record's entity (logical name) and id. */
   readonly entity = input<string | undefined>(undefined);
   readonly record = input<string | undefined>(undefined);
+  /** T2-T3 preview: render as if the person held these roles, on this size, in this language. */
+  readonly previewRoles = input<readonly string[] | null>(null);
+  readonly previewDevice = input<Device | null>(null);
+  readonly previewArabic = input<boolean | null>(null);
 
   protected readonly loaded = signal<PageDoc | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly doc = computed(() => this.page() ?? this.loaded());
-  protected readonly arabic = computed(() => this.lang.isRtl());
+  protected readonly arabic = computed(() => this.previewArabic() ?? this.lang.isRtl());
   protected readonly title = computed(() => {
     const d = this.doc();
     if (!d) return '';
@@ -74,8 +78,19 @@ export class PageRuntimeComponent {
   constructor() {
     this.onResize();
     effect(() => this.ctx.arabic.set(this.arabic()));
-    const roles = this.data.myRoles().subscribe(r => this.ctx.roles.set(r));
+    const roles = this.data.myRoles().subscribe(r => {
+      if (this.previewRoles() === null) this.ctx.roles.set(r);
+    });
     this.destroyRef.onDestroy(() => roles.unsubscribe());
+    effect(() => {
+      const preview = this.previewRoles();
+      if (preview !== null) this.ctx.roles.set(preview);
+    });
+    effect(() => {
+      const device = this.previewDevice();
+      if (device !== null) this.ctx.device.set(device);
+      else untracked(() => this.onResize());
+    });
     effect(() => {
       const id = this.id();
       untracked(() => {
@@ -90,6 +105,7 @@ export class PageRuntimeComponent {
   }
 
   onResize(): void {
+    if (this.previewDevice() !== null) return;
     if (typeof window !== 'undefined') this.ctx.device.set(deviceOf(window.innerWidth));
   }
 

@@ -250,7 +250,10 @@ export class CanvasComponent {
   /** Applies one command; the selection follows a moved node. */
   exec(command: EditCommand, select?: string): boolean {
     if (!this.stack().exec(command)) return false;
-    if (select !== undefined) this.selected.set(select ? [select] : []);
+    if (select !== undefined) {
+      this.selected.set(select ? [select] : []);
+      this.selectionChange.emit(this.selected());
+    }
     this.changed.emit(this.stack().doc());
     return true;
   }
@@ -297,7 +300,7 @@ export class CanvasComponent {
     const key = event.key;
     if (mod && key.toLowerCase() === 'z' && !event.shiftKey) { event.preventDefault(); this.undo(); return; }
     if (mod && (key.toLowerCase() === 'y' || (key.toLowerCase() === 'z' && event.shiftKey))) { event.preventDefault(); this.redo(); return; }
-    if (key === 'Escape') { this.selected.set([]); return; }
+    if (key === 'Escape') { this.selected.set([]); this.selectionChange.emit([]); return; }
     const placed = this.placed();
     const focus = this.focus();
     if (key === 'ArrowDown' || key === 'ArrowUp') {
@@ -338,6 +341,7 @@ export class CanvasComponent {
   private afterHistory(): void {
     const paths = new Set(this.placed().map(p => p.path));
     this.selected.update(s => s.filter(p => paths.has(p)));
+    this.selectionChange.emit(this.selected());
     this.changed.emit(this.stack().doc());
   }
 }

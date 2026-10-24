@@ -198,6 +198,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/governance').then(m => m.StateModelsManagerComponent),
           },
           {
+            // T2-T3 — the page designer on the shared canvas.
+            path: 'pages/:id/design',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/page-designer').then(m => m.PageDesignerComponent),
+          },
+          {
             // L5-T7 — the lineage canvas (`?node=<key>` deep-links a walk).
             path: 'lineage',
             canActivate: [authGuard],
