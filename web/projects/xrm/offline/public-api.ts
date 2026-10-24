@@ -4,6 +4,10 @@
 export { IndexedDbBackend, MemoryBackend, OfflineStore, uuidv7 } from './offline-store';
 export type { KvBackend, StoreName } from './offline-store';
 export { OFFLINE_STORE, OfflineQueueService } from './offline-queue.service';
+// B18-T8 — entity reads and writes served on the device while offline.
+export {
+  answerOffline, keepSchema, offlineDataInterceptor, offlineRoute, ruleErrors, schemaKey,
+} from './offline-data.interceptor';
 export type { NewOp, QueuedOp } from './offline-queue.service';
 export { PUSH_BATCH, SyncService, expired, nextBackoff } from './sync.service';
 // B18-T11: search over the device's records, Arabic normalised.

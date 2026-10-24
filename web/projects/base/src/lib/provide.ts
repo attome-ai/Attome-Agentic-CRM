@@ -111,7 +111,7 @@ export function provideAttomeI18n(languages: readonly LanguageDef[] = DEFAULT_LA
  */
 export function provideAttomeBase(config: AttomeBaseConfig): EnvironmentProviders {
   return makeEnvironmentProviders([
-    provideHttpClient(withInterceptors([authInterceptor, metadataVersionInterceptor])),
+    provideHttpClient(withInterceptors([...(config.interceptors ?? []), authInterceptor, metadataVersionInterceptor])),
     { provide: ATTOME_CONFIG, useValue: config },
     provideAppInitializer(() => { inject(AuthService).sessionReady().subscribe(); }),
     provideAttomeI18n(config.languages),

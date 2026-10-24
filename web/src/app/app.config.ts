@@ -6,6 +6,7 @@ import { BrandService, IdlePreloading, provideAttomeBase } from '@attome/base';
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 import { provideHostI18n } from './i18n/provide-host-i18n';
+import { offlineShimInterceptor } from './offline-shim.interceptor';
 
 // XRM form providers live in the lazy XRM route tree to keep them out of the
 // website's eager bundle.
@@ -26,7 +27,11 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     // Guards and logout return XRM users to the canonical XRM login. The
     // public website keeps its separate, root-owned sign-in modal.
-    provideAttomeBase({ apiUrl: environment.apiUrl, portalKey: 'xrm', loginRoute: '/xrm/login' }),
+    provideAttomeBase({
+      apiUrl: environment.apiUrl, portalKey: 'xrm', loginRoute: '/xrm/login',
+      // B18-T8: entity reads and writes served on the device while offline.
+      interceptors: [offlineShimInterceptor],
+    }),
     provideHostI18n(),
     // B13-T8: the deployment's published brand colours, for the sign-in page
     // and everything after it. Not awaited: the product's own colours show

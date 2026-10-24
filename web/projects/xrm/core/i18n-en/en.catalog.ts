@@ -820,6 +820,9 @@ export const xrmEn = {
   },
   // B18-T9: offline conflicts and refused changes.
   offline: {
+    notOnDevice: 'This record is not on this device. It opens again once you are back online.',
+    pendingNumber: 'Number pending (assigned when this device syncs)',
+    ruleFailed: 'This change breaks a rule of this record type.',
     conflict: {
       title: 'Someone else changed this record too',
       hint: 'Choose which value to keep for each field. Nothing is saved until every field has a choice.',
