@@ -1,3 +1,14 @@
+@if (canScan()) {
+  <div class="rg-scan-bar">
+    <button type="button" class="dialog-button" data-testid="scan-lines" (click)="scanOpen.set(true)">
+      <i class="las la-barcode" aria-hidden="true"></i> {{ 'relatedGrid.scan.open' | translate }}
+    </button>
+  </div>
+}
+@if (scanOpen() && scanField(); as field) {
+  <xrm-continuous-scan-dialog [entityName]="entityName()" [valueField]="field" [links]="filters()"
+                              (closed)="closeScan()" />
+}
 <attome-metadata-list
   [entityName]="entityName()" [fixedFilters]="relationshipFilter()"
   [initialViewId]="effectiveViewId()" [pageSize]="pageSize()" [compact]="true"

@@ -22,3 +22,5 @@ tbody tr.selected { background: rgb(139 92 246 / .14); }
 .dialog-button:hover:not(:disabled) { background: rgb(148 163 184 / .08); }
 .dialog-button-primary { border-color: var(--color-accent, #8b5cf6); color: white; background: var(--color-accent, #8b5cf6); }
 .dialog-button:disabled { cursor: not-allowed; opacity: .45; }
+
+.rg-scan-bar { display: flex; justify-content: flex-end; margin-block-end: 6px; }

@@ -10,6 +10,8 @@ import { QueryColumnDef, QueryService, ViewAdminService } from '@attome/xrm/core
 import { EntityService } from '../services/entity.service';
 import { EntityListComponent } from '../list/entity-list.component';
 import { entityFormRoute } from '../services/entity-url.utils';
+import { FeatureFlagsService } from '@attome/xrm/core/admin/data';
+import { ContinuousScanDialogComponent } from './continuous-scan-dialog.component';
 
 /** Suffix marking a seeded view as the stable, non-default target for a
  * related-grid/subgrid — see `ensure_secondary_view` call sites named
@@ -35,7 +37,7 @@ export interface RelationshipPickerConfig {
   selector: 'xrm-related-grid',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EntityListComponent, FormsModule, TranslatePipe],
+  imports: [EntityListComponent, FormsModule, TranslatePipe, ContinuousScanDialogComponent],
   styleUrls: ['./related-grid.component.css'],
   templateUrl: './related-grid.component.html',
 })
@@ -44,6 +46,19 @@ export class RelatedGridComponent {
   private readonly entitySvc = inject(EntityService);
   private readonly querySvc = inject(QueryService);
   private readonly viewSvc = inject(ViewAdminService);
+  private readonly flags = inject(FeatureFlagsService);
+
+  // ── B16-T10: continuous scanning into new lines ───────────────────────────
+  /** The line entity's field a scan fills: its first text or number field with scanning on. */
+  readonly scanField = signal<string | null>(null);
+  readonly scanOpen = signal(false);
+  /** Shown when creating is allowed, a field scans, and `scan.continuous_enabled` is on. */
+  readonly canScan = computed(() =>
+    this.allowCreate() && this.scanField() !== null && this.flags.isOn('scan.continuous_enabled'));
+
+  closeScan(): void {
+    this.scanOpen.set(false);
+  }
   private readonly list = viewChild(EntityListComponent);
   private readonly pickerSearchInput = viewChild<ElementRef<HTMLInputElement>>('pickerSearchInput');
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -64,6 +79,15 @@ export class RelatedGridComponent {
     effect(() => {
       const entity = this.entityName();
       untracked(() => {
+        this.flags.ensureLoaded();
+        this.scanField.set(null);
+        this.entitySvc.getSchema(entity).pipe(catchError(() => of(null))).subscribe(schema => {
+          const f = schema?.fields.find(x => {
+            const scan = (x.options as { scan?: { enabled?: boolean } } | null)?.scan;
+            return !!scan && scan.enabled !== false && (x.field_type === 'text' || x.field_type === 'number');
+          });
+          this.scanField.set(f?.name ?? null);
+        });
         this.relatedViewId.set(null);
         this.resolveRelatedViewId(entity).subscribe(id => this.relatedViewId.set(id));
       });

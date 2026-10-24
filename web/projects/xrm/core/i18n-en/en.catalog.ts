@@ -1087,6 +1087,18 @@ export const xrmEn = {
     rollupSaveFirst: 'Save the record to see this total.',
   },
   relatedGrid: {
+    scan: {
+      open: 'Scan lines',
+      title: 'Scan lines',
+      count: '{count, plural, =0 {Nothing scanned yet} one {# scanned} other {# scanned}}',
+      typeOrScan: 'Scan with the camera or a scanner, or type a code and press Enter',
+      duplicate: '{value} is already added. Add it again?',
+      addAgain: 'Add again',
+      skip: 'Skip',
+      written: '{count} saved, {pending} waiting',
+      done: 'Done',
+      cameraDenied: 'The camera could not be opened. Allow it in the browser, or use a scanner.',
+    },
     remove: 'Remove',
     addRelationship: 'Add relationship', close: 'Close', searchRecords: 'Search records',
     loading: 'Loading…', noRecords: 'No records found.', cancel: 'Cancel', adding: 'Adding…', add: 'Add',

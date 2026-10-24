@@ -1049,6 +1049,18 @@ export const xrmAr = {
     rollupSaveFirst: 'احفظ السجل لعرض هذا الإجمالي.',
   },
   relatedGrid: {
+    scan: {
+      open: 'امسح البنود',
+      title: 'امسح البنود',
+      count: '{count, plural, =0 {لم يُمسح شيء بعد} zero {لم يُمسح شيء} one {مُسح رمز واحد} two {مُسح رمزان} few {مُسحت # رموز} many {مُسح # رمزًا} other {مُسح # رمز}}',
+      typeOrScan: 'امسح بالكاميرا أو بالماسح، أو اكتب رمزًا واضغط Enter',
+      duplicate: '{value} مضاف مسبقًا. هل تضيفه مرة أخرى؟',
+      addAgain: 'أضفه مجددًا',
+      skip: 'تخطَّ',
+      written: 'حُفظ {count}، وينتظر {pending}',
+      done: 'تم',
+      cameraDenied: 'تعذّر فتح الكاميرا. اسمح بها في المتصفح أو استخدم الماسح.',
+    },
     remove: 'إزالة',
     addRelationship: 'إضافة علاقة', close: 'إغلاق', searchRecords: 'البحث في السجلات',
     loading: 'جاري التحميل…', noRecords: 'لم يتم العثور على سجلات.', cancel: 'إلغاء', adding: 'جاري الإضافة…', add: 'إضافة',

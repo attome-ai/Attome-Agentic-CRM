@@ -364,6 +364,12 @@ export class EntityService {
     return this.api.post<BulkOperationResponse>(`/api/v1/${entityName}/bulk`, body);
   }
 
+  /** B16-T10: creates `records` in one bulk request (`operation: create`). */
+  bulkCreate(entityName: string, records: BulkRecordEnvelope[]): Observable<BulkOperationResponse> {
+    const body: ApiComponents['schemas']['BulkRequestBody'] = { operation: 'create', records };
+    return this.api.post<BulkOperationResponse>(`/api/v1/${entityName}/bulk`, body);
+  }
+
   /** With `includeItems`, one result per item (`ok`, or a `problem` with its code). */
   bulkStatus(entityName: string, bulkOperationId: string, includeItems = false): Observable<BulkOperationStatus> {
     const url = `/api/v1/${entityName}/bulk/${bulkOperationId}`;
