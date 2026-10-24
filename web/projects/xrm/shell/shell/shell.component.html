@@ -65,6 +65,7 @@
           <input class="qs-input" type="text" [placeholder]="'shell.palettePlaceholder' | translate"
                  [ngModel]="qsQuery()"
                  (ngModelChange)="qsQuery.set($event); qsActive.set(0)" />
+          <xrm-scan-find (done)="closeQuickSearch()" />
           <button type="button" class="qs-esc" (click)="closeQuickSearch()">ESC</button>
         </div>
         <ul class="qs-results" role="listbox">
