@@ -44,6 +44,17 @@ every key.
 - **Backups**: `attome backup now`, `attome backup drill`, and `attome restore <archive|latest>`
   (see [backup](../backup.md)).
 
+## Email
+
+Email is off until `email.enabled` is set. Mail leaves through SMTP, Amazon SES or SendGrid, chosen
+per sender address; each has a setup page: [SMTP](../email/smtp.md), [Amazon SES](../email/ses.md),
+[SendGrid](../email/sendgrid.md). Before mailing customers, publish SPF, DKIM and DMARC for the
+sending domain ([the sending domain](../email/sending-domain.md)). Every message is in the delivery
+log (`/api/v1/admin/email/deliveries`, with resend), and addresses that must not be mailed are on
+the suppression list (`/api/v1/admin/email/suppressions`). Development and copied deployments set
+`email.test_mode_catch_all` so no real person is mailed. Bounce and complaint webhooks from SES and
+SendGrid are not received yet.
+
 ## Records and compliance
 
 - **Recycle bin**: deleted records wait in the bin; each entity's bin rules (reason required,

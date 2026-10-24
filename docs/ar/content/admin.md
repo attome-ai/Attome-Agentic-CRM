@@ -35,6 +35,16 @@
   تشغيلها أو احذفها بعد إصلاح السبب.
 - **النسخ الاحتياطي**: `attome backup now` و`attome backup drill` و`attome restore <archive|latest>`.
 
+## البريد الإلكتروني
+
+البريد معطّل حتى يُضبط `email.enabled`. يخرج البريد عبر SMTP أو Amazon SES أو SendGrid، ويُختار المزوّد حسب
+عنوان المرسل، ولكل منها صفحة إعداد: [SMTP](../../email/smtp.md) و[Amazon SES](../../email/ses.md)
+و[SendGrid](../../email/sendgrid.md) (بالإنجليزية). قبل مراسلة العملاء انشر سجلات SPF وDKIM وDMARC لنطاق
+الإرسال ([نطاق الإرسال](../../email/sending-domain.md)). كل رسالة في سجل التسليم
+(`/api/v1/admin/email/deliveries` مع إعادة الإرسال)، والعناوين التي لا يجوز مراسلتها في قائمة الحظر
+(`/api/v1/admin/email/suppressions`). نسخ التطوير والنسخ المنسوخة تضبط `email.test_mode_catch_all` حتى لا
+تصل رسالة إلى شخص حقيقي. إشعارات الارتداد والشكاوى من SES وSendGrid لا تُستقبل بعد.
+
 ## السجلات والامتثال
 
 - **سلة المحذوفات**: تنتظر السجلات المحذوفة في السلة؛ تُضبط قواعد سلة كل كيان (طلب السبب، أيام الاحتفاظ)

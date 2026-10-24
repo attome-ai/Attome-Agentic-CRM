@@ -1,5 +1,9 @@
 # Email providers
 
+Setting one up, step by step: [SMTP](email/smtp.md), [Amazon SES](email/ses.md),
+[SendGrid](email/sendgrid.md), and [the sending domain](email/sending-domain.md)
+(SPF, DKIM and DMARC). This page is the reference.
+
 Outbound email leaves through one of three providers. Each message picks
 its provider by its sender identity, the From address:
 
