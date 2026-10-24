@@ -8,6 +8,7 @@
 - [Developer](content/developer.md): the API, and building from source.
 - [Extension](content/extension.md): packs, agents, integrations, web forms, branding.
 - [Partners](content/partners/README.md): the partner programme, its tiers and the implementation methodology.
+- [Trust centre](content/trust/README.md): certifications and reports, and who operates each security control per hosting profile.
 - [Upgrade](content/upgrade.md): upgrading and rolling back.
 - [Learning paths](content/learn/README.md): four paths with exercises and answer checks on a local Solo install.
 
