@@ -1,6 +1,8 @@
 //! L6-T6: a staged import is profiled before it is applied, and a holder of
 //! `metadata.read` (not an administrator) reads the profile without the
-//! sensitive attribute their field security hides.
+//! sensitive attribute their field security hides. L6-T9: an entity
+//! profile names no hidden attribute, and a sensitive attribute's examples
+//! are shapes even for an administrator.
 //!
 //! Requires a live Postgres (`DATABASE_URL`) and Redis (`TEST_REDIS_HOST`/
 //! `TEST_REDIS_PORT`), as `attribute_retire.rs`.
@@ -445,5 +447,212 @@ fn file_profile_and_non_admin_reader() {
         .unwrap();
         let (status, _) = read(session_cookie(other)).await;
         assert_eq!(status, StatusCode::FORBIDDEN);
+    })
+}
+
+/// An entity with a plain `title` and a sensitive `national_id`, three
+/// records, and its profile run by a new administrator. The entity, its
+/// profile id, the administrator's cookie, the application and its state.
+async fn profiled_records(
+    system: TestSystem,
+    prefix: &str,
+) -> (String, Uuid, String, axum::Router, EngineState) {
+    let state = system.state().clone();
+    let admin = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)",
+    )
+    .bind(admin)
+    .bind(format!("profile-admin-{admin}"))
+    .execute(&state.base.db)
+    .await
+    .unwrap();
+    grant(&state.base.db, admin, "system.admin").await;
+    let admin_cookie = &session_cookie(admin);
+    let db = state.base.db.clone();
+    let app = full_app(system);
+    let entity = format!("{prefix}_{}", Uuid::now_v7().simple());
+    let (status, created) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/v1/admin/entities".into(),
+            admin_cookie,
+            serde_json::json!({ "logicalname": entity, "name": "Profile Test" }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{created}");
+    let entity_id = created["id"].as_str().unwrap().to_owned();
+    for (name, sensitive) in [("title", false), ("national_id", true)] {
+        let (status, body) = send(
+            &app,
+            json_request(
+                "POST",
+                format!("/api/v1/admin/entities/{entity_id}/fields"),
+                admin_cookie,
+                serde_json::json!({ "logicalname": name, "name": name, "field_type": "text", "is_sensitive": sensitive }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+    }
+    let registry = attome_core::build_registry(&db).await.unwrap();
+    state.entities.swap(registry);
+    for (title, id) in [
+        ("Sara", "1045678909"),
+        ("Omar", "2123456788"),
+        ("Laila", "1045678909"),
+    ] {
+        let (status, body) = send(
+            &app,
+            json_request(
+                "POST",
+                format!("/api/v1/{entity}"),
+                admin_cookie,
+                serde_json::json!({ "title": title, "national_id": id }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+    }
+    let profile_id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO data_profile (id, entity_logicalname, status, created_by) \
+         VALUES ($1, $2, 'pending', $3)",
+    )
+    .bind(profile_id)
+    .bind(&entity)
+    .bind(admin)
+    .execute(&db)
+    .await
+    .unwrap();
+    attome_api::data_profile_admin::process(
+        &state,
+        attome_core::jobs::DataProfilePayload {
+            profile_id,
+            entity_logicalname: entity.clone(),
+            user_id: admin,
+            full_scan: true,
+            import_job_id: None,
+        },
+    )
+    .await
+    .expect("profile the records");
+    (entity, profile_id, admin_cookie.clone(), app, state)
+}
+
+async fn read_profile(app: &axum::Router, profile_id: Uuid, cookie: &str) -> (StatusCode, Value) {
+    send(
+        app,
+        Request::builder()
+            .uri(format!("/api/v1/admin/data/profile/{profile_id}"))
+            .header("cookie", cookie)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await
+}
+
+/// L6-T9: a reader whose field security hides an attribute gets no
+/// statistics of it at all, not even its name or counts.
+#[test]
+fn hidden_attribute_stats_not_returned() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (entity, profile_id, _, app, state) = profiled_records(system, "dph").await;
+        let db = state.base.db.clone();
+        let reader = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO user_account (id, user_name, email, is_active) \
+             VALUES ($1, $2, $2 || '@test.invalid', true)",
+        )
+        .bind(reader)
+        .bind(format!("profile-hidden-{reader}"))
+        .execute(&db)
+        .await
+        .unwrap();
+        grant(&db, reader, "metadata.read").await;
+        grant(&db, reader, &format!("{entity}.read")).await;
+
+        let (status, seen) = read_profile(&app, profile_id, &session_cookie(reader)).await;
+        assert_eq!(status, StatusCode::OK, "{seen}");
+        assert_eq!(seen["status"], "completed", "{seen}");
+        let fields: Vec<&str> = seen["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|f| f["field"].as_str())
+            .collect();
+        assert!(fields.contains(&"title"), "{seen}");
+        assert!(!fields.contains(&"national_id"), "{seen}");
+        let text = seen.to_string();
+        assert!(
+            !text.contains("national_id"),
+            "the hidden attribute is not named: {seen}"
+        );
+        assert!(
+            !text.contains("1045678909"),
+            "nor any of its values: {seen}"
+        );
+    })
+}
+
+/// L6-T9: even for an administrator, a sensitive attribute's top values,
+/// minimum and maximum are shapes, never the values.
+#[test]
+fn sensitive_attribute_examples_are_shapes_only() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, profile_id, admin_cookie, app, _) = profiled_records(system, "dps").await;
+        let (status, full) = read_profile(&app, profile_id, &admin_cookie).await;
+        assert_eq!(status, StatusCode::OK, "{full}");
+        let national = full["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|f| f["field"] == "national_id")
+            .unwrap_or_else(|| panic!("an administrator sees the attribute: {full}"));
+        assert_eq!(national["masked"], true, "{national}");
+        let top: Vec<&str> = national["top_values"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|v| v["value"].as_str())
+            .collect();
+        assert!(!top.is_empty(), "{national}");
+        assert!(
+            top.iter().all(|v| *v == "9999999999"),
+            "shapes only: {national}"
+        );
+        let counted: u64 = national["top_values"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|v| v["count"].as_u64())
+            .sum();
+        assert_eq!(
+            counted, 3,
+            "every value is counted under its shape: {national}"
+        );
+        for key in ["min", "max"] {
+            if let Some(v) = national[key].as_str() {
+                assert_eq!(v, "9999999999", "{key}: {national}");
+            }
+        }
+        let text = national.to_string();
+        assert!(
+            !text.contains("1045678909") && !text.contains("2123456788"),
+            "{national}"
+        );
+        // The plain attribute keeps its values.
+        let title = full["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|f| f["field"] == "title")
+            .unwrap();
+        assert_eq!(title["masked"], false);
+        assert!(title.to_string().contains("Sara"), "{title}");
     })
 }
