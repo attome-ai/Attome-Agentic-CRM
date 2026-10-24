@@ -2309,6 +2309,22 @@ export const xrmAr = {
     refused: 'لا يستطيع {name} تولي هذه المهمة (فُحص: {rules}).',
     stale: 'غيّر أحدهم هذه المهمة بعد تحميل اللوحة. أُعيد تحميل اللوحة.',
   },
+  // V4-T1 — the project booking board.
+  bookingBoard: {
+    title: 'حجوزات المشاريع',
+    earlier: 'أسبق',
+    later: 'لاحق',
+    grid: 'الأشخاص وحجوزاتهم حسب الأسبوع',
+    person: 'الشخص',
+    load: 'محجوز بنسبة {pct}%',
+    over: 'محجوز فوق طاقته',
+    leave: 'في إجازة',
+    clickToBook: 'انقر أسبوعًا في صف شخص لحجزه في هذا المشروع بنسبة {percent}%.',
+    book: 'حجز {name} لأسبوع {week}',
+    bar: '{percent}% · {project}',
+    stale: 'غيّر أحدهم هذا الحجز منذ تحميل اللوحة، وأُعيد تحميلها.',
+    noPeople: 'لا يوجد من يُعرض في هذه الأسابيع.',
+  },
   salesCommittee: {
     title: 'لجنة الشراء',
     influence: 'التأثير',

@@ -468,6 +468,13 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/contract').then(m => m.ContractCompareComponent),
           },
           {
+            // V4-T1: the project booking board (`?projectId=` books on that
+            // project; `?start=YYYY-MM-DD`, this week by default).
+            path: 'project/booking',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/entity/views').then(m => m.BookingBoardComponent),
+          },
+          {
             // I3-T1: the dispatch board (`?day=YYYY-MM-DD`, today by default).
             path: 'service/dispatch',
             canActivate: [authGuard],

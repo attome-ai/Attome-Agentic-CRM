@@ -2387,6 +2387,22 @@ export const xrmEn = {
     refused: '{name} cannot take this job (checked: {rules}).',
     stale: 'Someone changed this job since the board loaded. The board has reloaded.',
   },
+  // V4-T1 — the project booking board.
+  bookingBoard: {
+    title: 'Project bookings',
+    earlier: 'Earlier',
+    later: 'Later',
+    grid: 'People and their bookings by week',
+    person: 'Person',
+    load: '{pct}% booked',
+    over: 'Over-booked',
+    leave: 'On leave',
+    clickToBook: 'Click a week on a row to book that person on this project at {percent}%.',
+    book: 'Book {name} for the week of {week}',
+    bar: '{percent}% · {project}',
+    stale: 'Someone changed this booking since the board loaded; it has been reloaded.',
+    noPeople: 'No one to show for these weeks.',
+  },
   salesCommittee: {
     title: 'Buying committee',
     influence: 'Influence',
