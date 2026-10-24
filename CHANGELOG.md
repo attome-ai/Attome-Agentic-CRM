@@ -664,6 +664,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - `POST /api/v1/query/changes` (AA7-T4): the records of one entity added, changed or removed since
   a signed cursor, as the caller may read them now. A record the caller can no longer read is
   listed in `removed` by id only.
+- Cache and compression metrics (AA7-T9): `http_conditional_total{route, result}` counts reads sent with
+  `If-None-Match` and whether they were answered 304; `http_response_bytes_total{area, encoding}` counts
+  response bytes per API area before compression (`identity`) and as sent compressed, so their ratio is
+  the compression ratio; `delta_rows` is the size of each change-feed read. The Grafana dashboard
+  shows the 304 rate per route and the compression ratio per area.
+- Polling agents read only what moved (AA7-T10): `record.get` takes `etag` (the `row_version` read
+  before) and answers `{"unchanged": true}` while the record is still at it, and the new MCP tool
+  `record.changes` lists one entity's records added, changed or removed since a cursor, through the
+  same engine function as `POST /api/v1/query/changes`.
 - Conflict rules for flows and agents (A16-T5): an Update Record node's `on_conflict` is `retry_fresh`
   (default, up to three tries), `merge`, `stop` or `ask_person` (an approval request carrying the
   conflict; approved, the change is applied to the record as it is then). Agent record updates

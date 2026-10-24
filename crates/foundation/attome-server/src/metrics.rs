@@ -926,3 +926,79 @@ mod tests {
 pub(crate) fn record_failover_retry(outcome: &'static str) {
     metrics::counter!("http_failover_retries_total", "outcome" => outcome).increment(1);
 }
+
+/// AA7-T9 — `http_conditional_total{route, result}`: a read that carried
+/// `If-None-Match`, answered `304` (`hit`) or with the body (`miss`). Only
+/// routes that serve ETags see conditional reads, so the routes it names stay
+/// few even though the API has over a thousand.
+pub fn record_conditional(route: &str, hit: bool) {
+    metrics::counter!(
+        "http_conditional_total",
+        "route" => route.to_owned(),
+        "result" => if hit { "hit" } else { "miss" }
+    )
+    .increment(1);
+}
+
+/// AA7-T9: the API area of a route template, for labels that every response
+/// carries: the first segment after `/api/v1/` (`admin`, `query`, `search`),
+/// `records` for the generic entity routes (`/api/v1/{entity}/…`), `other`
+/// outside the API. Route templates are too many to be a label (the
+/// stop condition of AA7-T9); the API's top-level segments are a few dozen.
+pub fn route_area(template: &str) -> String {
+    let Some(rest) = template.strip_prefix("/api/v1/") else {
+        return "other".to_owned();
+    };
+    match rest.split('/').next().unwrap_or_default() {
+        "" => "other".to_owned(),
+        segment if segment.starts_with('{') => "records".to_owned(),
+        segment => segment.to_owned(),
+    }
+}
+
+/// AA7-T9 — `http_response_bytes_total{area, encoding}`: response body bytes
+/// by API area, before compression (`identity`) and as sent when compressed
+/// (`gzip`, `br`, `zstd`, `deflate`); their ratio per area is the compression
+/// ratio, and `identity` minus the encoded bytes is what compression saved.
+pub fn record_response_bytes(area: &str, encoding: &str, bytes: u64) {
+    metrics::counter!(
+        "http_response_bytes_total",
+        "area" => area.to_owned(),
+        "encoding" => encoding.to_owned()
+    )
+    .increment(bytes);
+}
+
+/// AA7-T9 — `delta_rows`: the records one change-feed read returned
+/// (`query/changes`, AA7-T4). No entity label: a deployment has hundreds.
+pub fn record_delta_rows(rows: usize) {
+    metrics::histogram!("delta_rows").record(rows as f64);
+}
+
+#[cfg(test)]
+mod conditional_tests {
+    use super::*;
+
+    #[test]
+    fn conditional_counter_rendered() {
+        let recorder = PrometheusBuilder::new().build_recorder();
+        let handle = recorder.handle();
+        metrics::with_local_recorder(&recorder, || {
+            record_conditional("/api/v1/{entity}/{id}", true);
+            record_response_bytes("records", "identity", 1200);
+            record_response_bytes("records", "gzip", 300);
+        });
+        let text = handle.render();
+        assert!(text.contains("http_conditional_total"), "{text}");
+        assert!(text.contains("result=\"hit\""), "{text}");
+        assert!(text.contains("http_response_bytes_total"), "{text}");
+    }
+
+    #[test]
+    fn areas_are_few() {
+        assert_eq!(route_area("/api/v1/{entity}/{id}"), "records");
+        assert_eq!(route_area("/api/v1/admin/entities/{id}"), "admin");
+        assert_eq!(route_area("/api/v1/query/run"), "query");
+        assert_eq!(route_area("/health/live"), "other");
+    }
+}

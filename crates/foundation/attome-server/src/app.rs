@@ -402,6 +402,13 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
             ))
             .layer(compression_layer()),
     );
+    // AA7-T9: outside compression, so it sees the bytes compression sends.
+    // A layer of its own: the router has turned the compressed response into
+    // an axum `Response` by here, which a `from_fn` inside the stack above
+    // would not get.
+    let router = router.layer(middleware::from_fn(
+        crate::middleware::cache_policy::count_encoded_bytes,
+    ));
 
     let header_values = security_headers::SecurityHeaderValues::new(
         config.security.csp_enforce,

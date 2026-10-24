@@ -122,13 +122,39 @@ fn header_values(class: CacheClass) -> (&'static str, Option<&'static str>) {
     }
 }
 
-/// The layer itself; see the module doc.
+/// The layer itself; see the module doc. AA7-T9: it also counts conditional
+/// reads per route and the response bytes per API area before compression.
 pub async fn cache_policy(req: Request, next: Next) -> Response {
-    let class = match req.extensions().get::<MatchedPath>() {
-        Some(path) => class_for(req.method(), path.as_str()),
+    let template = req
+        .extensions()
+        .get::<MatchedPath>()
+        .map(|path| path.as_str().to_owned());
+    let class = match &template {
+        Some(path) => class_for(req.method(), path),
         None => CacheClass::NoStore,
     };
+    let conditional = req.headers().contains_key(header::IF_NONE_MATCH);
     let mut response = next.run(req).await;
+    if let Some(template) = &template {
+        if conditional {
+            crate::metrics::record_conditional(
+                template,
+                response.status() == axum::http::StatusCode::NOT_MODIFIED,
+            );
+        }
+        if let Some(bytes) = response
+            .headers()
+            .get(header::CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<u64>().ok())
+        {
+            crate::metrics::record_response_bytes(
+                &crate::metrics::route_area(template),
+                "identity",
+                bytes,
+            );
+        }
+    }
     let headers = response.headers_mut();
     if headers.contains_key(header::CACHE_CONTROL) {
         return response;
@@ -148,6 +174,88 @@ pub async fn cache_policy(req: Request, next: Next) -> Response {
         }
     }
     response
+}
+
+/// AA7-T9: outside the compression layer, counts a compressed response's
+/// bytes as they are sent (a compressed body is streamed, so it has no
+/// length up front) under its area and encoding.
+pub async fn count_encoded_bytes(req: Request, next: Next) -> Response {
+    let area = req
+        .extensions()
+        .get::<MatchedPath>()
+        .map(|path| crate::metrics::route_area(path.as_str()));
+    let response = next.run(req).await;
+    let encoding = response
+        .headers()
+        .get(header::CONTENT_ENCODING)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| match v {
+            "gzip" => Some("gzip"),
+            "br" => Some("br"),
+            "zstd" => Some("zstd"),
+            "deflate" => Some("deflate"),
+            _ => None,
+        });
+    let (Some(area), Some(encoding)) = (area, encoding) else {
+        return response;
+    };
+    let (parts, body) = response.into_parts();
+    let counted = Counted {
+        inner: body.into_data_stream(),
+        bytes: 0,
+        area,
+        encoding,
+        recorded: false,
+    };
+    Response::from_parts(parts, axum::body::Body::from_stream(counted))
+}
+
+/// A body stream that records how many bytes went through it, once, when it
+/// ends or is dropped.
+struct Counted<S> {
+    inner: S,
+    bytes: u64,
+    area: String,
+    encoding: &'static str,
+    recorded: bool,
+}
+
+impl<S> Counted<S> {
+    fn record(&mut self) {
+        if !self.recorded {
+            self.recorded = true;
+            crate::metrics::record_response_bytes(&self.area, self.encoding, self.bytes);
+        }
+    }
+}
+
+impl<S> futures_util::Stream for Counted<S>
+where
+    S: futures_util::Stream<Item = Result<bytes::Bytes, axum::Error>> + Unpin,
+{
+    type Item = Result<bytes::Bytes, axum::Error>;
+
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+        let polled = std::pin::Pin::new(&mut this.inner).poll_next(cx);
+        match &polled {
+            std::task::Poll::Ready(Some(Ok(chunk))) => {
+                this.bytes = this.bytes.saturating_add(chunk.len() as u64);
+            }
+            std::task::Poll::Ready(None) => this.record(),
+            _ => {}
+        }
+        polled
+    }
+}
+
+impl<S> Drop for Counted<S> {
+    fn drop(&mut self) {
+        self.record();
+    }
 }
 
 #[cfg(test)]

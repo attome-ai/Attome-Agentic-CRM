@@ -77,6 +77,8 @@ impl Verb {
 /// ungoverned.
 pub(crate) const GOVERNED_ACTIONS: &[(&str, Verb)] = &[
     ("record.get", Verb::Read),
+    // AA7-T10: what changed in one entity since a cursor.
+    ("record.changes", Verb::Read),
     ("record.summarize", Verb::Read),
     ("record.classify", Verb::Read),
     ("record.update_field", Verb::Update),

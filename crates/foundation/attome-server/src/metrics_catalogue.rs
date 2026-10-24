@@ -598,6 +598,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "عمر أقدم عنصر في صندوق الرسائل المتعذرة، حسب المصدر.",
     },
     MetricInfo {
+        name: "delta_rows",
+        kind: "histogram",
+        unit: "records",
+        en: "Records one read of the change feed returned.",
+        ar: "السجلات التي أعادتها قراءة واحدة لموجز التغييرات.",
+    },
+    MetricInfo {
         name: "email_send_duration_seconds",
         kind: "histogram",
         unit: "seconds",
@@ -703,6 +710,20 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "عمليات البحث في الذاكرة المؤقتة الداخلية حسب الإصابة.",
     },
     MetricInfo {
+        name: "http_conditional_total",
+        kind: "counter",
+        unit: "requests",
+        en: "Reads sent with If-None-Match, by route and whether they were answered 304.",
+        ar: "طلبات قراءة أُرسلت مع If-None-Match حسب المسار، وهل أُجيبت بـ304.",
+    },
+    MetricInfo {
+        name: "http_failover_retries_total",
+        kind: "counter",
+        unit: "requests",
+        en: "Requests retried across a database failover, by whether the retry succeeded.",
+        ar: "الطلبات التي أُعيدت أثناء تحويل قاعدة البيانات إلى الاحتياطية، حسب نجاح الإعادة.",
+    },
+    MetricInfo {
         name: "http_flood_untracked_total",
         kind: "counter",
         unit: "requests",
@@ -715,6 +736,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         unit: "requests",
         en: "Requests a protective layer refused, by layer and reason.",
         ar: "طلبات رفضتها طبقة حماية، حسب الطبقة والسبب.",
+    },
+    MetricInfo {
+        name: "http_response_bytes_total",
+        kind: "counter",
+        unit: "bytes",
+        en: "Response bytes by API area, before compression and as sent compressed.",
+        ar: "بايتات الردود حسب منطقة الواجهة، قبل الضغط وكما أُرسلت مضغوطة.",
     },
     MetricInfo {
         name: "http_waf_signal_total",

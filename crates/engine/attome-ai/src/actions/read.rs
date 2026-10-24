@@ -32,6 +32,12 @@ use crate::prompt::Segment;
 /// `record.get` — fetch one record the caller can already see.
 pub const RECORD_GET: &str = "record.get";
 
+/// `record.changes` — AA7-T10: the records of one entity added, changed or
+/// removed since a cursor, through the same engine function as
+/// `POST /api/v1/query/changes` (AA7-T4), so a polling agent reads only what
+/// moved.
+pub const RECORD_CHANGES: &str = "record.changes";
+
 /// `query.execute` — run an admin-defined stored query.
 ///
 /// The model **selects and parameterises** a stored query; it never authors
@@ -75,9 +81,33 @@ const RECORD_GET_SCHEMA: &str = r#"{
       "type": "string",
       "format": "uuid",
       "description": "The record's id."
+    },
+    "etag": {
+      "type": ["string", "integer"],
+      "description": "The row_version you read before. When the record is still at it, the answer is {\"unchanged\": true} instead of the record."
     }
   },
   "required": ["entity", "record_id"],
+  "additionalProperties": false
+}"#;
+
+const RECORD_CHANGES_SCHEMA: &str = r#"{
+  "type": "object",
+  "properties": {
+    "entity": {
+      "type": "string",
+      "description": "Entity logical name, e.g. \"account\"."
+    },
+    "cursor": {
+      "type": "string",
+      "description": "The next_cursor of your previous call. Omit it once to get a cursor for now; later calls return what changed since."
+    },
+    "page_size": {
+      "type": "integer", "minimum": 1, "maximum": 500, "default": 100,
+      "description": "Change events to read."
+    }
+  },
+  "required": ["entity"],
   "additionalProperties": false
 }"#;
 
@@ -167,6 +197,19 @@ pub fn descriptors() -> Vec<ActionDescriptor> {
         .cacheable()
         .input_schema(RECORD_GET_SCHEMA),
         ActionDescriptor::new(
+            RECORD_CHANGES,
+            "List the records of one entity added, changed or removed since a \
+             cursor, as the caller may read them now. Call it once without a \
+             cursor to start; poll with the returned next_cursor.",
+            RiskTier::Read,
+            Effect::Read,
+            RetryClass::Idempotent,
+            MODULE_CORE,
+            &[],
+        )
+        // Not cacheable: the answer depends on what was written since.
+        .input_schema(RECORD_CHANGES_SCHEMA),
+        ActionDescriptor::new(
             QUERY_EXECUTE,
             "Run an admin-defined stored query by id or by entity, binding \
              values to its filters. Cannot execute arbitrary SQL.",
@@ -219,6 +262,34 @@ struct RecordArgs {
     /// SQL. Defaults to the record's own language being inferred by the model.
     #[serde(default)]
     language: Option<String>,
+    /// `record.get` only (AA7-T10): the row version the caller read before.
+    #[serde(default)]
+    etag: Option<Value>,
+}
+
+/// AA7-T10: whether `etag` names `row_version`. It may be the number, or the
+/// HTTP ETag text (`7`, `"7"`, `W/"7"`).
+pub(crate) fn etag_matches(etag: &Value, row_version: i64) -> bool {
+    match etag {
+        Value::Number(n) => n.as_i64() == Some(row_version),
+        Value::String(text) => text
+            .trim()
+            .trim_start_matches("W/")
+            .trim_matches('"')
+            .parse::<i64>()
+            .is_ok_and(|v| v == row_version),
+        _ => false,
+    }
+}
+
+/// AA7-T10: the answer to a `record.get` whose record has not changed.
+pub(crate) fn unchanged(entity: &str, record_id: Uuid, row_version: i64) -> Value {
+    serde_json::json!({
+        "unchanged": true,
+        "entity": entity,
+        "record_id": record_id,
+        "row_version": row_version,
+    })
 }
 
 fn parse_args(args: &Value) -> Result<RecordArgs, AppError> {
@@ -253,11 +324,72 @@ impl Action for RecordGet {
             )
             .await?;
             refuse_if_restricted(state, &args.entity, args.record_id).await?;
+            if let Some(etag) = &args.etag
+                && etag_matches(etag, record.row_version())
+            {
+                return Ok(ActionResult::plain(unchanged(
+                    &args.entity,
+                    args.record_id,
+                    record.row_version(),
+                )));
+            }
             let mut value = serde_json::to_value(record)
                 .map_err(|e| AppError::internal(format!("record serialization failed: {e}")))?;
             // D-769: over MCP, lookup display names into entities not
             // admitted for read are dropped.
             crate::mcp::admission::redact_record_for_caller(state, ctx, &mut value)?;
+            Ok(ActionResult::plain(value))
+        })
+    }
+}
+
+/// The arguments `record.changes` takes, as `ChangesRequest` has them.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ChangesArgs {
+    entity: String,
+    #[serde(default)]
+    cursor: Option<String>,
+    #[serde(default)]
+    page_size: Option<i64>,
+}
+
+fn changes_request(args: &Value) -> Result<attome_records::changes::ChangesRequest, AppError> {
+    let args: ChangesArgs = serde_json::from_value(args.clone())
+        .map_err(|e| AppError::Validation(format!("invalid action arguments: {e}")))?;
+    Ok(attome_records::changes::ChangesRequest {
+        entity: args.entity,
+        cursor: args.cursor,
+        page_size: args.page_size,
+    })
+}
+
+struct RecordChanges;
+
+impl Action for RecordChanges {
+    fn id(&self) -> ActionId {
+        ActionId(RECORD_CHANGES)
+    }
+
+    fn execute<'a>(
+        &'a self,
+        state: &'a EngineState,
+        ctx: &'a ActionContext,
+        args: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<ActionResult, AppError>> + Send + 'a>> {
+        Box::pin(async move {
+            let request = changes_request(args)?;
+            let changes =
+                attome_records::changes::changes_since(state, &ctx.security, &request).await?;
+            let mut value = serde_json::to_value(changes)
+                .map_err(|e| AppError::internal(format!("changes serialization failed: {e}")))?;
+            // D-769: as `record.get`, each record's lookup display names into
+            // entities not admitted for read are dropped over MCP.
+            if let Some(records) = value.get_mut("upserted").and_then(Value::as_array_mut) {
+                for record in records {
+                    crate::mcp::admission::redact_record_for_caller(state, ctx, record)?;
+                }
+            }
             Ok(ActionResult::plain(value))
         })
     }
@@ -614,6 +746,7 @@ impl Action for QueryExecute {
 pub fn executors() -> Vec<Box<dyn Action>> {
     vec![
         Box::new(RecordGet),
+        Box::new(RecordChanges),
         Box::new(QueryExecute),
         Box::new(RecordSummarize),
     ]
@@ -623,6 +756,58 @@ pub fn executors() -> Vec<Box<dyn Action>> {
 mod tests {
     use super::*;
     use crate::prompt::{CLOSE, OPEN};
+
+    /// AA7-T10: a `record.get` naming the version the record is still at is
+    /// answered with `unchanged`, not the record.
+    #[test]
+    fn read_tool_returns_unchanged_on_matching_etag() {
+        for etag in [
+            serde_json::json!(7),
+            serde_json::json!("7"),
+            serde_json::json!("\"7\""),
+            serde_json::json!("W/\"7\""),
+        ] {
+            assert!(etag_matches(&etag, 7), "{etag}");
+            assert!(!etag_matches(&etag, 8), "{etag}");
+        }
+        assert!(!etag_matches(&serde_json::json!("seven"), 7));
+        assert!(!etag_matches(&serde_json::json!(null), 7));
+        let id = Uuid::now_v7();
+        let answer = unchanged("account", id, 7);
+        assert_eq!(answer["unchanged"], true);
+        assert_eq!(answer["row_version"], 7);
+        assert!(answer.get("name").is_none(), "no record fields: {answer}");
+        let args = parse_args(&serde_json::json!({
+            "entity": "account", "record_id": id, "etag": "W/\"7\""
+        }))
+        .unwrap();
+        assert!(args.etag.is_some());
+    }
+
+    /// AA7-T10: `record.changes` asks the AA7-T4 engine function for the
+    /// cursor's changes (that function's own tests prove only changes come
+    /// back); it is a read nobody caches, and it takes nothing else.
+    #[test]
+    fn changes_since_tool_returns_only_changes() {
+        let request = changes_request(&serde_json::json!({
+            "entity": "account", "cursor": "abc.def", "page_size": 20
+        }))
+        .unwrap();
+        assert_eq!(request.entity, "account");
+        assert_eq!(request.cursor.as_deref(), Some("abc.def"));
+        assert_eq!(request.page_size, Some(20));
+        assert!(changes_request(&serde_json::json!({"entity": "account", "sql": "x"})).is_err());
+        let descriptor = descriptors()
+            .into_iter()
+            .find(|d| d.id.as_str() == RECORD_CHANGES)
+            .expect("record.changes must be registered");
+        assert!(!descriptor.cacheable);
+        assert!(
+            executors()
+                .iter()
+                .any(|e| e.id().as_str() == RECORD_CHANGES)
+        );
+    }
 
     /// `query.execute` must stay uncacheable. `record.get`'s cache key is a
     /// single record id, so a repeat within one turn is safe; a stored query's

@@ -225,6 +225,30 @@
       "targets": [
         { "expr": "attome:slo_errors:ratio_rate1h", "legendFormat": "{{slo_class}} {{slo_route}}" }
       ]
+    },
+    {
+      "id": 19,
+      "title": "304 rate per route (5m)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 72 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "description": "AA7-T9: the share of conditional reads (If-None-Match) answered 304, per route. Only routes that serve ETags appear.",
+      "targets": [
+        { "expr": "sum by (route) (rate(http_conditional_total{result=\"hit\"}[5m])) / sum by (route) (rate(http_conditional_total[5m]))", "legendFormat": "{{route}}" }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Compression ratio per area (5m)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 72 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "description": "AA7-T9: compressed bytes sent over the bytes before compression, per API area; one minus it is the share compression saved.",
+      "targets": [
+        { "expr": "sum by (area) (rate(http_response_bytes_total{encoding!=\"identity\"}[5m])) / sum by (area) (rate(http_response_bytes_total{encoding=\"identity\"}[5m]))", "legendFormat": "{{area}}" }
+      ]
     }
   ]
 }

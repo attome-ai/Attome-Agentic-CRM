@@ -173,6 +173,17 @@ pub(crate) async fn changes(
     ctx: Authorized<RecordScoped>,
     Json(body): Json<ChangesRequest>,
 ) -> Result<Json<ChangesResponse>, AppError> {
+    changes_since(&state, &ctx, &body).await.map(Json)
+}
+
+/// AA7-T4: what changed in `request.entity` since its cursor, as `ctx` may
+/// read it now. The route's body, and what an agent's `query.changes` tool
+/// calls in-process (AA7-T10).
+pub async fn changes_since(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    body: &ChangesRequest,
+) -> Result<ChangesResponse, AppError> {
     let page_size = body.page_size.unwrap_or(DEFAULT_PAGE_SIZE);
     if !(1..=MAX_PAGE_SIZE).contains(&page_size) {
         return Err(AppError::Validation(format!(
@@ -196,12 +207,12 @@ pub(crate) async fn changes(
         .map_err(AppError::internal)?;
     let Some(cursor) = body.cursor.as_deref() else {
         let start = horizon(&mut conn).await?;
-        return Ok(Json(ChangesResponse {
+        return Ok(ChangesResponse {
             upserted: Vec::new(),
             removed: Vec::new(),
             next_cursor: seal_position(start),
             has_more: false,
-        }));
+        });
     };
     let position = open_position(cursor)?;
     let (events, next) = read_after_for_entity(&mut conn, &entity, position, page_size).await?;
@@ -216,7 +227,7 @@ pub(crate) async fn changes(
         }
     }
     ids.reverse();
-    let visible = readable_ids(&state, &ctx, entity_id, &entity, &ids).await?;
+    let visible = readable_ids(state, ctx, entity_id, &entity, &ids).await?;
 
     let mut upserted = Vec::new();
     let mut removed = Vec::new();
@@ -227,18 +238,20 @@ pub(crate) async fn changes(
         }
         // The record read applies field security; a record that went away
         // between the two reads counts as removed.
-        match crate::entity_crud::read_record(&state, &ctx, &entity, id).await {
+        match crate::entity_crud::read_record(state, ctx, &entity, id).await {
             Ok(record) => upserted.push(record),
             Err(AppError::NotFound | AppError::Forbidden) => removed.push(id),
             Err(other) => return Err(other),
         }
     }
-    Ok(Json(ChangesResponse {
+    // AA7-T9: how large each read of the feed is.
+    attome_server::metrics::record_delta_rows(upserted.len() + removed.len());
+    Ok(ChangesResponse {
         upserted,
         removed,
         next_cursor: seal_position(next),
         has_more,
-    }))
+    })
 }
 
 #[cfg(test)]
