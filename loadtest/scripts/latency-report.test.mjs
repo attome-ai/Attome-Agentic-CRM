@@ -31,3 +31,26 @@ test('the report compares with the previous release and marks a regression', () 
   assert.match(second.markdown, /\| read \| 8\.2 \| 21\.5 \| 40\.1 \| 21\.5 \| \+0\.0 \| \+0\.0% \|/);
   assert.match(second.markdown, /Compared with: 0\.9\.0/);
 });
+
+// AA1-T10: two releases' summaries, side by side.
+const at = (p95) => ({ level: 1, target: 'primary', ops: { read: { p50: 1, p95, p99: p95 * 2 } } });
+
+test('adds delta column against previous', () => {
+  const previous = buildReport([at(20)], null, { version: '1.0.0' }).data;
+  const report = buildReport([at(23)], previous, { version: '1.1.0' });
+  // 20 ms to 23 ms at p95: +3.0 ms, +15.0%.
+  assert.match(report.markdown, /\| read \| 1\.0 \| 23\.0 \| 46\.0 \| 20\.0 \| \*\*\+3\.0\*\* \| \*\*\+15\.0%\*\* \|/);
+  assert.equal(report.data.previous_version, '1.0.0');
+});
+
+test('bolds regressions above 10 percent', () => {
+  const previous = buildReport([at(100)], null, { version: '1.0.0' }).data;
+  const slower = buildReport([at(115)], previous, { version: '1.1.0' }).markdown;
+  const slightly = buildReport([at(105)], previous, { version: '1.1.0' }).markdown;
+  const faster = buildReport([at(80)], previous, { version: '1.1.0' }).markdown;
+  assert.match(slower, /\*\*\+15\.0%\*\*/);
+  assert.match(slightly, /\| \+5\.0 \| \+5\.0% \|/);
+  assert.doesNotMatch(slightly, /\*\*/);
+  assert.match(faster, /\| -20\.0 \| -20\.0% \|/);
+  assert.doesNotMatch(faster, /\*\*/);
+});
