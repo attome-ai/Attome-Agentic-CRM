@@ -363,8 +363,9 @@
         </tr>
         } @else if (!loading() && records().length === 0) {
         <tr>
-          <td [attr.colspan]="columns().length + 1" class="empty-state">
-            {{ 'entityList.noRecords' | translate }}
+          <td [attr.colspan]="columns().length + 1">
+            <xrm-empty-state [reason]="emptyReason()" [canCreate]="allowCreate()"
+              (create)="handleAdd()" (clearFilters)="clearEmptyFilters()" />
           </td>
         </tr>
         } @else {

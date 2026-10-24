@@ -1344,6 +1344,16 @@ export const xrmEn = {
   },
   // M26 dashboard editor form + its grid bulk action. Shared form chrome
   // (Back/Saving…/Saved/Update, the record-conflict banner) reuses `xrmForm`.
+  // AK4-T1: an empty list's message and its one first action.
+  emptyState: {
+    filteredTitle: 'No records match these filters',
+    filteredHint: 'Try fewer filters, or clear them to see every record.',
+    noneTitle: 'Nothing here yet',
+    noneHint: 'Records appear here once they are added.',
+    noneHintCreate: 'Add the first record to get started.',
+    clearFilters: 'Clear filters',
+    createFirst: 'Create the first record',
+  },
   dashboard: {
     archiveSelected: 'Archive',
     archiveSelectedConfirm: '{count, plural, one {Archive # selected dashboard?} other {Archive # selected dashboards?}}',
@@ -1353,7 +1363,7 @@ export const xrmEn = {
       noHomeDashboard: 'No home dashboard yet',
       goToDashboards: 'Create a dashboard',
       edit: 'Edit', back: 'Back', dashboardPickerLabel: 'Dashboard',
-      noPagesYet: 'This dashboard has no pages yet.', noWidgetsYet: 'This page has no widgets yet.',
+      noPagesYet: 'This dashboard has no pages yet.', noWidgetsYet: 'This page has no widgets yet.', openDesigner: 'Open the designer',
       filterAllPlaceholder: 'All', draftStatus: 'draft',
       noDashboardIdGiven: 'No dashboard id given.',
       widgetQueryFailed: 'This widget’s query could not be run.',

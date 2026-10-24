@@ -1300,6 +1300,16 @@ export const xrmAr = {
     inspectorEmptyWire: 'اسحب من منفذ مخرج إلى منفذ مدخل لوصل حافة؛ واسحب منفذ مدخل موصولاً بعيداً وأفلته على لوحة فارغة لحذف تلك الحافة.',
     inspectorEmptyPan: 'اسحب الخلفية للتنقل في اللوحة.',
   },
+  // AK4-T1
+  emptyState: {
+    filteredTitle: 'لا توجد سجلات تطابق عوامل التصفية هذه',
+    filteredHint: 'جرّب عوامل تصفية أقل، أو امسحها لعرض جميع السجلات.',
+    noneTitle: 'لا يوجد شيء هنا بعد',
+    noneHint: 'ستظهر السجلات هنا بعد إضافتها.',
+    noneHintCreate: 'أضف السجل الأول للبدء.',
+    clearFilters: 'مسح عوامل التصفية',
+    createFirst: 'إنشاء السجل الأول',
+  },
   dashboard: {
     archiveSelected: 'أرشفة',
     archiveSelectedConfirm: '{count, plural, one {أرشفة لوحة المعلومات المحددة؟} other {أرشفة # لوحات معلومات محددة؟}}',
@@ -1308,7 +1318,7 @@ export const xrmAr = {
       noHomeDashboard: 'لا توجد لوحة معلومات رئيسية بعد',
       goToDashboards: 'إنشاء لوحة معلومات',
       edit: 'تعديل', back: 'رجوع', dashboardPickerLabel: 'لوحة المعلومات',
-      noPagesYet: 'لا توجد صفحات في لوحة المعلومات هذه بعد.', noWidgetsYet: 'لا توجد ودجات في هذه الصفحة بعد.',
+      noPagesYet: 'لا توجد صفحات في لوحة المعلومات هذه بعد.', noWidgetsYet: 'لا توجد ودجات في هذه الصفحة بعد.', openDesigner: 'فتح المصمم',
       filterAllPlaceholder: 'الكل', draftStatus: 'مسودة',
       noDashboardIdGiven: 'لم يتم تحديد معرّف لوحة المعلومات.',
       widgetQueryFailed: 'تعذّر تشغيل استعلام هذا الودجت.',

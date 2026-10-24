@@ -45,6 +45,7 @@ import { viewFilters } from './advanced-find';
 import { RecordAccessActionsComponent } from '../record-access/record-access-actions.component';
 import { ImageThumbComponent } from '../field/image-thumb/image-thumb.component';
 import { ListCardsComponent, SwipeAction, mobileOptions } from './list-cards.component';
+import { EmptyStateComponent, type EmptyReason } from './empty-state.component';
 import { RecordTypePickerComponent } from '../record-type-picker/record-type-picker.component';
 
 /** A lowercase or uppercase hyphenated UUID. */
@@ -174,7 +175,7 @@ export function richTextToPlainText(html: string): string {
   imports:     [
     FormsModule, NgComponentOutlet, RouterLink, TranslatePipe, ChoicePillComponent, BulkEditDialogComponent,
     AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent, BulkTagComponent,
-    ListCardsComponent, RecordTypePickerComponent,
+    ListCardsComponent, RecordTypePickerComponent, EmptyStateComponent,
   ],
   host: { '(document:click)': 'handleDocumentClick($event)' },
   templateUrl: './entity-list.component.html',
@@ -381,6 +382,11 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
     Object.values(this.activeFilters()).filter(d => this.isFilterDraftActive(d)).length
       + this.advancedFilters().length
   );
+
+  /** AK4-T1: an empty list is either filtered to nothing or has no records. */
+  readonly emptyReason = computed<EmptyReason>(() =>
+    this.activeFilterCount() > 0 || this.tagFilter() !== null || this.searchDraft().trim() !== ''
+      ? 'filtered' : 'none');
 
   readonly activeFilterSummary = computed(() =>
     this.lang.translate('entityList.filterCount', { count: this.activeFilterCount() })
@@ -720,6 +726,12 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
     const tag = this.tagFilter();
     if (tag) filters.push({ field: 'id', op: 'tagged', value: tag });
     return filters;
+  }
+
+  /** AK4-T1: the empty state's "clear filters", which also drops a tag filter. */
+  clearEmptyFilters(): void {
+    this.tagFilter.set(null);
+    this.clearAllFilters();
   }
 
   /** B4-T4: drops the tag filter the tag page set. */

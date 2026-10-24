@@ -123,9 +123,15 @@
     }
 
     @if (pages().length === 0) {
-      <p class="xf-empty">{{ 'dashboard.viewer.noPagesYet' | translate }}</p>
+      <div class="xf-empty" data-testid="dashboard-empty">
+        <p>{{ 'dashboard.viewer.noPagesYet' | translate }}</p>
+        <button type="button" class="btn btn-primary" data-empty-action="design" (click)="cancel()">{{ 'dashboard.viewer.openDesigner' | translate }}</button>
+      </div>
     } @else if (!canvasSection()) {
-      <p class="xf-empty">{{ 'dashboard.viewer.noWidgetsYet' | translate }}</p>
+      <div class="xf-empty" data-testid="dashboard-empty">
+        <p>{{ 'dashboard.viewer.noWidgetsYet' | translate }}</p>
+        <button type="button" class="btn btn-primary" data-empty-action="design" (click)="cancel()">{{ 'dashboard.viewer.openDesigner' | translate }}</button>
+      </div>
     } @else {
       <attome-dashboard-section-view
         [section]="canvasSection()!"
