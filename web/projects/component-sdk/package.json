@@ -1,0 +1,7 @@
+{
+  "name": "@attome/component-sdk",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-only",
+  "description": "What a custom component may use (T3-T1): records through the API with the viewer's own permissions, events to its page, and the theme. Framework-free; no access to the app or its credentials.",
+  "sideEffects": false
+}
