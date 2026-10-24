@@ -207,6 +207,11 @@ pub fn validate(graph: &Graph) -> Result<String, ValidationError> {
                 )));
             }
         }
+        // A16-T5: an update's conflict rule is one the scheduler knows.
+        if node_type == NodeType::UpdateRecord {
+            crate::conflict::OnConflict::from_config(node.config.get("on_conflict"))
+                .map_err(|e| ValidationError(format!("node {:?}: {e}", node.id)))?;
+        }
         // S14-T1: a connector names its system and operation; a map's
         // mapping is well formed.
         if node_type == NodeType::Connector {

@@ -3,6 +3,7 @@ pub mod assign;
 pub mod catalog_backfill;
 /// Z11-T15: Condition nodes as V2 rule expressions.
 pub mod condition;
+pub mod conflict;
 pub mod dead_letter_admin;
 pub mod dead_letter_source;
 pub mod engine;

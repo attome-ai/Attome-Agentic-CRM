@@ -19,6 +19,7 @@ import { NODE_CONFIG_SCHEMA } from './services/workflow-admin.service';
 const EXECUTOR_TO_NODE_TYPE: Record<string, string[]> = {
   eval_condition:            ['condition'],
   execute_entity_write:      ['create_record', 'update_record'],
+  update_by_rule:            ['update_record'],
   execute_restore_record:    ['restore_record'],
   execute_duplicate_check:   ['duplicate_check'],
   execute_assign:            ['assign'],

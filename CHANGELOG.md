@@ -664,6 +664,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - `POST /api/v1/query/changes` (AA7-T4): the records of one entity added, changed or removed since
   a signed cursor, as the caller may read them now. A record the caller can no longer read is
   listed in `removed` by id only.
+- Conflict rules for flows and agents (A16-T5): an Update Record node's `on_conflict` is `retry_fresh`
+  (default, up to three tries), `merge`, `stop` or `ask_person` (an approval request carrying the
+  conflict; approved, the change is applied to the record as it is then). Agent record updates
+  merge over a stale `row_version` when the attributes they send were not changed since.
 - `POST /api/v1/query/run` (S4-T2 to S4-T8): one structured query, as a QuerySpec (`spec`) or its
   SQL-like text (`q`, parsed by the server, never sent to the database as text). Fields through up
   to three lookups (`primary_contact.team.name`), `exists` / `not_exists` over child rows or a

@@ -332,6 +332,27 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
         let taken_port = wait_for_event_taken_port(node_data.get(&node.id));
         mark_untaken_branch(&graph, &node.id, taken_port, &mut node_runs);
     }
+    // A16-T5: an `update_record` node that waited on an `ask_person`
+    // conflict approval has not written yet. Once the request settles it runs
+    // again: approved, it applies its changes over the record as it is then;
+    // otherwise it fails (`update_by_rule` reads the decision).
+    for node in &graph.nodes {
+        if NodeType::parse(&node.node_type) != Some(NodeType::UpdateRecord) {
+            continue;
+        }
+        let resumed = node_runs.get(&node.id).map(|nr| nr.status.as_str()) == Some("succeeded")
+            && crate::conflict::conflict_decision(node_data.get(&node.id)).is_some();
+        if !resumed {
+            continue;
+        }
+        if let Some(entry) = node_runs.get_mut(&node.id) {
+            entry.status = "pending".into();
+            entry.completed_at = None;
+            entry.output = None;
+            entry.dirty = true;
+        }
+        node_data.remove(&node.id);
+    }
 
     // `Arc`, not owned: `execute_route` (M33 Phase 1) needs an owned
     // `Arc<SecurityContext>` to build an `attome_ai::ActionContext` for a
@@ -2185,6 +2206,214 @@ async fn execute_restore_record(
     })
 }
 
+/// A write transaction for an entity-write node. M1-T5: the change event the
+/// write produces carries the run's chain depth plus one
+/// (`entity_change_event.chain_depth` defaults from this transaction-local
+/// setting), so a flow its write triggers knows how deep the chain is.
+async fn begin_entity_write<'a>(
+    state: &'a EngineState,
+    instance: &InstanceRow,
+) -> Result<attome_db::Tx<'a>, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query(
+        "SELECT set_config('attome.workflow_chain_depth', \
+                COALESCE((SELECT (chain_depth + 1)::text FROM workflow_instance WHERE id = $1), '1'), \
+                true)",
+    )
+    .bind(instance.id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(tx)
+}
+
+/// What an `update_record` node's write came to under its conflict rule.
+enum RuleOutcome<'a> {
+    Written(
+        attome_db::Tx<'a>,
+        attome_records::entity_mutation::MutationResult,
+    ),
+    /// `ask_person`: waiting on the approval request the conflict opened.
+    Paused(NodeOutcome),
+}
+
+/// A16-T5: an `update_record` node's write under its `config.on_conflict`
+/// rule ([`crate::conflict`]). A rule that ends in a failure or a wait
+/// releases the node's idempotency slot first, so the write can be made
+/// again later (after an approval, or a retry of the node).
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the write's own parts, as execute_entity_write holds them"
+)]
+async fn update_by_rule<'a>(
+    state: &'a EngineState,
+    ctx: &SecurityContext,
+    instance: &InstanceRow,
+    node: &GraphNode,
+    meta: &attome_core::EntityMeta,
+    input: &Value,
+    data: &serde_json::Map<String, Value>,
+    idempotency_id: Uuid,
+) -> Result<RuleOutcome<'a>, AppError> {
+    use crate::conflict::{self, ConflictStep, MergeCheck, OnConflict};
+
+    let entity_name = meta.logicalname.as_str();
+    let record_id = input
+        .get("record_id")
+        .and_then(|v| v.as_str().or_else(|| v.get("id").and_then(Value::as_str)))
+        .and_then(|s| Uuid::parse_str(s).ok())
+        .ok_or_else(|| {
+            AppError::Validation("update_record node has no resolvable record_id".into())
+        })?;
+    let mut rule = OnConflict::from_config(node.config.get("on_conflict"))?;
+    // Resuming from an `ask_person` approval: approved applies the changes
+    // over the record as it is now; anything else ends the node.
+    match conflict::conflict_decision(instance.node_data.get(&node.id)) {
+        Some("approved") => rule = OnConflict::RetryFresh,
+        Some(decision) => {
+            return Err(AppError::Validation(format!(
+                "the conflict on {entity_name} {record_id} was not approved ({decision})"
+            )));
+        }
+        None => {}
+    }
+    let mut write_over: Option<i64> = if rule.writes_over_seen_version() {
+        conflict::seen_version(input, &instance.context, record_id)
+    } else {
+        None
+    };
+    let mut merged = false;
+    let mut attempt = 0usize;
+    loop {
+        attempt += 1;
+        let mut tx = begin_entity_write(state, instance).await?;
+        let expected = match write_over {
+            Some(version) => version,
+            None => sqlx::query_scalar(&format!(
+                "SELECT row_version FROM {} WHERE id = $1",
+                attome_core::quote_ident(entity_name)
+            ))
+            .bind(record_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?,
+        };
+        let result = attome_records::entity_mutation::update_one(
+            &mut tx,
+            state,
+            ctx,
+            entity_name,
+            meta.entity_id,
+            record_id,
+            &meta.attrs,
+            data,
+            ctx.user_id,
+            expected,
+            attome_records::entity_mutation::MutationMode::Strict,
+        )
+        .await;
+        match result {
+            Ok(mutation) => return Ok(RuleOutcome::Written(tx, mutation)),
+            Err(AppError::VersionConflict) => drop(tx),
+            Err(other) => return Err(other),
+        }
+
+        let check = if rule == OnConflict::Merge && !merged {
+            attome_records::entity_crud::history::merge_basis(
+                state,
+                ctx,
+                entity_name,
+                record_id,
+                expected,
+            )
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!(error = %e, %record_id, "flow merge basis unavailable");
+                None
+            })
+            .map(|basis| MergeCheck {
+                current_version: basis.current_version,
+                overlaps: basis.changed.iter().any(|name| data.contains_key(name)),
+            })
+        } else {
+            None
+        };
+        match conflict::after_conflict(rule, attempt, check.as_ref(), merged) {
+            ConflictStep::Retry => write_over = None,
+            ConflictStep::MergeAt(version) => {
+                merged = true;
+                write_over = Some(version);
+            }
+            ConflictStep::Stop => {
+                idempotency_durable::release_on_failure(&state.base, idempotency_id).await;
+                return Err(attome_records::entity_crud::history::version_conflict(
+                    state,
+                    ctx,
+                    entity_name,
+                    record_id,
+                    expected,
+                    "workflow",
+                )
+                .await);
+            }
+            ConflictStep::AskPerson => {
+                idempotency_durable::release_on_failure(&state.base, idempotency_id).await;
+                let conflict = attome_records::entity_crud::history::version_conflict(
+                    state,
+                    ctx,
+                    entity_name,
+                    record_id,
+                    expected,
+                    "workflow",
+                )
+                .await;
+                let payload = serde_json::json!({
+                    "instance_id": instance.id,
+                    "node_id": node.id,
+                    "entity": entity_name,
+                    "record_id": record_id,
+                    "changes": data,
+                    "conflict": conflict_body(&conflict),
+                });
+                let requested_by = instance.started_by.unwrap_or(Uuid::nil());
+                let request = attome_approval::submit(
+                    &state.base.db,
+                    conflict::CONFLICT_ACTION_TYPE,
+                    payload,
+                    requested_by,
+                    1,
+                    chrono::Duration::hours(72),
+                )
+                .await?;
+                return Ok(RuleOutcome::Paused(NodeOutcome::Waiting {
+                    match_type: "signal",
+                    entity_logicalname: None,
+                    condition: Some(
+                        serde_json::json!({ "kind": "approval", "approval_request_id": request.id }),
+                    ),
+                    resume_at: None,
+                    eventual_output: serde_json::json!({ "approval_request_id": request.id }),
+                }));
+            }
+        }
+    }
+}
+
+/// The A16-T1 conflict body (`current_version`, `current_state`), for an
+/// approval request's payload.
+fn conflict_body(error: &AppError) -> Value {
+    match error {
+        AppError::VersionConflictAt {
+            current_version,
+            current_state,
+        } => serde_json::json!({
+            "current_version": current_version,
+            "current_state": current_state,
+        }),
+        _ => Value::Null,
+    }
+}
+
 /// §4.4 mechanism 1: routes Create/Update Record through
 /// `attome_server::middleware::idempotency_durable` — the SAME durable
 /// Postgres tier the HTTP `X-Idempotency-Key` mandatory-operation path uses
@@ -2280,25 +2509,12 @@ async fn execute_entity_write(
         idempotency_durable::AcquireOutcome::Acquired { record_id } => record_id,
     };
 
-    let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    // M1-T5: the change event this write produces carries the run's chain
-    // depth plus one (`entity_change_event.chain_depth` defaults from this
-    // transaction-local setting), so a flow its write triggers knows how
-    // deep the chain is.
-    sqlx::query(
-        "SELECT set_config('attome.workflow_chain_depth', \
-                COALESCE((SELECT (chain_depth + 1)::text FROM workflow_instance WHERE id = $1), '1'), \
-                true)",
-    )
-    .bind(instance.id)
-    .execute(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
     let org_ref = attome_core::ROOT_ORGANIZATION_ID;
     let user_id = ctx.user_id;
 
-    let result = if matches!(node_type, NodeType::CreateRecord) {
-        attome_records::entity_mutation::create_one(
+    let (mut tx, mutation) = if matches!(node_type, NodeType::CreateRecord) {
+        let mut tx = begin_entity_write(state, instance).await?;
+        let mutation = attome_records::entity_mutation::create_one(
             &mut tx,
             state,
             ctx,
@@ -2309,40 +2525,14 @@ async fn execute_entity_write(
             org_ref,
             attome_records::entity_mutation::MutationMode::Strict,
         )
-        .await
+        .await?;
+        (tx, mutation)
     } else {
-        let record_id = input
-            .get("record_id")
-            .and_then(|v| v.as_str().or_else(|| v.get("id").and_then(Value::as_str)))
-            .and_then(|s| Uuid::parse_str(s).ok())
-            .ok_or_else(|| {
-                AppError::Validation("update_record node has no resolvable record_id".into())
-            })?;
-        let expected_version: i64 = sqlx::query_scalar(&format!(
-            "SELECT row_version FROM {} WHERE id = $1",
-            attome_core::quote_ident(entity_name)
-        ))
-        .bind(record_id)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-        attome_records::entity_mutation::update_one(
-            &mut tx,
-            state,
-            ctx,
-            entity_name,
-            meta.entity_id,
-            record_id,
-            &meta.attrs,
-            &data,
-            user_id,
-            expected_version,
-            attome_records::entity_mutation::MutationMode::Strict,
-        )
-        .await
+        match update_by_rule(state, ctx, instance, node, &meta, input, &data, record_id).await? {
+            RuleOutcome::Written(tx, mutation) => (tx, mutation),
+            RuleOutcome::Paused(outcome) => return Ok(outcome),
+        }
     };
-
-    let mutation = result?;
     let output = serde_json::json!({ "id": mutation.record_id });
     idempotency_durable::complete_in_tx(
         &mut tx,

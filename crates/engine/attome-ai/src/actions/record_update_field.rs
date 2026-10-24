@@ -342,10 +342,9 @@ impl Action for RecordUpdateField {
             // 7. The write itself, through the same primitive the HTTP PATCH
             // route uses — never route-local SQL (guidelines §9).
             let body = serde_json::json!({ args.field.clone(): args.value.clone() });
-            let response = attome_records::entity_crud::update_record_for(
+            let response = crate::actions::record_write::update_merging(
                 state,
                 &ctx.security,
-                ctx.security.user_id,
                 &args.entity,
                 args.record_id,
                 args.row_version,

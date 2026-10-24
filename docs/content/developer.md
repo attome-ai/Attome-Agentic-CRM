@@ -97,6 +97,13 @@ not read). With `Prefer: return=minimal` the answer is just:
 When another writer changed an attribute you send, or the record's history cannot account for the
 versions in between, the answer is the same 409 as above.
 
+Flows and agents follow a rule too. An Update Record node's `on_conflict` setting is `retry_fresh`
+(the default: read the record again and apply the node's changes, up to three tries), `merge` (write
+over the version the run saw and merge as `If-Match-Merge` does, else stop), `stop` (fail the node
+with the 409 body) or `ask_person` (open an approval request with the conflict; approved, the node
+applies its changes to the record as it is then, declined, it fails). An agent's record update
+merges the same way and, when it cannot, gets the 409 body back to read the record again.
+
 ## Building from source
 
 Rust 1.97 (pinned in `rust-toolchain.toml`) on Windows or Linux, PostgreSQL 18 with pgvector for the

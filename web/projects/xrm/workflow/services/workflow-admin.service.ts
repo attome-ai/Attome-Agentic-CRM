@@ -271,6 +271,15 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
   update_record: [
     { key: 'entity', label: 'Entity', kind: 'entity', required: true,
       hint: 'Target row comes from the wired "record_id" input, values from "data".' },
+    // A16-T5: scheduler::update_by_rule
+    { key: 'on_conflict', label: 'On conflict', kind: 'select', default: 'retry_fresh',
+      options: [
+        { value: 'retry_fresh', label: 'Retry on the latest version' },
+        { value: 'merge', label: 'Merge when other changes do not overlap' },
+        { value: 'stop', label: 'Stop' },
+        { value: 'ask_person', label: 'Ask a person' },
+      ],
+      hint: 'What happens when the record changed after the run read it.' },
   ],
   // scheduler::execute_duplicate_check
   duplicate_check: [

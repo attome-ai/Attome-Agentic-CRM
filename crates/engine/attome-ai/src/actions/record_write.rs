@@ -299,6 +299,76 @@ impl Action for RecordCreate {
     }
 }
 
+/// A16-T5: an agent's update merges by default. A stale `row_version`
+/// whose missed versions changed none of the attributes sent is applied over
+/// the record's current version (A16-T2's rule); otherwise the agent gets the
+/// conflict, with what changed (A16-T1), to read the record again. AH4's
+/// limits name no conflict rule, so no agent write waits for a person.
+pub(crate) async fn update_merging(
+    state: &EngineState,
+    security: &attome_server::security::SecurityContext,
+    entity: &str,
+    record_id: Uuid,
+    row_version: i64,
+    body: Value,
+) -> Result<attome_records::entity_crud::EntityRecordResponse, AppError> {
+    let sent: Vec<String> = body
+        .as_object()
+        .map(|fields| fields.keys().cloned().collect())
+        .unwrap_or_default();
+    let first = attome_records::entity_crud::update_record_for(
+        state,
+        security,
+        security.user_id,
+        entity,
+        record_id,
+        row_version,
+        body.clone(),
+    )
+    .await;
+    if !matches!(first, Err(AppError::VersionConflict)) {
+        return first;
+    }
+    let basis = attome_records::entity_crud::history::merge_basis(
+        state,
+        security,
+        entity,
+        record_id,
+        row_version,
+    )
+    .await
+    .unwrap_or_else(|e| {
+        tracing::warn!(error = %e, %record_id, "agent merge basis unavailable");
+        None
+    })
+    .filter(|basis| !basis.changed.iter().any(|name| sent.contains(name)));
+    if let Some(basis) = basis {
+        match attome_records::entity_crud::update_record_for(
+            state,
+            security,
+            security.user_id,
+            entity,
+            record_id,
+            basis.current_version,
+            body,
+        )
+        .await
+        {
+            Err(AppError::VersionConflict) => {}
+            other => return other,
+        }
+    }
+    Err(attome_records::entity_crud::history::version_conflict(
+        state,
+        security,
+        entity,
+        record_id,
+        row_version,
+        "agent",
+    )
+    .await)
+}
+
 pub(crate) struct RecordUpdate;
 
 impl Action for RecordUpdate {
@@ -321,10 +391,9 @@ impl Action for RecordUpdate {
                 ));
             }
             refuse_sensitive_fields(state, ctx, &args.entity, args.values.keys())?;
-            let record = attome_records::entity_crud::update_record_for(
+            let record = update_merging(
                 state,
                 &ctx.security,
-                ctx.security.user_id,
                 &args.entity,
                 args.record_id,
                 args.row_version,
