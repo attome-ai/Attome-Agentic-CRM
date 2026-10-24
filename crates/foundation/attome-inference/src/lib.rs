@@ -48,8 +48,8 @@ pub mod catalogue;
 pub mod embed;
 /// Z9-T4: falling back to the next allowed model.
 pub mod fallback;
-pub mod gpu_queue;
 pub mod generate;
+pub mod gpu_queue;
 pub mod models;
 pub mod ocr;
 pub mod rerank;
@@ -524,6 +524,25 @@ pub(crate) struct Transport {
     /// `"embedding"`. `&'static str` so no error variant can ever carry a
     /// caller-supplied or provider-supplied string.
     label: &'static str,
+    /// Z9-T2: how the endpoint's key is sent (a bearer token unless the
+    /// provider names its own header), headers every request carries, and
+    /// query parameters every request carries (Azure's `api-version`).
+    key_header: KeyHeader,
+    extra_headers: Vec<(&'static str, String)>,
+    query: Vec<(&'static str, String)>,
+}
+
+/// Z9-T2: how a provider takes the endpoint's key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum KeyHeader {
+    /// `Authorization: Bearer <key>`: OpenAI-compatible servers, Azure with
+    /// an Entra token, Vertex.
+    Bearer,
+    /// The key as the value of a named header: `x-api-key` (Anthropic),
+    /// `api-key` (Azure).
+    Named(&'static str),
+    /// No key on the request: the adapter signs it itself (Bedrock).
+    None,
 }
 
 /// Parses and validates an endpoint's base URL (BIN-A3).
@@ -691,6 +710,9 @@ impl Transport {
             base_url,
             endpoint,
             label,
+            key_header: KeyHeader::Bearer,
+            extra_headers: Vec::new(),
+            query: Vec::new(),
         })
     }
 
@@ -717,6 +739,9 @@ impl Transport {
             base_url,
             endpoint,
             label,
+            key_header: KeyHeader::Bearer,
+            extra_headers: Vec::new(),
+            query: Vec::new(),
         })
     }
 
@@ -728,20 +753,97 @@ impl Transport {
         self.label
     }
 
-    /// Builds the authenticated request for `path`. The URL is joined from the
-    /// parsed base, so nothing here can retarget the request.
-    fn request<Req: Serialize>(&self, path: &str, body: &Req) -> reqwest::RequestBuilder {
-        let mut request = self.http.post(join_path(&self.base_url, path)).json(body);
-        if let Some(key) = self
-            .endpoint
+    /// Z9-T2: the key goes in `header` instead of `Authorization: Bearer`.
+    #[must_use]
+    pub(crate) fn with_key_header(mut self, header: KeyHeader) -> Self {
+        self.key_header = header;
+        self
+    }
+
+    /// Z9-T2: a header every request carries (`anthropic-version`).
+    #[must_use]
+    pub(crate) fn with_header(mut self, name: &'static str, value: impl Into<String>) -> Self {
+        self.extra_headers.push((name, value.into()));
+        self
+    }
+
+    /// Z9-T2: a query parameter every request carries (`api-version`).
+    #[must_use]
+    pub(crate) fn with_query(mut self, name: &'static str, value: impl Into<String>) -> Self {
+        self.query.push((name, value.into()));
+        self
+    }
+
+    /// The endpoint's key, when it has a non-empty one.
+    pub(crate) fn api_key(&self) -> Option<&str> {
+        self.endpoint
             .api_key
             .as_ref()
             .map(|k| k.expose())
             .filter(|k| !k.is_empty())
-        {
-            request = request.bearer_auth(key);
+    }
+
+    /// The URL a request to `path` goes to: joined from the parsed base, with
+    /// the endpoint's own query parameters.
+    pub(crate) fn url(&self, path: &str) -> reqwest::Url {
+        let mut url = join_path(&self.base_url, path);
+        if !self.query.is_empty() {
+            let mut pairs = url.query_pairs_mut();
+            for (name, value) in &self.query {
+                pairs.append_pair(name, value);
+            }
         }
-        request
+        url
+    }
+
+    /// The key and the endpoint's own headers, on `request`.
+    fn authorize(&self, mut request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        for (name, value) in &self.extra_headers {
+            request = request.header(*name, value);
+        }
+        match (self.key_header, self.api_key()) {
+            (KeyHeader::Bearer, Some(key)) => request.bearer_auth(key),
+            (KeyHeader::Named(header), Some(key)) => request.header(header, key),
+            _ => request,
+        }
+    }
+
+    /// Builds the authenticated request for `path`. The URL is joined from the
+    /// parsed base, so nothing here can retarget the request.
+    fn request<Req: Serialize>(&self, path: &str, body: &Req) -> reqwest::RequestBuilder {
+        self.authorize(self.http.post(self.url(path)).json(body))
+    }
+
+    /// Z9-T2: POSTs a body already serialised, with headers the adapter made
+    /// for it (a request signature over these exact bytes), and deserialises
+    /// the answer as [`Transport::post`] does. Sent once.
+    pub(crate) async fn post_signed<Res: for<'de> Deserialize<'de>>(
+        &self,
+        path: &str,
+        body: Vec<u8>,
+        headers: Vec<(String, String)>,
+    ) -> Result<Res, InferenceError> {
+        let mut request = self
+            .http
+            .post(self.url(path))
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(body);
+        for (name, value) in headers {
+            request = request.header(name, value);
+        }
+        let request = self.authorize(request);
+        self.through(false, || {
+            let attempt = request.try_clone();
+            async move {
+                let attempt = attempt.ok_or(InferenceError::Transport {
+                    endpoint: self.label,
+                    kind: "request could not be prepared",
+                })?;
+                let response = self.send(attempt).await?;
+                self.read_json(response).await
+            }
+        })
+        .await
     }
 
     /// Sends and maps the transport half of a failure. The status is returned
@@ -921,20 +1023,12 @@ impl Transport {
         content_type: &str,
         body: Vec<u8>,
     ) -> Result<Res, InferenceError> {
-        let mut request = self
-            .http
-            .post(join_path(&self.base_url, path))
-            .header(reqwest::header::CONTENT_TYPE, content_type)
-            .body(body);
-        if let Some(key) = self
-            .endpoint
-            .api_key
-            .as_ref()
-            .map(|k| k.expose())
-            .filter(|k| !k.is_empty())
-        {
-            request = request.bearer_auth(key);
-        }
+        let request = self.authorize(
+            self.http
+                .post(self.url(path))
+                .header(reqwest::header::CONTENT_TYPE, content_type)
+                .body(body),
+        );
         // AB6-T3: an upload is sent once.
         self.through(false, || {
             let attempt = request.try_clone();

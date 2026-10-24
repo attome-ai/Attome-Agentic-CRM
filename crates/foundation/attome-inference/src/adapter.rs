@@ -9,7 +9,19 @@
 //! `/chat/completions` and `/embeddings` that every configured model server
 //! speaks. It delegates to [`GenerationClient`] and [`EmbeddingClient`]
 //! unchanged, so behaviour (budgets, retries, timeouts, telemetry) is exactly
-//! theirs. Other providers implement the same trait.
+//! theirs. Other providers implement the same trait (Z9-T2): [`Anthropic`]
+//! (Messages API), [`AzureOpenAi`], [`Bedrock`] (Converse, SigV4) and
+//! [`Vertex`] (Gemini); all four are chat only, none embeds.
+
+pub mod anthropic;
+pub mod azure;
+pub mod bedrock;
+pub mod vertex;
+
+pub use anthropic::Anthropic;
+pub use azure::{AzureAuth, AzureOpenAi};
+pub use bedrock::{AwsCredentials, Bedrock};
+pub use vertex::Vertex;
 
 use std::future::Future;
 use std::pin::Pin;

@@ -537,6 +537,15 @@ impl GenerationClient {
         })
     }
 
+    /// Z9-T2: a client over a transport an adapter set up (Azure's key
+    /// header and `api-version`).
+    pub(crate) fn from_transport(transport: Transport, max_output_tokens: u32) -> Self {
+        Self {
+            transport,
+            max_output_tokens,
+        }
+    }
+
     pub fn model_id(&self) -> &str {
         self.transport.model()
     }
