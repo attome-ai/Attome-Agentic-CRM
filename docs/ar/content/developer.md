@@ -14,6 +14,11 @@
   `If-Match: "<row_version>"` من السجل الذي قرأته، والإصدار القديم يُرد عليه بـ409.
 - **الاستعلامات**: `POST /api/v1/query/execute` يشغّل استعلامًا مخزنًا أو عرضًا مع مرشحات وتصفّح بالمؤشر
   (`after_id`) وعدد إجمالي دقيق اختياري.
+- **الاستعلامات المنظّمة**: `POST /api/v1/query/run` مع `{spec}` (‏QuerySpec: ‏`entity` و`select` وشجرة `where`
+  و`sort` و`page_size` و`cursor`، أو `group_by` و`aggregates` مع `having`) أو `{q}`
+  (`SELECT name FROM account WHERE EXISTS(incident.customer WHERE statecode = 0)`)، ومع `params` لقيم `:name`.
+  يُسمّى الحقل المرتبط بمساره (`primary_contact.name`). تُستبعد السجلات والحقول التي لا يحق لك قراءتها، و`explain: true`
+  يعيد خطة التنفيذ بدل النتائج.
 - **القوائم** تجيب بـ`{items, total, page, page_size}` (تبدأ الصفحات من 1)، والقوائم غير المحدودة تستخدم مؤشرًا
   (`next_cursor`).
 - **إعادة المحاولة**: أرسل `Idempotency-Key` مع الإنشاء أو الإجراء، فتحصل إعادة المحاولة بالمفتاح نفسه على

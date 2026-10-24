@@ -3665,3 +3665,217 @@ fn changes_since_invalid_cursor_is_422() {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     })
 }
+
+// ── S4-T7: POST /api/v1/query/run ──────────────────────────────────────────
+
+async fn run(
+    app: &axum::Router,
+    cookie: &str,
+    body: serde_json::Value,
+) -> (StatusCode, serde_json::Value) {
+    send_json(app, "POST", "/api/v1/query/run", cookie, body).await
+}
+
+fn titles(page: &serde_json::Value) -> Vec<String> {
+    page["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .map(|r| r["title"].as_str().expect("title").to_owned())
+        .collect()
+}
+
+/// A reader of `logicalname` at the None tier, who sees only `shared`.
+async fn none_tier_reader_sharing(system: &TestSystem, logicalname: &str, shared: Uuid) -> String {
+    let db = system.state().base.db.clone();
+    let entity_id: Uuid = sqlx::query_scalar("SELECT id FROM entity_info WHERE logicalname = $1")
+        .bind(logicalname)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+    let (reader, cookie, role_id) = seed_rls_reader(&db, logicalname).await;
+    sqlx::query(
+        "INSERT INTO role_mm_entity_access \
+         (id, role_ref, entity_ref, read_access_level, write_access_level, delete_access_level, owner_layer) \
+         VALUES ($1, $2, $3, 0, 0, 0, 'project')",
+    )
+    .bind(Uuid::now_v7())
+    .bind(role_id)
+    .bind(entity_id)
+    .execute(&db)
+    .await
+    .unwrap();
+    grant_record_view_share(&db, entity_id, shared, reader).await;
+    system
+        .state()
+        .base
+        .security
+        .invalidate_sync(reader)
+        .await
+        .unwrap();
+    cookie
+}
+
+/// S4-T7: the selected rows in sort order, a page at a time, from the JSON
+/// form and the text form alike.
+#[test]
+fn query_run_returns_selected_rows() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, _, _) = etag_fixture(&system, &app, &cookie).await;
+        for title in ["second", "third"] {
+            create_titled_record(&app, &cookie, &logicalname, title).await;
+        }
+
+        let spec = serde_json::json!({
+            "entity": logicalname, "select": ["title"],
+            "sort": [{"field": "created_at"}], "page_size": 2
+        });
+        let (status, page) = run(&app, &cookie, serde_json::json!({ "spec": spec })).await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        assert_eq!(titles(&page), vec!["first", "second"]);
+        let cursor = page["next_cursor"]
+            .as_str()
+            .expect("a next page")
+            .to_owned();
+
+        let mut next = spec.clone();
+        next["cursor"] = serde_json::json!(cursor);
+        let (status, rest) = run(&app, &cookie, serde_json::json!({ "spec": next })).await;
+        assert_eq!(status, StatusCode::OK, "{rest}");
+        assert_eq!(titles(&rest), vec!["third"]);
+        assert!(rest.get("next_cursor").is_none(), "{rest}");
+
+        let text = format!(
+            "SELECT title FROM {logicalname} WHERE title starts_with :p ORDER BY created_at DESC"
+        );
+        let (status, page) = run(
+            &app,
+            &cookie,
+            serde_json::json!({ "q": text, "params": {"p": "t"} }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        assert_eq!(titles(&page), vec!["third"]);
+
+        // Outside the grammar, and an unknown entity.
+        let (status, _) = run(
+            &app,
+            &cookie,
+            serde_json::json!({ "q": format!("SELECT title FROM {logicalname}; DELETE") }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        let (status, _) = run(
+            &app,
+            &cookie,
+            serde_json::json!({ "spec": {"entity": "no_such_entity"} }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+    })
+}
+
+/// S4-T7: a None-tier reader gets only the record shared with them.
+#[test]
+fn query_run_hides_records_without_access() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, admin) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, _, shared) = etag_fixture(&system, &app, &admin).await;
+        create_titled_record(&app, &admin, &logicalname, "hidden").await;
+        let reader = none_tier_reader_sharing(&system, &logicalname, shared).await;
+
+        let body = serde_json::json!({ "spec": {"entity": logicalname, "select": ["title"]} });
+        let (status, page) = run(&app, &reader, body.clone()).await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        assert_eq!(titles(&page), vec!["first"]);
+        assert!(!page.to_string().contains("hidden"));
+        let (_, all) = run(&app, &admin, body).await;
+        assert_eq!(titles(&all).len(), 2);
+
+        // A user without the entity's read privilege gets a 404.
+        let stranger =
+            seed_user_with_privilege(&system, &format!("qrun-stranger-{}", Uuid::now_v7())).await;
+        let (status, _) = run(
+            &app,
+            &stranger,
+            serde_json::json!({ "spec": {"entity": logicalname} }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+    })
+}
+
+/// S4-T7: an aggregate counts only the records the caller may read.
+#[test]
+fn query_run_aggregate_counts_only_visible_records() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, admin) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, _, shared) = etag_fixture(&system, &app, &admin).await;
+        for title in ["hidden one", "hidden two"] {
+            create_titled_record(&app, &admin, &logicalname, title).await;
+        }
+        let reader = none_tier_reader_sharing(&system, &logicalname, shared).await;
+
+        let body = serde_json::json!({ "q": format!("SELECT count(*) AS n FROM {logicalname}") });
+        let (status, reader_counts) = run(&app, &reader, body.clone()).await;
+        assert_eq!(status, StatusCode::OK, "{reader_counts}");
+        assert_eq!(
+            reader_counts["groups"][0]["values"]["n"], 1,
+            "{reader_counts}"
+        );
+        let (_, admin_counts) = run(&app, &admin, body).await;
+        assert_eq!(
+            admin_counts["groups"][0]["values"]["n"], 3,
+            "{admin_counts}"
+        );
+
+        let (status, grouped) = run(
+            &app,
+            &admin,
+            serde_json::json!({ "spec": {
+                "entity": logicalname,
+                "group_by": [{"field": "title"}],
+                "aggregates": [{"func": "count", "alias": "n"}],
+                "having": {"kind": "compare", "field": "n", "op": "gte", "value": 1}
+            }}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{grouped}");
+        assert_eq!(grouped["groups"].as_array().unwrap().len(), 3, "{grouped}");
+        assert_eq!(grouped["groups"][0]["keys"]["title"], "first");
+    })
+}
+
+/// S4-T7: `explain` returns the plan's summary and no rows.
+#[test]
+fn query_run_explain_does_not_execute() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, _, _) = etag_fixture(&system, &app, &cookie).await;
+
+        let (status, plan) = run(
+            &app,
+            &cookie,
+            serde_json::json!({ "spec": {"entity": logicalname, "select": ["title"]}, "explain": true }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{plan}");
+        assert!(plan.get("items").is_none(), "{plan}");
+        assert!(
+            ["scan", "index"].contains(&plan["plan_class"].as_str().unwrap()),
+            "{plan}"
+        );
+        assert!(plan["total_cost"].as_f64().unwrap() > 0.0);
+        assert_eq!(plan["guard_limit"], 100_000.0);
+        assert!(plan["estimated_rows"].is_i64());
+    })
+}

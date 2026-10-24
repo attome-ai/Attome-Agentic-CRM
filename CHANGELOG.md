@@ -664,6 +664,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - `POST /api/v1/query/changes` (AA7-T4): the records of one entity added, changed or removed since
   a signed cursor, as the caller may read them now. A record the caller can no longer read is
   listed in `removed` by id only.
+- `POST /api/v1/query/run` (S4-T2 to S4-T8): one structured query, as a QuerySpec (`spec`) or its
+  SQL-like text (`q`, parsed by the server, never sent to the database as text). Fields through up
+  to three lookups (`primary_contact.team.name`), `exists` / `not_exists` over child rows or a
+  many-to-many relationship, relative dates, `between`, `not_in`, `mine`, `my_team` and the
+  Arabic-aware `text_matches`; or `count`/`sum`/`avg`/`min`/`max`/`count_distinct` grouped by fields
+  and date buckets with `having`. Record and field security are inside the SQL, on every joined
+  entity too. Rows come as a signed keyset page; `explain` returns the plan's summary instead.
 - Outbound metrics and breaker state (AB6-T8): `outbound_calls_total{service,outcome}`,
   `outbound_latency_seconds{service}`, `outbound_retries_total{service}` and
   `outbound_breaker_state{service}` (0 closed, 1 half open, 2 open). While the `ai_model`,

@@ -502,6 +502,7 @@ mod tests {
             SurvivorshipRule {
                 strategy: Strategy::MostRecent,
                 priority_owner_ids: vec![],
+                source_system_rank: None,
             },
         );
         let (fill, conflicts) = compute_fill(&attrs, &canonical, &duplicate, &rules);
@@ -526,6 +527,7 @@ mod tests {
             SurvivorshipRule {
                 strategy: Strategy::MostRecent,
                 priority_owner_ids: vec![],
+                source_system_rank: None,
             },
         );
         let (fill, _) = compute_fill(&attrs, &canonical, &duplicate, &rules);
@@ -551,6 +553,7 @@ mod tests {
             SurvivorshipRule {
                 strategy: Strategy::SourcePriority,
                 priority_owner_ids: vec![team_a, team_b],
+                source_system_rank: None,
             },
         );
         let (fill, _) = compute_fill(&attrs, &canonical, &duplicate, &rules);
@@ -569,6 +572,7 @@ mod tests {
             SurvivorshipRule {
                 strategy: Strategy::Manual,
                 priority_owner_ids: vec![],
+                source_system_rank: None,
             },
         );
         let (fill, conflicts) = compute_fill(&attrs, &canonical, &duplicate, &rules);
@@ -590,6 +594,7 @@ mod tests {
             SurvivorshipRule {
                 strategy: Strategy::Manual,
                 priority_owner_ids: vec![],
+                source_system_rank: None,
             },
         );
         let (fill, conflicts) = compute_fill(&attrs, &canonical, &duplicate, &rules);
@@ -608,6 +613,7 @@ mod tests {
             SurvivorshipRule {
                 strategy: Strategy::Manual,
                 priority_owner_ids: vec![],
+                source_system_rank: None,
             },
         );
         let (fill, conflicts) = compute_fill(&attrs, &canonical, &duplicate, &rules);

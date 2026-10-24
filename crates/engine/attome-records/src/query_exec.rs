@@ -2989,8 +2989,14 @@ pub async fn execute_stored_query_with_definition(
 /// document even if a future refactor stops referencing one from a response.
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(execute, crate::changes::changes),
+    paths(execute, crate::changes::changes, crate::query_spec::routes::run_query),
     components(schemas(
+        crate::query_spec::routes::RunRequest,
+        crate::query_spec::routes::RunResponse,
+        crate::query_spec::routes::RunRow,
+        crate::query_spec::routes::ExplainResponse,
+        crate::query_spec::aggregate::AggregateResult,
+        crate::query_spec::aggregate::Group,
         ExecuteQueryRequest,
         Filter,
         ExecResponse,
@@ -3010,6 +3016,11 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/query/execute", post(execute))
         // AA7-T4: what changed in an entity since a cursor.
         .route("/api/v1/query/changes", post(crate::changes::changes))
+        // S4-T7: a QuerySpec or its text form, with security inside the SQL.
+        .route(
+            "/api/v1/query/run",
+            post(crate::query_spec::routes::run_query),
+        )
 }
 
 #[cfg(test)]

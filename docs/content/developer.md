@@ -29,6 +29,11 @@ entities and fields.
   `{entity, cursor}` to get the records added or changed since (`upserted`, as you may read them
   now), the ids deleted or no longer visible to you (`removed`, id only) and the next cursor. Use
   it to keep a local copy in step without re-reading the whole list.
+- **Structured queries**: `POST /api/v1/query/run` with `{spec}` (a QuerySpec: `entity`, `select`,
+  a `where` tree, `sort`, `page_size`, `cursor`, or `group_by` and `aggregates` with `having`) or
+  `{q}` (`SELECT name FROM account WHERE EXISTS(incident.customer WHERE statecode = 0)`), with
+  `params` for `:name` values. A related field is named by its path (`primary_contact.name`).
+  Records and fields you may not read are left out; `explain: true` returns the plan instead.
 - **Lists** answer `{items, total, page, page_size}` (pages start at 1); unbounded lists use a cursor
   (`next_cursor`).
 - **Retries**: send `Idempotency-Key` on a create or an action; a retry with the same key gets the
