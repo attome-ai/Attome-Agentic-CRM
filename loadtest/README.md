@@ -296,6 +296,40 @@ scenario and runs with no warm-up:
 ./scripts/run-matrix.ps1 -Scenarios production_mix -NodeCounts 1 -Cold
 ```
 
+## The customer-run bench (AA1-T9)
+
+`scripts/bench.ps1` (Windows, or PowerShell anywhere) and `scripts/bench.sh` (Linux) run the
+production mix against a customer's own running deployment and print its numbers next to the
+published ones. Both take the same flags:
+
+```powershell
+pwsh -File loadtest/scripts/bench.ps1 -BaseUrl https://crm.example.com -ApiKey '<public>:<secret>' `
+  -Profile solo -Published docs/evidence/latency-1.0.0.json
+pwsh -File loadtest/scripts/bench.ps1 -BaseUrl https://crm.example.com -Profile solo -Plan
+```
+
+```sh
+loadtest/scripts/bench.sh -BaseUrl https://crm.example.com -ApiKey '<public>:<secret>'   -Profile solo -Published docs/evidence/latency-1.0.0.json
+```
+
+1. **Seed**: the entity `bench_load` (`title`, `seq`) and the stored query `bench_load_list`,
+   created through the admin API on the first run and reused after, then `-Rows` (10,000) records
+   through the bulk API. No other entity is read or written.
+2. **Run**: `k6/production_mix.js` for `-Duration` (60 s) at the profile's two lowest concurrency
+   levels and its rated request rate (`profiles.json`). With `API_KEY` set the mix sends
+   `Authorization: ApiKey ...` instead of logging in.
+3. **Compare**: `scripts/bench-compare.mjs` prints p50/p95/p99 per class beside the published
+   report's (`latency-<version>.json` from `latency-report.mjs`) and the p95 ratio.
+4. **Clean up**: every `bench_load` record is deleted through the bulk API (`-KeepRecords` skips
+   it); the entity stays for the next run.
+
+The API key must be an administrator's: creating the entity and its stored query needs
+`system.admin`. A deployment that records metadata changes in required mode needs `-Changeset
+<open changeset id>`, sent as `X-Attome-Changeset`. k6 runs from the PATH, or in Docker
+(`grafana/k6`) when it is not installed; the comparison needs Node.js. `-Plan` prints the four steps
+and exits without a call. When the `attome` CLI gains a `bench` subcommand (U1), it calls these
+scripts. `node --test loadtest/scripts/bench-compare.test.mjs` tests the comparison.
+
 ## The production-shape run (TODO-014) — runbook for a dedicated Linux host
 
 Both existing results docs were produced on a Windows dev machine via Docker

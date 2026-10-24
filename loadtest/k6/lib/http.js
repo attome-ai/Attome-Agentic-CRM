@@ -60,10 +60,25 @@ export function login(baseUrl, email, password) {
 // missed by step 10's original finding, which named only the two mutating
 // scenarios.
 export function jsonHeaders(cookie, extra = {}) {
+  if (API_KEY) {
+    return { 'Content-Type': 'application/json', ...authHeaders(cookie), ...extra };
+  }
   return {
     'Content-Type': 'application/json',
     Cookie: cookie,
     'Sec-Fetch-Site': 'same-origin',
     ...extra,
   };
+}
+
+// AA1-T9: with API_KEY (`<public>:<secret>`) set, every request carries
+// `Authorization: ApiKey ...` instead of a session cookie; the customer-run
+// bench (`scripts/bench.ps1`) has an API key, not a password. No cookie, so
+// the CSRF check does not apply.
+export const API_KEY = __ENV.API_KEY || '';
+
+// The credential headers for a request: the API key when one is set, else
+// the session cookie.
+export function authHeaders(cookie) {
+  return API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : { Cookie: cookie };
 }

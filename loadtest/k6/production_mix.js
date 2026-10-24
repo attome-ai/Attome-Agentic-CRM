@@ -14,7 +14,7 @@
 //     -e SEED_FILE=results/seed-solo.json k6/production_mix.js
 import http from 'k6/http';
 import { check } from 'k6';
-import { baseUrls, pickBaseUrl, login, jsonHeaders } from './lib/http.js';
+import { API_KEY, authHeaders, baseUrls, pickBaseUrl, login, jsonHeaders } from './lib/http.js';
 
 export const WEIGHTS = { read: 50, list: 20, query: 10, write: 12, search: 6, bulk: 2 };
 const OPS = Object.keys(WEIGHTS);
@@ -80,10 +80,11 @@ export function setup() {
       accounts.push([email, PROFILE_PASSWORD]);
     }
   }
-  if (accounts.length === 0) {
+  if (accounts.length === 0 && !API_KEY) {
     accounts.push([__ENV.TEST_EMAIL, __ENV.TEST_PASSWORD]);
   }
-  const cookies = accounts.map(([email, password]) => login(baseUrl, email, password));
+  // AA1-T9: with an API key no one logs in; every request carries the key.
+  const cookies = API_KEY ? [''] : accounts.map(([email, password]) => login(baseUrl, email, password));
   const res = http.post(
     `${baseUrl}/api/v1/query/execute`,
     JSON.stringify({ query_id: BULK_QUERY_ID, page: 1, page_size: 200 }),
@@ -107,7 +108,7 @@ function someSeq() {
 export function read(data) {
   const id = data.ids[(__VU + __ITER) % data.ids.length];
   const res = http.get(`${pickBaseUrl()}/api/v1/${BULK_ENTITY}/${id}`, {
-    headers: { Cookie: cookieFor(data) },
+    headers: authHeaders(cookieFor(data)),
     tags: { name: 'mix_read', op: 'read' },
   });
   check(res, { 'read 200': (r) => r.status === 200 });
@@ -163,7 +164,7 @@ export function search(data) {
   const q = `bulk-row-${someSeq()}`;
   const res = http.get(
     `${pickBaseUrl()}/api/v1/search?q=${encodeURIComponent(q)}&page_size=10`,
-    { headers: { Cookie: cookieFor(data) }, tags: { name: 'mix_search', op: 'search' } }
+    { headers: authHeaders(cookieFor(data)), tags: { name: 'mix_search', op: 'search' } }
   );
   check(res, { 'search 200': (r) => r.status === 200 });
 }
