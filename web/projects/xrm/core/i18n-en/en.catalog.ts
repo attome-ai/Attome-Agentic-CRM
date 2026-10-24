@@ -2320,6 +2320,17 @@ export const xrmEn = {
     download: 'Download',
     cannot: 'This value cannot be drawn as that kind of code.',
   },
+  pageRuntime: {
+    loading: 'Loading…',
+    notFound: 'This page is not published.',
+    failed: 'This part of the page could not load.',
+    actionFailed: 'That did not work. Try again, or ask an administrator.',
+    empty: 'Nothing to show.',
+    asList: 'Shown as a list on this page.',
+    noRecord: 'No record to show.',
+    custom: 'Custom component {id}',
+    run: 'Run',
+  },
   salesCommittee: {
     title: 'Buying committee',
     influence: 'Influence',

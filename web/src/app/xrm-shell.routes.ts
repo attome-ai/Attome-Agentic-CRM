@@ -450,6 +450,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/verticals/sales/orgchart').then(m => m.OrgChartComponent),
           },
           {
+            // T2-T2: a published page; `?entity=&record=` for a record page.
+            path: 'pages/:id',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/page-runtime').then(m => m.PageRuntimeComponent),
+          },
+          {
             // W1-T15: a contract comparison (a `contract_comparison` record) side by side.
             path: 'contract/compare/:id',
             canActivate: [authGuard],
