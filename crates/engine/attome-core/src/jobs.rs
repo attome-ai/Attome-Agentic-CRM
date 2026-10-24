@@ -156,6 +156,10 @@ pub enum EngineJob {
     /// name the file (`attome_document::text_extract::process`). Enqueued in
     /// the scan's clean transaction. Pure pointer; idempotent.
     DocumentTextExtract { session_id: Uuid },
+    /// Z6-T6 — makes a clean image upload's 320 px thumbnail and stores it
+    /// beside the original (`attome_document::thumbnail::process`). Enqueued
+    /// in the scan's clean transaction for PNG, JPEG and WebP. Idempotent.
+    FileThumbnail { session_id: Uuid },
     /// P-file-upload-pipeline — periodic sweep that expires abandoned upload
     /// sessions (presigned but never uploaded, uploaded but never
     /// finalized) past `attome_document::files::UPLOAD_SESSION_TTL_SECS` and
@@ -1062,6 +1066,7 @@ impl EngineJob {
             | Self::BuildBusinessKeyIndex { .. }
             | Self::ScanUploadedFile { .. }
             | Self::DocumentTextExtract { .. }
+            | Self::FileThumbnail { .. }
             | Self::PruneExpiredUploadSessions
             | Self::PruneApalisJobHistory
             | Self::RevalidateQueryPlans
@@ -1196,6 +1201,7 @@ impl EngineJob {
             EngineJob::RewrapSecrets { .. } => "RewrapSecrets",
             EngineJob::ScanUploadedFile { .. } => "ScanUploadedFile",
             EngineJob::DocumentTextExtract { .. } => "DocumentTextExtract",
+            EngineJob::FileThumbnail { .. } => "FileThumbnail",
             EngineJob::PruneExpiredUploadSessions => "PruneExpiredUploadSessions",
             EngineJob::PruneApalisJobHistory => "PruneApalisJobHistory",
             EngineJob::RevalidateQueryPlans => "RevalidateQueryPlans",
@@ -1345,6 +1351,7 @@ impl EngineJob {
             Self::SendEmail(_)
             | Self::ScanUploadedFile { .. }
             | Self::DocumentTextExtract { .. }
+            | Self::FileThumbnail { .. }
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::ReportScheduleFire { .. }
@@ -1650,6 +1657,7 @@ impl EngineJob {
             | Self::ApplyStagedImport(_)
             | Self::ScanUploadedFile { .. }
             | Self::DocumentTextExtract { .. }
+            | Self::FileThumbnail { .. }
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::ReportScheduleFire { .. }

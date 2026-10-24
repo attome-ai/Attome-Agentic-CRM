@@ -1559,6 +1559,13 @@ impl AppConfig {
     /// chosen backend is checked; the others' settings are ignored.
     fn validate_storage_backend(&self, production: bool) -> Result<(), ConfigError> {
         let storage = &self.storage;
+        // Z6-T7: a warning share outside 1..=100 would warn always or never.
+        if !(1..=100).contains(&storage.quota_warning_pct) {
+            return Err(ConfigError::Invalid {
+                field: "storage.quota_warning_pct".into(),
+                reason: "must be a percentage from 1 to 100".into(),
+            });
+        }
         let backend = match storage.backend {
             StorageBackend::S3 => "s3",
             StorageBackend::Local => "local",

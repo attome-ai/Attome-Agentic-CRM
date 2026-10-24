@@ -33,6 +33,10 @@ Required.
 | `app.server_host` | string | `"0.0.0.0"` |  |  |
 | `app.shutdown_drain_delay_secs` | integer | `10` |  | S1 (BSV-F13 / BSV-D11) — how many seconds a draining node keeps answering `/health/ready` with 503 **before** it signals its HTTP listeners to stop accepting connections. |
 | `app.time_zone` | string, optional | `null` |  | A4-T1: the deployment's time zone, an IANA name such as `Asia/Riyadh`. Dates in autonumber formats and their yearly, monthly and daily resets follow it. Unset (or unknown): UTC. |
+| `app.tls.cert_path` | string | `""` |  | The PEM certificate chain, leaf first. |
+| `app.tls.enabled` | boolean | `false` |  | Serve HTTPS on `app.port` from the certificate and key below. |
+| `app.tls.key_path` | string | `""` |  | The PEM private key (PKCS#8, PKCS#1 or SEC1). |
+| `app.tls.min_version` | string, optional | `null` |  | The oldest TLS version accepted: `"1.2"` (the default) or `"1.3"`. |
 | `app.web_root` | string, optional | `null` |  | The built web app's directory, served by `attome serve` for every GET outside the API (`attome_server::web`). Unset: a `web` directory next to the executable when one exists; otherwise the server serves the API only and the web app is hosted separately. |
 
 ## `approval`
@@ -561,8 +565,10 @@ Required.
 | `storage.local.public_base_url` | string | `""` |  | Address browsers reach the server at, put in front of the signed links (`https://crm.example.com`). Empty (the default) hands out links relative to the server, which a browser on the same origin follows. |
 | `storage.local.url_signing_key` | string |  | yes | Key that signs the short-lived upload and download links the server hands out in place of presigned bucket URLs (at least 32 bytes). Every process of the deployment needs the same value, so a link one process mints is accepted by another. |
 | `storage.max_deployment_storage_bytes` | integer, optional | `null` |  | Soft cap on the whole deployment's promoted (`clean`) file storage — meaningful because D-099's data-plane model is one dedicated deployment per customer, so this is that customer's total quota, not a cross-customer figure. `None` (the default) disables the check, same reasoning and TODO as `max_user_storage_bytes` above. |
+| `storage.max_entity_storage_bytes` | map |  |  | Z6-T7: caps on the files of one entity's records, by the entity's logical name (`{"contract": 10737418240}`), counted like the user cap. An entity not named has no cap of its own; the user and deployment caps still apply. Empty (the default) sets none. |
 | `storage.max_upload_size_bytes` | integer | `26214400` |  | Max `declared_size_bytes` an upload session may declare; enforced at finalize (HEAD-verified against what was actually PUT), not at presign time (§4.2's documented limitation). |
 | `storage.max_user_storage_bytes` | integer, optional | `null` |  | Soft cap on one user's total upload-session footprint: the sum of `declared_max_size_bytes` across their non-terminal sessions (`pending`/`uploaded`/`scanning`) plus `actual_size_bytes` across their `clean` ones. Checked in `create_upload_session` before a new session is created (item 26 remediation — a per-user quota). `None` (the default) disables the check: an unmeasured cap would be a guess, not evidence (guidelines §14) — TODO(item 26): pick a real number with the ops/customer team once there is usage data, then set this in each deployment's `config.json`. |
+| `storage.quota_warning_pct` | integer | `80` |  | Z6-T7: the share of a cap, in percent, past which administrators are told (once a day per cap). 80 by default. |
 | `storage.s3_access_key` | string | `""` |  |  |
 | `storage.s3_bucket` | string | `""` |  |  |
 | `storage.s3_endpoint` | string | `""` |  |  |

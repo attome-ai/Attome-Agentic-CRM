@@ -826,6 +826,15 @@ pub async fn process(state: &EngineState, session_id: Uuid) -> Result<(), AppErr
             )
             .await
             .map_err(AppError::internal)?;
+            // Z6-T6: an image's thumbnail, in the background.
+            if crate::thumbnail::is_thumbnailable(&actual_content_type) {
+                attome_jobs::enqueue_in_tx(
+                    &mut tx,
+                    attome_core::jobs::EngineJob::FileThumbnail { session_id },
+                )
+                .await
+                .map_err(AppError::internal)?;
+            }
             attome_db::tx::commit(tx).await?;
 
             if let Err(e) = state.base.storage.store().delete(&quarantine_path).await {

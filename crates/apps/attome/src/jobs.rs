@@ -782,6 +782,10 @@ async fn dispatch_platform_job(
         EngineJob::DocumentTextExtract { session_id } => {
             attome_document::text_extract::process(&attome_state, session_id).await?;
         }
+        // Z6-T6 — see this variant's doc comment.
+        EngineJob::FileThumbnail { session_id } => {
+            attome_document::thumbnail::process(&attome_state, session_id).await?;
+        }
         // N22-T2 — see this variant's doc comment.
         EngineJob::TranscribeRecording { document_id } => {
             attome_document::transcribe::process(&attome_state, document_id).await?;

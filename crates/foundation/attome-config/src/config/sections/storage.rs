@@ -245,6 +245,16 @@ pub struct StorageSection {
     /// same reasoning and TODO as `max_user_storage_bytes` above.
     #[serde(default)]
     pub max_deployment_storage_bytes: Option<u64>,
+    /// Z6-T7: caps on the files of one entity's records, by the entity's
+    /// logical name (`{"contract": 10737418240}`), counted like the user cap.
+    /// An entity not named has no cap of its own; the user and deployment
+    /// caps still apply. Empty (the default) sets none.
+    #[serde(default)]
+    pub max_entity_storage_bytes: std::collections::BTreeMap<String, u64>,
+    /// Z6-T7: the share of a cap, in percent, past which administrators are
+    /// told (once a day per cap). 80 by default.
+    #[serde(default = "default_quota_warning_pct")]
+    pub quota_warning_pct: u8,
     /// `host:port` of a ClamAV `clamd` daemon (INSTREAM protocol) the async
     /// scan job submits uploaded bytes to. Empty (the default) means no
     /// scanner is configured — the scan job then fails closed (rejects,
@@ -295,9 +305,15 @@ impl std::fmt::Debug for StorageSection {
                 "max_deployment_storage_bytes",
                 &self.max_deployment_storage_bytes,
             )
+            .field("max_entity_storage_bytes", &self.max_entity_storage_bytes)
+            .field("quota_warning_pct", &self.quota_warning_pct)
             .field("clamd_address", &self.clamd_address)
             .finish()
     }
+}
+
+fn default_quota_warning_pct() -> u8 {
+    80
 }
 
 fn default_max_upload_size_bytes() -> u64 {

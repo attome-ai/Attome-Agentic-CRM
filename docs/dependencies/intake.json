@@ -103,6 +103,14 @@
       "licence": "MIT",
       "maintenance": "Active; regular releases, port of Barcode Writer in Pure PostScript.",
       "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "image",
+      "reason": "Z6-T6: decodes clean PNG, JPEG and WebP uploads and resizes them into the 256-pixel thumbnails the file panel shows; default features off, three decoders only.",
+      "licence": "MIT OR Apache-2.0",
+      "maintenance": "Active; image-rs organisation, regular releases.",
+      "windows_native": true
     }
   ]
 }

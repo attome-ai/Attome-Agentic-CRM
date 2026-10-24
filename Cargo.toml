@@ -183,6 +183,8 @@ webpki-roots  = "0.26"
 hex           = "0.4"
 hmac          = "0.12"
 http          = "1"
+# Z6-T6: upload thumbnails; pure Rust, three decoders only.
+image         = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 infer         = "0.22"
 jsonwebtoken  = "9"
 lettre        = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "smtp-transport", "builder"] }

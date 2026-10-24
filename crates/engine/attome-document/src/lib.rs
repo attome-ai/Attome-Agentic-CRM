@@ -51,6 +51,8 @@ pub mod integrity;
 pub mod share;
 /// K1-T4: document text for global search.
 pub mod text_extract;
+/// Z6-T6: thumbnails of clean images, made in the background.
+pub mod thumbnail;
 /// N22-T2: recording transcripts.
 pub mod transcribe;
 

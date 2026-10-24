@@ -415,12 +415,33 @@ fn valid_sha256_hex(value: &str) -> bool {
 /// control, not a hard security boundary, so a `Conflict` on lock contention
 /// simply asks the caller to retry rather than queuing behind a blocking lock
 /// (guidelines §2: never a blocking session advisory lock).
+/// Z6-T7: one cap's use once the new upload is counted, for the warning past
+/// `storage.quota_warning_pct`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QuotaUse {
+    /// The setting that sets the cap.
+    pub limit: &'static str,
+    /// Whose files it counts: `deployment`, `entity:<name>`, `user:<id>`.
+    pub scope: String,
+    pub used: u64,
+    pub max: u64,
+}
+
+impl QuotaUse {
+    /// Whether the use is at or past `pct` percent of the cap.
+    pub fn past(&self, pct: u8) -> bool {
+        self.max > 0 && u128::from(self.used) * 100 >= u128::from(self.max) * u128::from(pct)
+    }
+}
+
 async fn check_storage_quota(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     storage_cfg: &attome_config::StorageSection,
     owner: FileOwner,
+    entity_name: &str,
     new_bytes: u64,
-) -> Result<(), AppError> {
+) -> Result<Vec<QuotaUse>, AppError> {
+    let mut uses = Vec::new();
     // A staff user's cap is configured (or absent); a portal user's is the
     // fixed D-774 default, on its own lock key and owner column.
     let (max_owner_bytes, lock_key, owner_column, owner_id) = match owner {
@@ -473,7 +494,8 @@ async fn check_storage_quota(
             .await
             .map_err(AppError::internal)?;
 
-        if (used.max(0) as u64).saturating_add(new_bytes) > max_user_bytes {
+        let after = (used.max(0) as u64).saturating_add(new_bytes);
+        if after > max_user_bytes {
             // Z6-T7 / AA9-T4: the quota, named.
             return Err(AppError::LimitExceeded {
                 limit: "storage.max_user_storage_bytes",
@@ -481,6 +503,57 @@ async fn check_storage_quota(
                 next: attome_types::error::NextStep::ContactAdmin,
             });
         }
+        if matches!(owner, FileOwner::Staff(_)) {
+            uses.push(QuotaUse {
+                limit: "storage.max_user_storage_bytes",
+                scope: format!("user:{owner_id}"),
+                used: after,
+                max: max_user_bytes,
+            });
+        }
+    }
+
+    // Z6-T7: the cap on one entity's files, counted like a user's.
+    if let Some(&max_entity_bytes) = storage_cfg.max_entity_storage_bytes.get(entity_name) {
+        let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+            .bind(attome_records::FILES_ADVISORY_LOCK_NAMESPACE)
+            .bind(format!("xrm-files/upload-quota:entity:{entity_name}"))
+            .fetch_one(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+        if !locked {
+            return Err(AppError::Conflict(
+                "another upload session is being created for this entity, retry shortly",
+            ));
+        }
+        let used: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(SUM(CASE
+                    WHEN status IN ('pending', 'uploaded', 'scanning') THEN declared_max_size_bytes
+                    WHEN status = 'clean' THEN actual_size_bytes
+                    ELSE 0
+                END), 0)::bigint
+             FROM upload_session
+             WHERE entity_logicalname = $1 AND is_deleted = false
+               AND status IN ('pending', 'uploaded', 'scanning', 'clean')",
+        )
+        .bind(entity_name)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+        let after = (used.max(0) as u64).saturating_add(new_bytes);
+        if after > max_entity_bytes {
+            return Err(AppError::LimitExceeded {
+                limit: "storage.max_entity_storage_bytes",
+                value: i64::try_from(max_entity_bytes).unwrap_or(i64::MAX),
+                next: attome_types::error::NextStep::ContactAdmin,
+            });
+        }
+        uses.push(QuotaUse {
+            limit: "storage.max_entity_storage_bytes",
+            scope: format!("entity:{entity_name}"),
+            used: after,
+            max: max_entity_bytes,
+        });
     }
 
     if let Some(max_deployment_bytes) = storage_cfg.max_deployment_storage_bytes {
@@ -505,16 +578,70 @@ async fn check_storage_quota(
         .await
         .map_err(AppError::internal)?;
 
-        if (used.max(0) as u64).saturating_add(new_bytes) > max_deployment_bytes {
+        let after = (used.max(0) as u64).saturating_add(new_bytes);
+        if after > max_deployment_bytes {
             return Err(AppError::LimitExceeded {
                 limit: "storage.max_deployment_storage_bytes",
                 value: i64::try_from(max_deployment_bytes).unwrap_or(i64::MAX),
                 next: attome_types::error::NextStep::ContactAdmin,
             });
         }
+        uses.push(QuotaUse {
+            limit: "storage.max_deployment_storage_bytes",
+            scope: "deployment".into(),
+            used: after,
+            max: max_deployment_bytes,
+        });
     }
 
-    Ok(())
+    Ok(uses)
+}
+
+/// Z6-T7: tells administrators about each cap at or past
+/// `storage.quota_warning_pct`, once a day per cap (a Redis key per cap, scope
+/// and day, set only if absent), after the session is committed. Best effort:
+/// a failure is logged and the upload goes on.
+async fn warn_near_quota(state: &EngineState, uses: &[QuotaUse]) {
+    let pct = state.base.config.storage.quota_warning_pct;
+    let day = chrono::Utc::now().format("%Y-%m-%d");
+    for quota in uses.iter().filter(|u| u.past(pct)) {
+        let key = format!(
+            "attome-document:quota-warning:{}:{}:{day}",
+            quota.limit, quota.scope
+        );
+        match state
+            .base
+            .redis
+            .set_nx(&key, "1", Some(Duration::from_secs(2 * 24 * 3600)))
+            .await
+        {
+            Ok(true) => {}
+            Ok(false) => continue,
+            Err(error) => {
+                tracing::warn!(%error, limit = quota.limit, "storage quota warning: not sent");
+                continue;
+            }
+        }
+        let share = u128::from(quota.used) * 100 / u128::from(quota.max.max(1));
+        tracing::warn!(
+            limit = quota.limit,
+            scope = %quota.scope,
+            used = quota.used,
+            max = quota.max,
+            "file storage passed {pct}% of its cap"
+        );
+        attome_notification::dispatch::alert_admins(
+            &state.base.db,
+            &state.base.config.notification,
+            format!("File storage at {share}% of its limit"),
+            format!(
+                "{} ({}) holds {} of {} bytes. Uploads past the limit are refused.",
+                quota.limit, quota.scope, quota.used, quota.max
+            ),
+            "/xrm/admin/settings",
+        )
+        .await;
+    }
 }
 
 // ── POST /api/v1/{entity}/{id}/files/{field}/upload-session ───────────────
@@ -687,7 +814,14 @@ pub async fn start_upload(
             "an upload session is already being created for this field",
         ));
     }
-    check_storage_quota(&mut tx, storage_cfg, owner, body.declared_size_bytes as u64).await?;
+    let quota_uses = check_storage_quota(
+        &mut tx,
+        storage_cfg,
+        owner,
+        entity_name,
+        body.declared_size_bytes as u64,
+    )
+    .await?;
     let (owner_user_ref, owner_portal_user_ref) = owner.columns();
     sqlx::query(
         "INSERT INTO upload_session
@@ -711,6 +845,7 @@ pub async fn start_upload(
     .await
     .map_err(AppError::internal)?;
     attome_db::tx::commit(tx).await?;
+    warn_near_quota(state, &quota_uses).await;
 
     let ttl = Duration::from_secs(UPLOAD_SESSION_TTL_SECS);
     let upload_url = attome_storage::presign_upload(&state.base.storage, &key, ttl)
@@ -1289,6 +1424,10 @@ struct DownloadUrlQuery {
     /// `is_current` — the version list is the read path for history; this is
     /// the read path for one specific entry in it.
     version: Option<i32>,
+    /// Z6-T6: the file's 320 px thumbnail instead of the file (an image
+    /// only, once the background job has made it; 404 before that).
+    #[serde(default)]
+    thumbnail: bool,
 }
 
 // ── GET /api/v1/{entity}/{id}/files/{field}/download-url ──────────────────
@@ -1397,6 +1536,14 @@ async fn get_download_url(
         }
     };
 
+    // Z6-T6: the thumbnail, after the same record and field check.
+    let key = if params.thumbnail {
+        crate::thumbnail::thumbnail_of(&state, &key)
+            .await?
+            .ok_or(AppError::NotFound)?
+    } else {
+        key
+    };
     Ok(Json(
         record_file_download(&state, &entity_name, record_id, &field_name, &key).await?,
     ))
@@ -1945,6 +2092,25 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/{entity}/{id}/files/{field}/versions/{version_no}",
             delete(purge_file_version_route),
         )
+}
+
+#[cfg(test)]
+mod quota_tests {
+    use super::QuotaUse;
+
+    #[test]
+    fn a_cap_is_past_its_warning_share() {
+        let quota = |used| QuotaUse {
+            limit: "storage.max_deployment_storage_bytes",
+            scope: "deployment".into(),
+            used,
+            max: 1000,
+        };
+        assert!(!quota(799).past(80));
+        assert!(quota(800).past(80));
+        assert!(quota(1000).past(100));
+        assert!(!QuotaUse { max: 0, ..quota(5) }.past(80));
+    }
 }
 
 #[cfg(test)]

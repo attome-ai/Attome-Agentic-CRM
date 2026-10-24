@@ -670,6 +670,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - `POST /api/v1/query/changes` (AA7-T4): the records of one entity added, changed or removed since
   a signed cursor, as the caller may read them now. A record the caller can no longer read is
   listed in `removed` by id only.
+- Image thumbnails (Z6-T6): once a PNG, JPEG or WebP upload is scanned clean, a background job stores
+  a 320-pixel thumbnail beside it, and `GET /api/v1/{entity}/{id}/files/{field}/download-url?thumbnail=true`
+  returns a link to it after the same record and field check (404 until it exists). Migration 0244 adds
+  `upload_session.thumbnail_key`.
+- Storage caps per entity and a warning before any cap (Z6-T7): `storage.max_entity_storage_bytes`
+  (by entity logical name) refuses an upload that would pass the entity's cap with `413
+  limit_exceeded` naming the setting, beside the user and deployment caps; when a cap passes
+  `storage.quota_warning_pct` (80 by default), administrators are told once a day.
 - Cache and compression metrics (AA7-T9): `http_conditional_total{route, result}` counts reads sent with
   `If-None-Match` and whether they were answered 304; `http_response_bytes_total{area, encoding}` counts
   response bytes per API area before compression (`identity`) and as sent compressed, so their ratio is
