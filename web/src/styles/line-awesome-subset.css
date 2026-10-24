@@ -1,8 +1,8 @@
 /* GENERATED — do not edit. Run `npm run generate:icons` from angular/. */
-/* 176 of 1659 Line Awesome icons; weights: lab, las. */
+/* 178 of 1659 Line Awesome icons; weights: lab, las. */
 /* Source of truth: the la-* classes referenced under projects/ and src/. */
-@font-face{font-family:'Line Awesome Brands';font-style:normal;font-weight:400;font-display:swap;src:url(./fonts/la-brands-400-subset.woff2?v=b78d5ff89658) format("woff2")}
-@font-face{font-family:'Line Awesome Free';font-style:normal;font-weight:900;font-display:swap;src:url(./fonts/la-solid-900-subset.woff2?v=b78d5ff89658) format("woff2")}
+@font-face{font-family:'Line Awesome Brands';font-style:normal;font-weight:400;font-display:swap;src:url(./fonts/la-brands-400-subset.woff2?v=aa5792af5e78) format("woff2")}
+@font-face{font-family:'Line Awesome Free';font-style:normal;font-weight:900;font-display:swap;src:url(./fonts/la-solid-900-subset.woff2?v=aa5792af5e78) format("woff2")}
 .la,.lab,.lad,.lal,.lar,.las{-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;display:inline-block;font-style:normal;font-variant:normal;text-rendering:auto;line-height:1}.la-lg{font-size:1.33333em;line-height:.75em;vertical-align:-.0667em}.la-xs{font-size:.75em}.la-sm{font-size:.875em}.la-1x{font-size:1em}.la-2x{font-size:2em}.la-3x{font-size:3em}.la-4x{font-size:4em}.la-5x{font-size:5em}.la-6x{font-size:6em}.la-7x{font-size:7em}.la-8x{font-size:8em}.la-9x{font-size:9em}.la-10x{font-size:10em}.la-fw{text-align:center;width:1.25em}.la-ul{list-style-type:none;margin-left:2.5em;padding-left:0}.la-ul>li{position:relative}.la-li{left:-2em;position:absolute;text-align:center;width:2em;line-height:inherit}.la-border{border:solid .08em #eee;border-radius:.1em;padding:.2em .25em .15em}.la-pull-left{float:left}.la-pull-right{float:right}.la.la-pull-left,.lab.la-pull-left,.lal.la-pull-left,.lar.la-pull-left,.las.la-pull-left{margin-right:.3em}.la.la-pull-right,.lab.la-pull-right,.lal.la-pull-right,.lar.la-pull-right,.las.la-pull-right{margin-left:.3em}.la-spin{-webkit-animation:la-spin 2s infinite linear;animation:la-spin 2s infinite linear}.la-pulse{-webkit-animation:la-spin 1s infinite steps(8);animation:la-spin 1s infinite steps(8)}@-webkit-keyframes la-spin{0%{-webkit-transform:rotate(0);transform:rotate(0)}100%{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes la-spin{0%{-webkit-transform:rotate(0);transform:rotate(0)}100%{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}.la-rotate-90{-webkit-transform:rotate(90deg);transform:rotate(90deg)}.la-rotate-180{-webkit-transform:rotate(180deg);transform:rotate(180deg)}.la-rotate-270{-webkit-transform:rotate(270deg);transform:rotate(270deg)}.la-flip-horizontal{-webkit-transform:scale(-1,1);transform:scale(-1,1)}.la-flip-vertical{-webkit-transform:scale(1,-1);transform:scale(1,-1)}.la-flip-both,.la-flip-horizontal.la-flip-vertical{-webkit-transform:scale(-1,-1);transform:scale(-1,-1)}:root .la-flip-both,:root .la-flip-horizontal,:root .la-flip-vertical,:root .la-rotate-180,:root .la-rotate-270,:root .la-rotate-90{-webkit-filter:none;filter:none}.la-stack{display:inline-block;height:2em;line-height:2em;position:relative;vertical-align:middle;width:2.5em}.la-stack-1x,.la-stack-2x{left:0;position:absolute;text-align:center;width:100%}.la-stack-1x{line-height:inherit}.la-stack-2x{font-size:2em}.la-inverse{color:#fff}.sr-only{border:0;clip:rect(0,0,0,0);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;width:1px}.sr-only-focusable:active,.sr-only-focusable:focus{clip:auto;height:auto;margin:0;overflow:visible;position:static;width:auto}.lab{font-family:'Line Awesome Brands'}.lar{font-family:'Line Awesome Free';font-weight:400}.la,.las{font-family:'Line Awesome Free';font-weight:900}.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la.la
 .la-adjust:before{content:"\f042"}
 .la-align-left:before{content:"\f036"}
@@ -133,6 +133,7 @@
 .la-redo:before{content:"\f01e"}
 .la-remove-format:before{content:"\f87d"}
 .la-robot:before{content:"\f544"}
+.la-save:before{content:"\f0c7"}
 .la-search:before{content:"\f002"}
 .la-server:before{content:"\f233"}
 .la-share:before{content:"\f064"}
@@ -178,6 +179,7 @@
 .la-user-times:before{content:"\f235"}
 .la-users:before{content:"\f0c0"}
 .la-users-cog:before{content:"\f509"}
+.la-vial:before{content:"\f492"}
 .la-water:before{content:"\f773"}
 .la-wpforms:before{content:"\f298"}
 .la.la-clone{font-family:'Line Awesome Free';font-weight:400}

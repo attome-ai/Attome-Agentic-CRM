@@ -102,9 +102,14 @@ export type {
 // Basic Units U19 (M14/M18/M89) and U8 (M07) — the governance screens'
 // services. Exported from this `/data` entry point (D-314); the components
 // live in `@attome/xrm/core/admin/governance`.
-export { DataQualityService, QUALITY_DIMENSIONS } from './services/data-quality.service';
+export {
+  DataQualityService, QUALITY_DIMENSIONS, SCORE_DIMENSIONS, QUALITY_ISSUE_STATUSES,
+  RULE_DIMENSIONS, RULE_SEVERITIES, QUALITY_FIXES, MAX_FIX_RECORDS,
+} from './services/data-quality.service';
 export type {
   QualityScore, QualityIssue, QualityDimension, QualityIssueStatus, QualityIssueFilter,
+  QualityRule, QualityTarget, CreateQualityRule, UpdateQualityRule, PutQualityTarget,
+  QualityFixBody, QualityFixPreview, QualityFixSubmitted, QualityFixKind,
 } from './services/data-quality.service';
 export { DataCatalogService } from './services/data-catalog.service';
 export type {

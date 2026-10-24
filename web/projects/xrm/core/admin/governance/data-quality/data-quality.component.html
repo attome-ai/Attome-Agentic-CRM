@@ -22,9 +22,30 @@
   </div>
 </div>
 
+<div class="dq-tabs" role="tablist" [attr.aria-label]="'governance.quality.tabsLabel' | translate">
+  @for (t of tabs; track t) {
+    <button type="button" role="tab" class="dq-tab" [class.dq-tab--active]="tab() === t"
+            [attr.aria-selected]="tab() === t" [attr.data-tab]="t" (click)="setTab(t)">
+      {{ 'governance.quality.tabs.' + t | translate }}
+    </button>
+  }
+</div>
+
+@if (tab() === 'overview') {
 <!-- ── Scores ─────────────────────────────────────────────────────────── -->
 <section class="card" aria-labelledby="dq-scores-title">
   <h3 id="dq-scores-title">{{ 'governance.quality.scoresTitle' | translate }}</h3>
+  @if (dimensionCards().length > 0) {
+    <div class="dq-cards" data-dimension-cards>
+      @for (c of dimensionCards(); track c.dimension) {
+        <div class="dq-card" [class]="'dq-card dq-card--' + band(c.score)">
+          <span class="dq-card__label">{{ 'governance.quality.dimensions.' + c.dimension | translate }}</span>
+          <span class="dq-card__value">{{ c.score | localNumber: { maximumFractionDigits: 1 } }}%</span>
+          <span class="hint">{{ 'governance.quality.cardEntities' | translate: { count: c.entities } }}</span>
+        </div>
+      }
+    </div>
+  }
   @if (scoresLoading()) {
     <p class="state-msg">{{ 'governance.common.loading' | translate }}</p>
   } @else if (scoresError()) {
@@ -66,9 +87,11 @@
               <td class="cell-mono">{{ s.period }}</td>
               <td class="cell-muted">{{ s.computed_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</td>
               <td class="actions">
-                <button type="button" class="btn-sm" (click)="toggleTrend(s)" [attr.aria-expanded]="isTrendOpen(s)">
-                  <i class="las la-chart-line" aria-hidden="true"></i> {{ 'governance.quality.trend' | translate }}
-                </button>
+                @if (canTrend(s)) {
+                  <button type="button" class="btn-sm" (click)="toggleTrend(s)" [attr.aria-expanded]="isTrendOpen(s)">
+                    <i class="las la-chart-line" aria-hidden="true"></i> {{ 'governance.quality.trend' | translate }}
+                  </button>
+                }
               </td>
             </tr>
             @if (isTrendOpen(s)) {
@@ -122,6 +145,49 @@
   }
 </section>
 
+<section class="card" aria-labelledby="dq-attention-title">
+  <h3 id="dq-attention-title">{{ 'governance.quality.attentionTitle' | translate }}</h3>
+  <div class="dq-attention">
+    <div>
+      <h4>{{ 'governance.quality.belowTarget' | translate }}</h4>
+      @if (belowTarget().length === 0) {
+        <p class="state-msg">{{ 'governance.quality.noneBelowTarget' | translate }}</p>
+      } @else {
+        <ul class="dq-list" data-below-target>
+          @for (b of belowTarget(); track b.entity) {
+            <li>
+              <span class="cell-mono">{{ b.entity }}</span>
+              {{ 'governance.quality.versusTarget' | translate: { score: (b.score | localNumber: { maximumFractionDigits: 1 }), target: (b.threshold | localNumber) } }}
+            </li>
+          }
+        </ul>
+      }
+    </div>
+    <div>
+      <h4>{{ 'governance.quality.worstFields' | translate }}</h4>
+      @if (worstFields().length === 0) {
+        <p class="state-msg">{{ 'governance.quality.noOpenIssues' | translate }}</p>
+      } @else {
+        <ul class="dq-list" data-worst-fields>
+          @for (w of worstFields(); track w.field) {
+            <li><span class="cell-mono">{{ w.field }}</span> {{ 'governance.quality.openCount' | translate: { count: w.count } }}</li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+</section>
+}
+
+@if (tab() === 'rules') {
+  <xrm-quality-rules [entity]="entityFilter()" />
+}
+
+@if (tab() === 'fixes') {
+  <xrm-quality-fixes [entity]="entityFilter()" />
+}
+
+@if (tab() === 'issues') {
 <!-- ── Issues ─────────────────────────────────────────────────────────── -->
 <section class="card" aria-labelledby="dq-issues-title">
   <div class="section-header">
@@ -132,8 +198,9 @@
     <div class="gov-filters">
       <label for="dq-status">{{ 'governance.quality.status' | translate }}</label>
       <select id="dq-status" [ngModel]="issueStatus()" (ngModelChange)="setIssueStatus($event)">
-        <option value="open">{{ 'governance.quality.statuses.open' | translate }}</option>
-        <option value="resolved">{{ 'governance.quality.statuses.resolved' | translate }}</option>
+        @for (st of statuses; track st) {
+          <option [value]="st">{{ 'governance.quality.statuses.' + st | translate }}</option>
+        }
         <option value="">{{ 'governance.common.all' | translate }}</option>
       </select>
       <label for="dq-dimension">{{ 'governance.quality.dimension' | translate }}</label>
@@ -189,10 +256,34 @@
                 <span class="badge">{{ 'governance.quality.statuses.' + i.status | translate }}</span>
               </td>
               <td class="actions">
-                @if (i.status === 'open') {
+                @if (i.status !== 'resolved') {
+                  @if (i.status === 'open') {
+                    <button type="button" class="btn-sm" data-issue-start (click)="moveIssue(i, 'in_progress')" [disabled]="resolvingId() === i.id">
+                      {{ 'governance.quality.actions.start' | translate }}
+                    </button>
+                  }
+                  @if (i.status === 'open' || i.status === 'in_progress') {
+                    <button type="button" class="btn-sm" data-issue-fixed (click)="moveIssue(i, 'fixed')" [disabled]="resolvingId() === i.id">
+                      {{ 'governance.quality.actions.fixed' | translate }}
+                    </button>
+                    <button type="button" class="btn-sm" data-issue-accept (click)="moveIssue(i, 'accepted')" [disabled]="resolvingId() === i.id">
+                      {{ 'governance.quality.actions.accept' | translate }}
+                    </button>
+                  }
                   <button type="button" class="btn-sm" (click)="resolve(i)" [disabled]="resolvingId() === i.id">
                     <i class="las la-check" aria-hidden="true"></i> {{ 'governance.quality.resolve' | translate }}
                   </button>
+                  @if (acceptingId() === i.id) {
+                    <div class="dq-accept">
+                      <label [attr.for]="'dq-reason-' + i.id">{{ 'governance.quality.actions.reason' | translate }}</label>
+                      <input [id]="'dq-reason-' + i.id" type="text" maxlength="500"
+                             [ngModel]="acceptReason()" (ngModelChange)="acceptReason.set($event)" />
+                      <button type="button" class="btn-sm" data-issue-accept-confirm (click)="moveIssue(i, 'accepted')"
+                              [disabled]="!acceptReason().trim() || resolvingId() === i.id">
+                        {{ 'governance.quality.actions.confirmAccept' | translate }}
+                      </button>
+                    </div>
+                  }
                 }
               </td>
             </tr>
@@ -214,3 +305,4 @@
     }
   }
 </section>
+}

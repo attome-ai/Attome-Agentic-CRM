@@ -58,3 +58,108 @@
 .dq-trend__table {
   max-inline-size: 260px;
 }
+
+/* L2-T8: tabs, dimension cards, the attention lists, the rule and fix forms. */
+.dq-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-block: 12px;
+  border-block-end: 1px solid var(--color-border);
+}
+
+.dq-tab {
+  padding-block: 8px;
+  padding-inline: 14px;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.dq-tab--active {
+  border-block-end-color: var(--color-accent);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.dq-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-block-end: 16px;
+}
+
+.dq-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-inline-start-width: 4px;
+  border-radius: 8px;
+}
+
+.dq-card--good { border-inline-start-color: var(--color-success, #16a34a); }
+.dq-card--fair { border-inline-start-color: var(--color-warning, #d97706); }
+.dq-card--poor { border-inline-start-color: var(--color-danger, #dc2626); }
+
+.dq-card__label { color: var(--color-text-secondary); }
+.dq-card__value { font-size: 1.5rem; font-weight: 600; }
+
+.dq-attention {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.dq-list {
+  margin: 0;
+  padding-inline-start: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dq-accept {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-block-start: 6px;
+}
+
+.dq-rule-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px 14px;
+  align-items: end;
+  margin-block: 12px;
+}
+
+.dq-rule-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dq-rule-form__wide { grid-column: 1 / -1; }
+.dq-rule-form__actions { display: flex; gap: 8px; }
+
+.dq-check {
+  flex-direction: row !important;
+  align-items: center;
+}
+
+.dq-arrow {
+  margin-inline: 6px;
+  color: var(--color-text-secondary);
+}
+
+.dq-fix-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-block-start: 12px;
+}
