@@ -472,6 +472,7 @@ fn manual_link_is_marked_hand_and_audited() {
         assert_eq!(confidence, "hand");
         assert_eq!(note.as_deref(), Some("nightly customer export"));
         assert!(documented_by.is_some());
+        drain_audit(&db).await;
         let audited: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM audit_header \
               WHERE record_id = $1 AND event_name = 'lineage.manual_link_added'",
@@ -551,6 +552,7 @@ fn manual_link_is_marked_hand_and_audited() {
             .await
             .unwrap();
         assert_eq!(left, 0);
+        drain_audit(&db).await;
         let removed: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM audit_header \
               WHERE record_id = $1 AND event_name = 'lineage.manual_link_removed'",
@@ -561,4 +563,74 @@ fn manual_link_is_marked_hand_and_audited() {
         .unwrap();
         assert_eq!(removed, 1);
     })
+}
+
+/// L5-T9: a definition that reads an entity no longer there is listed as
+/// dangling, and two definitions that use each other as a cycle.
+#[test]
+fn cycle_and_dangling_reference_listed_in_cleanup() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_user(&system).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+
+        // Sorted first among dangling edges, which other tests leave too.
+        let gone = format!("aaa_gone_{}", Uuid::now_v7().simple());
+        let reader = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO metadata_reference                  (from_kind, from_ref, from_label, to_entity, to_attribute, edge_kind, confidence)              VALUES ('query', $1, 'Reads a dropped entity', $2, 'total', 'reads', 'parsed')",
+        )
+        .bind(reader)
+        .bind(&gone)
+        .execute(&db)
+        .await
+        .unwrap();
+        let (a, b) = (Uuid::now_v7(), Uuid::now_v7());
+        for (from, to) in [(a, b), (b, a)] {
+            sqlx::query(
+                "INSERT INTO metadata_reference                      (from_kind, from_ref, from_label, to_entity, to_attribute, to_kind, to_ref)                  VALUES ('metric', $1, 'Cycle metric', $2, '', 'metric', $3)",
+            )
+            .bind(from)
+            .bind(format!("metric:{to}"))
+            .bind(to)
+            .execute(&db)
+            .await
+            .unwrap();
+        }
+
+        let (status, cleanup) =
+            get_json(&app, "/api/v1/lineage/cleanup".into(), &admin_cookie).await;
+        assert_eq!(status, StatusCode::OK, "{cleanup}");
+        assert!(
+            cleanup["dangling"].as_array().unwrap().iter().any(|e| {
+                e["from"] == format!("query:{reader}")
+                    && e["to"].as_str().is_some_and(|t| t.contains(&gone))
+            }),
+            "the edge to the dropped entity is dangling: {cleanup}"
+        );
+        let (ka, kb) = (format!("metric:{a}"), format!("metric:{b}"));
+        assert!(
+            cleanup["cycles"].as_array().unwrap().iter().any(|c| {
+                let nodes: Vec<&str> = c
+                    .as_array()
+                    .map(|c| c.iter().filter_map(Value::as_str).collect())
+                    .unwrap_or_default();
+                nodes.contains(&ka.as_str()) && nodes.contains(&kb.as_str())
+            }),
+            "the two metrics form a cycle: {cleanup}"
+        );
+    })
+}
+
+/// Moves captured audit events into the chain, where `audit_header` holds them.
+async fn drain_audit(db: &attome_db::DbPool) {
+    for _ in 0..20 {
+        let done = attome_audit::chainer::run_once(db, None, 1000, None)
+            .await
+            .expect("chain the captured audit events");
+        if done.is_empty() {
+            break;
+        }
+    }
 }
