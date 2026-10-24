@@ -11,6 +11,7 @@ import { RecordAccessActionsComponent } from '../../record-access/record-access-
 import { RecordTabPanelsComponent } from '../../record-tabs/record-tab-panels.component';
 import { RemindMeComponent } from '../../reminders/remind-me.component';
 import { FollowButtonComponent } from '../../follow-button/follow-button.component';
+import { RecordCodeComponent } from '../../record-code/record-code.component';
 import { RecordTagsComponent } from '../../record-tags/record-tags.component';
 import { RecordAncestorsComponent } from '../../record-tree/record-ancestors.component';
 import { StageBarComponent } from '../../stage-bar/stage-bar.component';
@@ -63,7 +64,7 @@ import { XrmTabDirective } from './xrm-tab.directive';
     NgTemplateOutlet, TranslatePipe, DuplicateBannerComponent, PredictionBannerComponent,
     RecordChangedBannerComponent, ConflictDialogComponent, PendingTimersComponent,
     RecordAccessActionsComponent, RecordTabPanelsComponent, RemindMeComponent, FollowButtonComponent, RecordTagsComponent,
-    StageBarComponent,
+    StageBarComponent, RecordCodeComponent,
   ],
   styleUrls: ['../../../../styles/xrm-form.css', './xrm-base-form.component.css'],
   templateUrl: './xrm-base-form.component.html',

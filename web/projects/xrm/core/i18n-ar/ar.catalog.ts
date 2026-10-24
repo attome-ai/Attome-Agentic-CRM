@@ -2228,6 +2228,17 @@ export const xrmAr = {
     deviations: '{count, plural, zero {لا أقسام تخالف مكتبة البنود} one {قسم واحد يخالف مكتبة البنود} two {قسمان يخالفان مكتبة البنود} few {# أقسام تخالف مكتبة البنود} many {# قسمًا يخالف مكتبة البنود} other {# قسم يخالف مكتبة البنود}}',
     status: { changed: 'مُعدَّل', added: 'مُضاف', removed: 'محذوف' },
   },
+  recordCode: {
+    show: 'عرض الرمز',
+    title: 'رمز هذا السجل',
+    what: 'رمز لـ',
+    link: 'رابط إلى هذا السجل (QR)',
+    kind: 'النوع',
+    kinds: { qr: 'رمز QR', code128: 'Code 128', ean13: 'EAN-13', datamatrix: 'Data Matrix' },
+    alt: 'الرمز',
+    download: 'تنزيل',
+    cannot: 'لا يمكن رسم هذه القيمة بهذا النوع من الرموز.',
+  },
   salesCommittee: {
     title: 'لجنة الشراء',
     influence: 'التأثير',

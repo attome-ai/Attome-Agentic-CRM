@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { LangService, LocalNumberPipe, TranslatePipe } from '@attome/base';
+import { LangService, TranslatePipe } from '@attome/base';
 import type { ApiError } from '@attome/base';
 import {
   DataQualityService, MAX_FIX_RECORDS, QUALITY_FIXES,
@@ -23,7 +23,7 @@ const ISSUE_PAGE = 200;
   selector: 'xrm-quality-fixes',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, LocalNumberPipe, TranslatePipe],
+  imports: [FormsModule, TranslatePipe],
   styleUrls: ['../../../../styles/admin-page.css', '../governance.css', './data-quality.component.css'],
   template: `
     <section class="card" aria-labelledby="dq-fixes-title">

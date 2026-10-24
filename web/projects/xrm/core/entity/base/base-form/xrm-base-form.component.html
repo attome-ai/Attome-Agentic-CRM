@@ -46,6 +46,9 @@
           <xrm-remind-me [entity]="f.name()" [recordId]="recordId" />
           <!-- C2-T2 — follow the record's changes. -->
           <xrm-follow-button [entity]="f.name()" [recordId]="recordId" />
+          <!-- B16-T11 — a QR code of the record's link, or a barcode of a value. -->
+          <xrm-record-code [entity]="f.name()" [recordId]="recordId" [fields]="schema.fields" [values]="f.recordValue()"
+                           data-advanced />
           <!-- B7-T3 — a copy through the ordinary create. -->
           @if (!readOnly()) {
             <button type="button" class="xf-btn xf-btn-secondary" data-testid="entity-duplicate" data-advanced

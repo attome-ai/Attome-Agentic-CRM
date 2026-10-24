@@ -6,6 +6,7 @@
     "@angular/common": "^22.0.0",
     "@angular/core":   "^22.0.0",
     "@angular/router": "^22.0.0",
+    "bwip-js":         "4.11.4",
     "@jsverse/transloco":             "^8.4.0",
     "@jsverse/transloco-messageformat": "^8.4.0",
     "rxjs":            "~7.8.0",

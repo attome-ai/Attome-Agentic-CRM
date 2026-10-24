@@ -32,6 +32,8 @@ export { NotesPanelComponent }          from './notes/notes-panel.component';
 // U4 (D-602) — "Remind me" on the record form header.
 export { RemindMeComponent, REMINDER_ENTITY } from './reminders/remind-me.component';
 export { FollowButtonComponent, FOLLOW_ENTITY } from './follow-button/follow-button.component';
+// B16-T11 — record codes; the `/r/{entity}/{id}` route is the host app's.
+export { RecordCodeComponent, recordLink } from './record-code/record-code.component';
 export { FollowingListComponent } from './follow-button/following-list.component';
 // U7 Phase A — admin-only Assign / Share on the record form header and the
 // list's bulk bar. Only the button pair is exported; its dialog is deferred

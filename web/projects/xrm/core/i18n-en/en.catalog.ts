@@ -2226,7 +2226,7 @@ export const xrmEn = {
   },
   apiUsage: {
     title: 'API usage',
-    subtitle: 'Requests per API key and per route, from the nightly count, and each key's own limit.',
+    subtitle: 'Requests per API key and per route, from the nightly count, and the limit on each key.',
     window: 'Period',
     days: '{count, plural, one {Last day} other {Last # days}}',
     loading: 'Loading…',
@@ -2305,6 +2305,17 @@ export const xrmEn = {
     deviationHint: 'Unlike the standard text and every fallback of clause {key}',
     deviations: '{count, plural, one {# section departs from the clause library} other {# sections depart from the clause library}}',
     status: { changed: 'Changed', added: 'Added', removed: 'Removed' },
+  },
+  recordCode: {
+    show: 'Show code',
+    title: 'Code for this record',
+    what: 'Code of',
+    link: 'A link to this record (QR)',
+    kind: 'Kind',
+    kinds: { qr: 'QR code', code128: 'Code 128', ean13: 'EAN-13', datamatrix: 'Data Matrix' },
+    alt: 'The code',
+    download: 'Download',
+    cannot: 'This value cannot be drawn as that kind of code.',
   },
   salesCommittee: {
     title: 'Buying committee',

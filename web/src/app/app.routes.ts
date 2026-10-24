@@ -3,6 +3,7 @@ import { CanActivateFn, Router, Routes } from '@angular/router';
 import { map } from 'rxjs';
 import { AuthService, authGuard, layerCatalogsReady } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { RECORD_LINK_ROUTE } from './record-link.route';
 
 // Same rule as `authGuard`: wait for the one session bootstrap before
 // branching, so /xrm never sends a logged-in user to the login page merely
@@ -127,6 +128,8 @@ export const routes: Routes = [
     canActivate: [layerCatalogsReady],
     loadComponent: () => import('@attome/xrm/portal/esign').then(m => m.SignPageComponent),
   },
+  // B16-T11: a record's QR link, `/r/{entity}/{id}`: sign in, then the record.
+  RECORD_LINK_ROUTE,
   {
     // G13-T2: a web portal's community (forum and ideas) for its signed-in
     // portal users. Public route; the portal's own session authorizes every
