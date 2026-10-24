@@ -221,13 +221,13 @@ async fn distribute(
         .map(|d| state.settings.load().resolve(d, None, None).0)
         .unwrap_or(Value::Null);
     if certified_only(&setting, entity)
-        && super::steward::certification(&mut **tx, entity, golden).await?
+        && super::steward::certification(tx, entity, golden).await?
             != super::steward::Certification::Certified
     {
         return Ok(());
     }
     attome_core::change_feed::emit_with(
-        &mut **tx,
+        tx,
         entity,
         golden,
         attome_core::change_feed::ChangeOperation::Update,

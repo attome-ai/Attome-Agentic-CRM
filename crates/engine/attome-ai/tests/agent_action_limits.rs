@@ -26,6 +26,7 @@ use std::sync::Arc;
 
 use attome_ai::context::ActionContext;
 use attome_ai::descriptor::{ActionId, RiskTier};
+use attome_ai::registry::ActionRegistry;
 use attome_ai::session::{self, AgentSession, SessionStart, WriteReservation};
 use attome_config::AppConfig;
 use attome_core::EngineState;

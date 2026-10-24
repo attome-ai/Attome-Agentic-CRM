@@ -96,7 +96,7 @@ pub fn saudi_id_checksum(digits: &str) -> bool {
             }
         })
         .sum();
-    sum % 10 == 0
+    sum.is_multiple_of(10)
 }
 
 /// The ISO 13616 check: the IBAN, its first four characters moved to the

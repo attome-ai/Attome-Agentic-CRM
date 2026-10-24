@@ -305,6 +305,11 @@
   "retention": {
     "_comment": "P-retention-archive-completion — partition archive/drop, entity purge and legal hold. Development default: every window unset (keep forever), dry_run on, legal_hold off (BCF-12 adds this block so the dev template carries every section)."
   },
+  "residency": {
+    "_comment": "R7-T1 — where data may live: allowed_regions (empty for no rule) and per-component region overrides, checked at boot against what each component's own configuration declares.",
+    "allowed_regions": [],
+    "components": {}
+  },
   "idempotency": {
     "_comment": "P-idempotency-hardening §4.4/§4.5 — the durable-tier mandatory-operation policy. Empty by default (opt-in); under app.deployment_profile = \"production\" server::boot::validate_operation_registries additionally requires every xrm_server::bulk::MANDATORY_TIER_OPERATIONS entry to be listed here."
   },

@@ -372,6 +372,7 @@ const PATTERNS: &[&str] = &[
 ];
 
 /// `revenue_contract.update`: who combines contracts (the revenue accountant).
+#[derive(Debug)]
 pub struct RevenueContractUpdate;
 
 impl PrivilegeKey for RevenueContractUpdate {

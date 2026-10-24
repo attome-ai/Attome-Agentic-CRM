@@ -735,7 +735,7 @@ fn export_token_handover_has_no_gap() {
         let record_id: Uuid = record["id"].as_str().unwrap().parse().unwrap();
 
         // A write still running when the export's snapshot is taken.
-        let mut during = db.begin().await.unwrap();
+        let mut during = attome_db::tx::begin(&db).await.unwrap();
         let during_id: Uuid = sqlx::query_scalar(
             "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) \
              VALUES ($1, $2, 'update') RETURNING id",
@@ -749,7 +749,7 @@ fn export_token_handover_has_no_gap() {
             .fetch_one(&db)
             .await
             .unwrap();
-        during.commit().await.unwrap();
+        attome_db::tx::commit(during).await.unwrap();
         // A write after the export.
         let after_id: Uuid = sqlx::query_scalar(
             "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) \

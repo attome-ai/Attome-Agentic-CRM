@@ -35,6 +35,16 @@ pub struct SapB1Client<'a> {
     cookie: Option<String>,
 }
 
+impl std::fmt::Debug for SapB1Client<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SapB1Client")
+            .field("base_url", &self.base_url)
+            .field("company_db", &self.company_db)
+            .field("username", &self.username)
+            .finish_non_exhaustive()
+    }
+}
+
 /// The session cookie (`B1SESSION=...; ROUTEID=...`) of a login answer.
 pub fn session_cookie(answer: &Response) -> Option<String> {
     let parts: Vec<String> = answer
@@ -311,8 +321,11 @@ mod tests {
         seen: Mutex<Vec<Request>>,
     }
 
+    /// A canned answer: status, body and headers.
+    type Answer<'a> = (u16, Value, Vec<(&'a str, &'a str)>);
+
     impl Fixture {
-        fn new(answers: Vec<(u16, Value, Vec<(&str, &str)>)>) -> Self {
+        fn new(answers: Vec<Answer<'_>>) -> Self {
             Fixture {
                 answers: Mutex::new(
                     answers

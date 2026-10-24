@@ -230,9 +230,9 @@ mod tests {
         assert_eq!(last, serde_json::json!({ "items": [] }));
         let more = serde_json::to_value(MyWorkPage::new(Vec::new(), Some("c1".into())))
             .expect("serialize");
-        assert_eq!(
-            more,
-            serde_json::json!({ "items": [], "next_cursor": "c1" })
-        );
+        assert_eq!(more["items"], serde_json::json!([]));
+        // Z14-T5: the cursor goes out sealed and opens back to what was sent.
+        let sent = more["next_cursor"].as_str().expect("a cursor");
+        assert_eq!(attome_types::cursor::open(sent).expect("opens"), "c1");
     }
 }

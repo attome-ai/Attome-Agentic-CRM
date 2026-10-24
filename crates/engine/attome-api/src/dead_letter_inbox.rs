@@ -251,7 +251,7 @@ async fn list_items(
     if let Some(group) = q.group.as_deref() {
         items.retain(|i| i.cause_group == group);
     }
-    items.sort_by(|a, b| b.first_seen.cmp(&a.first_seen));
+    items.sort_by_key(|b| std::cmp::Reverse(b.first_seen));
     let total = items.len() as i64;
     let page_items = items
         .into_iter()

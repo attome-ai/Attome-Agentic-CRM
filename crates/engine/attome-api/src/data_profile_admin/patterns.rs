@@ -82,11 +82,14 @@ fn date_year(value: &str) -> Option<(u32, bool)> {
     Some((year, value.contains("هـ")))
 }
 
+/// A check of a value against an attribute's declared format.
+pub type FormatCheck = Box<dyn Fn(&str) -> bool + Send + Sync>;
+
 /// One text attribute's shapes and Arabic measures.
 pub struct PatternStats {
     shapes: HashMap<String, u64>,
     values: u64,
-    format: Option<Box<dyn Fn(&str) -> bool + Send + Sync>>,
+    format: Option<FormatCheck>,
     matched: u64,
     name_like: bool,
     arabic: u64,
@@ -111,7 +114,7 @@ impl std::fmt::Debug for PatternStats {
 impl PatternStats {
     /// `format` checks a value against the attribute's declared format;
     /// `name_like` counts name parts.
-    pub fn new(format: Option<Box<dyn Fn(&str) -> bool + Send + Sync>>, name_like: bool) -> Self {
+    pub fn new(format: Option<FormatCheck>, name_like: bool) -> Self {
         PatternStats {
             shapes: HashMap::new(),
             values: 0,

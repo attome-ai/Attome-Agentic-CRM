@@ -40,6 +40,16 @@ pub struct OdooClient<'a> {
     calls: u64,
 }
 
+impl std::fmt::Debug for OdooClient<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OdooClient")
+            .field("url", &self.url)
+            .field("database", &self.database)
+            .field("username", &self.username)
+            .finish_non_exhaustive()
+    }
+}
+
 impl<'a> OdooClient<'a> {
     pub fn new(
         url: &str,

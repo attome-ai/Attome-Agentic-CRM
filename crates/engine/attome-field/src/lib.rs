@@ -399,10 +399,13 @@ fn validate_multi_file(value: &Value) -> Result<(), AppError> {
     Ok(())
 }
 
+/// A predicate over a text value, as [`format_matcher`] returns it.
+pub type FormatMatcher = Box<dyn Fn(&str) -> bool + Send + Sync>;
+
 /// L6-T3: a checker of an attribute's declared format (`options.pattern`,
 /// the same anchored full match writes are held to), for profiling; `None`
 /// without a pattern or with one that does not compile.
-pub fn format_matcher(options: Option<&Value>) -> Option<Box<dyn Fn(&str) -> bool + Send + Sync>> {
+pub fn format_matcher(options: Option<&Value>) -> Option<FormatMatcher> {
     let pattern = options?
         .get("pattern")?
         .as_str()

@@ -43,7 +43,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, patch},
+    routing::{get, patch, post},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -499,6 +499,7 @@ pub struct ReadQuery {
 }
 
 /// A stream read's outcome.
+#[derive(Debug)]
 pub enum Read {
     Page(StreamPage),
     /// The cursor's events are gone, or the subscription ended.
@@ -1068,7 +1069,7 @@ pub struct ErasureConfirmations {
     path = "/api/v1/change-stream/{subscription}/erasure-confirmations",
     operation_id = "change_stream_confirm_erasures",
     tag = "integration",
-    params(("subscription" = Uuid, Path)),
+    params(("subscription" = Uuid, Path, description = "The caller's change-stream subscription")),
     request_body = ErasureConfirmationBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, AuditOperation::Update)])))),
     responses(
@@ -1157,6 +1158,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/change-stream/{subscription}/sse",
             get(stream_events),
+        )
+        .route(
+            "/api/v1/change-stream/{subscription}/erasure-confirmations",
+            post(confirm_erasures),
         )
 }
 

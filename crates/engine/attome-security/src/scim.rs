@@ -959,8 +959,11 @@ async fn delete_user(
 
 // ── Groups ───────────────────────────────────────────────────────────────
 
+/// A team's name, SCIM external id, and created and updated times.
+type GroupRow = (String, Option<String>, DateTime<Utc>, DateTime<Utc>);
+
 async fn group_json(state: &EngineState, id: Uuid) -> Result<Value, AppError> {
-    let row: Option<(String, Option<String>, DateTime<Utc>, DateTime<Utc>)> = sqlx::query_as(
+    let row: Option<GroupRow> = sqlx::query_as(
         "SELECT name, scim_external_id, created_at, updated_at FROM team \
           WHERE id = $1 AND NOT is_deleted",
     )

@@ -125,6 +125,7 @@ pub async fn ingest(
 }
 
 /// A valid contribution about to be attached.
+#[derive(Debug)]
 pub struct Pending<'a> {
     pub contribution: Uuid,
     /// The golden record it was attached to before, if any.

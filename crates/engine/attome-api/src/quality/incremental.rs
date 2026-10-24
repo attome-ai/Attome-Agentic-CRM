@@ -475,17 +475,29 @@ mod tests {
     fn quality_fingerprint_changes_with_rules_and_weights_only() {
         let rule = (Uuid::nil(), "validity".to_owned(), "amount >= 0".to_owned());
         let target = (json!({"validity": 2, "completeness": 1}), 70.0, None, false);
-        let a = fingerprint(&["b".into(), "a".into()], &[rule.clone()], Some(&target));
+        let a = fingerprint(
+            &["b".into(), "a".into()],
+            std::slice::from_ref(&rule),
+            Some(&target),
+        );
         let reordered = (json!({"completeness": 1, "validity": 2}), 70.0, None, false);
         assert_eq!(
             a,
-            fingerprint(&["a".into(), "b".into()], &[rule.clone()], Some(&reordered)),
+            fingerprint(
+                &["a".into(), "b".into()],
+                std::slice::from_ref(&rule),
+                Some(&reordered)
+            ),
             "order does not matter"
         );
         let heavier = (json!({"validity": 3, "completeness": 1}), 70.0, None, false);
         assert_ne!(
             a,
-            fingerprint(&["a".into(), "b".into()], &[rule.clone()], Some(&heavier))
+            fingerprint(
+                &["a".into(), "b".into()],
+                std::slice::from_ref(&rule),
+                Some(&heavier)
+            )
         );
         let other_rule = (Uuid::nil(), "validity".to_owned(), "amount > 0".to_owned());
         assert_ne!(

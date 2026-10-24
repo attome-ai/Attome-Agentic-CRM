@@ -285,6 +285,12 @@ pub trait Transport: Send + Sync {
 /// The deployment's transport: the SSRF-guarded client.
 pub struct GuardedTransport(pub attome_server::ssrf_guard::GuardedClient);
 
+impl std::fmt::Debug for GuardedTransport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GuardedTransport").finish_non_exhaustive()
+    }
+}
+
 impl Transport for GuardedTransport {
     fn send<'a>(&'a self, request: Request) -> BoxFuture<'a, Response> {
         Box::pin(async move {
@@ -442,6 +448,12 @@ pub struct Runtime<'a> {
     pub secret: Option<Secret>,
     limiter: Option<Limiter>,
     token: Option<String>,
+}
+
+impl std::fmt::Debug for Runtime<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Runtime").finish_non_exhaustive()
+    }
 }
 
 impl<'a> Runtime<'a> {
@@ -764,8 +776,11 @@ mod tests {
         seen: Mutex<Vec<Request>>,
     }
 
+    /// A canned answer: status, body and headers.
+    type Answer<'a> = (u16, Value, Vec<(&'a str, &'a str)>);
+
     impl Mock {
-        fn new(answers: Vec<(u16, Value, Vec<(&str, &str)>)>) -> Self {
+        fn new(answers: Vec<Answer<'_>>) -> Self {
             Mock {
                 answers: Mutex::new(
                     answers

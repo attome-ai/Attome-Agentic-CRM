@@ -139,13 +139,15 @@ pub async fn known_before_provider(state: &EngineState, record: &Value) -> bool 
 
 /// Suggests an account for one new lead; whether it did.
 async fn suggest_for_lead(state: &EngineState, lead: Uuid) -> Result<bool, AppError> {
-    let row: Option<(
+    /// email, converted_account_ref, suggested_account_ref, owner_ref, row_version.
+    type LeadRow = (
         Option<String>,
         Option<Uuid>,
         Option<Uuid>,
         Option<Uuid>,
         i64,
-    )> = sqlx::query_as(
+    );
+    let row: Option<LeadRow> = sqlx::query_as(
         "SELECT email, converted_account_ref, suggested_account_ref, owner_ref, row_version \
                FROM lead WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
     )

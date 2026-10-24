@@ -53,6 +53,7 @@ mod pii;
 /// L6-T6: reading data profiles (and profiling a staged import) without
 /// `system.admin`: a holder reads the profiles of entities they may read,
 /// without the attributes their field security hides.
+#[derive(Debug)]
 pub struct MetadataRead;
 
 impl PrivilegeKey for MetadataRead {
@@ -246,10 +247,11 @@ async fn list_profiles(
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    let items: Vec<DataProfileRow> = items
-        .into_iter()
-        .map(|row| hide_unreadable(&state, &ctx, row))
-        .collect();
+    let mut shown = Vec::with_capacity(items.len());
+    for row in items {
+        shown.push(hide_unreadable(&state, &ctx, row).await);
+    }
+    let items = shown;
 
     let total: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM data_profile \
@@ -297,12 +299,15 @@ async fn get_profile(
     if ctx.require(&row.entity_logicalname, "read").is_err() {
         return Err(AppError::NotFound);
     }
-    Ok(Json(hide_unreadable(&state, &ctx, row)))
+    Ok(Json(hide_unreadable(&state, &ctx, row).await))
 }
 
-/// L6-T6: drops the field summaries of sensitive attributes the caller has
-/// no field-read grant on.
-fn hide_unreadable(
+/// L6-T6: keeps only the field summaries of attributes the caller may read:
+/// a sensitive attribute needs a field-read grant. The attributes come from
+/// the registry, and from the database when the registry does not know a
+/// summarised field yet (just added). A field neither knows is dropped:
+/// fail closed rather than show a column nobody checked.
+async fn hide_unreadable(
     state: &EngineState,
     ctx: &SecurityContext,
     mut row: DataProfileRow,
@@ -310,26 +315,36 @@ fn hide_unreadable(
     if ctx.is_admin {
         return row;
     }
-    let registry = state.entities.load();
-    let hidden: std::collections::HashSet<String> = registry
-        .get(&row.entity_logicalname)
-        .map(|meta| {
-            meta.attrs
-                .iter()
-                .filter(|a| {
-                    a.is_sensitive && !ctx.has_field_read_grant(&meta.logicalname, &a.logicalname)
-                })
-                .map(|a| a.logicalname.clone())
-                .collect()
-        })
+    let entity = row.entity_logicalname.clone();
+    let Value::Array(fields) = &mut row.fields else {
+        return row;
+    };
+    let names: Vec<String> = fields
+        .iter()
+        .filter_map(|f| f["field"].as_str().map(str::to_owned))
+        .collect();
+    let mut attrs = state
+        .entities
+        .load()
+        .get(&entity)
+        .map(|meta| meta.attrs.clone())
         .unwrap_or_default();
-    if let Value::Array(fields) = &mut row.fields {
-        fields.retain(|f| {
-            f["field"]
-                .as_str()
-                .is_none_or(|name| !hidden.contains(name))
-        });
+    if names
+        .iter()
+        .any(|n| !attrs.iter().any(|a| &a.logicalname == n))
+        && let Ok((_, _, fresh, _)) =
+            entity_crud::resolve_entity_from_db(&state.base.db, &entity).await
+    {
+        attrs = fresh;
     }
+    fields.retain(|f| {
+        f["field"].as_str().is_some_and(|name| {
+            attrs.iter().any(|a| {
+                a.logicalname == name
+                    && (!a.is_sensitive || ctx.has_field_read_grant(&entity, &a.logicalname))
+            })
+        })
+    });
     row
 }
 
@@ -478,12 +493,24 @@ async fn process_file(
             return Ok(());
         }
     };
-    let registry = state.entities.load();
-    let attrs: Vec<attome_core::AttrInfo> = registry
+    let mut attrs: Vec<attome_core::AttrInfo> = state
+        .entities
+        .load()
         .get(entity)
         .map(|m| m.attrs.clone())
         .unwrap_or_default();
-    drop(registry);
+    // A column the registry does not know yet (an attribute just added) is
+    // looked up in the database, so its label still decides its masking.
+    let unknown = rows
+        .iter()
+        .flat_map(|r| r.as_object().into_iter().flat_map(|m| m.keys()))
+        .any(|k| !attrs.iter().any(|a| &a.logicalname == k));
+    if unknown
+        && let Ok((_, _, fresh, _)) =
+            entity_crud::resolve_entity_from_db(&state.base.db, entity).await
+    {
+        attrs = fresh;
+    }
     let (columns, fields) = profile_rows(&rows, &attrs);
     let total: i64 = sqlx::query_scalar("SELECT count(*) FROM import_stage WHERE job_id = $1")
         .bind(import_job)
@@ -510,7 +537,8 @@ async fn process_file(
 
 /// L6-T6: the field summaries of staged rows, one per column (the union of
 /// the rows' keys, at most 500), with an attribute of the same name's label
-/// deciding the masking; and the column count.
+/// deciding the masking (a column no attribute names is masked: nothing says
+/// it is safe to show); and the column count.
 fn profile_rows(rows: &[Value], attrs: &[attome_core::AttrInfo]) -> (usize, Vec<Value>) {
     let mut columns: Vec<String> = Vec::new();
     for row in rows {
@@ -553,7 +581,7 @@ fn profile_rows(rows: &[Value], attrs: &[attome_core::AttrInfo]) -> (usize, Vec<
                 };
                 stats.push(text.as_deref());
             }
-            stats.finish(column, shape_of, attr.is_some_and(is_labelled))
+            stats.finish(column, shape_of, attr.is_none_or(is_labelled))
         })
         .collect();
     (columns.len(), fields)

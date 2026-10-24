@@ -150,11 +150,14 @@ struct FlowRow {
     records: i64,
 }
 
+/// One stage's duration row: its counts and its two duration measures.
+pub type StageDurations = (i64, i64, Option<f64>, Option<f64>);
+
 /// The per-stage measures from the duration and flow rows, in the
 /// process's stage order.
 pub fn assemble(
     stages: &[Value],
-    durations: &HashMap<String, (i64, i64, Option<f64>, Option<f64>)>,
+    durations: &HashMap<String, StageDurations>,
     flows: &HashMap<(String, Option<String>), i64>,
 ) -> Vec<StageMetric> {
     let codes: Vec<&str> = stages.iter().filter_map(|s| s["code"].as_str()).collect();

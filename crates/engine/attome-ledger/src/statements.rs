@@ -242,13 +242,15 @@ async fn accounts(state: &EngineState) -> Result<Vec<Account>, AppError> {
     if !ready {
         return Err(AppError::NotFound);
     }
-    let rows: Vec<(
+    /// id, code, name, name_ar, account_type.
+    type AccountRow = (
         Uuid,
         Option<String>,
         Option<String>,
         Option<String>,
         Option<String>,
-    )> = sqlx::query_as(
+    );
+    let rows: Vec<AccountRow> = sqlx::query_as(
         "SELECT id, code, name, name_ar, account_type FROM gl_account \
               WHERE is_active IS NULL OR is_active",
     )

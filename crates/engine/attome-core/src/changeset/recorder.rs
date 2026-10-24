@@ -413,6 +413,46 @@ async fn insert_automatic(
     Ok(id)
 }
 
+/// L7-T6: the schema operations a change stream reports.
+pub const SCHEMA_EVENT_OPS: &[Op] = &[
+    Op::CreateEntity,
+    Op::UpdateEntity,
+    Op::RetireEntity,
+    Op::AddField,
+    Op::UpdateField,
+    Op::RenameField,
+    Op::ChangeFieldType,
+    Op::AddChoiceValue,
+    Op::RemoveChoiceValue,
+    Op::DeleteField,
+];
+
+/// L7-T6: writes `op` to `schema_change_event` (migration 0225) when it
+/// changes an entity or attribute: the entity, the operation, the attribute,
+/// never a value.
+async fn write_schema_event(tx: &mut Tx<'_>, op: &RecordedOp) -> Result<(), AppError> {
+    if !SCHEMA_EVENT_OPS.contains(&op.op) {
+        return Ok(());
+    }
+    let Some(entity) = op.target.get("entity").and_then(serde_json::Value::as_str) else {
+        return Ok(());
+    };
+    let field = op.target.get("field").and_then(serde_json::Value::as_str);
+    sqlx::query(
+        "INSERT INTO schema_change_event (entity_logicalname, change, object_kind, object_ref, field) \
+         VALUES ($1, $2, $3, $4, $5)",
+    )
+    .bind(entity)
+    .bind(op.op.as_str())
+    .bind(op.object_kind)
+    .bind(op.object_ref)
+    .bind(field)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::store::{is_valid_name, is_valid_scope};
@@ -484,44 +524,4 @@ mod tests {
         assert_eq!(Recording::Seed.stamp().ok(), Some(Layer::Platform));
         assert!(Recording::Seed.check_owner(Layer::Project).is_ok());
     }
-}
-
-/// L7-T6: the schema operations a change stream reports.
-pub const SCHEMA_EVENT_OPS: &[Op] = &[
-    Op::CreateEntity,
-    Op::UpdateEntity,
-    Op::RetireEntity,
-    Op::AddField,
-    Op::UpdateField,
-    Op::RenameField,
-    Op::ChangeFieldType,
-    Op::AddChoiceValue,
-    Op::RemoveChoiceValue,
-    Op::DeleteField,
-];
-
-/// L7-T6: writes `op` to `schema_change_event` (migration 0225) when it
-/// changes an entity or attribute: the entity, the operation, the attribute,
-/// never a value.
-async fn write_schema_event(tx: &mut Tx<'_>, op: &RecordedOp) -> Result<(), AppError> {
-    if !SCHEMA_EVENT_OPS.contains(&op.op) {
-        return Ok(());
-    }
-    let Some(entity) = op.target.get("entity").and_then(serde_json::Value::as_str) else {
-        return Ok(());
-    };
-    let field = op.target.get("field").and_then(serde_json::Value::as_str);
-    sqlx::query(
-        "INSERT INTO schema_change_event (entity_logicalname, change, object_kind, object_ref, field) \
-         VALUES ($1, $2, $3, $4, $5)",
-    )
-    .bind(entity)
-    .bind(op.op.as_str())
-    .bind(op.object_kind)
-    .bind(op.object_ref)
-    .bind(field)
-    .execute(&mut **tx)
-    .await
-    .map_err(AppError::internal)?;
-    Ok(())
 }

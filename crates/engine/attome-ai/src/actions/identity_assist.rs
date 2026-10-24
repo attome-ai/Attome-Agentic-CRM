@@ -94,8 +94,11 @@ pub struct Metadata {
     pub certificate_sha256: Option<String>,
 }
 
+/// A tag's local name, its attributes, and where it starts and ends.
+type Tag = (String, Vec<(String, String)>, usize, usize);
+
 /// One tag's local name and attributes, from `<prefix:Name a="1" b='2'>`.
-fn tags(xml: &str) -> Vec<(String, Vec<(String, String)>, usize, usize)> {
+fn tags(xml: &str) -> Vec<Tag> {
     let mut out = Vec::new();
     let mut i = 0;
     while let Some(open) = xml[i..].find('<').map(|p| p + i) {
@@ -118,7 +121,7 @@ fn tags(xml: &str) -> Vec<(String, Vec<(String, String)>, usize, usize)> {
             .unwrap_or_default()
             .to_owned();
         let mut attrs = Vec::new();
-        let rest = inner[name_end..].as_bytes();
+        let rest = &inner.as_bytes()[name_end..];
         let mut j = 0;
         while j < rest.len() {
             while j < rest.len() && (rest[j] as char).is_whitespace() {
