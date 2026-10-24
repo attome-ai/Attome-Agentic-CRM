@@ -8,6 +8,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Per-key API quotas (S10-T1): an administrator sets an API key's own requests-per-minute budget
+  (`PUT /api/v1/admin/api-keys/{id}/quota`, a configuration audit event; `null` clears it), and the
+  rate limiter refuses the key's request past it with `429` (`RateLimit-Policy: api_key_quota`) on any
+  route, on top of the per-category limits. `GET /api/v1/admin/api-keys` lists every key with its
+  owner, quota and requests over a window; the new API usage screen (`/xrm/admin/api-usage`) shows
+  both and the most requested routes. Migration 0243 adds `api_key.requests_per_minute`.
 - Signed gate reports (AC4-T9): `attome-release tag` signs each operating system's gate report with
   the release key (`COSIGN_KEY`, refused when it lies inside the working tree) into `gate-<os>.json.sig`
   and verifies it against `deploy/cosign.pub`, offline; a missing key or a failed signature refuses

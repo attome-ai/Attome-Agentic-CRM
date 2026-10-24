@@ -119,6 +119,9 @@ export type {
 // L6-T7 — data profiles: the catalog's profile panel and the field list's fill-rate badge.
 export { DataProfileService, fillRate, fillRates, profileFields } from './services/data-profile.service';
 export type { DataProfileRow, FieldProfile } from './services/data-profile.service';
+// S10-T1 — API usage and per-key quotas.
+export { ApiUsageService, MAX_KEY_QUOTA, USAGE_WINDOWS } from './services/api-usage.service';
+export type { ApiKeyQuotaSet, ApiKeyUsageRow, ApiUsageSummaryRow } from './services/api-usage.service';
 // L5-T7 — the lineage graph, version compare, cleanup and a change's impact.
 export { LINEAGE_KINDS, LINEAGE_MAX_DEPTH, LineageService } from './services/lineage.service';
 export type {

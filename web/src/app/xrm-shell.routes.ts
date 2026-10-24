@@ -227,6 +227,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/metadata-versions').then(m => m.MetadataVersionsComponent),
           },
           {
+            // S10-T1 — API usage per key and route, and per-key quotas.
+            path: 'api-usage',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/api-usage').then(m => m.ApiUsageComponent),
+          },
+          {
             path: 'release-reports/:id',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/admin/release-reports').then(m => m.ReleaseReportDetailComponent),

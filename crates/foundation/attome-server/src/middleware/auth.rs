@@ -52,6 +52,12 @@ fn extract_api_key(req: &Request) -> Option<(String, String)> {
 #[derive(Debug, Clone, Copy)]
 pub struct ApiKeyIdentity(pub Uuid);
 
+/// S10-T1: the authenticating key's own request budget per minute
+/// (`api_key.requests_per_minute`), attached next to [`ApiKeyIdentity`] only
+/// when the key has one; `rate_limit` enforces it across every route.
+#[derive(Debug, Clone, Copy)]
+pub struct ApiKeyQuota(pub u32);
+
 /// Base-auth hardening 2.1b (D-510 rule 7) — attached only on the cookie-session
 /// branch below, after the token and every check on it passed. It is what tells
 /// a cookie session apart from an API-key or S2S caller, which never have a
@@ -66,18 +72,20 @@ pub struct CookieSession;
 /// checked, never the user row itself. `is_active IS NULL` is legacy-active
 /// (D-005, matches `0024_partial_unique_soft_delete.sql`'s index predicate).
 ///
-/// Returns `(user_id, key_id)` — `key_id` exists only so `authn` below can
-/// attach `ApiKeyIdentity` for usage analytics; every check this function
-/// performs is unchanged and still keyed on `user_id`/the row it resolves
-/// internally.
+/// Returns `(user_id, key_id, quota)` — `key_id` exists only so `authn`
+/// below can attach `ApiKeyIdentity` for usage analytics, and `quota` (S10-T1)
+/// is the key's own per-minute budget; every check this function performs is
+/// unchanged and still keyed on `user_id`/the row it resolves internally.
 async fn resolve_api_key(
     state: &AppState,
     public_key: &str,
     secret: &str,
     caller_ip: Option<IpAddr>,
-) -> Result<(Uuid, Uuid), AppError> {
-    let row: Option<(Uuid, Uuid, String, Option<Vec<String>>)> = sqlx::query_as(
-        "SELECT k.id, k.user_ref, k.secret_hash, k.ip_allowlist
+) -> Result<(Uuid, Uuid, Option<u32>), AppError> {
+    /// id, user_ref, secret_hash, ip_allowlist, requests_per_minute.
+    type KeyRow = (Uuid, Uuid, String, Option<Vec<String>>, Option<i32>);
+    let row: Option<KeyRow> = sqlx::query_as(
+        "SELECT k.id, k.user_ref, k.secret_hash, k.ip_allowlist, k.requests_per_minute
          FROM api_key k
          JOIN user_account u ON u.id = k.user_ref
              AND (u.is_active IS NULL OR u.is_active = TRUE)
@@ -90,8 +98,12 @@ async fn resolve_api_key(
     .map_err(AppError::internal)?;
     let ip_allowlist_for_key = row
         .as_ref()
-        .and_then(|(_, _, _, allowlist)| allowlist.clone());
-    let row = row.map(|(id, user_id, secret_hash, _)| (id, user_id, secret_hash));
+        .and_then(|(_, _, _, allowlist, _)| allowlist.clone());
+    let quota = row
+        .as_ref()
+        .and_then(|(_, _, _, _, rpm)| rpm.and_then(|n| u32::try_from(n).ok()))
+        .filter(|n| *n > 0);
+    let row = row.map(|(id, user_id, secret_hash, _, _)| (id, user_id, secret_hash));
 
     // P-api-key-hashing (D-112, revised): both the hit and miss paths run
     // through verify_api_key_secret so the cost/shape doesn't leak whether
@@ -176,7 +188,7 @@ async fn resolve_api_key(
         tracing::warn!("auth: failed to record api-key last_used touch: {e}");
     }
 
-    Ok((user_id, key_id))
+    Ok((user_id, key_id, quota))
 }
 
 /// Role-scoped IP allow-list for the cookie-session branch. A caller holding
@@ -336,7 +348,7 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
     // ── Try API key header ────────────────────────────────────────────────────
     if let Some((pub_key, secret)) = extract_api_key(&req) {
         match resolve_api_key(&state, &pub_key, &secret, caller_ip).await {
-            Ok((user_id, key_id)) => {
+            Ok((user_id, key_id, quota)) => {
                 let now = Utc::now().timestamp();
                 let claims = SessionClaims {
                     sub: user_id,
@@ -364,6 +376,9 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
                 };
                 req.extensions_mut().insert(claims);
                 req.extensions_mut().insert(ApiKeyIdentity(key_id));
+                if let Some(quota) = quota {
+                    req.extensions_mut().insert(ApiKeyQuota(quota));
+                }
                 return next.run(req).await;
             }
             Err(e) => return refuse(e, "invalid_api_key"),

@@ -1,0 +1,36 @@
+.au-window {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.au-notice {
+  margin-block-end: 12px;
+}
+
+.au-quota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.au-quota input {
+  inline-size: 8rem;
+}
+
+.au-inactive {
+  opacity: 0.6;
+}
+
+.au-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-block-start: 12px;
+}
+
+td .hint {
+  display: block;
+}

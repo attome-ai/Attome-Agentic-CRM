@@ -11,7 +11,7 @@ use axum::{
 use uuid::Uuid;
 
 use crate::api_usage::{self, Identity};
-use crate::middleware::auth::ApiKeyIdentity;
+use crate::middleware::auth::{ApiKeyIdentity, ApiKeyQuota};
 use crate::middleware::client_ip::{client_ip, rate_limit_subject};
 use crate::state::AppState;
 
@@ -508,8 +508,40 @@ pub async fn rate_limit(
         Err(e) => return e.into_response(),
     }
 
-    let key = format!("base:rl:{bucket}:{category}");
     let (principal_kind, principal_id) = principal(&identity);
+
+    // S10-T1: a key with its own budget is held to it across every route,
+    // before (and on top of) the per-category limit below. Fails closed on
+    // a store error, like the budget check itself.
+    if let (Some(ApiKeyQuota(quota)), Identity::ApiKey(key_id)) =
+        (req.extensions().get::<ApiKeyQuota>().copied(), &identity)
+    {
+        let key = api_key_quota_key(*key_id);
+        let quota = i32::try_from(quota).unwrap_or(i32::MAX);
+        match attome_cache::rate_limit::check(&state.redis_coordination, &key, quota).await {
+            Ok(outcome) if outcome.allowed => {}
+            Ok(outcome) => {
+                metrics::counter!("security_rejection_total", "reason" => "rate_limit")
+                    .increment(1);
+                crate::metrics::record_rejection("rate_limit", "api_key_quota");
+                crate::limit_usage::record_limit_hit(
+                    API_KEY_QUOTA_POLICY,
+                    principal_kind,
+                    principal_id,
+                    i64::from(outcome.limit),
+                );
+                let mut resp = AppError::TooManyRequests {
+                    retry_after_secs: Some(outcome.retry_after_secs),
+                }
+                .into_response();
+                apply_rate_limit_headers(resp.headers_mut(), outcome, API_KEY_QUOTA_POLICY);
+                return resp;
+            }
+            Err(e) => return e.into_response(),
+        }
+    }
+
+    let key = format!("base:rl:{bucket}:{category}");
     match attome_cache::rate_limit::check(&state.redis_coordination, &key, limit as i32).await {
         Ok(outcome) if outcome.allowed => {
             // AA9-T7: a signed-in caller past half its minute's budget is
@@ -563,6 +595,14 @@ pub async fn rate_limit(
         }
         Err(e) => e.into_response(),
     }
+}
+
+/// S10-T1: the policy a key's own quota is reported under.
+pub const API_KEY_QUOTA_POLICY: &str = "api_key_quota";
+
+/// S10-T1: one key's per-minute budget, shared by every route it calls.
+pub fn api_key_quota_key(key_id: Uuid) -> String {
+    format!("base:rl:apikey:{key_id}")
 }
 
 /// Coarse, IP-only rate limit that runs BEFORE `s2s_authn`/`authn` (unlike
