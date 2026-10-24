@@ -63,6 +63,46 @@
       "licence": "Apache-2.0 OR MIT",
       "maintenance": "Maintained by Stalwart Labs; the parser of the Stalwart mail server.",
       "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "zxing-wasm",
+      "reason": "B16-T1: decodes barcodes and QR codes from camera frames in browsers without BarcodeDetector (@attome/base/scan), loaded with a dynamic import so it is never in the main bundle.",
+      "licence": "MIT",
+      "maintenance": "Active; monthly releases (3.1.x in 2026), WebAssembly build of zxing-cpp.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "type-fest",
+      "reason": "B16-T1: a type-only dependency of zxing-wasm (its own nested copy).",
+      "licence": "(MIT OR CC0-1.0)",
+      "maintenance": "Maintained by sindresorhus; widely used.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tagged-tag",
+      "reason": "B16-T1: a dependency of type-fest, pulled in by zxing-wasm.",
+      "licence": "MIT",
+      "maintenance": "Maintained by sindresorhus; tiny.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/emscripten",
+      "reason": "B16-T1: type declarations zxing-wasm depends on for its Emscripten module.",
+      "licence": "MIT",
+      "maintenance": "DefinitelyTyped.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "bwip-js",
+      "reason": "B16-T11: draws QR codes, Code 128, EAN-13 and Data Matrix as SVG in the browser (Show code), loaded on first use into a lazy chunk.",
+      "licence": "MIT",
+      "maintenance": "Active; regular releases, port of Barcode Writer in Pure PostScript.",
+      "windows_native": true
     }
   ]
 }
