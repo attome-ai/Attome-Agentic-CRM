@@ -113,7 +113,8 @@ export function moveCommand(from: string, fromList: string | null, fromIndex: nu
                 [attr.aria-selected]="selected().includes(p.path)" [class.cv-node--selected]="selected().includes(p.path)"
                 [class.cv-node--container]="p.container" [style.--cv-depth]="p.depth"
                 [attr.data-path]="p.path" data-testid="canvas-node" draggable="true"
-                (click)="select(p.path, $event)" (dragstart)="dragStart(p)" (dragover)="$event.preventDefault()"
+                tabindex="-1" (click)="select(p.path, $event)" (keydown.enter)="select(p.path)"
+                (dragstart)="dragStart(p)" (dragover)="$event.preventDefault()"
                 (drop)="drop($event, p)">
               <span class="cv-handle" aria-hidden="true">⠿</span>
               @if (nodeTemplate(); as tpl) {
@@ -131,16 +132,17 @@ export function moveCommand(from: string, fromList: string | null, fromIndex: nu
             <h3>{{ 'canvas.properties' | translate }}</h3>
             <p class="cv-muted"><span class="cv-type">{{ f.node['type'] ?? '' }}</span> <bdi dir="ltr">{{ f.node['id'] ?? '' }}</bdi></p>
             @for (prop of propsOf(f.node); track prop.key) {
-              <label class="cv-prop">
-                <span>{{ prop.key }}</span>
+              <div class="cv-prop">
+                <label [attr.for]="'cv-prop-' + prop.key">{{ prop.key }}</label>
                 @if (prop.kind === 'boolean') {
-                  <input type="checkbox" [checked]="prop.value" (change)="setProp(f.path, prop.key, checked($event))" />
+                  <input type="checkbox" [id]="'cv-prop-' + prop.key" [checked]="prop.value"
+                         (change)="setProp(f.path, prop.key, checked($event))" />
                 } @else {
-                  <input [type]="prop.kind === 'number' ? 'number' : 'text'" dir="auto" [value]="prop.value"
+                  <input [id]="'cv-prop-' + prop.key" [type]="prop.kind === 'number' ? 'number' : 'text'" dir="auto" [value]="prop.value"
                          [attr.data-prop]="prop.key"
                          (change)="setProp(f.path, prop.key, prop.kind === 'number' ? numberOf($event) : textOf($event))" />
                 }
-              </label>
+              </div>
             } @empty {
               <p class="cv-muted">{{ 'canvas.noProps' | translate }}</p>
             }
