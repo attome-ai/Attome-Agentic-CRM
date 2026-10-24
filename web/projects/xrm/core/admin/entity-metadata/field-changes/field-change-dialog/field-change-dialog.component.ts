@@ -11,6 +11,7 @@ import {
   CONVERSION_DATE_FORMATS, FieldChangeService, conversionTargets, structureErrorText,
   type AttributeMeta, type ConversionInput, type FieldChangeOutcome, type FieldChangeResult,
 } from '@attome/xrm/core/admin/data';
+import { ImpactPanelComponent } from '@attome/xrm/core/admin/governance';
 import { FieldChangeResultComponent } from '../field-change-result/field-change-result.component';
 import { FieldRunStatusComponent } from '../field-run-status/field-run-status.component';
 
@@ -64,7 +65,7 @@ export function splitList(text: string): string[] {
   selector: 'attome-field-change-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TranslatePipe, FieldChangeResultComponent, FieldRunStatusComponent],
+  imports: [FormsModule, TranslatePipe, FieldChangeResultComponent, FieldRunStatusComponent, ImpactPanelComponent],
   styleUrls: ['../../../../../styles/admin-page.css', './field-change-dialog.component.css'],
   templateUrl: './field-change-dialog.component.html',
   host: { '(document:keydown.escape)': 'onEscape()' },
@@ -78,6 +79,8 @@ export class FieldChangeDialogComponent implements OnInit, OnDestroy {
   readonly entityId = input.required<string>();
   readonly field = input.required<AttributeMeta>();
   readonly mode = input.required<FieldChangeMode>();
+  /** L5-T7: the entity's logical name; with it, the dialog shows what the change affects downstream. */
+  readonly entityName = input('');
   /** `true` when a change was applied (the designer reloads the entity). */
   readonly closed = output<boolean>();
 
@@ -108,6 +111,12 @@ export class FieldChangeDialogComponent implements OnInit, OnDestroy {
 
   private modal: ModalHandle | null = null;
   private releaseTrap: (() => void) | null = null;
+
+  /** L5-T7: the lineage impact the preview shows, for the changes it reports on. */
+  readonly impactChange = computed(() => {
+    if (!this.entityName()) return null;
+    return ({ rename: 'rename', delete: 'delete', changeType: 'retype', choices: null } as const)[this.mode()];
+  });
 
   readonly titleKey = computed(() => ({
     rename: 'fieldChange.dialog.titleRename',

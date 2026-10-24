@@ -11,3 +11,11 @@ export { DataCatalogComponent }         from './data-catalog/data-catalog.compon
 export { ChangeFeedComponent }          from './change-feed/change-feed.component';
 export { StateModelsManagerComponent }  from './state-models/state-models-manager.component';
 export { StateDiagramComponent }        from './state-diagram/state-diagram.component';
+// L5-T7 — the lineage canvas, its cleanup list, and the impact panel the
+// field-change preview shows.
+export { LineageComponent }             from './lineage/lineage.component';
+export { LineageGraphComponent }        from './lineage/lineage-graph.component';
+export { CleanupListComponent }         from './lineage/cleanup-list.component';
+export { ImpactPanelComponent }         from './lineage/impact-panel.component';
+export { NODE_H, NODE_W, layoutLineage, walkTarget } from './lineage/lineage-layout';
+export type { LineageLayout, PlacedEdge, PlacedNode } from './lineage/lineage-layout';

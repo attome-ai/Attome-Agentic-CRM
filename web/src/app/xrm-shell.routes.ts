@@ -198,6 +198,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/governance').then(m => m.StateModelsManagerComponent),
           },
           {
+            // L5-T7 — the lineage canvas (`?node=<key>` deep-links a walk).
+            path: 'lineage',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/governance').then(m => m.LineageComponent),
+          },
+          {
             // Solution 7 Phase 2 (D-788, design §10) — the release report.
             // `:id` is bound to the detail page's `id` input
             // (`withComponentInputBinding()`); the post-apply notification

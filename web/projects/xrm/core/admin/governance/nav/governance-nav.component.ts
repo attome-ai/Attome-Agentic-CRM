@@ -3,7 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@attome/base';
 
 /**
- * The strip of links shared by the four governance screens, so each is one
+ * The strip of links shared by the governance screens, so each is one
  * click from the others. The sidebar itself is database-driven
  * (`sidebar` rows), so this is the in-app way between them.
  */
@@ -31,5 +31,6 @@ export class GovernanceNavComponent {
     { path: '/xrm/admin/data/catalog', key: 'governance.nav.catalog',     icon: 'la-book' },
     { path: '/xrm/admin/changes',      key: 'governance.nav.changes',     icon: 'la-history' },
     { path: '/xrm/admin/state-models', key: 'governance.nav.stateModels', icon: 'la-project-diagram' },
+    { path: '/xrm/admin/lineage',      key: 'governance.nav.lineage',     icon: 'la-sitemap' },
   ] as const;
 }

@@ -221,6 +221,9 @@
       <attome-field-run-status [entityId]="entityId()" [fieldId]="field().id" [runId]="run"
                             (abandoned)="onRunAbandoned()" />
     }
+    @if (impactChange(); as change) {
+      <xrm-lineage-impact [entity]="entityName()" [attribute]="field().logicalname" [change]="change" />
+    }
   </div>
 
   <footer class="fcd-foot">

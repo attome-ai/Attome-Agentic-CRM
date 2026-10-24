@@ -478,7 +478,7 @@
   </div>
 
   @if (dialogField(); as f) {
-    <attome-field-change-dialog [entityId]="id()" [field]="f" [mode]="dialogMode()"
+    <attome-field-change-dialog [entityId]="id()" [entityName]="entity()?.logicalname ?? ''" [field]="f" [mode]="dialogMode()"
                              (closed)="onFieldChangeClosed($event)" />
   }
 

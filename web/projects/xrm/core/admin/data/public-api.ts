@@ -119,6 +119,12 @@ export type {
 // L6-T7 — data profiles: the catalog's profile panel and the field list's fill-rate badge.
 export { DataProfileService, fillRate, fillRates, profileFields } from './services/data-profile.service';
 export type { DataProfileRow, FieldProfile } from './services/data-profile.service';
+// L5-T7 — the lineage graph, version compare, cleanup and a change's impact.
+export { LINEAGE_KINDS, LINEAGE_MAX_DEPTH, LineageService } from './services/lineage.service';
+export type {
+  ImpactAffected, ImpactBreaking, ImpactChange, ImpactReport, LineageCleanup, LineageComparison,
+  LineageDirection, LineageEdge, LineageGraph, LineageNode, LineageNodeRef, LineageWalk,
+} from './services/lineage.service';
 export { ChangeFeedService, CHANGE_KINDS } from './services/change-feed.service';
 export type { ChangeConsumer } from './services/change-feed.service';
 export type { ChangeFeedEntry, ChangeFeedPage, ChangeKind, ChangeFeedFilter } from './services/change-feed.service';
