@@ -107,6 +107,20 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::knowledge_answer::answer_system_prompt(),
         },
         PromptEntry {
+            action_id: crate::actions::draft_page::PAGE_DRAFT,
+            version: crate::actions::draft_page::PAGE_DRAFT_PROMPT_VERSION,
+            // Rendered for a custom page; at runtime the page type and a
+            // record page's entity id are filled in.
+            text: crate::actions::draft_page::page_draft_system_prompt(
+                &attome_metadata::model_edit::registry()
+                    .get("page")
+                    .map(|kind| kind.json_schema())
+                    .unwrap_or_default(),
+                "custom",
+                None,
+            ),
+        },
+        PromptEntry {
             action_id: crate::actions::translate::TEXT_TRANSLATE,
             version: crate::actions::translate::TRANSLATE_PROMPT_VERSION,
             // Rendered into Arabic with no glossary; at runtime the terms

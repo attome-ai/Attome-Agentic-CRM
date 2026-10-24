@@ -57,6 +57,7 @@ utoipa.workspace              = true
 uuid.workspace                = true
 
 [dev-dependencies]
+attome-inference = { workspace = true, features = ["test-support"] }
 attome-project.workspace  = true
 attome-storage.workspace  = true
 attome-testkit  = { workspace = true, features = ["app-config"] }

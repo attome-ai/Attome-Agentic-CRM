@@ -669,6 +669,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   response bytes per API area before compression (`identity`) and as sent compressed, so their ratio is
   the compression ratio; `delta_rows` is the size of each change-feed read. The Grafana dashboard
   shows the 304 rate per route and the compression ratio per area.
+- Pages drafted from a description (T2-T5): the agent tool `page.draft` asks the model for a page in
+  the page kind's shape, checks it and returns the draft with what the check found; nothing is saved
+  until `model.page.edit` saves it, which an administrator confirms. Administrators only.
 - Polling agents read only what moved (AA7-T10): `record.get` takes `etag` (the `row_version` read
   before) and answers `{"unchanged": true}` while the record is still at it, and the new MCP tool
   `record.changes` lists one entity's records added, changed or removed since a cursor, through the

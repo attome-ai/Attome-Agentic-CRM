@@ -83,6 +83,8 @@ pub mod system_status;
 pub mod table;
 pub mod transition;
 pub mod translate;
+// T2-T5: a page drafted from a description.
+pub mod draft_page;
 pub mod workflow;
 pub mod workforce;
 
@@ -110,6 +112,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(bulk::descriptors());
     all.extend(transition::descriptors());
     all.push(translate::descriptor());
+    all.push(draft_page::descriptor());
     all.push(sentiment::descriptor());
     all.push(adapt_flow_template::descriptor());
     all.extend(lineage::descriptors());
@@ -189,6 +192,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(transition::RecordTransitions));
     all.push(Box::new(transition::RecordTransition));
     all.push(Box::new(translate::TextTranslate));
+    all.push(Box::new(draft_page::PageDraft));
     all.push(Box::new(sentiment::TextSentiment));
     all.push(Box::new(adapt_flow_template::FlowTemplateAdapt));
     all.extend(lineage::executors());
