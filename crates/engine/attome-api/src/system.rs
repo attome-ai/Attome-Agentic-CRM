@@ -751,6 +751,7 @@ impl EngineSystem {
                 "omnichannel",
             ))
             .merge(attome_security::api_keys::routes())
+            .merge(attome_security::my_roles::routes())
             .merge(attome_security::mfa::routes());
 
         let router = attome_server::health_routes()

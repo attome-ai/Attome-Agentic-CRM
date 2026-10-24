@@ -1,6 +1,8 @@
 pub mod accounts;
 pub mod admin;
 pub mod api_keys;
+/// T2-T2: the caller's own role names.
+pub mod my_roles;
 pub mod cache;
 pub mod conditions;
 pub mod context;
@@ -60,6 +62,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 23;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = admin::openapi();
     doc.merge(api_keys::openapi_fragment());
+    doc.merge(my_roles::openapi_fragment());
     doc.merge(mfa::openapi_fragment());
     doc
 }

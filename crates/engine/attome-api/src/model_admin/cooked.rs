@@ -13,7 +13,7 @@
 //!
 //! Only kinds every signed-in user may already read are served
 //! ([`SHARED_KINDS`]: forms, which `/api/v1/model/forms/{id}/plan` serves
-//! too, and option sets, which choice fields expose). Agents, prompts,
+//! too, option sets, which choice fields expose, and pages, T2-T2). Agents, prompts,
 //! navigation (filtered per user when served), environment variables and
 //! the rest answer 404, as does a hash that is not in the current version.
 //! Both routes read only memory once the registry is loaded.
@@ -35,7 +35,9 @@ use super::cooked;
 
 /// The kinds a signed-in caller may fetch: their artefacts hold nothing a
 /// user cannot already read.
-pub const SHARED_KINDS: &[&str] = &["form", "option_set"];
+/// T2-T2: pages too: a page is layout, and every read its components make
+/// is checked on its own.
+pub const SHARED_KINDS: &[&str] = &["form", "option_set", "page"];
 
 /// One artefact of the current version.
 #[derive(Debug, Serialize, ToSchema)]
