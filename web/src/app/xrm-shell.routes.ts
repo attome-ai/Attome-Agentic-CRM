@@ -444,6 +444,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/verticals/sales/orgchart').then(m => m.OrgChartComponent),
           },
           {
+            // D23-T12: an opportunity's buying-committee map.
+            path: 'sales/committee-map/:id',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/verticals/sales/orgchart').then(m => m.CommitteeMapComponent),
+          },
+          {
             // D21-T11: the power dialer for one call list.
             path: 'sales/dialer/:id',
             canActivate: [authGuard],

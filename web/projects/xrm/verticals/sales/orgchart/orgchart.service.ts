@@ -34,6 +34,45 @@ export interface ManagerSet {
   row_version: number;
 }
 
+/** One contact on a deal (`DealContact`); `influence` and `attitude` are
+ * absent for a caller without the Deal Attitude field profile. */
+export interface DealContact {
+  contact_id: string;
+  full_name?: string | null;
+  role?: string | null;
+  is_primary: boolean;
+  influence?: string | null;
+  attitude?: string | null;
+  met_recently: boolean;
+  /** O7 relationship strength (0-100), only when the API returns it. */
+  strength?: number | null;
+}
+
+/** An "influences" link between two contacts on the deal. */
+export interface InfluenceLink {
+  from_contact: string;
+  to_contact: string;
+}
+
+/** A coverage gap (`Gap`). */
+export interface CoverageGap {
+  kind: 'missing_role' | 'unmet_high_influence';
+  role?: string | null;
+  contact_id?: string | null;
+}
+
+/** `GET /api/v1/sales/opportunities/{id}/committee-map`. */
+export interface DealMap {
+  opportunity_id: string;
+  account_id?: string | null;
+  chart?: OrgChart | null;
+  contacts: DealContact[];
+  influences: InfluenceLink[];
+  required_roles: string[];
+  gaps: CoverageGap[];
+  gaps_computed_at?: string | null;
+}
+
 /** D23's org chart routes. */
 @Injectable({ providedIn: 'root' })
 export class OrgChartService {
@@ -45,6 +84,21 @@ export class OrgChartService {
     const params: Record<string, string> = { group: String(group) };
     if (expand.length) params['expand'] = expand.join(',');
     return this.api.get<OrgChart>(`/api/v1/sales/accounts/${encodeURIComponent(account)}/org-chart`, params);
+  }
+
+  /** The deal's buying committee and its coverage gaps (D23-T7). */
+  committeeMap(opportunity: string): Observable<DealMap> {
+    return this.api.get<DealMap>(`/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/committee-map`);
+  }
+
+  /** Records that `from` influences `to`: a `record_relationship` row
+   * through the generic entity API. */
+  addInfluence(from: string, to: string): Observable<unknown> {
+    return this.entities.create('record_relationship', {
+      from_entity_name: 'contact', from_record_id: from,
+      to_entity_name: 'contact', to_record_id: to,
+      relationship_type: 'influences',
+    });
   }
 
   /**
