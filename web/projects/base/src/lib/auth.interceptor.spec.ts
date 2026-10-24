@@ -57,6 +57,18 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
+  it('leaves a portal keyword path 401 to the page: no refresh, no navigation', () => {
+    setUp();
+    let error: unknown;
+    http.get(`${BASE}/acme/api/v1/records/forum_thread`).subscribe({ error: err => { error = err; } });
+    httpMock
+      .expectOne(`${BASE}/acme/api/v1/records/forum_thread`)
+      .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    httpMock.expectNone(`${BASE}/api/v1/auth/refresh`);
+    expect((error as { status: number }).status).toBe(401);
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
   it('does not auto-retry a non-idempotent POST after refresh — surfaces the original 401', () => {
     setUp();
     let error: unknown;

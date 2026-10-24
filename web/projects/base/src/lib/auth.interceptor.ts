@@ -99,6 +99,18 @@ function isSessionBootstrapEndpoint(url: string): boolean {
 }
 
 /**
+ * G13-T2: a web portal's own API, `/{keyword}/api/v1/...` (the portal
+ * session, not the staff one). Its 401 means the portal user is signed out of
+ * that portal; refreshing the staff session cannot help, and navigating to the
+ * staff login would take a portal visitor somewhere they cannot sign in. The
+ * page handles it.
+ */
+function isPortalRequest(url: string): boolean {
+  const path = pathnameOf(url);
+  return path !== null && !path.startsWith('/api/') && /^\/[^/]+\/api\/v1\//.test(path);
+}
+
+/**
  * Whether this request targets something this app owns — a relative URL (always
  * same-origin) or its configured API origin.
  *
@@ -182,6 +194,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         || err.status !== 401
         || isCredentialEndpoint(req.url)
         || isReauthRequired(err)
+        || isPortalRequest(req.url)
       ) {
         return throwError(() => err);
       }
