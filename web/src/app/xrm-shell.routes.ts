@@ -450,6 +450,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/verticals/sales/orgchart').then(m => m.OrgChartComponent),
           },
           {
+            // W1-T15: a contract comparison (a `contract_comparison` record) side by side.
+            path: 'contract/compare/:id',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/contract').then(m => m.ContractCompareComponent),
+          },
+          {
             // D23-T12: an opportunity's buying-committee map.
             path: 'sales/committee-map/:id',
             canActivate: [authGuard],
