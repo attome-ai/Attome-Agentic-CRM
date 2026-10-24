@@ -1,0 +1,101 @@
+{
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": {},
+    "checks": {}
+  },
+  "metrics": {
+    "http_req_duration{op:read,phase:measure}": {
+      "avg": 9.02,
+      "min": 1.0,
+      "med": 8.2,
+      "p(50)": 8.2,
+      "p(90)": 19.35,
+      "p(95)": 21.5,
+      "p(99)": 40.1,
+      "max": 60.150000000000006,
+      "thresholds": {
+        "max>=0": false
+      }
+    },
+    "http_req_duration{op:list,phase:measure}": {
+      "avg": 15.400000000000002,
+      "min": 1.0,
+      "med": 14.0,
+      "p(50)": 14.0,
+      "p(90)": 34.38,
+      "p(95)": 38.2,
+      "p(99)": 70.9,
+      "max": 106.35000000000001,
+      "thresholds": {
+        "max>=0": false
+      }
+    },
+    "http_req_duration{op:query,phase:measure}": {
+      "avg": 20.130000000000003,
+      "min": 1.0,
+      "med": 18.3,
+      "p(50)": 18.3,
+      "p(90)": 40.5,
+      "p(95)": 45.0,
+      "p(99)": 88.4,
+      "max": 132.60000000000002,
+      "thresholds": {
+        "max>=0": false
+      }
+    },
+    "http_req_duration{op:write,phase:measure}": {
+      "avg": 24.310000000000002,
+      "min": 1.0,
+      "med": 22.1,
+      "p(50)": 22.1,
+      "p(90)": 55.53,
+      "p(95)": 61.7,
+      "p(99)": 120.3,
+      "max": 180.45,
+      "thresholds": {
+        "max>=0": false
+      }
+    },
+    "http_req_duration{op:search,phase:measure}": {
+      "avg": 33.550000000000004,
+      "min": 1.0,
+      "med": 30.5,
+      "p(50)": 30.5,
+      "p(90)": 72.18,
+      "p(95)": 80.2,
+      "p(99)": 150.0,
+      "max": 225.0,
+      "thresholds": {
+        "max>=0": false
+      }
+    },
+    "http_req_duration{op:bulk,phase:measure}": {
+      "avg": 132.0,
+      "min": 1.0,
+      "med": 120.0,
+      "p(50)": 120.0,
+      "p(90)": 279.36,
+      "p(95)": 310.4,
+      "p(99)": 520.8,
+      "max": 781.1999999999999,
+      "thresholds": {
+        "max>=0": false
+      }
+    },
+    "http_req_duration": {
+      "avg": 20.0,
+      "p(50)": 12.0,
+      "p(95)": 50.0,
+      "p(99)": 100.0,
+      "max": 600.0
+    },
+    "http_req_failed": {
+      "passes": 0,
+      "fails": 1200,
+      "value": 0
+    }
+  }
+}

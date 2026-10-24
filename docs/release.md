@@ -28,6 +28,12 @@ measured when it is unset), plus the web app with
 `docs/perf-history/` against the previous release's on the same machine (record one with
 `attome perf record --release <v>` after the load-test matrix; see that folder's README).
 
+After the matrix, write the release's latency report: `node loadtest/scripts/latency-report.mjs
+--version <v> --profile <p> --previous docs/evidence/latency-<previous>.json` writes
+`docs/evidence/latency-<v>.md` (p50/p95/p99 per operation class and concurrency, the machine it ran
+on and the data set, a p95 more than 10% slower than the previous release in bold) and the `.json`
+the next release compares with. `--dry-run` prints it without writing.
+
 Each run writes `target/release-gate/gate-<os>.json`: the commit, the OS, the toolchain and every
 step's outcome. CI does the same on every push and keeps the report as the `release-gate-<os>`
 artifact of the run.
