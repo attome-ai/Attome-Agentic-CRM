@@ -896,6 +896,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists API keys with their quotas and use.
+         * @description `system.admin` only. Every API key with its owner, its own per-minute
+         *     quota and its requests over the trailing `days`, most used first; never a
+         *     secret or its hash.
+         */
+        get: operations["list_keys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/api-keys/{id}/quota": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sets or clears an API key's own quota.
+         * @description `system.admin` only. Sets (or, with `null`, clears) the key's own
+         *     per-minute budget. Idempotent: the same body twice leaves the same value;
+         *     the change and its audit event commit together.
+         */
+        put: operations["set_quota"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/api-usage/summary": {
         parameters: {
             query?: never;
@@ -2954,8 +2998,9 @@ export interface paths {
         /**
          * `GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an
          *     administrator sees every issue; anyone else the issues of entities they
-         *     may read, without the records they may not read. A UI requests
-         *     `status=open` for the steward queue view.
+         *     may read, without the records they may not read, and a total that counts
+         *     only those (L2-T10). A UI requests `status=open` for the steward queue
+         *     view.
          */
         get: operations["list_issues"];
         put?: never;
@@ -14609,6 +14654,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/master/{entity}/xref": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Finds the golden record of a source system's id.
+         * @description One lookup on the contribution's unique key. A golden record the caller
+         *     cannot read is not found.
+         */
+        get: operations["master_xref_lookup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master/{entity}/{id}/as-of": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Returns a golden record's values at a moment.
+         * @description Each attribute changed since takes the value it had before its first
+         *     change after the moment, from the field history; the rest keep their
+         *     current value. Attributes the caller cannot read never appear.
+         */
+        get: operations["master_as_of"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/master/{entity}/{id}/certify": {
         parameters: {
             query?: never;
@@ -14668,6 +14756,48 @@ export interface paths {
          *     record is queued.
          */
         delete: operations["master_unpin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master/{entity}/{id}/provenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Says where each attribute's golden value came from.
+         * @description The source system, its id and when it sent the value, the rule that chose
+         *     it, and whether a steward pinned it. Attributes the caller cannot read are
+         *     left out. The whole list on one page.
+         */
+        get: operations["master_provenance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master/{entity}/{id}/xref": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists every source system id of a golden record.
+         * @description By system, then id, up to 500: the whole capped list on one page.
+         */
+        get: operations["master_xref_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -14903,6 +15033,28 @@ export interface paths {
         post: operations["report_recent"];
         /** B9-T2: empties the caller's recent list. */
         delete: operations["delete_recent"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Returns the caller's own role names.
+         * @description The roles held directly or through a team, distinct and sorted. A page
+         *     uses them to show a component only to some roles; they decide nothing
+         *     about access.
+         */
+        get: operations["my_roles"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -16087,6 +16239,28 @@ export interface paths {
          *     the query running.
          */
         post: operations["execute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/query/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a structured query
+         * @description S4-T7: one query over one entity and what it reaches through lookups and
+         *     relationships, as JSON or text. Records and fields the caller may not read
+         *     are filtered inside the SQL; a hidden entity is a 404 like a missing one.
+         */
+        post: operations["query_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22384,6 +22558,10 @@ export interface components {
              */
             truncated: boolean;
         };
+        /** @description An aggregate query's result. */
+        AggregateResult: {
+            groups: components["schemas"]["Group"][];
+        };
         /** @description One collections reminder of an invoice (a follow-up ledger row). */
         AiCollectionsReminder: {
             /** Format: uuid */
@@ -22567,6 +22745,32 @@ export interface components {
             last_used_at?: string | null;
             name: string;
             public_key: string;
+        };
+        /** @description S10-T1: one API key as an admin sees it. Never the secret or its hash. */
+        ApiKeyUsageRow: {
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            is_active: boolean;
+            /** Format: date-time */
+            last_used_at?: string | null;
+            name: string;
+            /** Format: uuid */
+            owner_id: string;
+            owner_name?: string | null;
+            public_key: string;
+            /**
+             * Format: int32
+             * @description The key's own budget per minute; `None` leaves it under the
+             *     deployment's per-category limits only.
+             */
+            requests_per_minute?: number | null;
+            /**
+             * Format: int64
+             * @description Requests over the window, from the nightly rollup.
+             */
+            total_requests: number;
         };
         ApiUsageSummaryRow: {
             identity_kind: string;
@@ -27585,6 +27789,22 @@ export interface components {
             total?: number | null;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_RunRow: {
+            items: Record<string, never>[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_ShareEvent: {
             items: {
                 /** Format: uuid */
@@ -29394,6 +29614,12 @@ export interface components {
             fields: components["schemas"]["FieldSchemaDef"][];
             /** Format: uuid */
             id: string;
+            /**
+             * @description L1-T9: the entity is master data (it has golden records built from
+             *     source systems), so its form shows the golden record panel. Sent only
+             *     when true.
+             */
+            is_master?: boolean;
             name: string;
             plural_name: string;
             relationships: components["schemas"]["RelationshipSchemaEntry"][];
@@ -29981,6 +30207,20 @@ export interface components {
             /** Format: int64 */
             row_version: number;
             status: string;
+        };
+        /** @description What the planner expects of a query; nothing is run. */
+        ExplainResponse: {
+            /** Format: int64 */
+            estimated_rows: number;
+            /**
+             * Format: double
+             * @description The cost above which the query would be refused.
+             */
+            guard_limit: number;
+            /** @description `scan` when the plan reads the whole root table, else `index`. */
+            plan_class: string;
+            /** Format: double */
+            total_cost: number;
         };
         /** @description One step of why a person is in a list or not. */
         ExplainStep: {
@@ -30930,6 +31170,13 @@ export interface components {
          * @enum {string}
          */
         Grounding: "sourced" | "no_sources" | "none";
+        /** @description One group of an aggregate result. */
+        Group: {
+            /** @description Each group field's value (a bucket's start for a date bucket). */
+            keys: Record<string, never>;
+            /** @description Each aggregate's value, by alias. */
+            values: Record<string, never>;
+        };
         GroupReplayBody: {
             /** @description The group to replay, from the groups list. */
             cause_group: string;
@@ -32458,6 +32705,19 @@ export interface components {
             /** @description `form`, `portal`, `import` or `staff` (default). */
             source?: string | null;
         };
+        /** @description A golden record's values at a moment. */
+        MasterAsOf: {
+            /** Format: date-time */
+            at: string;
+            /** Format: uuid */
+            golden_id: string;
+            /** @description The readable attributes and the values they held then. */
+            values: {
+                [key: string]: unknown;
+            };
+            /** @description Readable attributes whose earlier value the history withholds. */
+            withheld: string[];
+        };
         /** @description A certification change. */
         MasterCertified: {
             previous: string;
@@ -32494,6 +32754,22 @@ export interface components {
              */
             value?: unknown;
         };
+        /** @description Where one attribute's golden value came from. */
+        MasterProvenance: {
+            attribute: string;
+            /** Format: date-time */
+            chosen_at: string;
+            /** Format: uuid */
+            contribution_id?: string | null;
+            external_id?: string | null;
+            /** @description Whether a steward pinned it. */
+            pinned: boolean;
+            /** Format: date-time */
+            received_at?: string | null;
+            /** @description The rule that chose the value: `source_system_rank`, `most_recent` or `pinned`. */
+            rule: string;
+            source_system?: string | null;
+        };
         /** @description What a release or detach did to the golden record. */
         MasterRebuildQueued: {
             /** Format: uuid */
@@ -32512,6 +32788,27 @@ export interface components {
             payload?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** @description One source system's id of a golden record. */
+        MasterSystemId: {
+            /**
+             * Format: uuid
+             * @description The contribution's id, for a steward's detach.
+             */
+            contribution_id: string;
+            external_id: string;
+            /** Format: date-time */
+            received_at: string;
+            source_system: string;
+            /** @description `attached`, `held` or `detached`. */
+            status: string;
+        };
+        /** @description The golden record a source system's id belongs to. */
+        MasterXrefGolden: {
+            /** Format: uuid */
+            golden_id: string;
+            /** @description The contribution's status: `attached`, `held` or `detached`. */
+            status: string;
         };
         /** @description One field of a match rule (`match_rule.fields`). */
         MatchField: {
@@ -33324,6 +33621,11 @@ export interface components {
         /** @description The limits that apply to the caller. */
         MyLimits: {
             limits: components["schemas"]["MyLimit"][];
+        };
+        /** @description The caller's role names. */
+        MyRoles: {
+            /** @description Distinct names, sorted. */
+            items: string[];
         };
         /**
          * @description One authoritative action a caller may take on a [`MyWorkItem`] — never
@@ -34856,6 +35158,45 @@ export interface components {
                 last_used_at?: string | null;
                 name: string;
                 public_key: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ApiKeyUsageRow: {
+            items: {
+                /** Format: date-time */
+                expires_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                is_active: boolean;
+                /** Format: date-time */
+                last_used_at?: string | null;
+                name: string;
+                /** Format: uuid */
+                owner_id: string;
+                owner_name?: string | null;
+                public_key: string;
+                /**
+                 * Format: int32
+                 * @description The key's own budget per minute; `None` leaves it under the
+                 *     deployment's per-category limits only.
+                 */
+                requests_per_minute?: number | null;
+                /**
+                 * Format: int64
+                 * @description Requests over the window, from the nightly rollup.
+                 */
+                total_requests: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -37959,6 +38300,62 @@ export interface components {
                 /** Format: date-time */
                 received_at: string;
                 source_system: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_MasterProvenance: {
+            items: {
+                attribute: string;
+                /** Format: date-time */
+                chosen_at: string;
+                /** Format: uuid */
+                contribution_id?: string | null;
+                external_id?: string | null;
+                /** @description Whether a steward pinned it. */
+                pinned: boolean;
+                /** Format: date-time */
+                received_at?: string | null;
+                /** @description The rule that chose the value: `source_system_rank`, `most_recent` or `pinned`. */
+                rule: string;
+                source_system?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_MasterSystemId: {
+            items: {
+                /**
+                 * Format: uuid
+                 * @description The contribution's id, for a steward's detach.
+                 */
+                contribution_id: string;
+                external_id: string;
+                /** Format: date-time */
+                received_at: string;
+                source_system: string;
+                /** @description `attached`, `held` or `detached`. */
+                status: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -42958,6 +43355,19 @@ export interface components {
             /** Format: int64 */
             queued: number;
         };
+        QuotaBody: {
+            /**
+             * Format: int32
+             * @description Requests per minute, 1 to 100,000; `null` clears the quota.
+             */
+            requests_per_minute?: number | null;
+        };
+        QuotaSet: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            requests_per_minute?: number | null;
+        };
         /** @description A customer's decision. */
         QuoteDecision: {
             /** @description `accept` or `reject`. */
@@ -44844,6 +45254,32 @@ export interface components {
              */
             params?: components["schemas"]["Filter"][];
         };
+        /**
+         * @description A query, as `spec` (the QuerySpec JSON form) or as `q` (its text form),
+         *     exactly one. `params` and `explain` apply to either; a text query takes
+         *     them only from here.
+         */
+        RunRequest: {
+            /** @description Plan the query and return the plan's summary instead of rows. */
+            explain?: boolean;
+            params?: Record<string, never>;
+            /**
+             * @description The text form: `SELECT … FROM … [WHERE …] [GROUP BY …] [HAVING …]
+             *     [ORDER BY …] [LIMIT n]`.
+             */
+            q?: string | null;
+            /**
+             * @description The QuerySpec: `entity`, `select`, `where` (a condition tree of
+             *     `and`/`or`/`not`/`compare`/`param`/`exists`/`not_exists` nodes, tagged
+             *     by `kind`), `sort`, `page_size`, `cursor`, `group_by`, `aggregates`,
+             *     `having`.
+             */
+            spec?: Record<string, never> | null;
+        };
+        /** @description Rows (a keyset page), aggregate groups, or a plan. */
+        RunResponse: components["schemas"]["CursorPage_RunRow"] | components["schemas"]["AggregateResult"] | components["schemas"]["ExplainResponse"];
+        /** @description One result row, its columns by name (a related field by its path). */
+        RunRow: Record<string, never>;
         /** @description What a started run returns at once (N7-T1). */
         RunStarted: {
             /** Format: uuid */
@@ -52393,6 +52829,117 @@ export interface operations {
             };
             /** @description No active policy with this id */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_keys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description How many trailing days of requests to count. Defaults to 7, clamped
+                 *     to [1, 90].
+                 */
+                days: number | null;
+                /** @description One-based — the first page is `page=1` (D-347). */
+                page: number | null;
+                /** @description Keys per page, up to the platform maximum. */
+                page_size: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ApiKeyUsageRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_quota: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The API key */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotaBody"];
+            };
+        };
+        responses: {
+            /** @description Quota set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotaSet"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such key */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -90461,6 +91008,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The caller's change-stream subscription */
                 subscription: string;
             };
             cookie?: never;
@@ -98047,6 +98595,134 @@ export interface operations {
             };
         };
     };
+    master_xref_lookup: {
+        parameters: {
+            query: {
+                /** @description The source system, as its contributions name it. */
+                system: string;
+                /** @description The record's id in that system. */
+                external_id: string;
+            };
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The golden record the system id belongs to */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MasterXrefGolden"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read the entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, an unknown system id, or a golden record the caller cannot read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data, or no system or id */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    master_as_of: {
+        parameters: {
+            query: {
+                /** @description An RFC 3339 timestamp. */
+                at: string;
+            };
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+                /** @description The golden record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The golden values held at the moment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MasterAsOf"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read the entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, a golden record the caller cannot read, or one created after the moment */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data, or a malformed moment */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     master_certify: {
         parameters: {
             query?: never;
@@ -98226,6 +98902,128 @@ export interface operations {
                 };
             };
             /** @description No such entity, golden record or pin */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    master_provenance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+                /** @description The golden record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where each readable attribute's value came from */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MasterProvenance"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read the entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or a golden record the caller cannot read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    master_xref_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+                /** @description The golden record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every source system id of the golden record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MasterSystemId"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read the entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or a golden record the caller cannot read */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -98877,6 +99675,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    my_roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's role names */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyRoles"];
+                };
             };
             /** @description Missing or invalid credentials */
             401: {
@@ -102448,6 +103275,75 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    query_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunRequest"];
+            };
+        };
+        responses: {
+            /** @description A page of rows with its cursor, the aggregate groups, or the plan when explain is set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description A cursor this deployment did not issue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or one the caller may not read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A query outside the grammar, an unknown field or operator, or a plan over the cost limit */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The query ran past the statement time limit */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -116327,6 +117223,11 @@ export interface operations {
                  *     the read path for one specific entry in it.
                  */
                 version: number | null;
+                /**
+                 * @description Z6-T6: the file's 320 px thumbnail instead of the file (an image
+                 *     only, once the background job has made it; 404 before that).
+                 */
+                thumbnail: boolean;
             };
             cookie?: never;
         };

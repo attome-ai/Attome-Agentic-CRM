@@ -4181,6 +4181,210 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/api-keys": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lists API keys with their quotas and use.",
+        "description": "`system.admin` only. Every API key with its owner, its own per-minute\nquota and its requests over the trailing `days`, most used first; never a\nsecret or its hash.",
+        "operationId": "list_keys",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "path",
+            "description": "How many trailing days of requests to count. Defaults to 7, clamped\nto [1, 90].",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "description": "One-based — the first page is `page=1` (D-347).",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "path",
+            "description": "Keys per page, up to the platform maximum.",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ApiKeyUsageRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/api-keys/{id}/quota": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sets or clears an API key's own quota.",
+        "description": "`system.admin` only. Sets (or, with `null`, clears) the key's own\nper-minute budget. Idempotent: the same body twice leaves the same value;\nthe change and its audit event commit together.",
+        "operationId": "set_quota",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The API key",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuotaBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Quota set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotaSet"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/api-usage/summary": {
       "get": {
         "tags": [
@@ -17374,7 +17578,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "`GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an\nadministrator sees every issue; anyone else the issues of entities they\nmay read, without the records they may not read. A UI requests\n`status=open` for the steward queue view.",
+        "summary": "`GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an\nadministrator sees every issue; anyone else the issues of entities they\nmay read, without the records they may not read, and a total that counts\nonly those (L2-T10). A UI requests `status=open` for the steward queue\nview.",
         "operationId": "list_issues",
         "parameters": [
           {
@@ -66851,6 +67055,7 @@
           {
             "name": "subscription",
             "in": "path",
+            "description": "The caller's change-stream subscription",
             "required": true,
             "schema": {
               "type": "string",
@@ -79309,6 +79514,218 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/master/{entity}/xref": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Finds the golden record of a source system's id.",
+        "description": "One lookup on the contribution's unique key. A golden record the caller\ncannot read is not found.",
+        "operationId": "master_xref_lookup",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "system",
+            "in": "query",
+            "description": "The source system, as its contributions name it.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "external_id",
+            "in": "query",
+            "description": "The record's id in that system.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The golden record the system id belongs to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterXrefGolden"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read the entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, an unknown system id, or a golden record the caller cannot read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data, or no system or id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/master/{entity}/{id}/as-of": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Returns a golden record's values at a moment.",
+        "description": "Each attribute changed since takes the value it had before its first\nchange after the moment, from the field history; the rest keep their\ncurrent value. Attributes the caller cannot read never appear.",
+        "operationId": "master_as_of",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The golden record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "at",
+            "in": "query",
+            "description": "An RFC 3339 timestamp.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The golden values held at the moment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterAsOf"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read the entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, a golden record the caller cannot read, or one created after the moment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data, or a malformed moment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/master/{entity}/{id}/certify": {
       "post": {
         "tags": [
@@ -79650,6 +80067,200 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "high"
+      }
+    },
+    "/api/v1/master/{entity}/{id}/provenance": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Says where each attribute's golden value came from.",
+        "description": "The source system, its id and when it sent the value, the rule that chose\nit, and whether a steward pinned it. Attributes the caller cannot read are\nleft out. The whole list on one page.",
+        "operationId": "master_provenance",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The golden record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Where each readable attribute's value came from",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MasterProvenance"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read the entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, or a golden record the caller cannot read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/master/{entity}/{id}/xref": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lists every source system id of a golden record.",
+        "description": "By system, then id, up to 500: the whole capped list on one page.",
+        "operationId": "master_xref_list",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The golden record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every source system id of the golden record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MasterSystemId"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read the entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, or a golden record the caller cannot read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/mcp": {
@@ -80717,6 +81328,52 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "high"
+      }
+    },
+    "/api/v1/me/roles": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Returns the caller's own role names.",
+        "description": "The roles held directly or through a team, distinct and sorted. A page\nuses them to show a component only to some roles; they decide nothing\nabout access.",
+        "operationId": "my_roles",
+        "responses": {
+          "200": {
+            "description": "The caller's role names",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyRoles"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/metrics": {
@@ -86384,6 +87041,107 @@
         "x-module": "core",
         "x-privilege": "authenticated",
         "x-rate-class": "expensive_query",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/query/run": {
+      "post": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Run a structured query",
+        "description": "S4-T7: one query over one entity and what it reaches through lookups and\nrelationships, as JSON or text. Records and fields the caller may not read\nare filtered inside the SQL; a hidden entity is a 404 like a missing one.",
+        "operationId": "query_run",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A page of rows with its cursor, the aggregate groups, or the plan when explain is set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A cursor this deployment did not issue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, or one the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A query outside the grammar, an unknown field or operator, or a plan over the cost limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "The query ran past the statement time limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "runs one query on the read-only pool, or plans it; persists nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
         "x-risk": "medium"
       }
     },
@@ -109599,6 +110357,15 @@
               ],
               "format": "int32"
             }
+          },
+          {
+            "name": "thumbnail",
+            "in": "path",
+            "description": "Z6-T6: the file's 320 px thumbnail instead of the file (an image\nonly, once the background job has made it; 404 before that).",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -118863,6 +119630,21 @@
           }
         }
       },
+      "AggregateResult": {
+        "type": "object",
+        "description": "An aggregate query's result.",
+        "required": [
+          "groups"
+        ],
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            }
+          }
+        }
+      },
       "AiCollectionsReminder": {
         "type": "object",
         "description": "One collections reminder of an invoice (a follow-up ledger row).",
@@ -119356,6 +120138,70 @@
           },
           "public_key": {
             "type": "string"
+          }
+        }
+      },
+      "ApiKeyUsageRow": {
+        "type": "object",
+        "description": "S10-T1: one API key as an admin sees it. Never the secret or its hash.",
+        "required": [
+          "id",
+          "name",
+          "public_key",
+          "owner_id",
+          "is_active",
+          "total_requests"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "owner_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "public_key": {
+            "type": "string"
+          },
+          "requests_per_minute": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The key's own budget per minute; `None` leaves it under the\ndeployment's per-category limits only."
+          },
+          "total_requests": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Requests over the window, from the nightly rollup."
           }
         }
       },
@@ -132069,6 +132915,37 @@
           }
         }
       },
+      "CursorPage_RunRow": {
+        "type": "object",
+        "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One result row, its columns by name (a related field by its path)."
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Exact size of the whole window, when the route counts it (first page\nonly); absent otherwise."
+          }
+        }
+      },
       "CursorPage_ShareEvent": {
         "type": "object",
         "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
@@ -136675,6 +137552,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "is_master": {
+            "type": "boolean",
+            "description": "L1-T9: the entity is master data (it has golden records built from\nsource systems), so its form shows the golden record panel. Sent only\nwhen true."
+          },
           "name": {
             "type": "string"
           },
@@ -137917,6 +138798,35 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "ExplainResponse": {
+        "type": "object",
+        "description": "What the planner expects of a query; nothing is run.",
+        "required": [
+          "plan_class",
+          "estimated_rows",
+          "total_cost",
+          "guard_limit"
+        ],
+        "properties": {
+          "estimated_rows": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "guard_limit": {
+            "type": "number",
+            "format": "double",
+            "description": "The cost above which the query would be refused."
+          },
+          "plan_class": {
+            "type": "string",
+            "description": "`scan` when the plan reads the whole root table, else `index`."
+          },
+          "total_cost": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -140325,6 +141235,24 @@
           "no_sources",
           "none"
         ]
+      },
+      "Group": {
+        "type": "object",
+        "description": "One group of an aggregate result.",
+        "required": [
+          "keys",
+          "values"
+        ],
+        "properties": {
+          "keys": {
+            "type": "object",
+            "description": "Each group field's value (a bucket's start for a date bucket)."
+          },
+          "values": {
+            "type": "object",
+            "description": "Each aggregate's value, by alias."
+          }
+        }
       },
       "GroupReplayBody": {
         "type": "object",
@@ -144216,6 +145144,41 @@
           }
         }
       },
+      "MasterAsOf": {
+        "type": "object",
+        "description": "A golden record's values at a moment.",
+        "required": [
+          "golden_id",
+          "at",
+          "values",
+          "withheld"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "golden_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "values": {
+            "type": "object",
+            "description": "The readable attributes and the values they held then.",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "withheld": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Readable attributes whose earlier value the history withholds."
+          }
+        }
+      },
       "MasterCertified": {
         "type": "object",
         "description": "A certification change.",
@@ -144315,6 +145278,59 @@
           }
         }
       },
+      "MasterProvenance": {
+        "type": "object",
+        "description": "Where one attribute's golden value came from.",
+        "required": [
+          "attribute",
+          "rule",
+          "chosen_at",
+          "pinned"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "chosen_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "contribution_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "external_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "Whether a steward pinned it."
+          },
+          "received_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "rule": {
+            "type": "string",
+            "description": "The rule that chose the value: `source_system_rank`, `most_recent` or `pinned`."
+          },
+          "source_system": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "MasterRebuildQueued": {
         "type": "object",
         "description": "What a release or detach did to the golden record.",
@@ -144360,6 +145376,56 @@
             "propertyNames": {
               "type": "string"
             }
+          }
+        }
+      },
+      "MasterSystemId": {
+        "type": "object",
+        "description": "One source system's id of a golden record.",
+        "required": [
+          "contribution_id",
+          "source_system",
+          "external_id",
+          "status",
+          "received_at"
+        ],
+        "properties": {
+          "contribution_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The contribution's id, for a steward's detach."
+          },
+          "external_id": {
+            "type": "string"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_system": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "`attached`, `held` or `detached`."
+          }
+        }
+      },
+      "MasterXrefGolden": {
+        "type": "object",
+        "description": "The golden record a source system's id belongs to.",
+        "required": [
+          "golden_id",
+          "status"
+        ],
+        "properties": {
+          "golden_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "The contribution's status: `attached`, `held` or `detached`."
           }
         }
       },
@@ -146577,6 +147643,22 @@
             "items": {
               "$ref": "#/components/schemas/MyLimit"
             }
+          }
+        }
+      },
+      "MyRoles": {
+        "type": "object",
+        "description": "The caller's role names.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Distinct names, sorted."
           }
         }
       },
@@ -150735,6 +151817,104 @@
                 },
                 "public_key": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_ApiKeyUsageRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "S10-T1: one API key as an admin sees it. Never the secret or its hash.",
+              "required": [
+                "id",
+                "name",
+                "public_key",
+                "owner_id",
+                "is_active",
+                "total_requests"
+              ],
+              "properties": {
+                "expires_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_active": {
+                  "type": "boolean"
+                },
+                "last_used_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "owner_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "owner_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "public_key": {
+                  "type": "string"
+                },
+                "requests_per_minute": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "The key's own budget per minute; `None` leaves it under the\ndeployment's per-category limits only."
+                },
+                "total_requests": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Requests over the window, from the nightly rollup."
                 }
               }
             }
@@ -158734,6 +159914,159 @@
                 },
                 "source_system": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_MasterProvenance": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Where one attribute's golden value came from.",
+              "required": [
+                "attribute",
+                "rule",
+                "chosen_at",
+                "pinned"
+              ],
+              "properties": {
+                "attribute": {
+                  "type": "string"
+                },
+                "chosen_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "contribution_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "external_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "pinned": {
+                  "type": "boolean",
+                  "description": "Whether a steward pinned it."
+                },
+                "received_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "rule": {
+                  "type": "string",
+                  "description": "The rule that chose the value: `source_system_rank`, `most_recent` or `pinned`."
+                },
+                "source_system": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_MasterSystemId": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One source system's id of a golden record.",
+              "required": [
+                "contribution_id",
+                "source_system",
+                "external_id",
+                "status",
+                "received_at"
+              ],
+              "properties": {
+                "contribution_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The contribution's id, for a steward's detach."
+                },
+                "external_id": {
+                  "type": "string"
+                },
+                "received_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "source_system": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`attached`, `held` or `detached`."
                 }
               }
             }
@@ -171748,6 +173081,38 @@
           }
         }
       },
+      "QuotaBody": {
+        "type": "object",
+        "properties": {
+          "requests_per_minute": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Requests per minute, 1 to 100,000; `null` clears the quota."
+          }
+        }
+      },
+      "QuotaSet": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requests_per_minute": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "QuoteDecision": {
         "type": "object",
         "description": "A customer's decision.",
@@ -176420,6 +177785,52 @@
             "description": "Overrides the report's default `parameters` entirely when non-empty\n(not a deep merge) — same `Filter` grammar as `query/execute`."
           }
         }
+      },
+      "RunRequest": {
+        "type": "object",
+        "description": "A query, as `spec` (the QuerySpec JSON form) or as `q` (its text form),\nexactly one. `params` and `explain` apply to either; a text query takes\nthem only from here.",
+        "properties": {
+          "explain": {
+            "type": "boolean",
+            "description": "Plan the query and return the plan's summary instead of rows."
+          },
+          "params": {
+            "type": "object"
+          },
+          "q": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The text form: `SELECT … FROM … [WHERE …] [GROUP BY …] [HAVING …]\n[ORDER BY …] [LIMIT n]`."
+          },
+          "spec": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The QuerySpec: `entity`, `select`, `where` (a condition tree of\n`and`/`or`/`not`/`compare`/`param`/`exists`/`not_exists` nodes, tagged\nby `kind`), `sort`, `page_size`, `cursor`, `group_by`, `aggregates`,\n`having`."
+          }
+        },
+        "additionalProperties": false
+      },
+      "RunResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CursorPage_RunRow"
+          },
+          {
+            "$ref": "#/components/schemas/AggregateResult"
+          },
+          {
+            "$ref": "#/components/schemas/ExplainResponse"
+          }
+        ],
+        "description": "Rows (a keyset page), aggregate groups, or a plan."
+      },
+      "RunRow": {
+        "type": "object",
+        "description": "One result row, its columns by name (a related field by its path)."
       },
       "RunStarted": {
         "type": "object",
@@ -189801,6 +191212,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -189852,7 +191265,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  }
 }
