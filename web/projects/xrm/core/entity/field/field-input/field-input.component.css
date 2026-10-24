@@ -174,3 +174,12 @@ input[type="file"] {
 .hijri-entry .hijri-year { inline-size: 6em; }
 .hijri-entry .hijri-month { flex: 1; min-inline-size: 8em; }
 .hijri-suffix { font-size: 12px; color: var(--color-text-secondary); }
+
+/* B16-T4: the scan button sits at the input's inline end, so it mirrors in Arabic. */
+.scan-row { display: flex; align-items: center; gap: 0; }
+.scan-row .xf-input { flex: 1; min-inline-size: 0; }
+.scan-btn { margin-inline-start: 6px; background: none; border: 1px solid var(--color-border, #ccc); border-radius: 6px;
+            padding: 4px 8px; cursor: pointer; font-size: 18px; line-height: 1; color: inherit; }
+.scan-panel { display: grid; gap: 6px; margin-block-end: 6px; }
+.scan-video { inline-size: 100%; max-inline-size: 360px; border-radius: 6px; background: #000; }
+.scan-close { justify-self: start; }

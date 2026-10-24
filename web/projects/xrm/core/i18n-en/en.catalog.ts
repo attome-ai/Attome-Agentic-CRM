@@ -1057,6 +1057,14 @@ export const xrmEn = {
     dropzone: 'Drop files here or click to browse',
   },
   fieldInput: {
+    scan: {
+      button: 'Scan a code into {field}',
+      cancel: 'Cancel scanning',
+      empty: 'The code was empty.',
+      notANumber: 'This field takes a number; the code scanned is not one.',
+      badCheckDigit: 'The barcode check digit is wrong; scan it again.',
+      cameraDenied: 'The camera could not be opened. Allow it in the browser, or type the code.',
+    },
     change: 'Change', clear: 'Clear', remove: 'Remove', searchPlaceholder: 'Search…',
     hijriDate: 'Hijri date', hijriDay: 'Hijri day', hijriMonth: 'Hijri month', hijriYear: 'Hijri year',
     hijriSuffix: 'AH',

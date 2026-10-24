@@ -21,22 +21,47 @@
     <output [id]="field().name" class="xf-input xf-locked-value"
             [attr.aria-describedby]="lockNoteId()">{{ lockedDisplay() }}</output>
   } @else {
+  @if (scanOpen()) {
+    <div class="scan-panel" data-testid="scan-panel">
+      <video #scanVideo class="scan-video" playsinline muted></video>
+      <button type="button" class="scan-close" (click)="closeScan()">{{ 'fieldInput.scan.cancel' | translate }}</button>
+    </div>
+  }
+  @if (scanError(); as e) { <p class="field-error" role="alert" data-testid="scan-error">{{ e | translate }}</p> }
   @switch (field().field_type) {
 
     @case ('text') {
+      <div class="scan-row">
       <input [id]="field().name" [type]="textType()" class="xf-input" dir="auto"
              [class.is-invalid]="showRequiredError()"
              [attr.aria-invalid]="showRequiredError()"
              [formControlName]="field().name"
              [placeholder]="textPlaceholder()" />
+      @if (canScan()) {
+        <button type="button" class="scan-btn" data-testid="scan-button"
+                [attr.aria-label]="'fieldInput.scan.button' | translate: { field: field().display_name || field().name }"
+                (click)="openScan()">
+          <i class="las la-barcode" aria-hidden="true"></i>
+        </button>
+      }
+      </div>
       @if (showRequiredError()) {
         <p class="field-error" role="alert">{{ field().display_name || field().name }} is required.</p>
       }
     }
 
     @case ('number') {
+      <div class="scan-row">
       <input [id]="field().name" type="number" class="xf-input"
              [formControlName]="field().name" />
+      @if (canScan()) {
+        <button type="button" class="scan-btn" data-testid="scan-button"
+                [attr.aria-label]="'fieldInput.scan.button' | translate: { field: field().display_name || field().name }"
+                (click)="openScan()">
+          <i class="las la-barcode" aria-hidden="true"></i>
+        </button>
+      }
+      </div>
     }
 
     @case ('currency') {

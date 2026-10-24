@@ -7,6 +7,7 @@ import {
   FormGroupDirective, ReactiveFormsModule,
 } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { ScanService } from '@attome/base/scan';
 
 import {
   CurrencyService, HijriParts, LangService, TranslatePipe, UserPreferencesService,
@@ -24,6 +25,7 @@ import { MultiAttachmentComponent } from '../multi-attachment/multi-attachment.c
 import { RichTextEditorComponent } from '../rich-text-editor/rich-text-editor.component';
 import { FieldHistoryComponent } from '../field-history/field-history.component';
 import { ImageUploadComponent } from '../image-upload/image-upload.component';
+import { ScanFieldOptions, scanToValues } from './scan-to-values';
 
 @Component({
   selector: 'attome-field-input',
@@ -55,6 +57,7 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   readonly recordId   = input<string | null>(null);
 
   private readonly searchInputRef = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  private readonly scanVideoRef = viewChild<ElementRef<HTMLVideoElement>>('scanVideo');
 
   private readonly cc       = inject(ControlContainer);
   private readonly svc      = inject(EntityService);
@@ -62,6 +65,63 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   private readonly currency = inject(CurrencyService);
   private readonly lang     = inject(LangService);
   private readonly prefs    = inject(UserPreferencesService);
+  private readonly scanner  = inject(ScanService);
+
+  // ── Scanning (B16-T4) ─────────────────────────────────────────────────────
+  /** The field's `options.scan`, when it has one. */
+  readonly scanOpts = computed(() =>
+    ((this.field().options as { scan?: ScanFieldOptions } | null)?.scan) ?? null);
+  /** A scan button shows for a text or number field whose scan setting is on. */
+  readonly canScan = computed(() => {
+    const scan = this.scanOpts();
+    return !!scan && scan.enabled !== false && ['text', 'number'].includes(this.field().field_type);
+  });
+  readonly scanOpen  = signal(false);
+  readonly scanError = signal<string | null>(null);
+  private scanSub: Subscription | null = null;
+
+  /** Opens the camera under the field; the first code read fills it. */
+  openScan(): void {
+    this.scanError.set(null);
+    this.scanOpen.set(true);
+    // The <video> renders with the panel; start once it exists.
+    queueMicrotask(() => {
+      const video = this.scanVideoRef()?.nativeElement;
+      if (!video) return;
+      this.scanSub = this.scanner.startCamera(video, { continuous: false }).subscribe({
+        next: r => this.applyScan(r.rawValue, r.format),
+        error: () => { this.scanError.set('fieldInput.scan.cameraDenied'); this.closeScan(); },
+      });
+    });
+  }
+
+  closeScan(): void {
+    this.scanSub?.unsubscribe();
+    this.scanSub = null;
+    this.scanner.stop();
+    this.scanOpen.set(false);
+  }
+
+  /** Puts one scan into the form: the value, and GS1 batch and expiry into their fields. */
+  applyScan(raw: string, format: string): void {
+    const fill = scanToValues(raw, format, this.field().field_type, this.scanOpts());
+    this.closeScan();
+    if (fill.error) {
+      this.scanError.set(fill.error);
+      return;
+    }
+    this.scanError.set(null);
+    const value = this.field().field_type === 'number' ? Number(fill.value) : fill.value;
+    this.ctrl.setValue(value);
+    this.ctrl.markAsDirty();
+    const form = this.cc.control as FormGroup;
+    for (const [name, v] of Object.entries(fill.siblings)) {
+      const sibling = form.get(name);
+      if (!sibling) continue;
+      sibling.setValue(v);
+      sibling.markAsDirty();
+    }
+  }
 
   // ── Hijri entry (AG1-T8) ──────────────────────────────────────────────────
   /** Hijri day, month and year inputs beside a date field, when the field's
@@ -566,6 +626,7 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.closeScan();
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.pipeline.cancel();
     this.fileCtrlValueSub?.unsubscribe();

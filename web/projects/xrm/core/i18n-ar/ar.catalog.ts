@@ -1019,6 +1019,14 @@ export const xrmAr = {
     dropzone: 'أفلت الملفات هنا أو انقر للتصفح',
   },
   fieldInput: {
+    scan: {
+      button: 'امسح رمزًا في {field}',
+      cancel: 'إلغاء المسح',
+      empty: 'الرمز فارغ.',
+      notANumber: 'يقبل هذا الحقل رقمًا، والرمز الممسوح ليس رقمًا.',
+      badCheckDigit: 'رقم التحقق في الباركود خاطئ؛ امسحه مرة أخرى.',
+      cameraDenied: 'تعذّر فتح الكاميرا. اسمح بها في المتصفح أو اكتب الرمز.',
+    },
     change: 'تغيير', clear: 'مسح', remove: 'إزالة', searchPlaceholder: 'بحث…',
     hijriDate: 'التاريخ الهجري', hijriDay: 'اليوم الهجري', hijriMonth: 'الشهر الهجري', hijriYear: 'السنة الهجرية',
     hijriSuffix: 'هـ',
