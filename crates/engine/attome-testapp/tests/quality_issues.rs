@@ -1,7 +1,9 @@
 //! L2-T4: a new quality issue goes to the entity's domain steward with a due
 //! date from the target, its owner moves it through its statuses (accepting
 //! needs a reason), and a reader of profiles who may not read the entity
-//! sees none of its issues.
+//! sees none of its issues. L2-T10: the list's total counts only the issues
+//! of records the caller may read, so it never gives away an entity-wide
+//! count to someone who reads only part of the entity.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -219,5 +221,125 @@ fn issues_assigned_and_hidden_from_non_readers() {
                 .unwrap();
         assert_eq!(status, "accepted");
         assert_eq!(reason.as_deref(), Some("legacy rows"));
+    });
+}
+
+/// A role that reads `entity` at `level` (0 none, 1 team, 2 unit, 3 all),
+/// given to `user`.
+async fn read_at(app: &TestApp, user: Uuid, entity: &str, level: i16) {
+    let role = Uuid::now_v7();
+    sqlx::query("INSERT INTO role (id, name, owner_layer) VALUES ($1, $2, 'project')")
+        .bind(role)
+        .bind(format!("quality-reader-{role}"))
+        .execute(app.db())
+        .await
+        .unwrap();
+    let key = format!("{entity}.read");
+    attome_security::db::ensure_privilege(
+        app.db(),
+        &key,
+        &key,
+        "test grant",
+        attome_core::changeset::Layer::Project,
+    )
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO role_mm_privilege (id, role_ref, privilege_ref, owner_layer)          SELECT uuidv7(), $1, id, 'project' FROM privilege WHERE key = $2",
+    )
+    .bind(role)
+    .bind(&key)
+    .execute(app.db())
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO role_mm_entity_access             (id, role_ref, entity_ref, read_access_level, write_access_level, delete_access_level, owner_layer)          SELECT uuidv7(), $1, id, $3, 0, 0, 'project' FROM entity_info WHERE logicalname = $2",
+    )
+    .bind(role)
+    .bind(entity)
+    .bind(level)
+    .execute(app.db())
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO user_account_mm_role (id, user_ref, role_ref) VALUES (uuidv7(), $1, $2)",
+    )
+    .bind(user)
+    .bind(role)
+    .execute(app.db())
+    .await
+    .unwrap();
+}
+
+// feature: L2
+#[test]
+fn no_entity_totals_without_full_read() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app, "crm").await;
+        let ctx = app
+            .state
+            .base
+            .security
+            .resolve(app.admin.id)
+            .await
+            .expect("ctx");
+        // Two accounts the administrator owns, each with an open issue.
+        let tag = Uuid::now_v7().simple().to_string();
+        for n in 0..2 {
+            let (account, _) = attome_records::entity_crud::create_record_for(
+                &app.state,
+                &ctx,
+                app.admin.id,
+                "account",
+                json!({"name": format!("Totals {tag} {n}")}),
+            )
+            .await
+            .expect("account");
+            sqlx::query(
+                "INSERT INTO quality_issue (entity_logicalname, period, dimension, record_id,                                             field_logicalname, detail)                  VALUES ('account', $2, 'completeness', $1, 'phone', 'phone is empty')",
+            )
+            .bind(account)
+            .bind(format!("totals-{tag}"))
+            .execute(app.db())
+            .await
+            .unwrap();
+        }
+        let list = "/api/v1/admin/data/quality/issues?entity=account&status=open&page_size=100";
+        let mine = |body: &serde_json::Value| {
+            body["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|i| i["period"] == format!("totals-{tag}"))
+                .count()
+        };
+
+        // Someone who reads only their own team's accounts owns none of these.
+        let partial = attome_testapp::seed_user(app.db(), "totals-partial").await;
+        grant(&app, partial.id, "metadata.read").await;
+        read_at(&app, partial.id, "account", 1).await;
+        let (status, seen) = app
+            .request_as(&partial.cookie, Method::GET, list, None)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{seen}");
+        assert_eq!(mine(&seen), 0, "{seen}");
+        let shown = seen["items"].as_array().unwrap().len() as i64;
+        assert_eq!(
+            seen["total"].as_i64(),
+            Some(shown),
+            "the total counts only what the caller may see: {seen}"
+        );
+
+        // Someone who reads every account sees both, and a total to match.
+        let full = attome_testapp::seed_user(app.db(), "totals-full").await;
+        grant(&app, full.id, "metadata.read").await;
+        read_at(&app, full.id, "account", 3).await;
+        let (status, seen) = app.request_as(&full.cookie, Method::GET, list, None).await;
+        assert_eq!(status, StatusCode::OK, "{seen}");
+        assert_eq!(mine(&seen), 2, "{seen}");
+        assert!(seen["total"].as_i64().unwrap() >= 2, "{seen}");
     });
 }

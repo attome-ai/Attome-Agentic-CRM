@@ -248,8 +248,9 @@ struct ListIssuesQuery {
 
 /// `GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an
 /// administrator sees every issue; anyone else the issues of entities they
-/// may read, without the records they may not read. A UI requests
-/// `status=open` for the steward queue view.
+/// may read, without the records they may not read, and a total that counts
+/// only those (L2-T10). A UI requests `status=open` for the steward queue
+/// view.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/data/quality/issues",
@@ -299,25 +300,84 @@ async fn list_issues(
         offset,
     } = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
 
-    let items: Vec<QualityIssueView> = sqlx::query_as(&format!(
-        "SELECT {ISSUE_COLUMNS} FROM quality_issue \
-          WHERE ($1::text IS NULL OR entity_logicalname = $1) \
-            AND ($2::text IS NULL OR dimension = $2) \
-            AND ($3::text IS NULL OR status = $3) \
-            AND ($6::text[] IS NULL OR entity_logicalname = ANY($6)) \
-            AND ($7::uuid IS NULL OR owner_id = $7) \
-          ORDER BY detected_at DESC OFFSET $4 LIMIT $5"
-    ))
-    .bind(&q.entity)
-    .bind(&q.dimension)
-    .bind(&q.status)
-    .bind(offset)
-    .bind(page_size)
-    .bind(&readable)
-    .bind(q.owner_id)
-    .fetch_all(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
+    // L2-T10: what the caller may see is part of the SQL, so a page and its
+    // total agree and the total never counts an issue on a record they
+    // cannot read. An entity they read in full is one name in $5; each
+    // entity they read only in part adds its own record predicate.
+    let mut full: Vec<String> = Vec::new();
+    let mut partial: Vec<(String, attome_security::RlsPredicate)> = Vec::new();
+    let mut parts = String::new();
+    let mut next = if readable.is_some() { 6 } else { 5 };
+    if let Some(entities) = &readable {
+        let levels = attome_security::resolve_all_entity_access_levels(
+            &state.base.db,
+            ctx.user_id,
+            attome_security::RecordAction::Read,
+        )
+        .await?;
+        let registry = state.entities.load();
+        for name in entities {
+            let Some(meta) = registry.get(name) else {
+                continue;
+            };
+            let level = levels
+                .get(name)
+                .map_or(attome_server::security::AccessLevel::None, |(_, l)| *l);
+            match attome_security::rls_predicate(
+                &ctx,
+                meta.entity_id,
+                "",
+                level,
+                attome_security::RecordAction::Read.share_capability(),
+                next + 1,
+            ) {
+                None => full.push(name.clone()),
+                Some(pred) => {
+                    parts.push_str(&format!(
+                        " OR (entity_logicalname = ${next} AND record_id IN \
+                           (SELECT id FROM {} WHERE true {}))",
+                        attome_core::quote_ident(name),
+                        pred.sql
+                    ));
+                    next += 1 + attome_security::RLS_BIND_COUNT;
+                    partial.push((name.clone(), pred));
+                }
+            }
+        }
+    }
+    let visible = if readable.is_some() {
+        format!("AND (entity_logicalname = ANY($5){parts})")
+    } else {
+        String::new()
+    };
+    let filters = format!(
+        "WHERE ($1::text IS NULL OR entity_logicalname = $1) \
+           AND ($2::text IS NULL OR dimension = $2) \
+           AND ($3::text IS NULL OR status = $3) \
+           AND ($4::uuid IS NULL OR owner_id = $4) {visible}"
+    );
+    let list_sql = format!(
+        "SELECT {ISSUE_COLUMNS} FROM quality_issue {filters} \
+          ORDER BY detected_at DESC OFFSET ${next} LIMIT ${}",
+        next + 1
+    );
+    let mut list = sqlx::query_as::<_, QualityIssueView>(&list_sql)
+        .bind(&q.entity)
+        .bind(&q.dimension)
+        .bind(&q.status)
+        .bind(q.owner_id);
+    if readable.is_some() {
+        list = list.bind(&full);
+        for (name, pred) in &partial {
+            list = attome_security::bind_rls_predicate_as(list.bind(name), &pred.binds);
+        }
+    }
+    let items: Vec<QualityIssueView> = list
+        .bind(offset)
+        .bind(page_size)
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
     // L2-T4: an issue about a record the caller may not read is not shown.
     let items = if ctx.is_admin {
         items
@@ -350,22 +410,22 @@ async fn list_issues(
         kept
     };
 
-    let total: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM quality_issue \
-          WHERE ($1::text IS NULL OR entity_logicalname = $1) \
-            AND ($2::text IS NULL OR dimension = $2) \
-            AND ($3::text IS NULL OR status = $3) \
-            AND ($4::text[] IS NULL OR entity_logicalname = ANY($4)) \
-            AND ($5::uuid IS NULL OR owner_id = $5)",
-    )
-    .bind(&q.entity)
-    .bind(&q.dimension)
-    .bind(&q.status)
-    .bind(&readable)
-    .bind(q.owner_id)
-    .fetch_one(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
+    let count_sql = format!("SELECT COUNT(*) FROM quality_issue {filters}");
+    let mut count = sqlx::query_scalar::<_, i64>(&count_sql)
+        .bind(&q.entity)
+        .bind(&q.dimension)
+        .bind(&q.status)
+        .bind(q.owner_id);
+    if readable.is_some() {
+        count = count.bind(&full);
+        for (name, pred) in &partial {
+            count = attome_security::bind_rls_predicate(count.bind(name), &pred.binds);
+        }
+    }
+    let total = count
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
 
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
