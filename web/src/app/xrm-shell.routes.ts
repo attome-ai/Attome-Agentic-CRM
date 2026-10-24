@@ -468,6 +468,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/contract').then(m => m.ContractCompareComponent),
           },
           {
+            // I3-T1: the dispatch board (`?day=YYYY-MM-DD`, today by default).
+            path: 'service/dispatch',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/entity/views').then(m => m.ResourceBoardComponent),
+          },
+          {
             // D23-T12: an opportunity's buying-committee map.
             path: 'sales/committee-map/:id',
             canActivate: [authGuard],

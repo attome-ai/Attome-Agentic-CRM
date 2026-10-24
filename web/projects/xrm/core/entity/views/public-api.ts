@@ -12,3 +12,6 @@
 export { KanbanBoardComponent }  from './kanban/kanban-board.component';
 export { CalendarViewComponent } from './calendar/calendar-view.component';
 export { TimelineViewComponent } from './timeline/timeline-view.component';
+// I3-T1 — the timeline's resource mode: the dispatch board.
+export { DAY_FROM_HOUR, DAY_TO_HOUR, ResourceBoardComponent, axisHours, barGeometry } from './timeline/resource-board.component';
+export type { BoardGhost, BoardJob, BoardTechnician } from './timeline/resource-board.component';
