@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { EMPTY, of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LangService } from '@attome/base';
-import { AdminService, type AttributeMeta } from '@attome/xrm/core/admin/data';
+import { AdminService, DataProfileService, type AttributeMeta } from '@attome/xrm/core/admin/data';
 import { EntityEditorComponent, renderFormat } from './entity-editor.component';
 
 describe('EntityEditorComponent route input', () => {
@@ -14,6 +14,7 @@ describe('EntityEditorComponent route input', () => {
       imports: [EntityEditorComponent],
       providers: [
         { provide: AdminService, useValue: { getEntity } },
+        { provide: DataProfileService, useValue: { latest: () => of(null) } },
         // C-29 (M01 §7) — `typeLabel()` now injects the real `LangService`
         // (i18n-driven field-type labels instead of a hardcoded English
         // map); the stub echoes the key, same pattern every other spec that
@@ -50,6 +51,7 @@ describe('EntityEditorComponent field changes', () => {
       imports: [EntityEditorComponent],
       providers: [
         { provide: AdminService, useValue: { getEntity } },
+        { provide: DataProfileService, useValue: { latest: () => of(null) } },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

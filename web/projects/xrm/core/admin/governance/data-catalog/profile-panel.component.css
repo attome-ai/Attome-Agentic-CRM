@@ -1,0 +1,76 @@
+.dp-fill {
+  display: inline-flex;
+  inline-size: 48px;
+  block-size: 6px;
+  margin-inline-end: 6px;
+  border-radius: 3px;
+  vertical-align: middle;
+  overflow: hidden;
+  background: var(--color-bg-alt, #e8e8e8);
+}
+
+/* The filled part starts at the inline start, so it mirrors in Arabic. */
+.dp-fill::before {
+  content: '';
+  inline-size: var(--dp-fill);
+  background: var(--color-primary, #2b6cb0);
+}
+
+.dp-value {
+  display: inline-block;
+  margin-inline-end: 6px;
+  font-size: 0.8125rem;
+}
+
+.dp-shape {
+  font-family: var(--font-mono, monospace);
+  padding-inline: 4px;
+  border-radius: 3px;
+  background: var(--color-bg-alt, #f0f0f0);
+}
+
+.dp-detail {
+  display: grid;
+  gap: 10px;
+  padding-block: 6px;
+}
+
+.dp-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, max-content));
+  gap: 2px 16px;
+  margin: 0;
+}
+
+.dp-facts dt { color: var(--color-text-secondary, #666); font-size: 0.75rem; }
+.dp-facts dd { margin: 0; }
+
+.dp-label { margin: 0; font-weight: 600; font-size: 0.8125rem; }
+
+.dp-shapes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+/* Bars run along the inline axis, so they read right to left in Arabic. */
+.dp-histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  block-size: 64px;
+  max-inline-size: 360px;
+  border-block-end: 1px solid var(--color-border, #ccc);
+}
+
+.dp-bar {
+  flex: 1;
+  block-size: var(--dp-bar);
+  min-block-size: 1px;
+  background: var(--color-primary, #2b6cb0);
+  border-start-start-radius: 2px;
+  border-start-end-radius: 2px;
+}

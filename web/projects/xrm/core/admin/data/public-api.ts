@@ -116,6 +116,9 @@ export type {
   CatalogEntitySummary, CatalogEntityDetail, CatalogField, CatalogLineageEntry,
   CatalogGlossaryTerm, CatalogSearch,
 } from './services/data-catalog.service';
+// L6-T7 — data profiles: the catalog's profile panel and the field list's fill-rate badge.
+export { DataProfileService, fillRate, fillRates, profileFields } from './services/data-profile.service';
+export type { DataProfileRow, FieldProfile } from './services/data-profile.service';
 export { ChangeFeedService, CHANGE_KINDS } from './services/change-feed.service';
 export type { ChangeConsumer } from './services/change-feed.service';
 export type { ChangeFeedEntry, ChangeFeedPage, ChangeKind, ChangeFeedFilter } from './services/change-feed.service';

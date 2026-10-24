@@ -95,6 +95,7 @@
                 {{ typeLabel(a.field_type) }}
               </span>
               <xrm-owner-layer-badge [layer]="a.owner_layer" />
+              <xrm-fill-rate-badge [rate]="fillRates().get(a.logicalname)" />
             </div>
 
             <!-- Middle: detail lines -->

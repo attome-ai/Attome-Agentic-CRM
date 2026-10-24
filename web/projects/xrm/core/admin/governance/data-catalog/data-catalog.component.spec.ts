@@ -3,7 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LangService } from '@attome/base';
-import { DataCatalogService } from '@attome/xrm/core/admin/data';
+import { DataCatalogService, DataProfileService } from '@attome/xrm/core/admin/data';
 import type { CatalogEntityDetail } from '@attome/xrm/core/admin/data';
 import { DataCatalogComponent } from './data-catalog.component';
 
@@ -29,6 +29,7 @@ describe('DataCatalogComponent', () => {
       providers: [
         provideRouter([]),
         { provide: DataCatalogService, useValue: svc },
+        { provide: DataProfileService, useValue: { latest: () => of(null) } },
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
       ],
     }).compileComponents();

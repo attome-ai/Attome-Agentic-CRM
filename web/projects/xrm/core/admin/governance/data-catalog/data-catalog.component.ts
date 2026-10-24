@@ -10,6 +10,7 @@ import {
   DataCatalogService, type CatalogEntityDetail, type CatalogEntitySummary,
 } from '@attome/xrm/core/admin/data';
 import { GovernanceNavComponent } from '../nav/governance-nav.component';
+import { ProfilePanelComponent } from './profile-panel.component';
 
 /** `attribute_info.data_classification`'s vocabulary
  * (P-data-protection-governance §4). */
@@ -20,14 +21,14 @@ export const DATA_CLASSIFICATIONS = ['general', 'personal', 'sensitive_special_c
  * a searchable entity list (by name or classification) and one entity's
  * aggregated detail — fields with their classification, lineage (which
  * queries, workflows, dashboards and rules read it), the nightly usage
- * rollup, and glossary terms. `?entity=<logicalname>` deep-links the
+ * rollup, glossary terms, and the latest data profile (L6-T7). `?entity=<logicalname>` deep-links the
  * detail (bound through `withComponentInputBinding()`).
  */
 @Component({
   selector: 'xrm-data-catalog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, LocalDatePipe, LocalNumberPipe, TranslatePipe, GovernanceNavComponent],
+  imports: [FormsModule, LocalDatePipe, LocalNumberPipe, TranslatePipe, GovernanceNavComponent, ProfilePanelComponent],
   styleUrls: ['../../../../styles/admin-page.css', '../governance.css', './data-catalog.component.css'],
   templateUrl: './data-catalog.component.html',
 })

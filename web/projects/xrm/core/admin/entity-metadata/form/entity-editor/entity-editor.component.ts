@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input, OnInit, signal } from '@angular/core';
+import { catchError, of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
@@ -8,6 +9,7 @@ import {
   MetadataLabel, MetadataLabelMutation,
   RelationshipDef, CreateRelationshipBody,
   XrmFieldType,
+  DataProfileService, fillRates,
 } from '@attome/xrm/core/admin/data';
 import { OwnerLayerBadgeComponent } from '@attome/xrm/core/generic/components';
 import {
@@ -15,6 +17,7 @@ import {
 } from '../../field-changes/field-change-dialog/field-change-dialog.component';
 import { RecoveryArchiveComponent } from '../../field-changes/recovery-archive/recovery-archive.component';
 import { BinSettingsComponent } from '../../bin-settings/bin-settings.component';
+import { FillRateBadgeComponent } from './fill-rate-badge.component';
 
 type RelationshipCascade = 'restrict' | 'orphan' | 'cascade_deactivate';
 const RELATIONSHIP_CASCADE_LABELS: Record<RelationshipCascade, string> = {
@@ -146,7 +149,7 @@ const SYSTEM_FIELDS: SystemField[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports:    [
     OwnerLayerBadgeComponent, FormsModule, RouterLink, TranslatePipe,
-    FieldChangeDialogComponent, RecoveryArchiveComponent, BinSettingsComponent,
+    FieldChangeDialogComponent, RecoveryArchiveComponent, BinSettingsComponent, FillRateBadgeComponent,
   ],
   styleUrls:  ['../../../../../styles/admin-page.css', './entity-editor.component.css'],
   templateUrl: './entity-editor.component.html',
@@ -154,12 +157,15 @@ const SYSTEM_FIELDS: SystemField[] = [
 export class EntityEditorComponent implements OnInit {
   private readonly svc  = inject(AdminService);
   private readonly lang = inject(LangService);
+  private readonly profiles = inject(DataProfileService);
 
   readonly id = input.required<string>();
 
   readonly entity  = signal<EntityDetail | null>(null);
   readonly loading = signal(true);
   readonly error   = signal<string | null>(null);
+  /** L6-T7: each field's fill rate in the entity's latest data profile. */
+  readonly fillRates = signal<Map<string, number>>(new Map());
 
   // Auto Value panel. `autoValuesLoaded` is separate from `!loading` so the
   // rules are fetched once, on first expand, and not again on every toggle.
@@ -232,9 +238,14 @@ export class EntityEditorComponent implements OnInit {
   private load(): void {
     this.loading.set(true);
     this.svc.getEntity(this.id()).subscribe({
-      next: e => { this.entity.set(e); this.loading.set(false); },
+      next: e => { this.entity.set(e); this.loading.set(false); this.loadFillRates(e.logicalname); },
       error: (e: ApiError) => { this.error.set(e.message); this.loading.set(false); },
     });
+  }
+
+  /** L6-T7: the hints are optional, so a failed profile read shows none. */
+  private loadFillRates(entity: string): void {
+    this.profiles.latest(entity).pipe(catchError(() => of(null))).subscribe(p => this.fillRates.set(fillRates(p)));
   }
 
   // ── Field structure changes (Solution 7 Phase 2) ──────────────────────────

@@ -136,6 +136,8 @@
         </table>
       </div>
 
+      <xrm-profile-panel [entity]="d.logicalname" />
+
       <h4>{{ 'governance.catalog.lineage' | translate }} <span class="count">{{ d.lineage.length }}</span></h4>
       @if (d.lineage.length === 0) {
         <p class="gov-muted">{{ 'governance.catalog.noLineage' | translate }}</p>
