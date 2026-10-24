@@ -70,14 +70,14 @@ export interface ScanLineLink { field: string; value: string; }
     </div>
   `,
   styles: [`
-    .cs-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1000; }
+    .cs-backdrop { position: fixed; inset: 0; background: var(--color-overlay, rgba(0,0,0,.35)); z-index: 1000; }
     .cs-dialog { position: fixed; inset-block-start: 5vh; inset-inline: 0; margin-inline: auto; z-index: 1001;
                  inline-size: min(28rem, 94vw); max-block-size: 90vh; overflow: auto; display: grid; gap: .5rem;
                  padding: 1rem; background: var(--color-bg, #fff); border-radius: 10px; }
     .cs-head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
     .cs-head h3 { margin: 0; }
     .cs-count { font-weight: 700; }
-    .cs-video { inline-size: 100%; border-radius: 6px; background: #000; }
+    .cs-video { inline-size: 100%; border-radius: 6px; background: var(--color-media-bg, #000); }
     .cs-form { display: grid; gap: .25rem; }
     .cs-duplicate { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .5rem;
                     border-radius: 6px; background: var(--color-warning-bg, #fff4e0); }

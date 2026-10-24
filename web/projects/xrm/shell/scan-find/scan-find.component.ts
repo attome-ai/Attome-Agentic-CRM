@@ -60,8 +60,8 @@ export interface ScanHit {
     .sf-button { background: none; border: none; cursor: pointer; padding: 0 .375rem; font-size: 1.25rem; color: inherit; }
     .sf-panel { position: absolute; inset-block-start: 100%; inset-inline-end: 0; z-index: 10; inline-size: min(22rem, 90vw);
                 padding: .75rem; display: grid; gap: .5rem; background: var(--color-bg, #fff);
-                border: 1px solid var(--color-border, #ddd); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
-    .sf-video { inline-size: 100%; border-radius: 6px; background: #000; }
+                border: 1px solid var(--color-border, #ddd); border-radius: 8px; box-shadow: 0 6px 20px var(--color-shadow, rgba(0,0,0,.12)); }
+    .sf-video { inline-size: 100%; border-radius: 6px; background: var(--color-media-bg, #000); }
     .sf-form { display: flex; flex-wrap: wrap; gap: .375rem; align-items: center; }
     .sf-form label { flex-basis: 100%; font-size: .8125rem; }
     .sf-form input { flex: 1; min-inline-size: 8rem; }

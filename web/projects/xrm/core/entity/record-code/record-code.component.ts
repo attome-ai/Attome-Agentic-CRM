@@ -57,9 +57,9 @@ export function recordLink(origin: string, entity: string, id: string): string {
     :host { position: relative; display: inline-flex; }
     .rc-panel { position: absolute; inset-block-start: 100%; inset-inline-end: 0; z-index: 20; inline-size: 16rem;
                 display: grid; gap: .5rem; padding: .75rem; background: var(--color-bg, #fff);
-                border: 1px solid var(--color-border, #ddd); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+                border: 1px solid var(--color-border, #ddd); border-radius: 8px; box-shadow: 0 6px 20px var(--color-shadow, rgba(0,0,0,.12)); }
     .rc-panel label { display: grid; gap: .25rem; font-size: .8125rem; }
-    .rc-image { inline-size: 100%; background: #fff; }
+    .rc-image { inline-size: 100%; background: var(--color-code-bg, #fff); }
     .rc-error { color: var(--color-danger, #c53030); margin: 0; font-size: .8125rem; }
   `],
 })

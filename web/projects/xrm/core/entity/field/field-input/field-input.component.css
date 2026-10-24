@@ -181,5 +181,5 @@ input[type="file"] {
 .scan-btn { margin-inline-start: 6px; background: none; border: 1px solid var(--color-border, #ccc); border-radius: 6px;
             padding: 4px 8px; cursor: pointer; font-size: 18px; line-height: 1; color: inherit; }
 .scan-panel { display: grid; gap: 6px; margin-block-end: 6px; }
-.scan-video { inline-size: 100%; max-inline-size: 360px; border-radius: 6px; background: #000; }
+.scan-video { inline-size: 100%; max-inline-size: 360px; border-radius: 6px; background: var(--color-media-bg, #000); }
 .scan-close { justify-self: start; }
