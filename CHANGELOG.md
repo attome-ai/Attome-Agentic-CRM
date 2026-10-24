@@ -710,6 +710,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- SPL National Address client (AJ5-T1): looks an address up by its short address (`RRRD2929`) or as
+  typed, reads SPL's answer into standardised parts and coordinates, and maps them onto the library's
+  `address` entity, which gains `region`, `latitude` and `longitude` (library-core changeset 0002).
+  Checked against recorded answers; no SPL account is wired yet.
 - `POST /api/v1/query/run` (S4-T2 to S4-T8): one structured query, as a QuerySpec (`spec`) or its
   SQL-like text (`q`, parsed by the server, never sent to the database as text). Fields through up
   to three lookups (`primary_contact.team.name`), `exists` / `not_exists` over child rows or a

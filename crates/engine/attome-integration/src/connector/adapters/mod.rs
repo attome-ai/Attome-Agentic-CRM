@@ -5,6 +5,8 @@ pub mod erp;
 /// J2-T1: the IMAP, Graph and Gmail readers behind `mailbox`.
 pub mod mail;
 pub mod mailbox;
+/// AJ5-T1: SPL National Address lookups and standardisation.
+pub mod national_address;
 /// S12-T2: Odoo over JSON-RPC.
 pub mod odoo;
 pub mod reputation;

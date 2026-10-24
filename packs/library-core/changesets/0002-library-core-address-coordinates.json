@@ -1,0 +1,139 @@
+{
+  "author": "packs (AJ5-T1)",
+  "checksum": "sha256:f9f5fd3fc5e0fcbc20ea600d7b81cc0d3070d5875bcc289b8001042fe58e3608",
+  "closed_at": "2026-10-24T00:00:00Z",
+  "description": "The address's region and coordinates, which the SPL National Address check (AJ5-T1) fills when it standardises an address.",
+  "format": "attome-changeset/v1",
+  "id": "01a16eac-51fe-75bc-beaf-05d9af28c523",
+  "layer": "product",
+  "name": "library-core-address-coordinates",
+  "opened_at": "2026-10-24T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Region",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "region",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "address",
+        "field": "region"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latitude",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latitude",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "address",
+        "field": "latitude"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Longitude",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "longitude",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "address",
+        "field": "longitude"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنطقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "address.region",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خط العرض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "locale": "ar",
+        "object_key": "address.latitude",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خط الطول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "address.longitude",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "library-core",
+  "seq": 2,
+  "title": "Pack: library-core address coordinates"
+}

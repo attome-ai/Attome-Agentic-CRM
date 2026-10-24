@@ -148,6 +148,17 @@ fn the_library_core_pack_installs_once() {
             ],
         )
         .await;
+        // AJ5-T1: the National Address check fills these.
+        let coordinates: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref              WHERE e.logicalname = 'address' AND a.logicalname IN ('region', 'latitude', 'longitude')",
+        )
+        .fetch_one(app.db())
+        .await
+        .expect("read address fields");
+        assert_eq!(
+            coordinates, 3,
+            "the address carries its region and coordinates"
+        );
         let sensitive: Vec<String> = sqlx::query_scalar(
             "SELECT a.logicalname FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
              WHERE e.logicalname = 'person' AND a.is_sensitive ORDER BY a.logicalname",
