@@ -2331,6 +2331,16 @@ export const xrmEn = {
     custom: 'Custom component {id}',
     run: 'Run',
   },
+  canvas: {
+    toolbar: 'Canvas actions',
+    undo: 'Undo',
+    redo: 'Redo',
+    save: 'Save',
+    tree: 'Layout',
+    properties: 'Properties',
+    pick: 'Select a part to see its properties.',
+    noProps: 'This part has no properties to set here.',
+  },
   salesCommittee: {
     title: 'Buying committee',
     influence: 'Influence',

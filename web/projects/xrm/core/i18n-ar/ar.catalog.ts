@@ -2253,6 +2253,16 @@ export const xrmAr = {
     custom: 'مكوّن مخصص {id}',
     run: 'تشغيل',
   },
+  canvas: {
+    toolbar: 'إجراءات اللوحة',
+    undo: 'تراجع',
+    redo: 'إعادة',
+    save: 'حفظ',
+    tree: 'التخطيط',
+    properties: 'الخصائص',
+    pick: 'اختر جزءًا لترى خصائصه.',
+    noProps: 'لا خصائص لهذا الجزء تُضبط هنا.',
+  },
   salesCommittee: {
     title: 'لجنة الشراء',
     influence: 'التأثير',
