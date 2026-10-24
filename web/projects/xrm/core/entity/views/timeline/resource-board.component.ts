@@ -5,7 +5,7 @@ import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity';
 
 /** The day the board shows, in hours from midnight UTC. */
 export const DAY_FROM_HOUR = 6;

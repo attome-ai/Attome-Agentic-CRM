@@ -4,7 +4,7 @@ import { QueryService } from '@attome/xrm/core/query/data';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity';
 import { ResourceBoardComponent, barGeometry } from './resource-board.component';
 
 const DAY = '2026-10-26';
