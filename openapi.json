@@ -363,7 +363,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -4182,7 +4183,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -4377,7 +4379,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -4475,7 +4478,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -4562,7 +4566,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -5475,7 +5480,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -5927,7 +5933,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedResponse"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -6675,7 +6681,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -7280,7 +7287,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -9105,11 +9113,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "The calendar with its holiday rules and seasons",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CalendarDetail"
+                  "$ref": "#/components/schemas/CalendarFull"
                 }
               }
             }
@@ -9620,6 +9628,223 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/calendars/{id}/holiday-rules": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Add or change a holiday rule",
+        "description": "Z12-T6: a holiday that recurs — a fixed date, the nth weekday of a month,\na Hijri date (optionally waiting for a moon sighting) or a one-off date —\nnamed once within the calendar; posting the same name replaces it. The\nrule must expand for this year and the next. Administrators only.\nAudited.",
+        "operationId": "create_calendar_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The calendar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HolidayRuleDef"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The rule as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another layer owns the rule of that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A rule that does not parse or expand, or a sighting on a rule that is not Hijri",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/calendars/{id}/holiday-rules/{rule_id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Remove a holiday rule",
+        "description": "Removes a holiday rule; its sightings go with it. Administrators only.\nAudited.",
+        "operationId": "delete_calendar_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The calendar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "rule_id",
+            "in": "path",
+            "description": "The rule",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such rule on this calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another layer owns the rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/calendars/{id}/holidays": {
       "get": {
         "tags": [
@@ -9972,6 +10197,223 @@
           },
           "422": {
             "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/calendars/{id}/seasons": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Add or change a season",
+        "description": "Z12-T6: hours that replace the usual ones between two rules (Ramadan's\nshort day, say), named once within the calendar; posting the same name\nreplaces it. The season must expand for this year. Administrators only.\nAudited.",
+        "operationId": "create_calendar_season",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The calendar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeasonDef"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The season as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another layer owns the season of that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A season that does not parse or expand",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/calendars/{id}/seasons/{season_id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Remove a season",
+        "description": "Removes a season. Administrators only. Audited.",
+        "operationId": "delete_calendar_season",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The calendar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "season_id",
+            "in": "path",
+            "description": "The season",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such season on this calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another layer owns the season",
             "content": {
               "application/json": {
                 "schema": {
@@ -11169,7 +11611,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -17220,7 +17663,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -17777,7 +18221,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -17874,7 +18319,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -18325,7 +18771,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -18868,7 +19315,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -19330,7 +19778,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -19617,7 +20066,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -19982,7 +20432,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -20088,7 +20539,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -20185,7 +20637,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -20445,7 +20898,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -20714,7 +21168,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -21577,7 +22032,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -22353,7 +22809,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -26003,7 +26460,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -26435,7 +26893,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -29790,7 +30249,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -30338,7 +30798,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -30604,7 +31065,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -35009,7 +35471,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -38394,7 +38857,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -40528,7 +40992,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -40977,7 +41442,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -41651,7 +42117,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -43128,6 +43595,62 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/search/status": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search index status",
+        "description": "How far the search index is behind the change feed (unread events and the\nage of the oldest) and its rows and bytes per entity from the daily\nmeasurement. Administrators only.",
+        "operationId": "search_status",
+        "responses": {
+          "200": {
+            "description": "The index's backlog and size",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Search is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/admin/secrets": {
@@ -54326,6 +54849,8 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "A portal's account policy",
+        "description": "The account policy of one web portal: who may sign up, with which role,\nand how its accounts sign in (D-588). Administrators only.",
         "operationId": "portal_admin_get_auth_policy",
         "parameters": [
           {
@@ -54400,6 +54925,8 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Set a portal's account policy",
+        "description": "Replaces the account policy of one web portal: who may sign up, with\nwhich role, and how its accounts sign in (D-588). Administrators only.\nAudited.",
         "operationId": "portal_admin_put_auth_policy",
         "parameters": [
           {
@@ -60365,7 +60892,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedResponse"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -62915,7 +63442,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -65783,7 +66311,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -69324,6 +69853,488 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/calendar-assignments/{subject_type}/{subject_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A calendar assignment",
+        "description": "The calendar a person (`user`) or a team works to. Administrators only.",
+        "operationId": "get_calendar_assignment",
+        "parameters": [
+          {
+            "name": "subject_type",
+            "in": "path",
+            "description": "`user` or `team`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "description": "The user or team",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No calendar is assigned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown subject type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Assign a calendar",
+        "description": "Sets the calendar a person or a team works to; their business time is\ncounted on it. Administrators only. Audited.",
+        "operationId": "put_calendar_assignment",
+        "parameters": [
+          {
+            "name": "subject_type",
+            "in": "path",
+            "description": "`user` or `team`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "description": "The user or team",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The assignment as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such active calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The assignment exists and `row_version` is missing or stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown subject type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Remove a calendar assignment",
+        "description": "The person or team works to the default calendar again. Administrators\nonly. Audited.",
+        "operationId": "delete_calendar_assignment",
+        "parameters": [
+          {
+            "name": "subject_type",
+            "in": "path",
+            "description": "`user` or `team`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "description": "The user or team",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No calendar is assigned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown subject type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/calendar-sightings": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sightings of a year",
+        "description": "Every sighted holiday expected to start in the Gregorian year, with the\nstart confirmed so far. Administrators only.",
+        "operationId": "list_calendar_sightings",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The Gregorian year; this year when absent.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Expected and confirmed starts, earliest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SightingRow"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Confirm a sighting",
+        "description": "Z12-T6: the day a sighted Hijri holiday really starts this Hijri year, as\nannounced. Every calendar using the rule moves the holiday from the\nexpected day to this one. At most three days from the expected start.\nAdministrators only. Audited.",
+        "operationId": "confirm_calendar_sighting",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SightingBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The sighting as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SightingRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such active rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The rule waits for no sighting, or the start is too far from the expected one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/calendars/{id}/calculate": {
       "post": {
         "tags": [
@@ -69471,7 +70482,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -72646,7 +73658,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -72732,7 +73745,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -82583,7 +83597,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -88374,7 +89389,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -92056,6 +93072,325 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/record-templates/from-record": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Save a record as a template",
+        "description": "Saves a record's values as a new draft record template of its entity:\neach set field it may hold becomes a fixed value. The draft is published\nlike any metadata. Administrators only. Audited.",
+        "operationId": "save_record_as_template",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAsTemplate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new draft template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or one the caller cannot read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A blank name or label, or the template fails validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/record-templates/{id}/apply": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Apply a template to records",
+        "description": "Fills records of the template's entity with its values: only the fields\nthat are empty, unless `overwrite`. One record is updated now; several\nbecome a bulk operation that runs in the background. Needs the update\nprivilege (and `bulk` for several).",
+        "operationId": "apply_record_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The published template",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyTemplate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What was filled, or the bulk operation filling it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppliedTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller cannot update these records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such published template, or a record the caller cannot read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A record changed while it was being filled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No records or more than 1,000, a missing required answer, or a value that fails validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/record-templates/{id}/create": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Create a record from a template",
+        "description": "Creates a record of the template's entity with the template's values and\nthe person's answers, and the child records its child templates\ndescribe, each linked back to it. Needs the create privilege on every\nentity it writes.",
+        "operationId": "create_from_record_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The published template",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFromTemplate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The record and its children",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedFromTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller cannot create records of an entity the template writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such published template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A required answer is missing, the template names a field that is gone, or a record fails validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/reports": {
       "post": {
         "tags": [
@@ -92630,7 +93965,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -95463,7 +96799,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -97291,7 +98628,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -99001,7 +100339,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -99316,7 +100655,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -107368,7 +108708,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -108444,7 +109785,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -111816,7 +113158,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -125248,6 +126591,35 @@
           }
         }
       },
+      "AppliedTemplate": {
+        "type": "object",
+        "required": [
+          "filled",
+          "total"
+        ],
+        "properties": {
+          "bulk_operation_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "For several: the bulk operation filling them (`GET /api/v1/{entity}/bulk/{id}`)."
+          },
+          "filled": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "For one record: the fields it filled."
+          },
+          "total": {
+            "type": "integer",
+            "description": "Records the request changes (one record whose fields were all set\nalready changes none).",
+            "minimum": 0
+          }
+        }
+      },
       "AppliesTo": {
         "type": "string",
         "description": "Who a rule applies to (`rule.applies_to`).",
@@ -125425,6 +126797,29 @@
           "failed",
           "adopted"
         ]
+      },
+      "ApplyTemplate": {
+        "type": "object",
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "answers": {
+            "type": "object"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The records to fill, 1 to 1,000, all of the template's entity."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Replace values already set; otherwise only empty fields are filled."
+          }
+        }
       },
       "ApprovalDetail": {
         "type": "object",
@@ -126447,6 +127842,26 @@
           }
         }
       },
+      "AssignmentBody": {
+        "type": "object",
+        "required": [
+          "calendar_id"
+        ],
+        "properties": {
+          "calendar_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Required to change an assignment that exists (409 when stale)."
+          }
+        }
+      },
       "AssignmentPatch": {
         "type": "object",
         "description": "An assignment change.",
@@ -126479,6 +127894,33 @@
             ],
             "format": "uuid",
             "description": "Give the shift to this person."
+          }
+        }
+      },
+      "AssignmentRow": {
+        "type": "object",
+        "description": "Which calendar a person or a team works to.",
+        "required": [
+          "subject_type",
+          "subject_id",
+          "calendar_id",
+          "row_version"
+        ],
+        "properties": {
+          "calendar_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject_type": {
+            "type": "string"
           }
         }
       },
@@ -130461,6 +131903,13 @@
           "tz"
         ],
         "properties": {
+          "country_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "An ISO 3166 two-letter country code."
+          },
           "description": {
             "type": [
               "string",
@@ -130473,6 +131922,20 @@
           },
           "name": {
             "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parent_calendar_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Z12-T6: the calendar this one inherits from; its chain may not loop\nor run deeper than three calendars."
           },
           "tz": {
             "type": "string"
@@ -130493,6 +131956,13 @@
           "tz"
         ],
         "properties": {
+          "country_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Z12-T3: an ISO 3166 country code, such as `SA`."
+          },
           "description": {
             "type": [
               "string",
@@ -130525,6 +131995,39 @@
           "name": {
             "type": "string"
           },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parent": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Z12-T4: the calendar this one inherits from, by name. `None` leaves\nthe target's parent alone."
+          },
+          "rules": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/HolidayRuleDef"
+            },
+            "description": "Z12-T6: holiday rules by name. `None` leaves the target's alone;\n`Some` is the exact list. Export writes them when there are any."
+          },
+          "seasons": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SeasonDef"
+            },
+            "description": "Z12-T6: seasonal hours by name, the same way as `rules`."
+          },
           "tz": {
             "type": "string"
           },
@@ -130546,9 +132049,22 @@
           "hours",
           "is_default",
           "is_active",
-          "owner_layer"
+          "owner_layer",
+          "current_version"
         ],
         "properties": {
+          "country_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Z12-T3: an ISO 3166 country code, such as `SA`."
+          },
+          "current_version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Z12-T5: the calendar's content version."
+          },
           "description": {
             "type": [
               "string",
@@ -130569,9 +132085,30 @@
           "name": {
             "type": "string"
           },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "owner_layer": {
             "type": "string",
             "description": "Solution 7 (D-785) — the layer that owns this calendar: `platform`,\n`product`, `project` or `customer`. Only a changeset of that layer\nmay update or retire it (409 `layer_mismatch` otherwise)."
+          },
+          "parent": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The parent's name (how a changeset names it)."
+          },
+          "parent_calendar_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Z12-T4: the calendar this one inherits from."
           },
           "tz": {
             "type": "string"
@@ -130670,6 +132207,35 @@
             "description": "Empty: the date is closed. Otherwise these ranges replace the\nweekday's hours for that date."
           }
         }
+      },
+      "CalendarFull": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CalendarDetail"
+          },
+          {
+            "type": "object",
+            "required": [
+              "rules",
+              "seasons"
+            ],
+            "properties": {
+              "rules": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RuleDetail"
+                }
+              },
+              "seasons": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SeasonDetail"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Z12-T6: one calendar with its holiday rules and seasons."
       },
       "CalendarTimeRange": {
         "type": "object",
@@ -135796,6 +137362,15 @@
           }
         }
       },
+      "CreateFromTemplate": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "object",
+            "description": "Answers to the template's prompts, by field name."
+          }
+        }
+      },
       "CreateGrantBody": {
         "type": "object",
         "required": [
@@ -136954,6 +138529,30 @@
         ],
         "properties": {
           "folder": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CreatedFromTemplate": {
+        "type": "object",
+        "required": [
+          "entity",
+          "id",
+          "children"
+        ],
+        "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateRecord"
+            },
+            "description": "The child records created with it."
+          },
+          "entity": {
             "type": "string"
           },
           "id": {
@@ -147328,6 +148927,32 @@
           }
         }
       },
+      "HolidayRuleDef": {
+        "type": "object",
+        "description": "One `calendar_holiday_rule` row (Z12-T6), embedded under its calendar and\nidentified by `name` within it. `rule` is an\n`attome_calendar::rules::HolidayRule` (`{\"kind\": \"hijri\", \"month\": 10,\n\"day\": 1, \"span_days\": 3}`).",
+        "required": [
+          "name",
+          "rule"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "needs_sighting": {
+            "type": "boolean",
+            "description": "A Hijri holiday whose start moves when the moon is sighted."
+          },
+          "rule": {
+            "type": "object"
+          }
+        }
+      },
       "HookAccepted": {
         "type": "object",
         "description": "What an accepted call did.",
@@ -147986,6 +149611,33 @@
           "worst_mean_ms": {
             "type": "number",
             "format": "double"
+          }
+        }
+      },
+      "IndexSize": {
+        "type": "object",
+        "description": "A25-T5: one entity's share of the search index, as last measured.",
+        "required": [
+          "entity_logicalname",
+          "row_count",
+          "bytes",
+          "measured_at"
+        ],
+        "properties": {
+          "bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "entity_logicalname": {
+            "type": "string"
+          },
+          "measured_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "row_count": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -159244,9 +160896,22 @@
                 "hours",
                 "is_default",
                 "is_active",
-                "owner_layer"
+                "owner_layer",
+                "current_version"
               ],
               "properties": {
+                "country_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Z12-T3: an ISO 3166 country code, such as `SA`."
+                },
+                "current_version": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "Z12-T5: the calendar's content version."
+                },
                 "description": {
                   "type": [
                     "string",
@@ -159267,9 +160932,30 @@
                 "name": {
                   "type": "string"
                 },
+                "name_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "owner_layer": {
                   "type": "string",
                   "description": "Solution 7 (D-785) — the layer that owns this calendar: `platform`,\n`product`, `project` or `customer`. Only a changeset of that layer\nmay update or retire it (409 `layer_mismatch` otherwise)."
+                },
+                "parent": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The parent's name (how a changeset names it)."
+                },
+                "parent_calendar_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Z12-T4: the calendar this one inherits from."
                 },
                 "tz": {
                   "type": "string"
@@ -183556,6 +185242,46 @@
           }
         }
       },
+      "RuleDetail": {
+        "type": "object",
+        "required": [
+          "id",
+          "calendar_id",
+          "name",
+          "rule",
+          "needs_sighting",
+          "owner_layer"
+        ],
+        "properties": {
+          "calendar_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "needs_sighting": {
+            "type": "boolean"
+          },
+          "owner_layer": {
+            "type": "string"
+          },
+          "rule": {
+            "type": "object",
+            "description": "An `attome_calendar::rules::HolidayRule`, such as\n`{\"kind\": \"hijri\", \"month\": 10, \"day\": 1, \"span_days\": 3}`."
+          }
+        }
+      },
       "RuleEditorWarning": {
         "type": "object",
         "description": "An editor warning (design §6.4). Never blocks a write.",
@@ -185699,6 +187425,38 @@
           }
         }
       },
+      "SaveAsTemplate": {
+        "type": "object",
+        "required": [
+          "entity",
+          "id",
+          "name",
+          "label_en"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "The record's entity (its logical name)."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label_en": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "The new template's name."
+          }
+        }
+      },
       "SavePreferences": {
         "type": "object",
         "description": "`POST /api/v1/consents/preferences`.",
@@ -185715,6 +187473,29 @@
           },
           "token": {
             "type": "string"
+          }
+        }
+      },
+      "SavedTemplate": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "values"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The new draft template."
+          },
+          "name": {
+            "type": "string"
+          },
+          "values": {
+            "type": "integer",
+            "description": "The fields it fixes.",
+            "minimum": 0
           }
         }
       },
@@ -186538,6 +188319,26 @@
           }
         }
       },
+      "SearchStatus": {
+        "type": "object",
+        "description": "A25-T5: how far the index is behind, and its size per entity.",
+        "required": [
+          "backlog",
+          "sizes"
+        ],
+        "properties": {
+          "backlog": {
+            "$ref": "#/components/schemas/Backlog"
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndexSize"
+            },
+            "description": "Per entity, largest first, from the daily upkeep."
+          }
+        }
+      },
       "SearchSuggestion": {
         "type": "object",
         "required": [
@@ -186562,6 +188363,64 @@
             "format": "uuid"
           },
           "text": {
+            "type": "string"
+          }
+        }
+      },
+      "SeasonDef": {
+        "type": "object",
+        "description": "One `calendar_season` row (Z12-T6), identified by `name` within its\ncalendar. `definition` is an `attome_calendar::rules::Season`.",
+        "required": [
+          "name",
+          "definition"
+        ],
+        "properties": {
+          "definition": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SeasonDetail": {
+        "type": "object",
+        "required": [
+          "id",
+          "calendar_id",
+          "name",
+          "definition",
+          "owner_layer"
+        ],
+        "properties": {
+          "calendar_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "definition": {
+            "type": "object",
+            "description": "An `attome_calendar::rules::Season`: `start` and `end` rules and the\nhours per weekday between them."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "owner_layer": {
             "type": "string"
           }
         }
@@ -188028,6 +189887,68 @@
             "type": "string"
           },
           "name": {
+            "type": "string"
+          }
+        }
+      },
+      "SightingBody": {
+        "type": "object",
+        "required": [
+          "rule_id",
+          "hijri_year",
+          "confirmed_start"
+        ],
+        "properties": {
+          "confirmed_start": {
+            "type": "string",
+            "format": "date",
+            "description": "The Gregorian day the holiday starts, as announced."
+          },
+          "hijri_year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SightingRow": {
+        "type": "object",
+        "description": "One sighted holiday of a Gregorian year: when it is expected to start and,\nonce confirmed, when it does.",
+        "required": [
+          "rule_id",
+          "rule_name",
+          "calendar_id",
+          "hijri_year",
+          "expected_start"
+        ],
+        "properties": {
+          "calendar_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmed_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "expected_start": {
+            "type": "string",
+            "format": "date"
+          },
+          "hijri_year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
             "type": "string"
           }
         }
@@ -192440,6 +194361,23 @@
             "type": "string"
           },
           "team_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "TemplateRecord": {
+        "type": "object",
+        "description": "One record a template created.",
+        "required": [
+          "entity",
+          "id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "id": {
             "type": "string",
             "format": "uuid"
           }

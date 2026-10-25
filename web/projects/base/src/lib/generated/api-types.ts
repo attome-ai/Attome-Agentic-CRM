@@ -1888,6 +1888,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/calendars/{id}/holiday-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add or change a holiday rule
+         * @description Z12-T6: a holiday that recurs — a fixed date, the nth weekday of a month,
+         *     a Hijri date (optionally waiting for a moon sighting) or a one-off date —
+         *     named once within the calendar; posting the same name replaces it. The
+         *     rule must expand for this year and the next. Administrators only.
+         *     Audited.
+         */
+        post: operations["create_calendar_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/calendars/{id}/holiday-rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a holiday rule
+         * @description Removes a holiday rule; its sightings go with it. Administrators only.
+         *     Audited.
+         */
+        delete: operations["delete_calendar_rule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/calendars/{id}/holidays": {
         parameters: {
             query?: never;
@@ -1953,6 +1998,49 @@ export interface paths {
          * @description Remove a holiday. Administrators only. Audited.
          */
         delete: operations["delete_holiday"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/calendars/{id}/seasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add or change a season
+         * @description Z12-T6: hours that replace the usual ones between two rules (Ramadan's
+         *     short day, say), named once within the calendar; posting the same name
+         *     replaces it. The season must expand for this year. Administrators only.
+         *     Audited.
+         */
+        post: operations["create_calendar_season"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/calendars/{id}/seasons/{season_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a season
+         * @description Removes a season. Administrators only. Audited.
+         */
+        delete: operations["delete_calendar_season"];
         options?: never;
         head?: never;
         patch?: never;
@@ -8348,6 +8436,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/search/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search index status
+         * @description How far the search index is behind the change feed (unread events and the
+         *     age of the oldest) and its rows and bytes per entity from the daily
+         *     measurement. Administrators only.
+         */
+        get: operations["search_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/secrets": {
         parameters: {
             query?: never;
@@ -10472,7 +10582,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A portal's account policy
+         * @description The account policy of one web portal: who may sign up, with which role,
+         *     and how its accounts sign in (D-588). Administrators only.
+         */
         get: operations["portal_admin_get_auth_policy"];
+        /**
+         * Set a portal's account policy
+         * @description Replaces the account policy of one web portal: who may sign up, with
+         *     which role, and how its accounts sign in (D-588). Administrators only.
+         *     Audited.
+         */
         put: operations["portal_admin_put_auth_policy"];
         post?: never;
         delete?: never;
@@ -13595,6 +13716,64 @@ export interface paths {
         get: operations["public_branding"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar-assignments/{subject_type}/{subject_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A calendar assignment
+         * @description The calendar a person (`user`) or a team works to. Administrators only.
+         */
+        get: operations["get_calendar_assignment"];
+        /**
+         * Assign a calendar
+         * @description Sets the calendar a person or a team works to; their business time is
+         *     counted on it. Administrators only. Audited.
+         */
+        put: operations["put_calendar_assignment"];
+        post?: never;
+        /**
+         * Remove a calendar assignment
+         * @description The person or team works to the default calendar again. Administrators
+         *     only. Audited.
+         */
+        delete: operations["delete_calendar_assignment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar-sightings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sightings of a year
+         * @description Every sighted holiday expected to start in the Gregorian year, with the
+         *     start confirmed so far. Administrators only.
+         */
+        get: operations["list_calendar_sightings"];
+        put?: never;
+        /**
+         * Confirm a sighting
+         * @description Z12-T6: the day a sighted Hijri holiday really starts this Hijri year, as
+         *     announced. Every calendar using the rule moves the holiday from the
+         *     expected day to this one. At most three days from the expected start.
+         *     Administrators only. Audited.
+         */
+        post: operations["confirm_calendar_sighting"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18537,6 +18716,74 @@ export interface paths {
          * @description Accepts or rejects the quote a guest link shows.
          */
         post: operations["post_decision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/record-templates/from-record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save a record as a template
+         * @description Saves a record's values as a new draft record template of its entity:
+         *     each set field it may hold becomes a fixed value. The draft is published
+         *     like any metadata. Administrators only. Audited.
+         */
+        post: operations["save_record_as_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/record-templates/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply a template to records
+         * @description Fills records of the template's entity with its values: only the fields
+         *     that are empty, unless `overwrite`. One record is updated now; several
+         *     become a bulk operation that runs in the background. Needs the update
+         *     privilege (and `bulk` for several).
+         */
+        post: operations["apply_record_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/record-templates/{id}/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a record from a template
+         * @description Creates a record of the template's entity with the template's values and
+         *     the person's answers, and the child records its child templates
+         *     describe, each linked back to it. Needs the create privilege on every
+         *     entity it writes.
+         */
+        post: operations["create_from_record_template"];
         delete?: never;
         options?: never;
         head?: never;
@@ -25436,6 +25683,20 @@ export interface components {
             /** Format: uuid */
             plan_id: string;
         };
+        AppliedTemplate: {
+            /**
+             * Format: uuid
+             * @description For several: the bulk operation filling them (`GET /api/v1/{entity}/bulk/{id}`).
+             */
+            bulk_operation_id?: string | null;
+            /** @description For one record: the fields it filled. */
+            filled: string[];
+            /**
+             * @description Records the request changes (one record whose fields were all set
+             *     already changes none).
+             */
+            total: number;
+        };
         /**
          * @description Who a rule applies to (`rule.applies_to`).
          * @enum {string}
@@ -25517,6 +25778,13 @@ export interface components {
          * @enum {string}
          */
         ApplyStatus: "planned" | "queued" | "claimed" | "applying" | "succeeded" | "failed" | "adopted";
+        ApplyTemplate: {
+            answers?: Record<string, never>;
+            /** @description The records to fill, 1 to 1,000, all of the template's entity. */
+            ids: string[];
+            /** @description Replace values already set; otherwise only empty fields are filled. */
+            overwrite?: boolean;
+        };
         /** @description M9-T4: what the request page shows. */
         ApprovalDetail: {
             action_type: string;
@@ -25896,6 +26164,15 @@ export interface components {
             /** Format: uuid */
             user_id: string;
         };
+        AssignmentBody: {
+            /** Format: uuid */
+            calendar_id: string;
+            /**
+             * Format: int64
+             * @description Required to change an assignment that exists (409 when stale).
+             */
+            row_version?: number | null;
+        };
         /** @description An assignment change. */
         AssignmentPatch: {
             /** Format: date-time */
@@ -25909,6 +26186,16 @@ export interface components {
              * @description Give the shift to this person.
              */
             user_id?: string | null;
+        };
+        /** @description Which calendar a person or a team works to. */
+        AssignmentRow: {
+            /** Format: uuid */
+            calendar_id: string;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: uuid */
+            subject_id: string;
+            subject_type: string;
         };
         /** @description One assignment. */
         AssignmentView: {
@@ -27465,10 +27752,19 @@ export interface components {
             result: unknown;
         };
         CalendarBody: {
+            /** @description An ISO 3166 two-letter country code. */
+            country_code?: string | null;
             description?: string | null;
             hours?: unknown;
             is_default?: boolean;
             name: string;
+            name_ar?: string | null;
+            /**
+             * Format: uuid
+             * @description Z12-T6: the calendar this one inherits from; its chain may not loop
+             *     or run deeper than three calendars.
+             */
+            parent_calendar_id?: string | null;
             tz: string;
             working_days?: string[];
         };
@@ -27483,6 +27779,8 @@ export interface components {
          *     table_definition` already takes for its own opaque jsonb column).
          */
         CalendarDef: {
+            /** @description Z12-T3: an ISO 3166 country code, such as `SA`. */
+            country_code?: string | null;
             description?: string | null;
             /**
              * @description D-592 per-date exceptions. `None` (a bundle written before they
@@ -27495,10 +27793,30 @@ export interface components {
             is_customized?: boolean;
             is_default?: boolean;
             name: string;
+            name_ar?: string | null;
+            /**
+             * @description Z12-T4: the calendar this one inherits from, by name. `None` leaves
+             *     the target's parent alone.
+             */
+            parent?: string | null;
+            /**
+             * @description Z12-T6: holiday rules by name. `None` leaves the target's alone;
+             *     `Some` is the exact list. Export writes them when there are any.
+             */
+            rules?: components["schemas"]["HolidayRuleDef"][] | null;
+            /** @description Z12-T6: seasonal hours by name, the same way as `rules`. */
+            seasons?: components["schemas"]["SeasonDef"][] | null;
             tz: string;
             working_days?: string[];
         };
         CalendarDetail: {
+            /** @description Z12-T3: an ISO 3166 country code, such as `SA`. */
+            country_code?: string | null;
+            /**
+             * Format: int32
+             * @description Z12-T5: the calendar's content version.
+             */
+            current_version: number;
             description?: string | null;
             hours: unknown;
             /** Format: uuid */
@@ -27506,12 +27824,20 @@ export interface components {
             is_active: boolean;
             is_default: boolean;
             name: string;
+            name_ar?: string | null;
             /**
              * @description Solution 7 (D-785) — the layer that owns this calendar: `platform`,
              *     `product`, `project` or `customer`. Only a changeset of that layer
              *     may update or retire it (409 `layer_mismatch` otherwise).
              */
             owner_layer: string;
+            /** @description The parent's name (how a changeset names it). */
+            parent?: string | null;
+            /**
+             * Format: uuid
+             * @description Z12-T4: the calendar this one inherits from.
+             */
+            parent_calendar_id?: string | null;
             tz: string;
             working_days: string[];
         };
@@ -27552,6 +27878,11 @@ export interface components {
              *     weekday's hours for that date.
              */
             ranges: components["schemas"]["CalendarTimeRange"][];
+        };
+        /** @description Z12-T6: one calendar with its holiday rules and seasons. */
+        CalendarFull: components["schemas"]["CalendarDetail"] & {
+            rules: components["schemas"]["RuleDetail"][];
+            seasons: components["schemas"]["SeasonDetail"][];
         };
         /** @description One working range on an exception's date, minutes from local midnight. */
         CalendarTimeRange: {
@@ -29557,6 +29888,10 @@ export interface components {
             id: string;
             pages_created: number;
         };
+        CreateFromTemplate: {
+            /** @description Answers to the template's prompts, by field name. */
+            answers?: Record<string, never>;
+        };
         CreateGrantBody: {
             privilege_key: string;
             privilege_name?: string | null;
@@ -30017,6 +30352,13 @@ export interface components {
         };
         CreatedFolder: {
             folder: string;
+            /** Format: uuid */
+            id: string;
+        };
+        CreatedFromTemplate: {
+            /** @description The child records created with it. */
+            children: components["schemas"]["TemplateRecord"][];
+            entity: string;
             /** Format: uuid */
             id: string;
         };
@@ -34273,6 +34615,19 @@ export interface components {
              */
             owner_layer: string;
         };
+        /**
+         * @description One `calendar_holiday_rule` row (Z12-T6), embedded under its calendar and
+         *     identified by `name` within it. `rule` is an
+         *     `attome_calendar::rules::HolidayRule` (`{"kind": "hijri", "month": 10,
+         *     "day": 1, "span_days": 3}`).
+         */
+        HolidayRuleDef: {
+            name: string;
+            name_ar?: string | null;
+            /** @description A Hijri holiday whose start moves when the moon is sighted. */
+            needs_sighting?: boolean;
+            rule: Record<string, never>;
+        };
         /** @description What an accepted call did. */
         HookAccepted: {
             accepted: boolean;
@@ -34517,6 +34872,16 @@ export interface components {
             statements: number;
             /** Format: double */
             worst_mean_ms: number;
+        };
+        /** @description A25-T5: one entity's share of the search index, as last measured. */
+        IndexSize: {
+            /** Format: int64 */
+            bytes: number;
+            entity_logicalname: string;
+            /** Format: date-time */
+            measured_at: string;
+            /** Format: int64 */
+            row_count: number;
         };
         /** @description The indexer's own state, shared by every collection. */
         IndexerStatus: {
@@ -38733,6 +39098,13 @@ export interface components {
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_CalendarDetail: {
             items: {
+                /** @description Z12-T3: an ISO 3166 country code, such as `SA`. */
+                country_code?: string | null;
+                /**
+                 * Format: int32
+                 * @description Z12-T5: the calendar's content version.
+                 */
+                current_version: number;
                 description?: string | null;
                 hours: unknown;
                 /** Format: uuid */
@@ -38740,12 +39112,20 @@ export interface components {
                 is_active: boolean;
                 is_default: boolean;
                 name: string;
+                name_ar?: string | null;
                 /**
                  * @description Solution 7 (D-785) — the layer that owns this calendar: `platform`,
                  *     `product`, `project` or `customer`. Only a changeset of that layer
                  *     may update or retire it (409 `layer_mismatch` otherwise).
                  */
                 owner_layer: string;
+                /** @description The parent's name (how a changeset names it). */
+                parent?: string | null;
+                /**
+                 * Format: uuid
+                 * @description Z12-T4: the calendar this one inherits from.
+                 */
+                parent_calendar_id?: string | null;
                 tz: string;
                 working_days: string[];
             }[];
@@ -48210,6 +48590,21 @@ export interface components {
             severity?: string;
             target_field?: string | null;
         };
+        RuleDetail: {
+            /** Format: uuid */
+            calendar_id: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            name_ar?: string | null;
+            needs_sighting: boolean;
+            owner_layer: string;
+            /**
+             * @description An `attome_calendar::rules::HolidayRule`, such as
+             *     `{"kind": "hijri", "month": 10, "day": 1, "span_days": 3}`.
+             */
+            rule: Record<string, never>;
+        };
         /** @description An editor warning (design §6.4). Never blocks a write. */
         RuleEditorWarning: {
             /**
@@ -48945,10 +49340,30 @@ export interface components {
             /** Format: uuid */
             opportunity_id: string;
         };
+        SaveAsTemplate: {
+            /** @description The record's entity (its logical name). */
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            label_ar?: string | null;
+            label_en: string;
+            /** @description The new template's name. */
+            name: string;
+        };
         /** @description `POST /api/v1/consents/preferences`. */
         SavePreferences: {
             changes: components["schemas"]["PreferenceChange"][];
             token: string;
+        };
+        SavedTemplate: {
+            /**
+             * Format: uuid
+             * @description The new draft template.
+             */
+            id: string;
+            name: string;
+            /** @description The fields it fixes. */
+            values: number;
         };
         SbomResponse: {
             packs: components["schemas"]["InstalledPack"][];
@@ -49266,6 +49681,12 @@ export interface components {
             route_hint?: null | components["schemas"]["RouteHintDto"];
             total: components["schemas"]["Total"];
         };
+        /** @description A25-T5: how far the index is behind, and its size per entity. */
+        SearchStatus: {
+            backlog: components["schemas"]["Backlog"];
+            /** @description Per entity, largest first, from the daily upkeep. */
+            sizes: components["schemas"]["IndexSize"][];
+        };
         SearchSuggestion: {
             /**
              * @description For `"entity"`: the entity to route to. For `"saved_search"`: always
@@ -49277,6 +49698,29 @@ export interface components {
             /** Format: uuid */
             record_id?: string | null;
             text: string;
+        };
+        /**
+         * @description One `calendar_season` row (Z12-T6), identified by `name` within its
+         *     calendar. `definition` is an `attome_calendar::rules::Season`.
+         */
+        SeasonDef: {
+            definition: Record<string, never>;
+            name: string;
+            name_ar?: string | null;
+        };
+        SeasonDetail: {
+            /** Format: uuid */
+            calendar_id: string;
+            /**
+             * @description An `attome_calendar::rules::Season`: `start` and `end` rules and the
+             *     hours per weekday between them.
+             */
+            definition: Record<string, never>;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            name_ar?: string | null;
+            owner_layer: string;
         };
         /** @description One secret, as an administrator sees it. There is no value field. */
         SecretInventoryRow: {
@@ -49857,6 +50301,34 @@ export interface components {
             id: string;
             key: string;
             name: string;
+        };
+        SightingBody: {
+            /**
+             * Format: date
+             * @description The Gregorian day the holiday starts, as announced.
+             */
+            confirmed_start: string;
+            /** Format: int32 */
+            hijri_year: number;
+            /** Format: uuid */
+            rule_id: string;
+        };
+        /**
+         * @description One sighted holiday of a Gregorian year: when it is expected to start and,
+         *     once confirmed, when it does.
+         */
+        SightingRow: {
+            /** Format: uuid */
+            calendar_id: string;
+            /** Format: date */
+            confirmed_start?: string | null;
+            /** Format: date */
+            expected_start: string;
+            /** Format: int32 */
+            hijri_year: number;
+            /** Format: uuid */
+            rule_id: string;
+            rule_name: string;
         };
         SignInUrl: {
             url: string;
@@ -51512,6 +51984,12 @@ export interface components {
             role_name: string;
             /** Format: uuid */
             team_id: string;
+        };
+        /** @description One record a template created. */
+        TemplateRecord: {
+            entity: string;
+            /** Format: uuid */
+            id: string;
         };
         /**
          * @description Who the rule is tested for. Absent: the rule is evaluated as if it
@@ -57188,7 +57666,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UnauthorizedResponse"];
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Caller lacks the required privilege, or an API-key caller on a step that asks for a step-up */
@@ -59037,13 +59515,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Success */
+            /** @description The calendar with its holiday rules and seasons */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CalendarDetail"];
+                    "application/json": components["schemas"]["CalendarFull"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -59349,6 +59827,137 @@ export interface operations {
             };
         };
     };
+    create_calendar_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The calendar */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolidayRuleDef"];
+            };
+        };
+        responses: {
+            /** @description The rule as stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleDetail"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another layer owns the rule of that name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A rule that does not parse or expand, or a sighting on a rule that is not Hijri */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_calendar_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The calendar */
+                id: string;
+                /** @description The rule */
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such rule on this calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another layer owns the rule */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_holidays: {
         parameters: {
             query?: never;
@@ -59566,6 +60175,137 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_calendar_season: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The calendar */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeasonDef"];
+            };
+        };
+        responses: {
+            /** @description The season as stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeasonDetail"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another layer owns the season of that name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A season that does not parse or expand */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_calendar_season: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The calendar */
+                id: string;
+                /** @description The season */
+                season_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such season on this calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another layer owns the season */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -79764,6 +80504,44 @@ export interface operations {
             };
         };
     };
+    search_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The index's backlog and size */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Search is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_secrets: {
         parameters: {
             query?: {
@@ -90312,7 +91090,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UnauthorizedResponse"];
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description The request is flat (not plan-bearing), or the caller is not an eligible approver for its current step */
@@ -95789,6 +96567,301 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_calendar_assignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `user` or `team` */
+                subject_type: string;
+                /** @description The user or team */
+                subject_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No calendar is assigned */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown subject type */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_calendar_assignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `user` or `team` */
+                subject_type: string;
+                /** @description The user or team */
+                subject_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignmentBody"];
+            };
+        };
+        responses: {
+            /** @description The assignment as stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such active calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The assignment exists and `row_version` is missing or stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown subject type */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_calendar_assignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `user` or `team` */
+                subject_type: string;
+                /** @description The user or team */
+                subject_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No calendar is assigned */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown subject type */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_calendar_sightings: {
+        parameters: {
+            query?: {
+                /** @description The Gregorian year; this year when absent. */
+                year?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Expected and confirmed starts, earliest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SightingRow"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_calendar_sighting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SightingBody"];
+            };
+        };
+        responses: {
+            /** @description The sighting as stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SightingRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such active rule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rule waits for no sighting, or the start is too far from the expected one */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -109777,6 +110850,201 @@ export interface operations {
             };
             /** @description Rate limited */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    save_record_as_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveAsTemplate"];
+            };
+        };
+        responses: {
+            /** @description The new draft template */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedTemplate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or one the caller cannot read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A blank name or label, or the template fails validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    apply_record_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The published template */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyTemplate"];
+            };
+        };
+        responses: {
+            /** @description What was filled, or the bulk operation filling it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppliedTemplate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller cannot update these records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such published template, or a record the caller cannot read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A record changed while it was being filled */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No records or more than 1,000, a missing required answer, or a value that fails validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_from_record_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The published template */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateFromTemplate"];
+            };
+        };
+        responses: {
+            /** @description The record and its children */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedFromTemplate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller cannot create records of an entity the template writes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such published template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A required answer is missing, the template names a field that is gone, or a record fails validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
