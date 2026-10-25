@@ -9,6 +9,8 @@ pub mod business;
 pub mod canonical;
 pub mod chainer;
 pub mod checkpoint;
+/// Q22-T1: detection rules over security events, each a security case.
+pub mod detections;
 pub mod erasure;
 pub mod erasure_ledger;
 pub mod initiator;

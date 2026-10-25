@@ -710,6 +710,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Security detections (Q22-T1, migration 0247): every five minutes the `security_detections` job reads
+  new security events and opens one `security_case` per detection: password spray (Q20's own
+  detections), impossible travel (two countries within two hours, through `auth.geoip_database`), mass
+  export (over 5,000 records in ten minutes, which also opens a privacy breach record with its 72-hour
+  deadline when the privacy pack is installed), privilege escalation (a grant to oneself, a grant naming
+  `system.admin`, or five grants in ten minutes) and a new device (a user agent unseen for 90 days,
+  kept hashed). The `security_cases_open` operations alert fires while any case is open.
 - Company walls (U12-T1, platform changeset 0072): an organisation marked `is_company_wall` is a
   company, and a person whose organisations all sit inside walls sees only records whose
   `organization_ref` is inside their companies: `Global` depth is capped to `BusinessUnit` and the

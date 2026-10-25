@@ -2959,6 +2959,8 @@ const DEDUP_KEY_MAINTENANCE: &str = "maintenance-generation";
 const DEDUP_KEY_DEVICE_READINGS: &str = "device-readings";
 /// R9-T1: policy reviews, attestations and exceptions (a registered job type).
 const DEDUP_KEY_GRC_POLICY_SWEEP: &str = "grc-policy-sweep";
+/// Q22-T1: detection rules over security events (a registered job type).
+const DEDUP_KEY_SECURITY_DETECTIONS: &str = "security-detections";
 /// R11-T1: evidence collectors (a registered job type).
 const DEDUP_KEY_GRC_EVIDENCE: &str = "grc-evidence-collect";
 /// I10-T2: warranty expiry reminders (a registered job type).
@@ -3225,6 +3227,11 @@ pub const DEVICE_READINGS: attome_jobs::JobType =
 /// and expired exceptions.
 pub const GRC_POLICY_SWEEP: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_grc::policy::JOB, 1);
+
+/// Q22-T1: spray, impossible travel, mass export, privilege escalation and
+/// new-device detections, each a security case.
+pub const SECURITY_DETECTIONS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_audit::detections::JOB, 1);
 
 /// R11-T1: evidence collectors writing evidence and, on failure, findings.
 pub const GRC_EVIDENCE_COLLECT: attome_jobs::JobType =
@@ -4104,6 +4111,26 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SECURITY_DETECTIONS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let run = attome_audit::detections::run(&state.base.db, chrono::Utc::now())
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if run.cases_opened > 0 {
+                    tracing::warn!(
+                        events = run.events,
+                        opened = run.cases_opened,
+                        breaches = run.breaches_opened,
+                        open = run.open_cases,
+                        "security detections opened cases"
+                    );
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             GRC_POLICY_SWEEP,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_GRC) {
@@ -4588,6 +4615,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_MAINTENANCE
         }
         EngineJob::Registered(job) if job.name == DEVICE_READINGS.name => DEDUP_KEY_DEVICE_READINGS,
+        EngineJob::Registered(job) if job.name == SECURITY_DETECTIONS.name => {
+            DEDUP_KEY_SECURITY_DETECTIONS
+        }
         EngineJob::Registered(job) if job.name == GRC_POLICY_SWEEP.name => {
             DEDUP_KEY_GRC_POLICY_SWEEP
         }
@@ -5538,6 +5568,21 @@ pub fn spawn_device_readings_scheduler(db: DbPool, interval: std::time::Duration
             "device readings",
         ),
         Err(error) => tracing::error!(%error, "device readings: not scheduled"),
+    }
+}
+
+/// Q22-T1: every five minutes, the security detection rules.
+pub fn spawn_security_detections_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(SECURITY_DETECTIONS.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_SECURITY_DETECTIONS,
+            "security detections",
+        ),
+        Err(error) => tracing::error!(%error, "security detections: not scheduled"),
     }
 }
 
