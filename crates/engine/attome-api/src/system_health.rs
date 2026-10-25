@@ -22,6 +22,9 @@ use attome_types::ErrorResponse;
 use axum::{Json, Router, extract::State, routing::get};
 use serde_json::{Value, json};
 
+/// Dependency health
+///
+/// Each dependency's state as this node sees it. Administrators only; readiness for the load balancer is /health/ready.
 #[utoipa::path(
     get,
     path = "/health/dependencies",

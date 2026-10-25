@@ -10,6 +10,9 @@ use crate::state::AppState;
 // M01 Core C-23: this handler takes no request body, query, or path
 // parameters — there is nothing for it to fail validation on, so the 422
 // this operation used to declare could never actually happen.
+/// Liveness
+///
+/// Answers 200 while the process is serving; it reads no dependency. Public, for load balancers and orchestrators.
 #[utoipa::path(
     get,
     path = "/health",
@@ -348,6 +351,8 @@ pub async fn health_ready(State(state): State<AppState>) -> (StatusCode, Json<Va
     ready_response(verdict)
 }
 
+/// Startup probe
+///
 /// U9-T1 — the startup probe: 200 once this node has finished booting
 /// (migrations, seeds, pre-warm), 503 before. An orchestrator holds liveness
 /// and readiness checks until it passes, so a slow first boot is not killed

@@ -36,6 +36,9 @@ pub struct WebChatMetrics {
     pub avg_csat: Option<f64>,
 }
 
+/// Web chat metrics
+///
+/// Web chat conversations over the last 30 days, the average first response time and the average satisfaction score where one was given. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/omnichannel/metrics",

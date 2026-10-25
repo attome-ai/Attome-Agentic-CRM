@@ -267,6 +267,8 @@ fn frame(name: &'static str, stamp: &str) -> Event {
         .data(json!({ "model_version": stamp }).to_string())
 }
 
+/// Live updates
+///
 /// Opens the live channel.
 #[utoipa::path(
     get,

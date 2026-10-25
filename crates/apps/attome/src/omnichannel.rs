@@ -248,6 +248,7 @@ pub struct SendMessageResponse {
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct PollQuery {
+    /// The chat session's token, from the session's first message.
     pub token: String,
     /// Only messages strictly after this instant. Omit to fetch the whole
     /// conversation so far — a short-poll GET is Phase 1's transport choice
@@ -668,6 +669,9 @@ async fn write_message(
 
 // ── HTTP handlers ────────────────────────────────────────────────────────
 
+/// Send a web chat message
+///
+/// A visitor's message in a web chat, answered by the bot or handed to a person. Public: the chat session token in the body identifies the conversation.
 #[utoipa::path(
     post,
     path = "/api/v1/omnichannel/webchat/message",
@@ -1070,6 +1074,9 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
+/// Poll a web chat
+///
+/// The messages of a web chat after a given time, for the widget's short polling. Public: the session token identifies the conversation.
 #[utoipa::path(
     get,
     path = "/api/v1/omnichannel/webchat/poll",
