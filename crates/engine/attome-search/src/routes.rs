@@ -1218,8 +1218,56 @@ async fn knowledge_indexer_status(
     Ok(Json(status))
 }
 
+/// A25-T5: one entity's share of the search index, as last measured.
+#[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
+pub struct IndexSize {
+    pub entity_logicalname: String,
+    pub row_count: i64,
+    pub bytes: i64,
+    pub measured_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// A25-T5: how far the index is behind, and its size per entity.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SearchStatus {
+    pub backlog: crate::drain::Backlog,
+    /// Per entity, largest first, from the daily upkeep.
+    pub sizes: Vec<IndexSize>,
+}
+
+/// Search index status
+///
+/// How far the search index is behind the change feed (unread events and the
+/// age of the oldest) and its rows and bytes per entity from the daily
+/// measurement. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/search/status",
+    tag = "search",
+    responses(
+        (status = 200, description = "The index's backlog and size", body = SearchStatus),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege, or Search is not licensed", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn search_status(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<SearchStatus>, AppError> {
+    let backlog = crate::drain::backlog(&state.base.db).await?;
+    let sizes: Vec<IndexSize> = sqlx::query_as(
+        "SELECT entity_logicalname, row_count, bytes, measured_at FROM search_index_size           ORDER BY bytes DESC, entity_logicalname LIMIT 500",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(SearchStatus { backlog, sizes }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route("/api/v1/admin/search/status", get(search_status))
         .route("/api/v1/search", get(search))
         .route("/api/v1/search/knowledge", get(knowledge_search))
         .route("/api/v1/search/knowledge/related", get(related_knowledge))
@@ -1244,7 +1292,8 @@ pub fn routes() -> Router<EngineState> {
     list_gaps,
     triage_gap,
     knowledge_coverage,
-    knowledge_indexer_status
+    knowledge_indexer_status,
+    search_status
 ))]
 #[derive(Debug)]
 pub struct ApiDocFragment;

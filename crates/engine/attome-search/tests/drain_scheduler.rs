@@ -234,3 +234,41 @@ async fn the_drain_lock_refuses_a_second_holder_rather_than_blocking() {
     assert!(got_third, "the lock must be released by the commit");
     second.rollback().await.expect("rollback");
 }
+
+/// A25-T5: events written after the drain's cursor show as its backlog, with
+/// the age of the oldest; the batch grows only past the heavy threshold.
+#[tokio::test]
+async fn lag_reported_after_bulk_insert() {
+    let db = skip_if_no_db!(test_db().await);
+    let before = attome_search::drain::backlog(&db)
+        .await
+        .expect("backlog before");
+    let mut conn = db.acquire().await.expect("a connection");
+    for _ in 0..5 {
+        attome_core::change_feed::emit(
+            &mut conn,
+            "lag_probe",
+            Uuid::now_v7(),
+            attome_core::change_feed::ChangeOperation::Create,
+        )
+        .await
+        .expect("emit a change");
+    }
+    drop(conn);
+    let after = attome_search::drain::backlog(&db)
+        .await
+        .expect("backlog after");
+    assert!(
+        after.events >= 5_i64.min(attome_core::change_feed::LAG_COUNT_CAP),
+        "{before:?} -> {after:?}"
+    );
+    assert!(after.lag_seconds >= 0.0);
+    assert_eq!(
+        attome_search::drain::batch_for(0),
+        attome_search::drain::DRAIN_BATCH
+    );
+    assert_eq!(
+        attome_search::drain::batch_for(attome_search::drain::HEAVY_BACKLOG),
+        attome_search::drain::HEAVY_BATCH
+    );
+}

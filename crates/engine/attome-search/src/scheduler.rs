@@ -44,7 +44,7 @@ use attome_core::EngineState;
 use attome_types::AppError;
 use sqlx::PgPool;
 
-use crate::drain::{DrainStats, drain_once};
+use crate::drain::DrainStats;
 
 /// How many published-but-unchunked items one catch-up pass projects.
 ///
@@ -70,6 +70,29 @@ const DRAIN_LOCK_KEY: &str = "attome-search/drain:record-corpus";
 /// Bounded so a large backlog of unembedded chunks cannot keep a tick busy
 /// indefinitely; the rest is picked up on later ticks.
 pub const EMBED_BATCHES_PER_TICK: usize = 4;
+
+/// A25-T5: logs a heavy backlog at warn, at most once a minute per node.
+fn warn_heavy_backlog(backlog: crate::drain::Backlog) {
+    use std::sync::atomic::{AtomicI64, Ordering};
+    static LAST_WARN: AtomicI64 = AtomicI64::new(0);
+    let now = chrono::Utc::now().timestamp();
+    let last = LAST_WARN.load(Ordering::Relaxed);
+    if now - last >= 60
+        && LAST_WARN
+            .compare_exchange(last, now, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+    {
+        tracing::warn!(
+            backlog_events = backlog.events,
+            lag_seconds = backlog.lag_seconds,
+            batch = crate::drain::HEAVY_BATCH,
+            "search index drain is behind a bulk load; draining in larger batches"
+        );
+    }
+}
+
+/// A25-T5: how often the drain loop runs [`crate::drain::daily_upkeep`].
+pub const UPKEEP_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// Runs one tick, taking the lock. `Ok(None)` means another node held it.
 ///
@@ -114,7 +137,16 @@ pub async fn drain_tick(state: &EngineState) -> Result<Option<DrainStats>, AppEr
         }) as std::pin::Pin<Box<dyn std::future::Future<Output = _> + Send>>
     };
 
-    let stats = drain_once(db, &project).await?;
+    // A25-T5: the lag before this pass, as gauges, and the batch it sets.
+    let backlog = crate::drain::backlog(db).await?;
+    metrics::gauge!(crate::metrics::INDEX_STALENESS.name).set(backlog.lag_seconds);
+    metrics::gauge!(crate::metrics::INDEX_BACKLOG.name).set(backlog.events as f64);
+    if backlog.events >= crate::drain::HEAVY_BACKLOG {
+        warn_heavy_backlog(backlog);
+    }
+    let stats =
+        crate::drain::drain_once_batch(db, &project, crate::drain::batch_for(backlog.events))
+            .await?;
     // N15-T2: the same tick re-chunks changed records, timelines and
     // documents, through its own cursor.
     let chunks = crate::corpus::record_chunks::drain_once(db, &registry).await?;
@@ -297,6 +329,8 @@ pub async fn run_drain_loop(state: EngineState, shutdown: impl std::future::Futu
     crate::knowledge::install_ranking(embedder.clone(), reranker(&state));
 
     let mut ticker = tokio::time::interval(DRAIN_INTERVAL);
+    // A25-T5: when this node last ran the daily upkeep.
+    let mut last_upkeep: Option<std::time::Instant> = None;
     ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     tokio::pin!(shutdown);
 
@@ -308,6 +342,20 @@ pub async fn run_drain_loop(state: EngineState, shutdown: impl std::future::Futu
             }
             _ = ticker.tick() => {
                 let outcome = drain_tick(&state).await;
+                // A25-T5: once a day, on a node that held the lock.
+                if matches!(outcome, Ok(Some(_)))
+                    && last_upkeep.is_none_or(|t: std::time::Instant| t.elapsed() >= UPKEEP_INTERVAL)
+                {
+                    last_upkeep = Some(std::time::Instant::now());
+                    match crate::drain::daily_upkeep(&state.base.db).await {
+                        Ok(upkeep) => tracing::info!(
+                            pruned = upkeep.pruned,
+                            measured = upkeep.measured,
+                            "search index upkeep"
+                        ),
+                        Err(error) => tracing::warn!(%error, "search index upkeep failed; it runs again tomorrow"),
+                    }
+                }
                 // Only the node that just held the drain lock embeds, so
                 // several nodes do not repeat the same model work. The lock is
                 // already released here — the model call must not run inside

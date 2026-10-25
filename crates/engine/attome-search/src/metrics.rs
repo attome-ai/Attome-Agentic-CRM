@@ -77,6 +77,12 @@ pub const INDEX_ROWS: MetricDef = MetricDef {
     help: "Rows currently in the search index, by corpus.",
 };
 
+/// A25-T5: change-feed events the index drain has not read yet, capped.
+pub const INDEX_BACKLOG: MetricDef = MetricDef {
+    name: "attome_search_index_backlog_events",
+    help: "Change events the search index drain has not read yet (capped at 100000).",
+};
+
 pub fn all() -> Vec<&'static MetricDef> {
     vec![
         &SEARCHES_TOTAL,
@@ -85,6 +91,7 @@ pub fn all() -> Vec<&'static MetricDef> {
         &LEG_DEGRADED_TOTAL,
         &INDEX_STALENESS,
         &INDEX_ROWS,
+        &INDEX_BACKLOG,
     ]
 }
 

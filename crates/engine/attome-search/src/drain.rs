@@ -38,6 +38,113 @@ pub const CORPUS_RECORD: &str = "record";
 /// visibility horizon down for everyone else (D-358's documented cost).
 pub const DRAIN_BATCH: i64 = 200;
 
+/// A25-T5: the backlog above which the drain takes [`HEAVY_BATCH`] events a
+/// pass. The pause between passes stays the loop's fixed interval, so a bulk
+/// load is worked through faster without the database load becoming
+/// unbounded.
+pub const HEAVY_BACKLOG: i64 = 50_000;
+
+/// A25-T5: events one pass claims while the backlog is heavy.
+pub const HEAVY_BATCH: i64 = 2_000;
+
+/// A25-T5: index rows one upkeep pass removes for an entity's `max_age_days`;
+/// the rest go on the next day's pass.
+pub const PRUNE_LIMIT: i64 = 50_000;
+
+/// A25-T5: how far the drain is behind.
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, utoipa::ToSchema)]
+pub struct Backlog {
+    /// Events after this consumer's cursor, counted up to
+    /// [`attome_core::change_feed::LAG_COUNT_CAP`].
+    pub events: i64,
+    /// Age of the oldest of them in seconds; 0 with nothing to read.
+    pub lag_seconds: f64,
+}
+
+/// This consumer's backlog now. A consumer that has never run reads the
+/// whole retained feed, so its backlog is all of it.
+pub async fn backlog(db: &PgPool) -> Result<Backlog, AppError> {
+    let (events, lag_seconds): (i64, f64) = sqlx::query_as(
+        "WITH c AS (SELECT COALESCE((SELECT last_commit_xid FROM change_consumer_cursor \
+                                      WHERE consumer = $1), '0'::xid8) AS x) \
+         SELECT (SELECT count(*) FROM (SELECT 1 FROM entity_change_event e, c \
+                                        WHERE e.commit_xid > c.x LIMIT $2) unread)::bigint, \
+                COALESCE((SELECT EXTRACT(EPOCH FROM now() - min(e.created_at))::float8 \
+                            FROM entity_change_event e, c WHERE e.commit_xid > c.x), 0)::float8",
+    )
+    .bind(CONSUMER)
+    .bind(change_feed::LAG_COUNT_CAP)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Backlog {
+        events,
+        lag_seconds: lag_seconds.max(0.0),
+    })
+}
+
+/// The events one pass claims for a backlog of `events`. Pure.
+pub fn batch_for(events: i64) -> i64 {
+    if events >= HEAVY_BACKLOG {
+        HEAVY_BATCH
+    } else {
+        DRAIN_BATCH
+    }
+}
+
+/// What a daily upkeep pass did.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Upkeep {
+    /// Index rows removed for their entity's `max_age_days`.
+    pub pruned: u64,
+    /// Entities whose size was measured.
+    pub measured: u64,
+}
+
+/// A25-T5, once a day: removes index rows older than their entity's
+/// `search_entity_setting.max_age_days` (by `source_modifiedon`, at most
+/// [`PRUNE_LIMIT`] per entity a day), then measures the index's rows and
+/// bytes per entity into `search_index_size`.
+pub async fn daily_upkeep(db: &PgPool) -> Result<Upkeep, AppError> {
+    let aged: Vec<(String, i32)> = sqlx::query_as(
+        "SELECT entity_logicalname, max_age_days FROM search_entity_setting \
+          WHERE max_age_days IS NOT NULL",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut upkeep = Upkeep::default();
+    for (entity, days) in aged {
+        let removed = sqlx::query(
+            "DELETE FROM search_index WHERE ctid IN ( \
+                 SELECT ctid FROM search_index \
+                  WHERE entity_logicalname = $1 \
+                    AND source_modifiedon < now() - make_interval(days => $2) \
+                  LIMIT $3)",
+        )
+        .bind(&entity)
+        .bind(days)
+        .bind(PRUNE_LIMIT)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
+        upkeep.pruned += removed.rows_affected();
+    }
+    let measured = sqlx::query(
+        "INSERT INTO search_index_size (entity_logicalname, row_count, bytes, measured_at) \
+         SELECT entity_logicalname, count(*), COALESCE(sum(pg_column_size(si.*)), 0), now() \
+           FROM search_index si GROUP BY entity_logicalname \
+         ON CONFLICT (entity_logicalname) DO UPDATE \
+            SET row_count = EXCLUDED.row_count, bytes = EXCLUDED.bytes, \
+                measured_at = EXCLUDED.measured_at",
+    )
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?;
+    upkeep.measured = measured.rows_affected();
+    Ok(upkeep)
+}
+
 /// What one drain pass did. Reported rather than logged-and-forgotten: the
 /// ratio of `skipped_unchanged` to `written` is the direct measure of whether
 /// the hash gate is earning its place, and a sudden collapse in it is the
@@ -181,8 +288,18 @@ pub async fn drain_once(
     db: &PgPool,
     project_record: ProjectFn<'_>,
 ) -> Result<DrainStats, AppError> {
+    drain_once_batch(db, project_record, DRAIN_BATCH).await
+}
+
+/// [`drain_once`] claiming up to `batch_size` events (A25-T5: larger while
+/// the backlog is heavy, [`batch_for`]).
+pub async fn drain_once_batch(
+    db: &PgPool,
+    project_record: ProjectFn<'_>,
+    batch_size: i64,
+) -> Result<DrainStats, AppError> {
     let mut conn = db.acquire().await.map_err(AppError::internal)?;
-    let batch = change_feed::read_batch(&mut conn, CONSUMER, DRAIN_BATCH).await?;
+    let batch = change_feed::read_batch(&mut conn, CONSUMER, batch_size).await?;
 
     let mut stats = DrainStats {
         read: batch.len() as u64,
