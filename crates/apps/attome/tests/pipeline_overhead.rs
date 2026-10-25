@@ -359,6 +359,13 @@ async fn noop() -> &'static str {
 }
 
 async fn build_app() -> Option<(axum::Router, AppState, AppConfig)> {
+    build_app_with(false).await
+}
+
+/// [`build_app`]; with `memory`, both cache roles are the in-process store
+/// (`cache.backend = "memory"`, the Solo profile), so the session denylist is
+/// read from Postgres (Z4-T5).
+async fn build_app_with(memory: bool) -> Option<(axum::Router, AppState, AppConfig)> {
     let mut config = bench_config();
     let db_url = attome_testkit::migrated_db_url()?;
     point_config_at(&mut config, &db_url);
@@ -379,13 +386,20 @@ async fn build_app() -> Option<(axum::Router, AppState, AppConfig)> {
     let storage = attome_storage::create_storage_client(&config)
         .await
         .expect("build storage client");
+    let (cache_store, coordination_store) = if memory {
+        config.cache.backend = attome_config::CacheBackend::Memory;
+        let store = attome_cache::Store::memory();
+        (store.clone(), store)
+    } else {
+        (redis.into(), redis_coordination.into())
+    };
     let base = AppState::new(
         config.clone(),
         db.clone(),
         db.clone(),
         db,
-        redis,
-        redis_coordination,
+        cache_store,
+        coordination_store,
         storage,
     );
 
@@ -862,4 +876,129 @@ async fn measure_middleware_overhead() {
     )
     .await;
     print_window("anonymous, new client address", &window);
+}
+
+// ── Q8-T10: the Postgres-backed session denylist ─────────────────────────────
+
+/// Denylist rows seeded before the Postgres-store run, so the lookup is
+/// measured against a realistically full table.
+const DENYLIST_ROWS: i64 = 100_000;
+/// Isolated `is_revoked` calls per store.
+const REVOCATION_CALLS: usize = 3000;
+
+/// Q8-T10: what reading the session denylist from Postgres (a deployment
+/// without Redis, Z4-T5) costs beside reading it from Redis, to decide
+/// whether the 15-minute access-token lifetime has to drop. Two views: the
+/// whole cookie-session pipeline over the bare handler, once per store, and
+/// `attome_auth::revocation::is_revoked` alone. The numbers and the machine
+/// go into `docs/evidence/session-revocation-<date>.md` in the plan
+/// repository.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "benchmark: run explicitly in release, see the module doc"]
+async fn measure_revocation_store_cost() {
+    let (redis_app, redis_state, _) = skip_if_no_db!(build_app_with(false).await);
+    let (pg_app, pg_state, _) = build_app_with(true).await.expect("the memory-backend app");
+
+    sqlx::query(
+        "INSERT INTO auth_jti_denylist (jti, expires_at)          SELECT gen_random_uuid(), now() + interval '1 hour' FROM generate_series(1, $1)          ON CONFLICT DO NOTHING",
+    )
+    .bind(DENYLIST_ROWS)
+    .execute(&pg_state.db)
+    .await
+    .unwrap();
+    sqlx::query("ANALYZE auth_jti_denylist")
+        .execute(&pg_state.db)
+        .await
+        .unwrap();
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM auth_jti_denylist")
+        .fetch_one(&pg_state.db)
+        .await
+        .unwrap();
+    let postgres: String = sqlx::query_scalar("SELECT version()")
+        .fetch_one(&pg_state.db)
+        .await
+        .unwrap();
+    println!("## Environment");
+    println!("build: release={}", !cfg!(debug_assertions));
+    println!("postgres: {postgres}");
+    println!("redis: {}", redis_server_facts().await);
+    println!("denylist rows: {rows}");
+    println!(
+        "load: warmup {WARMUP}, sequential {SEQUENTIAL}, isolated reads {REVOCATION_CALLS}, runtime 4 worker threads"
+    );
+
+    let bare = axum::Router::new().route(NOOP, axum::routing::get(noop));
+    let bare_peer = unique_peer();
+    run_sequential(&bare, NOOP, bare_peer, &Auth::Anonymous, WARMUP).await;
+    let bare_seq =
+        percentiles(run_sequential(&bare, NOOP, bare_peer, &Auth::Anonymous, SEQUENTIAL).await);
+
+    println!(
+        "
+## Cookie session through the whole pipeline (microseconds)"
+    );
+    println!("| denylist store | full p50 | full p99 | overhead p50 | overhead p99 |");
+    println!("|---|---|---|---|---|");
+    for (name, app, state) in [
+        ("Redis", &redis_app, &redis_state),
+        ("Postgres", &pg_app, &pg_state),
+    ] {
+        let (_, _, cookie) = seed_user_and_cookie(state).await;
+        let peer = unique_peer();
+        let auth = Auth::Cookie(cookie);
+        run_sequential(app, NOOP, peer, &auth, WARMUP).await;
+        let full = percentiles(run_sequential(app, NOOP, peer, &auth, SEQUENTIAL).await);
+        println!(
+            "| {name} | {:.0} | {:.0} | {:.0} | {:.0} |",
+            full[0],
+            full[2],
+            full[0] - bare_seq[0],
+            full[2] - bare_seq[2]
+        );
+    }
+
+    println!(
+        "
+## is_revoked alone (microseconds)"
+    );
+    println!("| denylist store | p50 | p95 | p99 | mean |");
+    println!("|---|---|---|---|---|");
+    let mut pg_p99 = 0.0;
+    for name in ["Redis", "Postgres"] {
+        let store = match name {
+            "Redis" => {
+                attome_auth::revocation::RevocationStore::Store(&redis_state.redis_coordination)
+            }
+            _ => attome_auth::revocation::RevocationStore::Postgres(&pg_state.db),
+        };
+        for _ in 0..WARMUP {
+            assert!(!attome_auth::revocation::is_revoked(store, Uuid::now_v7()).await);
+        }
+        let mut samples = Vec::with_capacity(REVOCATION_CALLS);
+        for _ in 0..REVOCATION_CALLS {
+            let jti = Uuid::now_v7();
+            let start = Instant::now();
+            let revoked = attome_auth::revocation::is_revoked(store, jti).await;
+            samples.push(start.elapsed());
+            assert!(
+                !revoked,
+                "{name}: an unknown jti read as revoked (a failed read)"
+            );
+        }
+        let p = percentiles(samples);
+        if name == "Postgres" {
+            pg_p99 = p[2];
+        }
+        println!(
+            "| {name} | {:.0} | {:.0} | {:.0} | {:.0} |",
+            p[0], p[1], p[2], p[3]
+        );
+    }
+    // The task's stop condition: above 2 ms at p99 an in-memory cache comes
+    // into question, which is the owner's call, so the run says so.
+    println!(
+        "
+Postgres is_revoked p99: {pg_p99:.0} us ({} the 2,000 us threshold)",
+        if pg_p99 > 2000.0 { "ABOVE" } else { "under" }
+    );
 }
