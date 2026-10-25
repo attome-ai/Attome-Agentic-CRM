@@ -6244,6 +6244,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/model/dependency/{id}/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A6-T4: the records an edited dependency would refuse
+         * @description Counts the entity's live records whose dependent value the dependency's
+         *     newest version (the draft being edited) does not allow, so a person sees
+         *     the effect before publishing. Administrators only.
+         */
+        get: operations["dependency_impact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/model/export": {
         parameters: {
             query?: never;
@@ -7611,6 +7633,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/break-glass-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Makes a user a break-glass account (Q1-T7). The user must have a
+         *     confirmed authenticator.
+         */
+        post: operations["add_break_glass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/break-glass-accounts/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Removes a break-glass account (Q1-T7); refused while it is the last one
+         *     and an SSO-only rule is in force.
+         */
+        delete: operations["remove_break_glass"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/entity-default-shares": {
         parameters: {
             query?: never;
@@ -8308,6 +8370,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["update_role"];
+        trace?: never;
+    };
+    "/api/v1/admin/security/roles/{id}/auth-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Sets whether a role signs in only through single sign-on (Q1-T7). */
+        put: operations["put_role_auth_policy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/security/roles/{id}/bulk-fields": {
@@ -10296,6 +10375,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_available_apps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/asyncapi.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["asyncapi_document"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13871,6 +13966,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fulfilment/backorders/allocate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Give arrived stock to backorders
+         * @description F6-T7: shares `quantity` units of a product at a location over the lines
+         *     waiting for them, highest priority and oldest order first.
+         */
+        post: operations["fulfilment_backorders_allocate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fulfilment/holds/{id}/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clear a fulfilment hold
+         * @description F6-T6: marks the hold released, with who and why; the order can then be
+         *     released once no other hold is open.
+         */
+        post: operations["fulfilment_hold_clear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fulfilment/orders/{id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Release a fulfilment order
+         * @description F6-T6: opens the holds the order should carry, then refuses while any
+         *     hold is open; otherwise the order is `released` for picking.
+         */
+        post: operations["fulfilment_order_release"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/graph/traverse": {
         parameters: {
             query?: never;
@@ -15244,6 +15402,24 @@ export interface paths {
          *     conforming host log a protocol error.
          */
         post: operations["mcp_endpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/email-signature": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's own email signature (J1-T1). */
+        get: operations["get_my_signature"];
+        /** Sets the caller's own email signature (J1-T1); an empty body clears it. */
+        put: operations["put_my_signature"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -23176,6 +23352,34 @@ export interface components {
             /** Format: double */
             value: number;
         };
+        /** @description Newly available stock to give to waiting lines. */
+        AllocateBody: {
+            /** Format: uuid */
+            location_id: string;
+            /** Format: uuid */
+            product_id: string;
+            /**
+             * Format: double
+             * @description How many units arrived (positive).
+             */
+            quantity: number;
+        };
+        /** @description What an allocation gave. */
+        AllocateResult: {
+            allocated: components["schemas"]["Allocated"][];
+            /**
+             * Format: double
+             * @description Units no waiting line needed.
+             */
+            left_over: number;
+        };
+        /** @description One line and what it got. */
+        Allocated: {
+            /** Format: uuid */
+            fulfilment_order_line_id: string;
+            /** Format: double */
+            quantity: number;
+        };
         /** @description One allocation written. */
         AllocationLine: {
             /** @description Decimal, as text. */
@@ -24728,12 +24932,12 @@ export interface components {
             /** Format: uuid */
             theme_id: string;
         };
+        /** @description A break-glass account to add. */
         BreakGlassBody: {
-            /**
-             * Format: int32
-             * @description Window length in minutes. Default 60, maximum 240.
-             */
-            ttl_minutes?: number | null;
+            /** @description Why this account keeps its password (kept with the record). */
+            reason: string;
+            /** Format: uuid */
+            user_id: string;
         };
         BreakGlassClosed: {
             /** @description `true` if a window was actually open and is now closed. */
@@ -25261,7 +25465,9 @@ export interface components {
         };
         /**
          * @description One business rule as the form evaluates it (design §5): `set_value`
-         *     policies and advanced-expression conditions stay server-only.
+         *     policies and advanced-expression conditions stay server-only. A6-T2:
+         *     field-attached `allowed_values` policies are sent, so the form offers
+         *     only the allowed choices.
          */
         BusinessRuleClient: {
             condition: components["schemas"]["ConditionTree"];
@@ -26248,6 +26454,11 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description Why a hold is cleared. */
+        ClearHold: {
+            /** @description Why the hold no longer applies (1 to 500 characters). */
+            note: string;
+        };
         ClientDetail: {
             allowed_cidrs?: string[] | null;
             /** Format: int32 */
@@ -26809,6 +27020,11 @@ export interface components {
             outcomes_without_provenance: number;
         };
         ComposeRequest: {
+            /**
+             * @description J1-T2: the record's own files to send with an email, by file key (at
+             *     most 10, 10 MiB together).
+             */
+            attachments?: string[];
             body: string;
             /**
              * @description `email` or `internal` — Phase 1 accepts no other value (see this
@@ -26820,6 +27036,12 @@ export interface components {
              *     `channel=internal`; ignored otherwise.
              */
             recipient_user_ids?: string[];
+            /**
+             * Format: date-time
+             * @description J1-T1: send no earlier than this (email only, up to 90 days ahead).
+             *     The author's signature is appended to an email either way.
+             */
+            send_at?: string | null;
             subject: string;
             /**
              * @description Recipient email addresses. Required, non-empty, for `channel=email`;
@@ -29136,6 +29358,20 @@ export interface components {
          */
         Density: "comfortable" | "compact";
         /**
+         * @description A6-T4: how many live records a dependency's newest version would not
+         *     allow, and a few of their ids.
+         */
+        DependencyImpact: {
+            /**
+             * Format: int64
+             * @description Live records whose dependent value the matrix (or its default) does
+             *     not allow for their controlling value.
+             */
+            count: number;
+            /** @description Up to 20 of them, for a person to look at. */
+            sample_ids: string[];
+        };
+        /**
          * @description Live records of one entity that point at the records being deleted
          *     through one lookup field.
          */
@@ -29899,6 +30135,15 @@ export interface components {
         };
         EmailBody: {
             email: string;
+        };
+        /**
+         * @description The caller's signature. `body` is empty and `row_version` is 0 when none
+         *     is set.
+         */
+        EmailSignature: {
+            body: string;
+            /** Format: int64 */
+            row_version: number;
         };
         EmbedContext: {
             entity_logical_name?: string | null;
@@ -43955,6 +44200,15 @@ export interface components {
         PushResult: {
             results: components["schemas"]["OpResult"][];
         };
+        /**
+         * @description A signature to store. An empty `body` clears it. `row_version` is the one
+         *     last read (0 when there was none).
+         */
+        PutEmailSignature: {
+            body: string;
+            /** Format: int64 */
+            row_version: number;
+        };
         /** @description `PUT /api/v1/me/notification-preferences`. Rows not named are unchanged. */
         PutNotificationPreferences: {
             items: components["schemas"]["NotificationPreferenceWrite"][];
@@ -45012,6 +45266,12 @@ export interface components {
             matter_id: string;
             status: string;
         };
+        /** @description A release's outcome. */
+        Released: {
+            /** Format: uuid */
+            fulfilment_order_id: string;
+            status: string;
+        };
         /** @description A record the device must drop. */
         Removal: {
             entity: string;
@@ -45135,7 +45395,14 @@ export interface components {
             started_at: string;
         };
         ReplyRequest: {
+            /** @description J1-T2: the record's own files to send with the reply, by file key. */
+            attachments?: string[];
             body: string;
+            /**
+             * Format: date-time
+             * @description J1-T1: send no earlier than this (email only, up to 90 days ahead).
+             */
+            send_at?: string | null;
         };
         /** @description `POST /api/v1/model/reply-templates/{id}/used`. */
         ReplyTemplateUsed: {
@@ -45692,6 +45959,22 @@ export interface components {
              *     exactly as it did before `update_role` started honoring the header.
              */
             row_version: number;
+        };
+        /** @description A role's stored sign-in policy. */
+        RoleSsoPolicy: {
+            /** Format: uuid */
+            role_id: string;
+            /** Format: int64 */
+            row_version: number;
+            sso_only: boolean;
+        };
+        /** @description A role's sign-in policy. */
+        RoleSsoPolicyBody: {
+            /**
+             * @description Only single sign-on, never a password, for every holder of the role
+             *     who is not a break-glass account.
+             */
+            sso_only: boolean;
         };
         RoleSummary: {
             /** Format: uuid */
@@ -72779,6 +73062,65 @@ export interface operations {
             };
         };
     };
+    dependency_impact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The dependency */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description How many live records would not fit, and some of them */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DependencyImpact"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dependency */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Its entity or attributes do not exist */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     export_files: {
         parameters: {
             query?: never;
@@ -77187,6 +77529,130 @@ export interface operations {
             };
         };
     };
+    add_break_glass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BreakGlassBody"];
+            };
+        };
+        responses: {
+            /** @description The user is a break-glass account */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The user already is one */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason, or the user has no second factor (`break_glass_needs_second_factor`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_break_glass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The break-glass account's user */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a break-glass account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The last break-glass account while an SSO-only rule is in force */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_entity_default_shares: {
         parameters: {
             query?: never;
@@ -79814,6 +80280,60 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_role_auth_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The role */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleSsoPolicyBody"];
+            };
+        };
+        responses: {
+            /** @description The role's policy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleSsoPolicy"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such role */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -87214,6 +87734,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AvailableApp"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    asyncapi_document: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AsyncAPI 3.0 for the change feed of the entities the caller may read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Missing or invalid credentials */
@@ -97272,6 +97821,186 @@ export interface operations {
             };
         };
     };
+    fulfilment_backorders_allocate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocateBody"];
+            };
+        };
+        responses: {
+            /** @description What each waiting line got */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocateResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks fulfilment_order.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another allocation for this product and location is running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The quantity is not positive */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fulfilment_hold_clear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The hold */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClearHold"];
+            };
+        };
+        responses: {
+            /** @description Cleared */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks fulfilment_hold.release */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such open hold */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An empty or too long note */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fulfilment_order_release: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The fulfilment order */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Released */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Released"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks fulfilment_order.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such fulfilment order */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A hold is open, or the order is not a draft or on hold */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     traverse_route: {
         parameters: {
             query?: never;
@@ -101307,6 +102036,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JsonRpcResponse"];
+                };
+            };
+        };
+    };
+    get_my_signature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's signature, empty when none is set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignature"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_my_signature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutEmailSignature"];
+            };
+        };
+        responses: {
+            /** @description The stored signature */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignature"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The signature is too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

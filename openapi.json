@@ -35792,6 +35792,94 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/model/dependency/{id}/impact": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "A6-T4: the records an edited dependency would refuse",
+        "description": "Counts the entity's live records whose dependent value the dependency's\nnewest version (the draft being edited) does not allow, so a person sees\nthe effect before publishing. Administrators only.",
+        "operationId": "dependency_impact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The dependency",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "How many live records would not fit, and some of them",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DependencyImpact"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dependency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Its entity or attributes do not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/model/export": {
       "get": {
         "tags": [
@@ -43030,6 +43118,192 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/break-glass-accounts": {
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Makes a user a break-glass account (Q1-T7). The user must have a\nconfirmed authenticator.",
+        "operationId": "add_break_glass",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BreakGlassBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The user is a break-glass account"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The user already is one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason, or the user has no second factor (`break_glass_needs_second_factor`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/break-glass-accounts/{user_id}": {
+      "delete": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Removes a break-glass account (Q1-T7); refused while it is the last one\nand an SSO-only rule is in force.",
+        "operationId": "remove_break_glass",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "The break-glass account's user",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a break-glass account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The last break-glass account while an SSO-only rule is in force",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/entity-default-shares": {
       "get": {
         "tags": [
@@ -47268,6 +47542,102 @@
           "events": [
             {
               "category": "access",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/roles/{id}/auth-policy": {
+      "put": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Sets whether a role signs in only through single sign-on (Q1-T7).",
+        "operationId": "put_role_auth_policy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The role",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleSsoPolicyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The role's policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleSsoPolicy"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
               "operation": "update"
             }
           ],
@@ -59314,6 +59684,48 @@
                     "$ref": "#/components/schemas/AvailableApp"
                   }
                 }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/asyncapi.json": {
+      "get": {
+        "tags": [
+          "openapi"
+        ],
+        "operationId": "asyncapi_document",
+        "responses": {
+          "200": {
+            "description": "AsyncAPI 3.0 for the change feed of the entities the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -75716,6 +76128,298 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/fulfilment/backorders/allocate": {
+      "post": {
+        "tags": [
+          "fulfilment"
+        ],
+        "summary": "Give arrived stock to backorders",
+        "description": "F6-T7: shares `quantity` units of a product at a location over the lines\nwaiting for them, highest priority and oldest order first.",
+        "operationId": "fulfilment_backorders_allocate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What each waiting line got",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocateResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks fulfilment_order.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another allocation for this product and location is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The quantity is not positive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "fulfilment",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/fulfilment/holds/{id}/clear": {
+      "post": {
+        "tags": [
+          "fulfilment"
+        ],
+        "summary": "Clear a fulfilment hold",
+        "description": "F6-T6: marks the hold released, with who and why; the order can then be\nreleased once no other hold is open.",
+        "operationId": "fulfilment_hold_clear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The hold",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClearHold"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Cleared"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks fulfilment_hold.release",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such open hold",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An empty or too long note",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "approved"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "fulfilment",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/fulfilment/orders/{id}/release": {
+      "post": {
+        "tags": [
+          "fulfilment"
+        ],
+        "summary": "Release a fulfilment order",
+        "description": "F6-T6: opens the holds the order should carry, then refuses while any\nhold is open; otherwise the order is `released` for picking.",
+        "operationId": "fulfilment_order_release",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The fulfilment order",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Released",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Released"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks fulfilment_order.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such fulfilment order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A hold is open, or the order is not a draft or on hold",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "activated"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "fulfilment",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/graph/traverse": {
       "post": {
         "tags": [
@@ -82460,6 +83164,133 @@
         "x-cache": "no-store",
         "x-idempotent": "key",
         "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/me/email-signature": {
+      "get": {
+        "tags": [
+          "notification"
+        ],
+        "summary": "The caller's own email signature (J1-T1).",
+        "operationId": "get_my_signature",
+        "responses": {
+          "200": {
+            "description": "The caller's signature, empty when none is set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailSignature"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "notification"
+        ],
+        "summary": "Sets the caller's own email signature (J1-T1); an empty body clears it.",
+        "operationId": "put_my_signature",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutEmailSignature"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The stored signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailSignature"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "row_version is stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The signature is too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
@@ -122322,6 +123153,70 @@
           }
         }
       },
+      "AllocateBody": {
+        "type": "object",
+        "description": "Newly available stock to give to waiting lines.",
+        "required": [
+          "product_id",
+          "location_id",
+          "quantity"
+        ],
+        "properties": {
+          "location_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double",
+            "description": "How many units arrived (positive)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "AllocateResult": {
+        "type": "object",
+        "description": "What an allocation gave.",
+        "required": [
+          "allocated",
+          "left_over"
+        ],
+        "properties": {
+          "allocated": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Allocated"
+            }
+          },
+          "left_over": {
+            "type": "number",
+            "format": "double",
+            "description": "Units no waiting line needed."
+          }
+        }
+      },
+      "Allocated": {
+        "type": "object",
+        "description": "One line and what it got.",
+        "required": [
+          "fulfilment_order_line_id",
+          "quantity"
+        ],
+        "properties": {
+          "fulfilment_order_line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "AllocationLine": {
         "type": "object",
         "description": "One allocation written.",
@@ -126230,17 +127125,22 @@
       },
       "BreakGlassBody": {
         "type": "object",
+        "description": "A break-glass account to add.",
+        "required": [
+          "user_id",
+          "reason"
+        ],
         "properties": {
-          "ttl_minutes": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32",
-            "description": "Window length in minutes. Default 60, maximum 240.",
-            "minimum": 0
+          "reason": {
+            "type": "string",
+            "description": "Why this account keeps its password (kept with the record)."
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "BreakGlassClosed": {
         "type": "object",
@@ -127631,7 +128531,7 @@
       },
       "BusinessRuleClient": {
         "type": "object",
-        "description": "One business rule as the form evaluates it (design §5): `set_value`\npolicies and advanced-expression conditions stay server-only.",
+        "description": "One business rule as the form evaluates it (design §5): `set_value`\npolicies and advanced-expression conditions stay server-only. A6-T2:\nfield-attached `allowed_values` policies are sent, so the form offers\nonly the allowed choices.",
         "required": [
           "name",
           "condition",
@@ -130186,6 +131086,20 @@
           }
         }
       },
+      "ClearHold": {
+        "type": "object",
+        "description": "Why a hold is cleared.",
+        "required": [
+          "note"
+        ],
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Why the hold no longer applies (1 to 500 characters)."
+          }
+        },
+        "additionalProperties": false
+      },
       "ClientDetail": {
         "type": "object",
         "required": [
@@ -131615,6 +132529,13 @@
           "body"
         ],
         "properties": {
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "J1-T2: the record's own files to send with an email, by file key (at\nmost 10, 10 MiB together)."
+          },
           "body": {
             "type": "string"
           },
@@ -131629,6 +132550,14 @@
               "format": "uuid"
             },
             "description": "Recipient `user_account` ids. Required, non-empty, for\n`channel=internal`; ignored otherwise."
+          },
+          "send_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "J1-T1: send no earlier than this (email only, up to 90 days ahead).\nThe author's signature is appended to an email either way."
           },
           "subject": {
             "type": "string"
@@ -137487,6 +138416,29 @@
           "compact"
         ]
       },
+      "DependencyImpact": {
+        "type": "object",
+        "description": "A6-T4: how many live records a dependency's newest version would not\nallow, and a few of their ids.",
+        "required": [
+          "count",
+          "sample_ids"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Live records whose dependent value the matrix (or its default) does\nnot allow for their controlling value."
+          },
+          "sample_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Up to 20 of them, for a person to look at."
+          }
+        }
+      },
       "DependentCount": {
         "type": "object",
         "description": "Live records of one entity that point at the records being deleted\nthrough one lookup field.",
@@ -139500,6 +140452,23 @@
         "properties": {
           "email": {
             "type": "string"
+          }
+        }
+      },
+      "EmailSignature": {
+        "type": "object",
+        "description": "The caller's signature. `body` is empty and `row_version` is 0 when none\nis set.",
+        "required": [
+          "body",
+          "row_version"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -175687,6 +176656,24 @@
           }
         }
       },
+      "PutEmailSignature": {
+        "type": "object",
+        "description": "A signature to store. An empty `body` clears it. `row_version` is the one\nlast read (0 when there was none).",
+        "required": [
+          "body",
+          "row_version"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
       "PutNotificationPreferences": {
         "type": "object",
         "description": "`PUT /api/v1/me/notification-preferences`. Rows not named are unchanged.",
@@ -178370,6 +179357,23 @@
           }
         }
       },
+      "Released": {
+        "type": "object",
+        "description": "A release's outcome.",
+        "required": [
+          "fulfilment_order_id",
+          "status"
+        ],
+        "properties": {
+          "fulfilment_order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "Removal": {
         "type": "object",
         "description": "A record the device must drop.",
@@ -178711,8 +179715,23 @@
           "body"
         ],
         "properties": {
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "J1-T2: the record's own files to send with the reply, by file key."
+          },
           "body": {
             "type": "string"
+          },
+          "send_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "J1-T1: send no earlier than this (email only, up to 90 days ahead)."
           }
         }
       },
@@ -180046,6 +181065,42 @@
             "description": "C-19: send back as `If-Match` on the next `PATCH` to guard against a\nlost update. Additive — a caller that ignores this keeps behaving\nexactly as it did before `update_role` started honoring the header."
           }
         }
+      },
+      "RoleSsoPolicy": {
+        "type": "object",
+        "description": "A role's stored sign-in policy.",
+        "required": [
+          "role_id",
+          "sso_only",
+          "row_version"
+        ],
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sso_only": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RoleSsoPolicyBody": {
+        "type": "object",
+        "description": "A role's sign-in policy.",
+        "required": [
+          "sso_only"
+        ],
+        "properties": {
+          "sso_only": {
+            "type": "boolean",
+            "description": "Only single sign-on, never a password, for every holder of the role\nwho is not a break-glass account."
+          }
+        },
+        "additionalProperties": false
       },
       "RoleSummary": {
         "type": "object",
@@ -194668,7 +195723,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -194721,5 +195775,6 @@
       }
     }
   },
+  "x-api-version": "2026-10",
   "x-version-adapters": []
 }
