@@ -183,7 +183,7 @@ async fn fetch_parent(
     post,
     path = "/api/v1/{entity}/{id}/communications",
     tag = "entity",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     request_body = ComposeRequest,
     responses(
         (status = 201, description = "Success", body = CommunicationResponse),
@@ -271,9 +271,9 @@ async fn compose(
     path = "/api/v1/{entity}/{id}/communications/{comm_id}/reply",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("comm_id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("comm_id" = Uuid, Path, description = "The message"),
     ),
     request_body = ReplyRequest,
     responses(

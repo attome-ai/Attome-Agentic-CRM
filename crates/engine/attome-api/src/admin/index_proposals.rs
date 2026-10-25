@@ -47,7 +47,7 @@ pub struct IndexAdvice {
     get,
     path = "/api/v1/admin/entities/{entity_id}/index-proposals",
     tag = "admin",
-    params(("entity_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity")),
     responses(
         (status = 200, description = "Proposed indexes, most called first", body = IndexAdvice),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

@@ -288,7 +288,7 @@ async fn list_projects(
     get,
     path = "/api/v1/admin/migration-projects/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The migration project")),
     responses(
         (status = 200, description = "Success", body = MigrationProjectRow),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -315,7 +315,7 @@ async fn get_project(
     put,
     path = "/api/v1/admin/migration-projects/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The migration project")),
     request_body = UpdateProjectBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -400,7 +400,7 @@ async fn update_project(
     delete,
     path = "/api/v1/admin/migration-projects/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The migration project")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),
@@ -609,7 +609,7 @@ async fn fetch_run_detail(
     post,
     path = "/api/v1/admin/migration-projects/{project_id}/runs",
     tag = "admin",
-    params(("project_id" = Uuid, Path)),
+    params(("project_id" = Uuid, Path, description = "The migration project")),
     request_body = CreateRunBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
     responses(
@@ -697,7 +697,7 @@ async fn create_run(
     get,
     path = "/api/v1/admin/migration-projects/{project_id}/runs",
     tag = "admin",
-    params(("project_id" = Uuid, Path), OnePageQuery),
+    params(("project_id" = Uuid, Path, description = "The migration project"), OnePageQuery),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<MigrationRunListItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -745,7 +745,7 @@ async fn list_runs(
     get,
     path = "/api/v1/admin/migration-projects/{project_id}/runs/{run_id}",
     tag = "admin",
-    params(("project_id" = Uuid, Path), ("run_id" = Uuid, Path)),
+    params(("project_id" = Uuid, Path, description = "The migration project"), ("run_id" = Uuid, Path, description = "The run")),
     responses(
         (status = 200, description = "Success", body = MigrationRunDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -779,7 +779,7 @@ async fn get_run(
     get,
     path = "/api/v1/admin/migration-projects/{project_id}/runs/{run_id}/errors",
     tag = "admin",
-    params(("project_id" = Uuid, Path), ("run_id" = Uuid, Path)),
+    params(("project_id" = Uuid, Path, description = "The migration project"), ("run_id" = Uuid, Path, description = "The run")),
     responses(
         (status = 200, description = "CSV of non-passing rows", body = String),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -846,7 +846,7 @@ async fn download_run_errors(
     post,
     path = "/api/v1/admin/migration-projects/{project_id}/runs/{run_id}/rollback",
     tag = "admin",
-    params(("project_id" = Uuid, Path), ("run_id" = Uuid, Path)),
+    params(("project_id" = Uuid, Path, description = "The migration project"), ("run_id" = Uuid, Path, description = "The run")),
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::Delegated, Some("EngineJob::RollbackMigrationRun (rollback_one_item -> entity_mutation::update_one/delete_one)"), "the route only flips rollback_status to requested and enqueues the job; each reverted record's audit event is written by the generic entity_mutation path the job calls per item (D-062)")))),
     responses(
         (status = 202, description = "Rollback enqueued", body = MigrationRunDetail),

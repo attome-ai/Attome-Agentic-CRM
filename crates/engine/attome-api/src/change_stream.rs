@@ -338,7 +338,7 @@ async fn create_subscription(
     path = "/api/v1/change-stream/subscriptions/{id}",
     operation_id = "change_stream_update_subscription",
     tag = "integration",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The subscription")),
     request_body = SubscriptionPatch,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -418,7 +418,7 @@ async fn update_subscription(
     path = "/api/v1/change-stream/subscriptions/{id}",
     operation_id = "change_stream_delete_subscription",
     tag = "integration",
-    params(("id" = Uuid, Path), RowVersionQuery),
+    params(("id" = Uuid, Path, description = "The subscription"), RowVersionQuery),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Ended"),
@@ -909,7 +909,7 @@ async fn own_subscription(
     path = "/api/v1/change-stream/{subscription}/events",
     operation_id = "change_stream_read_events",
     tag = "integration",
-    params(("subscription" = Uuid, Path), ReadQuery),
+    params(("subscription" = Uuid, Path, description = "The subscription"), ReadQuery),
     responses(
         (status = 200, description = "Events in commit order", body = StreamPage),
         (status = 400, description = "A cursor this deployment did not issue", body = ErrorResponse),
@@ -958,7 +958,7 @@ pub struct SseQuery {
     path = "/api/v1/change-stream/{subscription}/sse",
     operation_id = "change_stream_stream_events",
     tag = "integration",
-    params(("subscription" = Uuid, Path), SseQuery),
+    params(("subscription" = Uuid, Path, description = "The subscription"), SseQuery),
     responses(
         (status = 200, description = "text/event-stream of change events"),
         (status = 400, description = "A cursor this deployment did not issue", body = ErrorResponse),

@@ -372,7 +372,7 @@ async fn set_paused(
     tag = "admin",
     operation_id = "pause_schedule",
     description = "Pauses a flow or report schedule (M12-T3): its sweep skips it until it is resumed. Pausing a paused schedule changes nothing.",
-    params(("kind" = String, Path, description = "`flow` or `report`"), ("id" = String, Path)),
+    params(("kind" = String, Path, description = "`flow` or `report`"), ("id" = String, Path, description = "The record")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "Paused", body = PauseState),
@@ -401,7 +401,7 @@ async fn pause(
     tag = "admin",
     operation_id = "resume_schedule",
     description = "Resumes a paused flow or report schedule (M12-T3); its next due slot starts as usual.",
-    params(("kind" = String, Path, description = "`flow` or `report`"), ("id" = String, Path)),
+    params(("kind" = String, Path, description = "`flow` or `report`"), ("id" = String, Path, description = "The record")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "Resumed", body = PauseState),

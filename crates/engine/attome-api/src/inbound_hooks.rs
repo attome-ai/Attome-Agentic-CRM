@@ -445,7 +445,7 @@ async fn create_hook(
     tag = "admin",
     operation_id = "update_inbound_hook",
     description = "Changes an inbound hook (M14-T1); a new secret rotates it.",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The inbound hook")),
     request_body = InboundHookUpdate,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -555,7 +555,7 @@ async fn update_hook(
     tag = "admin",
     operation_id = "delete_inbound_hook",
     description = "Removes an inbound hook (M14-T1); its endpoint answers 404 from then on.",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The inbound hook")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Removed"),
@@ -798,7 +798,7 @@ async fn run_handler(
     tag = "integration",
     operation_id = "call_inbound_hook",
     description = "A provider's call to a builder-defined endpoint (M14-T1). Public: the hook's own checks are the credential (address allow-list and mTLS, then signature or bearer secret with a timestamp window, then the body's required fields, then a once-only event id). Accepted calls create a record or start a flow as the hook's service user.",
-    params(("name" = String, Path)),
+    params(("name" = String, Path, description = "The name")),
     request_body(content = Object, description = "The provider's JSON event"),
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Delegated,

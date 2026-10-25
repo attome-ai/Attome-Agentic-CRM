@@ -204,7 +204,7 @@ async fn list_relationships(
     get,
     path = "/api/v1/admin/relationships/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The relationship")),
     responses(
         (status = 200, description = "Success", body = RelationshipView),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -380,7 +380,7 @@ struct UpdateRelationshipBody {
     patch,
     path = "/api/v1/admin/relationships/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The relationship")),
     request_body = UpdateRelationshipBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -467,7 +467,7 @@ async fn update_relationship(
     delete,
     path = "/api/v1/admin/relationships/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The relationship")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),

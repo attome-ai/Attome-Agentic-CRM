@@ -93,7 +93,7 @@ fn counts(
     get,
     path = "/api/v1/admin/entities/{entity_id}/orphans",
     tag = "admin",
-    params(("entity_id" = Uuid, Path), OnePageQuery),
+    params(("entity_id" = Uuid, Path, description = "The entity"), OnePageQuery),
     responses(
         (status = 200, description = "Orphan counts per lookup field, in field order", body = PaginatedResponse<OrphanCount>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

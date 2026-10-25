@@ -186,7 +186,7 @@ struct ReplayResult {
     post,
     path = "/api/v1/admin/jobs/{id}/replay",
     tag = "admin",
-    params(("id" = String, Path)),
+    params(("id" = String, Path, description = "The job")),
     responses(
         (status = 200, description = "Success", body = ReplayResult),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -303,7 +303,7 @@ async fn audit_job_discard(
     delete,
     path = "/api/v1/admin/jobs/{id}",
     tag = "admin",
-    params(("id" = String, Path)),
+    params(("id" = String, Path, description = "The job")),
     responses(
         (status = 204, description = "The dead letter was deleted"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -567,7 +567,7 @@ async fn pending_timers(
     get,
     path = "/api/v1/jobs/{id}",
     tag = "jobs",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The job")),
     responses(
         (status = 200, description = "The batch job's status and progress", body = BatchJobProgress),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -591,7 +591,7 @@ async fn batch_progress(
     post,
     path = "/api/v1/jobs/{id}/cancel",
     tag = "jobs",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The job")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 202, description = "The job stops after its current chunk", body = BatchJobProgress),

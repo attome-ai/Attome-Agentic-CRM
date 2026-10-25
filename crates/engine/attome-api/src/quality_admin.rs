@@ -445,7 +445,7 @@ async fn list_issues(
     post,
     path = "/api/v1/admin/data/quality/issues/{id}/resolve",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The issue")),
     responses(
         (status = 204, description = "Issue marked resolved"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -555,7 +555,7 @@ fn require_issue_editor(
     path = "/api/v1/admin/data/quality/issues/{id}",
     operation_id = "quality_issue_update",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The issue")),
     request_body = UpdateIssueBody,
     responses(
         (status = 204, description = "The issue's status changed"),
@@ -864,7 +864,7 @@ async fn create_rule(
     path = "/api/v1/admin/data/quality/rules/{id}",
     operation_id = "quality_rule_update",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The rule")),
     request_body = UpdateRuleBody,
     responses(
         (status = 200, description = "The rule", body = QualityRuleView),
@@ -940,7 +940,7 @@ async fn update_rule(
     path = "/api/v1/admin/data/quality/rules/{id}",
     operation_id = "quality_rule_delete",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The rule")),
     responses(
         (status = 204, description = "Deleted"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1098,7 +1098,7 @@ async fn list_targets(
     path = "/api/v1/admin/data/quality/targets/{entity}",
     operation_id = "quality_target_put",
     tag = "admin",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = PutTargetBody,
     responses(
         (status = 200, description = "The target", body = QualityTargetView),
@@ -1164,7 +1164,7 @@ async fn put_target(
     path = "/api/v1/admin/data/quality/targets/{entity}",
     operation_id = "quality_target_delete",
     tag = "admin",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     responses(
         (status = 204, description = "Deleted"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

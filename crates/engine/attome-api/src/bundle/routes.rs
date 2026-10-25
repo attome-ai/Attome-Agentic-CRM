@@ -506,7 +506,7 @@ async fn list_plans(
     get,
     path = "/api/v1/admin/metadata/plans/{id}",
     tag = "admin-metadata",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The plan")),
     responses(
         (status = 200, description = "Success", body = PlanRow),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

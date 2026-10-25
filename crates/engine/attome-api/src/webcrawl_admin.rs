@@ -284,7 +284,7 @@ async fn create_target(
     post,
     path = "/api/v1/webcrawl/targets/{id}/recrawl",
     tag = "admin-webcrawl",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The target")),
     responses(
         (status = 200, description = "Success", body = TargetListItem),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -346,7 +346,7 @@ async fn recrawl_target(
     delete,
     path = "/api/v1/webcrawl/targets/{id}",
     tag = "admin-webcrawl",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The target")),
     responses(
         (status = 204, description = "Success"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -396,7 +396,7 @@ async fn delete_target(
     path = "/api/v1/webcrawl/targets/{id}/pages",
     operation_id = "list_webcrawl_target_pages",
     tag = "admin-webcrawl",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The target")),
     responses(
         (status = 200, description = "Success", body = Vec<PageListItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -429,7 +429,7 @@ async fn list_target_pages(
     patch,
     path = "/api/v1/webcrawl/targets/{id}/pages/selection",
     tag = "admin-webcrawl",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The target")),
     request_body = SelectionBody,
     responses(
         (status = 200, description = "Success"),
@@ -572,7 +572,7 @@ async fn ensure_data_source_for_target(
     post,
     path = "/api/v1/webcrawl/targets/{id}/import",
     tag = "admin-webcrawl",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The target")),
     request_body = ImportBody,
     responses(
         (status = 200, description = "Success", body = ImportResult),

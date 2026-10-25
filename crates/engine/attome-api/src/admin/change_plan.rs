@@ -70,7 +70,7 @@ fn class_name(class: ChangeClass) -> &'static str {
         None,
         "classifies proposed structure changes and estimates them; writes nothing"
     )))),
-    params(("entity_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity")),
     request_body = ChangePlanRequest,
     responses(
         (status = 200, description = "Each change's class and estimate, in request order", body = ChangePlan),

@@ -177,7 +177,7 @@ async fn list_variables(
     path = "/api/v1/admin/env-variables/{name}",
     tag = "admin",
     operation_id = "set_env_variable",
-    params(("name" = String, Path)),
+    params(("name" = String, Path, description = "The name")),
     request_body = SetEnvVariable,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -295,7 +295,7 @@ async fn set_variable(
     path = "/api/v1/admin/env-variables/{name}",
     tag = "admin",
     operation_id = "clear_env_variable",
-    params(("name" = String, Path)),
+    params(("name" = String, Path, description = "The name")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "Cleared: the default applies again"),
@@ -354,7 +354,7 @@ async fn clear_variable(
     path = "/api/v1/admin/env-variables/{name}/history",
     tag = "admin",
     operation_id = "env_variable_history",
-    params(("name" = String, Path)),
+    params(("name" = String, Path, description = "The name")),
     responses(
         (status = 200, description = "The variable's changes, newest first (at most 200)", body = PaginatedResponse<EnvVariableChange>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

@@ -310,7 +310,7 @@ impl From<ReplayOutcome> for ReplayItemResult {
     tag = "admin",
     operation_id = "dead_letter_replay",
     description = "Runs one dead letter again (M5-T2).",
-    params(("source" = String, Path), ("id" = String, Path)),
+    params(("source" = String, Path, description = "The dead-letter source"), ("id" = String, Path, description = "The record")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Execute)])))),
     responses(
         (status = 200, description = "Replayed", body = ReplayItemResult),
@@ -362,7 +362,7 @@ fn checked_reason(reason: &str) -> Result<&str, AppError> {
     tag = "admin",
     operation_id = "dead_letter_discard",
     description = "Drops one dead letter, with the reason on its audit event (M5-T2). A flow run is cancelled; every other item is deleted.",
-    params(("source" = String, Path), ("id" = String, Path)),
+    params(("source" = String, Path, description = "The dead-letter source"), ("id" = String, Path, description = "The record")),
     request_body = DiscardBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::HardDelete)])))),
     responses(

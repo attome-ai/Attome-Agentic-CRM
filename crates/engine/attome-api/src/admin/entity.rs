@@ -444,7 +444,7 @@ pub(super) async fn create_entity(
     get,
     path = "/api/v1/admin/entities/{entity_id}",
     tag = "admin",
-    params(("entity_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity")),
     responses(
         (status = 200, description = "Success", body = EntityDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -522,7 +522,7 @@ pub(super) async fn get_entity(
     patch,
     path = "/api/v1/admin/entities/{entity_id}",
     tag = "admin",
-    params(("entity_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity")),
     request_body = UpdateEntityBody,
     responses(
         (status = 200, description = "Success", body = EntityMeta),
@@ -896,7 +896,7 @@ struct EntityDeletePending {
     path = "/api/v1/admin/entities/{entity_id}",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
         DeleteEntityParams,
     ),
     responses(

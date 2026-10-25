@@ -141,7 +141,7 @@ async fn list_deliveries(
     get,
     path = "/api/v1/admin/email/deliveries/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The delivery")),
     responses(
         (status = 200, description = "Success", body = DeliverySummary),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -174,7 +174,7 @@ struct ResendResult {
     post,
     path = "/api/v1/admin/email/deliveries/{id}/resend",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The delivery")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Credential, AuditOperation::Create)])))),
     responses(
         (status = 201, description = "Success", body = ResendResult),
@@ -506,7 +506,7 @@ async fn add_suppression(
     delete,
     path = "/api/v1/admin/email/suppressions/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The suppression")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),

@@ -307,7 +307,7 @@ async fn create_policy(
     get,
     path = "/api/v1/admin/approval-policies/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval policy")),
     responses(
         (status = 200, description = "Success", body = ApprovalPolicyView),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -353,7 +353,7 @@ struct UpdatePolicyBody {
     put,
     path = "/api/v1/admin/approval-policies/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval policy")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     request_body = UpdatePolicyBody,
     responses(
@@ -466,7 +466,7 @@ async fn update_policy(
     delete,
     path = "/api/v1/admin/approval-policies/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval policy")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),

@@ -292,7 +292,7 @@ async fn create_process(
     path = "/api/v1/admin/approval-processes/{id}",
     tag = "admin",
     operation_id = "get_approval_process",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval process")),
     responses(
         (status = 200, description = "The process", body = ApprovalProcess),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -328,7 +328,7 @@ async fn load(state: &EngineState, id: Uuid) -> Result<ApprovalProcess, AppError
     path = "/api/v1/admin/approval-processes/{id}",
     tag = "admin",
     operation_id = "update_approval_process",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval process")),
     request_body = ApprovalProcessUpdate,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -407,7 +407,7 @@ async fn update_process(
     path = "/api/v1/admin/approval-processes/{id}",
     tag = "admin",
     operation_id = "delete_approval_process",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval process")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Deleted; pending requests keep their plan and lock until decided"),
@@ -490,7 +490,7 @@ pub fn admits(entry_condition: Option<&str>, record: &Value) -> bool {
     tag = "approvals",
     operation_id = "submit_to_approval_process",
     description = "Submits a record to an approval process (M9-T1): the caller must be able to update the record, the record must meet the process's entry condition, and it may have no other pending request of this process. A locking process holds the record until the request is decided or recalled.",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval process")),
     request_body = SubmitBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Submitted)])))),
     responses(
@@ -690,7 +690,7 @@ impl attome_db::BeforeCommit<attome_approval::ApprovalRequest> for RecallAudit<'
     tag = "approvals",
     operation_id = "recall_approval_process_request",
     description = "The requester takes a pending approval-process request back (M9-T1); the record's lock ends with it.",
-    params(("request_id" = Uuid, Path)),
+    params(("request_id" = Uuid, Path, description = "The request")),
     request_body = RecallBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Cancelled)])))),
     responses(
@@ -896,7 +896,7 @@ async fn may_read_record(
     tag = "approvals",
     operation_id = "get_approval_request_detail",
     description = "The approval request page (M9-T4): what is asked, by whom, why, the attribute changes it carries, every decision so far, and whether the caller may decide now. Visible to an administrator, the requester, anyone who decided it, an eligible approver, and anyone who may read the record it is about.",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval request")),
     responses(
         (status = 200, description = "The request", body = ApprovalDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -977,7 +977,7 @@ async fn get_request(
     tag = "approvals",
     operation_id = "list_approvals_regarding_record",
     description = "A record's approval history (M9-T4), newest first, for whoever may read the record.",
-    params(("entity" = String, Path), ("record_id" = Uuid, Path), OnePageQuery),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("record_id" = Uuid, Path, description = "The record"), OnePageQuery),
     responses(
         (status = 200, description = "The record's approval requests", body = PaginatedResponse<ApprovalHistoryItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

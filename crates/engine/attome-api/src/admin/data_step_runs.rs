@@ -167,7 +167,7 @@ async fn transition(
     get,
     path = "/api/v1/admin/data-step-runs/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The data step run")),
     responses(
         (status = 200, description = "The run's progress", body = DataStepRunStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -191,7 +191,7 @@ pub(super) async fn get_data_step_run(
     post,
     path = "/api/v1/admin/data-step-runs/{id}/pause",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The data step run")),
     responses(
         (status = 200, description = "Paused; a running batch finishes first", body = DataStepRunStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -230,7 +230,7 @@ pub(super) async fn pause_data_step_run(
     post,
     path = "/api/v1/admin/data-step-runs/{id}/resume",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The data step run")),
     responses(
         (status = 200, description = "Queued again; it continues from its cursor", body = DataStepRunStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -269,7 +269,7 @@ pub(super) async fn resume_data_step_run(
     post,
     path = "/api/v1/admin/data-step-runs/{id}/cancel",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The data step run")),
     responses(
         (status = 200, description = "Stopped: an orphan scan is abandoned, a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route", body = DataStepRunStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

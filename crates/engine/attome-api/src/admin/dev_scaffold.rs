@@ -296,7 +296,7 @@ fn relative_specifier(from_dir: &std::path::Path, to_path: &std::path::Path) -> 
         None,
         "dev-only Angular component scaffolder, gated off in production (dev_gate_open()); writes starting-point .ts/.html/.css files to the caller's local filesystem for the developer to review and commit, never touches customer data or metadata",
     )))),
-    params(("entity_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity")),
     request_body = ScaffoldBody,
     responses(
         (status = 201, description = "Success", body = ScaffoldResult),

@@ -69,7 +69,7 @@ async fn counts(
     get,
     path = "/api/v1/my-work/{provider}",
     tag = "my-work",
-    params(("provider" = String, Path), MyWorkListQuery),
+    params(("provider" = String, Path, description = "The provider's key"), MyWorkListQuery),
     responses(
         (status = 200, description = "Success", body = MyWorkPage),
         (status = 401, description = "Missing or invalid credentials", body = attome_types::ErrorResponse),
@@ -104,7 +104,7 @@ async fn list_provider(
     get,
     path = "/api/v1/my-work/{provider}/{record_id}/actions",
     tag = "my-work",
-    params(("provider" = String, Path), ("record_id" = Uuid, Path)),
+    params(("provider" = String, Path, description = "The provider's key"), ("record_id" = Uuid, Path, description = "The record")),
     responses(
         (status = 200, description = "Success", body = Vec<MyWorkAction>),
         (status = 401, description = "Missing or invalid credentials", body = attome_types::ErrorResponse),

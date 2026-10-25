@@ -453,7 +453,7 @@ struct SchemaChangePending {
     post,
     path = "/api/v1/admin/entities/{entity_id}/fields",
     tag = "admin",
-    params(("entity_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity")),
     responses(
         (status = 200, description = "Success"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -986,8 +986,8 @@ async fn resolve_lookup_target(
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
-        ("field_id" = Uuid, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
+        ("field_id" = Uuid, Path, description = "The field"),
     ),
     responses(
         (status = 200, description = "Success"),
@@ -1605,8 +1605,8 @@ pub(crate) async fn do_update_attribute_recorded(
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}/index-status",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
-        ("field_id" = Uuid, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
+        ("field_id" = Uuid, Path, description = "The field"),
     ),
     responses(
         (status = 200, description = "Success", body = AttributeIndexStatus),
@@ -1715,8 +1715,8 @@ pub(super) async fn attribute_index_status(
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}/schema-change-status",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
-        ("field_id" = Uuid, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
+        ("field_id" = Uuid, Path, description = "The field"),
     ),
     responses(
         (status = 200, description = "Success", body = SchemaChangeStatus),
@@ -1792,8 +1792,8 @@ pub(super) async fn attribute_schema_change_status(
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
-        ("field_id" = Uuid, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
+        ("field_id" = Uuid, Path, description = "The field"),
         DryRunQuery,
     ),
     responses(
@@ -2167,8 +2167,8 @@ async fn audit_structure_change(
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}/rename",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
-        ("field_id" = Uuid, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
+        ("field_id" = Uuid, Path, description = "The field"),
     ),
     request_body = RenameFieldBody,
     responses(
@@ -2224,8 +2224,8 @@ pub(super) async fn rename_attribute(
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}/change-type",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
-        ("field_id" = Uuid, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
+        ("field_id" = Uuid, Path, description = "The field"),
     ),
     request_body = ChangeTypeBody,
     responses(
@@ -2276,8 +2276,8 @@ pub(super) async fn change_attribute_type(
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choices",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
-        ("field_id" = Uuid, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
+        ("field_id" = Uuid, Path, description = "The field"),
     ),
     request_body = AddChoiceBody,
     responses(
@@ -2328,9 +2328,9 @@ pub(super) async fn add_attribute_choice(
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choices/{value}",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
-        ("field_id" = Uuid, Path),
-        ("value" = String, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
+        ("field_id" = Uuid, Path, description = "The field"),
+        ("value" = String, Path, description = "The choice value"),
         DryRunQuery,
     ),
     responses(
@@ -2401,7 +2401,7 @@ pub(crate) struct ChoiceUsage {
     get,
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choice-usage",
     tag = "admin",
-    params(("entity_id" = Uuid, Path), ("field_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity"), ("field_id" = Uuid, Path, description = "The field")),
     responses(
         (status = 200, description = "Records per value, most used first", body = ChoiceUsage),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -2527,9 +2527,9 @@ const LABEL_ABANDON_RULES_STAY_OFF: &str = "customer business rules turned off w
     path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}/runs/{run_id}/abandon",
     tag = "admin",
     params(
-        ("entity_id" = Uuid, Path),
-        ("field_id" = Uuid, Path),
-        ("run_id" = Uuid, Path),
+        ("entity_id" = Uuid, Path, description = "The entity"),
+        ("field_id" = Uuid, Path, description = "The field"),
+        ("run_id" = Uuid, Path, description = "The run"),
     ),
     responses(
         (status = 200, description = "Abandoned", body = AbandonedFieldRun),

@@ -41,7 +41,7 @@ pub struct DdlLogEntry {
     get,
     path = "/api/v1/admin/entities/{entity_id}/ddl-log",
     tag = "admin",
-    params(("entity_id" = Uuid, Path), OnePageQuery),
+    params(("entity_id" = Uuid, Path, description = "The entity"), OnePageQuery),
     responses(
         (status = 200, description = "The entity's DDL statements, newest first", body = PaginatedResponse<DdlLogEntry>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

@@ -193,7 +193,7 @@ pub async fn notify_mentions(
     path = "/api/v1/{entity}/{id}/mentions",
     tag = "entity",
     operation_id = "notify_record_mentions",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     request_body = MentionBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
     responses(

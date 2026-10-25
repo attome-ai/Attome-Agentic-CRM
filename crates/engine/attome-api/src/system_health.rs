@@ -442,7 +442,7 @@ const MAX_TRAIL: i64 = 100;
     get,
     path = "/api/v1/admin/ops/requests/{request_id}",
     tag = "operations",
-    params(("request_id" = String, Path)),
+    params(("request_id" = String, Path, description = "The request")),
     responses(
         (status = 200, description = "The request's jobs and audit events, at most 100 of each", body = RequestTrail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

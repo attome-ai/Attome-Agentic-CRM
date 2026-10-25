@@ -285,7 +285,7 @@ pub struct CleanupItem {
     path = "/api/v1/admin/business-rules/{id}/simulate",
     description = "Runs the rule over the entity's stored records (at most 10,000) and returns how many it would refuse and the first 50 of them, without saving anything (A3-T5).",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The business rule")),
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::DryRun, None, "evaluates the stored rule over stored records in memory only; writes nothing")))),
     responses(
         (status = 200, description = "What the rule would do to the stored records", body = Simulation),
@@ -312,7 +312,7 @@ pub(crate) async fn simulate_rule(
     path = "/api/v1/admin/business-rules/{id}/cleanup",
     description = "The stored records the published rule refuses, as its last scan found them, newest first (A3-T5).",
     tag = "admin",
-    params(("id" = Uuid, Path), OnePageQuery),
+    params(("id" = Uuid, Path, description = "The business rule"), OnePageQuery),
     responses(
         (status = 200, description = "The rule's clean-up queue", body = PaginatedResponse<CleanupItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

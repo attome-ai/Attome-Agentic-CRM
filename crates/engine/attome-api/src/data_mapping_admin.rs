@@ -279,7 +279,7 @@ async fn list_mappings(
     get,
     path = "/api/v1/admin/data/mappings/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The mapping")),
     responses(
         (status = 200, description = "Success", body = DataMappingRow),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -311,7 +311,7 @@ async fn get_mapping(
     put,
     path = "/api/v1/admin/data/mappings/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The mapping")),
     request_body = UpdateMappingBody,
     responses(
         (status = 200, description = "Success", body = DataMappingRow),
@@ -415,7 +415,7 @@ async fn update_mapping(
     delete,
     path = "/api/v1/admin/data/mappings/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The mapping")),
     responses(
         (status = 204, description = "Success"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

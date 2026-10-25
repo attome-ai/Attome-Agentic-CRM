@@ -170,7 +170,7 @@ async fn list_apps(
     get,
     path = "/api/v1/admin/apps/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The app")),
     responses(
         (status = 200, description = "Success", body = AppDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -377,7 +377,7 @@ fn app_op(op: Op, row: &AppDetail) -> Result<RecordedOp, AppError> {
     patch,
     path = "/api/v1/admin/apps/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The app")),
     request_body = AppBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -426,7 +426,7 @@ async fn update_app(
     delete,
     path = "/api/v1/admin/apps/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The app")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),

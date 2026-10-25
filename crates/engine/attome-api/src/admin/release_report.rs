@@ -373,7 +373,7 @@ pub(super) async fn report_summary(
     path = "/api/v1/admin/metadata/release-reports/{report_id}",
     operation_id = "get_release_report",
     tag = "admin",
-    params(("report_id" = Uuid, Path)),
+    params(("report_id" = Uuid, Path, description = "The release report")),
     responses(
         (status = 200, description = "The report with its counts", body = ReleaseReport),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -404,7 +404,7 @@ pub(super) async fn get_report(
     get,
     path = "/api/v1/admin/metadata/release-reports/{report_id}/items",
     tag = "admin",
-    params(("report_id" = Uuid, Path), ItemFilter, OnePageQuery),
+    params(("report_id" = Uuid, Path, description = "The release report"), ItemFilter, OnePageQuery),
     responses(
         (status = 200, description = "The report's items, oldest first; conflict values decrypted for a caller who may read the field", body = PaginatedResponse<ReportItemView>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -543,7 +543,7 @@ pub(super) async fn list_items(
     post,
     path = "/api/v1/admin/metadata/release-report-items/{item_id}/accept",
     tag = "admin",
-    params(("item_id" = Uuid, Path), ("If-Match" = String, Header, description = "The item's row_version, quoted")),
+    params(("item_id" = Uuid, Path, description = "The item"), ("If-Match" = String, Header, description = "The item's row_version, quoted")),
     responses(
         (status = 200, description = "Accepted", body = ReportItem),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -605,7 +605,7 @@ pub(super) async fn accept_item(
     post,
     path = "/api/v1/admin/metadata/release-report-items/{item_id}/dismiss",
     tag = "admin",
-    params(("item_id" = Uuid, Path), ("If-Match" = String, Header, description = "The item's row_version, quoted")),
+    params(("item_id" = Uuid, Path, description = "The item"), ("If-Match" = String, Header, description = "The item's row_version, quoted")),
     responses(
         (status = 200, description = "Dismissed", body = ReportItem),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -668,7 +668,7 @@ pub(super) async fn dismiss_item(
     post,
     path = "/api/v1/admin/metadata/release-report-items/{item_id}/use-mine",
     tag = "admin",
-    params(("item_id" = Uuid, Path), ("If-Match" = String, Header, description = "The item's row_version, quoted")),
+    params(("item_id" = Uuid, Path, description = "The item"), ("If-Match" = String, Header, description = "The item's row_version, quoted")),
     request_body = UseMineBody,
     responses(
         (status = 200, description = "Our value written; the item is used_mine", body = ReportItem),
@@ -843,7 +843,7 @@ pub(super) async fn use_mine_item(
     post,
     path = "/api/v1/admin/metadata/release-report-items/{item_id}/restore",
     tag = "admin",
-    params(("item_id" = Uuid, Path)),
+    params(("item_id" = Uuid, Path, description = "The item")),
     responses(
         (status = 200, description = "Counts; `remaining > 0` means repeat the request", body = ItemRestoreResult),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

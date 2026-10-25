@@ -280,7 +280,7 @@ async fn list_profiles(
     get,
     path = "/api/v1/admin/data/profile/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The profile")),
     responses(
         (status = 200, description = "Success", body = DataProfileRow),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

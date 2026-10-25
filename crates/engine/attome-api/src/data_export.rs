@@ -442,7 +442,7 @@ async fn count_matching(
     post,
     path = "/api/v1/{entity}/export",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = ExportRequestBody,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Delegated,
@@ -584,7 +584,7 @@ async fn enqueue_export(
     get,
     path = "/api/v1/{entity}/export/{id}",
     tag = "entity",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The export")),
     responses(
         (status = 200, description = "Success", body = ExportStatusResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

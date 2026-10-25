@@ -1489,7 +1489,7 @@ pub(crate) struct MenuItemOpened {
     post,
     path = "/api/v1/model/navigation/{id}/opened",
     tag = "model",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The navigation")),
     request_body = MenuItemOpened,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Telemetry,
@@ -1679,7 +1679,7 @@ async fn dependency_impact(
     get,
     path = "/api/v1/admin/model/navigation/{id}/usage",
     tag = "model",
-    params(("id" = Uuid, Path), MenuUsageQuery),
+    params(("id" = Uuid, Path, description = "The navigation"), MenuUsageQuery),
     responses(
         (status = 200, description = "Each item's opens, the unused ones flagged", body = attome_types::PaginatedResponse<MenuItemUsage>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

@@ -195,7 +195,7 @@ async fn resolve_entity_logicalname(
     get,
     path = "/api/v1/admin/entities/{entity_id}/labels",
     tag = "admin",
-    params(("entity_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity")),
     responses(
         (status = 200, description = "Success", body = Vec<LabelDetail>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -235,7 +235,7 @@ async fn list_labels(
     post,
     path = "/api/v1/admin/entities/{entity_id}/labels",
     tag = "admin",
-    params(("entity_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity")),
     request_body = LabelBody,
     responses(
         (status = 201, description = "Success", body = LabelDetail),
@@ -279,7 +279,7 @@ async fn create_label(
     patch,
     path = "/api/v1/admin/entities/{entity_id}/labels/{label_id}",
     tag = "admin",
-    params(("entity_id" = Uuid, Path), ("label_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity"), ("label_id" = Uuid, Path, description = "The label")),
     request_body = LabelBody,
     responses(
         (status = 200, description = "Success", body = LabelDetail),
@@ -413,7 +413,7 @@ async fn update_label(
     delete,
     path = "/api/v1/admin/entities/{entity_id}/labels/{label_id}",
     tag = "admin",
-    params(("entity_id" = Uuid, Path), ("label_id" = Uuid, Path)),
+    params(("entity_id" = Uuid, Path, description = "The entity"), ("label_id" = Uuid, Path, description = "The label")),
     responses(
         (status = 204, description = "Success"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

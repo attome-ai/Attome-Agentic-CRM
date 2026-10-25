@@ -1636,7 +1636,7 @@ async fn list_approvals(
     get,
     path = "/api/v1/admin/approvals/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval request")),
     responses(
         (status = 200, description = "Success", body = ApprovalRequestView),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1681,7 +1681,7 @@ struct CancelBody {
     post,
     path = "/api/v1/admin/approvals/{id}/cancel",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval request")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Cancelled)])))),
     request_body = CancelBody,
     responses(
@@ -1768,7 +1768,7 @@ struct DecideResponse {
     post,
     path = "/api/v1/admin/approvals/{id}/decide",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval request")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
         (attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Approved),
         (attome_audit::AuditCategory::Security, attome_audit::AuditOperation::DecisionDigest),
@@ -2103,7 +2103,7 @@ async fn do_decide(
     post,
     path = "/api/v1/approvals/{id}/decide",
     tag = "approvals",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval request")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
         (attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Approved),
         (attome_audit::AuditCategory::Security, attome_audit::AuditOperation::DecisionDigest),
@@ -2181,7 +2181,7 @@ struct RetryExecutionParams {
     post,
     path = "/api/v1/admin/approvals/{id}/retry-execution",
     tag = "admin",
-    params(("id" = Uuid, Path), RetryExecutionParams),
+    params(("id" = Uuid, Path, description = "The approval request"), RetryExecutionParams),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Execute)])))),
     responses(
         (status = 200, description = "Success", body = DecideResponse),
@@ -2360,7 +2360,7 @@ struct DelegateResponse {
     post,
     path = "/api/v1/admin/approvals/{id}/delegate",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The approval request")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Access, attome_audit::AuditOperation::Grant)])))),
     request_body = DelegateBody,
     responses(

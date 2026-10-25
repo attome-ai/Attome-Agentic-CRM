@@ -189,7 +189,7 @@ async fn list_rules(
     get,
     path = "/api/v1/admin/business-rules/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The business rule")),
     responses(
         (status = 200, description = "The rule with its editor warnings", body = BusinessRule),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -295,7 +295,7 @@ async fn create_rule(
     patch,
     path = "/api/v1/admin/business-rules/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path), ("If-Match" = String, Header, description = "`\"<row_version>\"` of the rule being changed (required)")),
+    params(("id" = Uuid, Path, description = "The business rule"), ("If-Match" = String, Header, description = "`\"<row_version>\"` of the rule being changed (required)")),
     request_body = BusinessRulePatch,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -368,7 +368,7 @@ async fn update_rule(
     delete,
     path = "/api/v1/admin/business-rules/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path), ("If-Match" = Option<String>, Header, description = "Optional `\"<row_version>\"`")),
+    params(("id" = Uuid, Path, description = "The business rule"), ("If-Match" = Option<String>, Header, description = "Optional `\"<row_version>\"`")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Retired (is_active = false)"),
@@ -565,7 +565,7 @@ fn outcome_label(o: &ConditionOutcome) -> &'static str {
     post,
     path = "/api/v1/admin/business-rules/{id}/test",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The business rule")),
     request_body = RuleTestRequest,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::DryRun, None, "evaluates the stored rule against a caller-supplied record in memory only; no save, no relation to any real record, no persistent effect")))),
     responses(
@@ -951,7 +951,7 @@ fn test_business(
     post,
     path = "/api/v1/admin/business-rules/{id}/publish",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The business rule")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Activated)])))),
     responses(
         (status = 200, description = "Published: `version` bumped and snapshotted", body = BusinessRule),

@@ -204,7 +204,7 @@ pub fn assemble(
     tag = "metadata",
     operation_id = "get_stage_process_metrics",
     description = "Time-in-stage measures of a stage process (M7-T3), from its recorded moves: per stage, records entered, left and in it now, mean and p90 seconds spent before leaving, and drop-off (percent of records that entered and never moved to the next stage in order).",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The stage process")),
     responses(
         (status = 200, description = "The measures", body = StageMetrics),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

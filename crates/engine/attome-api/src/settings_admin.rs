@@ -577,7 +577,7 @@ async fn create_theme(
     get,
     path = "/api/v1/admin/themes/{id}",
     tag = "settings",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The theme")),
     responses(
         (status = 200, description = "The version", body = ThemeRow),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -601,7 +601,7 @@ async fn get_theme(
     patch,
     path = "/api/v1/admin/themes/{id}",
     tag = "settings",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The theme")),
     request_body = ThemeTokensBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -643,7 +643,7 @@ async fn update_theme(
     post,
     path = "/api/v1/admin/themes/{id}/publish",
     tag = "settings",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The theme")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "Published", body = ThemeRow),
@@ -728,7 +728,7 @@ async fn rollback_theme(
     get,
     path = "/api/v1/admin/themes/{id}/diff",
     tag = "settings",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The theme")),
     responses(
         (status = 200, description = "Each changed token, before and after", body = attome_types::PaginatedResponse<theme_store::TokenChange>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -873,7 +873,7 @@ struct AssetKindQuery {
     post,
     path = "/api/v1/admin/themes/{id}/assets",
     tag = "settings",
-    params(("id" = Uuid, Path), AssetKindQuery),
+    params(("id" = Uuid, Path, description = "The theme"), AssetKindQuery),
     request_body(content = Vec<u8>, content_type = "application/octet-stream", description = "The file"),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -952,7 +952,7 @@ async fn upload_theme_asset(
     get,
     path = "/api/v1/admin/themes/{id}/assets",
     tag = "settings",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The theme")),
     responses(
         (status = 200, description = "The version's assets, one per kind", body = attome_types::PaginatedResponse<theme_store::BrandAsset>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

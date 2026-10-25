@@ -534,7 +534,7 @@ async fn list_available_views(
     get,
     path = "/api/v1/admin/views/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The view")),
     responses(
         (status = 200, description = "Success", body = ViewDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -817,7 +817,7 @@ fn view_patch_op(before: &ViewDetail, after: &ViewDetail) -> Result<RecordedOp, 
     patch,
     path = "/api/v1/admin/views/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The view")),
     request_body = ViewBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -878,7 +878,7 @@ async fn update_view(
     delete,
     path = "/api/v1/admin/views/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The view")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),
@@ -1057,7 +1057,7 @@ async fn create_personal_view(
     patch,
     path = "/api/v1/views/{id}",
     tag = "query",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The view")),
     request_body = UpdatePersonalViewBody,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::UserPreference,
@@ -1140,7 +1140,7 @@ async fn update_personal_view(
     delete,
     path = "/api/v1/views/{id}",
     tag = "query",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The view")),
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::UserPreference,
         None,
@@ -1188,7 +1188,7 @@ struct ShareProbeRow {
     post,
     path = "/api/v1/views/{id}/share",
     tag = "query",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The view")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::PermissionChange)])))),
     responses(
         (status = 200, description = "Success", body = ViewDetail),
@@ -1657,7 +1657,7 @@ pub(crate) struct ViewImpact {
     get,
     path = "/api/v1/admin/views/{id}/impact",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The view")),
     responses(
         (status = 200, description = "What depends on the view", body = ViewImpact),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

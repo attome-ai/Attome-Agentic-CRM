@@ -123,7 +123,7 @@ async fn list_calendars(
     get,
     path = "/api/v1/admin/calendars/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar")),
     responses(
         (status = 200, description = "Success", body = CalendarDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -309,7 +309,7 @@ fn calendar_op(op: Op, row: &CalendarDetail) -> Result<RecordedOp, AppError> {
     patch,
     path = "/api/v1/admin/calendars/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar")),
     request_body = CalendarBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -355,7 +355,7 @@ async fn update_calendar(
     delete,
     path = "/api/v1/admin/calendars/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),
@@ -602,7 +602,7 @@ const HOLIDAY_SELECT: &str =
     get,
     path = "/api/v1/admin/calendars/{id}/holidays",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar")),
     responses(
         (status = 200, description = "Success", body = Vec<HolidayDetail>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -635,7 +635,7 @@ async fn list_holidays(
     post,
     path = "/api/v1/admin/calendars/{id}/holidays",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar")),
     request_body = HolidayBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -721,7 +721,7 @@ async fn create_holiday(
     post,
     path = "/api/v1/admin/calendars/{id}/holidays/hijri-recurring",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar")),
     request_body = HijriRecurringBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
     responses(
@@ -948,7 +948,7 @@ async fn holiday_op(
     delete,
     path = "/api/v1/admin/calendars/{id}/holidays/{holiday_id}",
     tag = "admin",
-    params(("id" = Uuid, Path), ("holiday_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar"), ("holiday_id" = Uuid, Path, description = "The holiday")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 204, description = "Success"),
@@ -1061,7 +1061,7 @@ const EXCEPTION_SELECT: &str = "SELECT id, calendar_id, name, exception_date, ra
     get,
     path = "/api/v1/admin/calendars/{id}/exceptions",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar")),
     responses(
         (status = 200, description = "Success", body = Vec<CalendarExceptionDetail>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1092,7 +1092,7 @@ async fn list_exceptions(
     post,
     path = "/api/v1/admin/calendars/{id}/exceptions",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar")),
     request_body = CalendarExceptionBody,
     responses(
         (status = 201, description = "Success", body = CalendarExceptionDetail),
@@ -1266,7 +1266,7 @@ async fn exception_op(
     delete,
     path = "/api/v1/admin/calendars/{id}/exceptions/{exception_id}",
     tag = "admin",
-    params(("id" = Uuid, Path), ("exception_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The calendar"), ("exception_id" = Uuid, Path, description = "The exception")),
     responses(
         (status = 204, description = "Success"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

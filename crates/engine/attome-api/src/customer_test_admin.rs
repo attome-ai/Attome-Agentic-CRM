@@ -164,7 +164,7 @@ async fn create_test(
     path = "/api/v1/admin/customer-tests/{id}",
     tag = "admin",
     operation_id = "get_customer_test",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The customer test")),
     responses(
         (status = 200, description = "The test", body = CustomerTest),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -189,7 +189,7 @@ async fn get_test(
     path = "/api/v1/admin/customer-tests/{id}",
     tag = "admin",
     operation_id = "update_customer_test",
-    params(("id" = Uuid, Path), ("If-Match" = String, Header, description = "\"<row_version>\"")),
+    params(("id" = Uuid, Path, description = "The customer test"), ("If-Match" = String, Header, description = "\"<row_version>\"")),
     request_body = CustomerTestPatch,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -234,7 +234,7 @@ async fn update_test(
     path = "/api/v1/admin/customer-tests/{id}",
     tag = "admin",
     operation_id = "delete_customer_test",
-    params(("id" = Uuid, Path), ("If-Match" = Option<String>, Header, description = "\"<row_version>\", optional")),
+    params(("id" = Uuid, Path, description = "The customer test"), ("If-Match" = Option<String>, Header, description = "\"<row_version>\", optional")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "Deleted, with its runs"),
@@ -276,7 +276,7 @@ async fn delete_test(
     path = "/api/v1/admin/customer-tests/{id}/runs",
     tag = "admin",
     operation_id = "list_customer_test_runs",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The customer test")),
     responses(
         (status = 200, description = "The test's latest runs, newest first (at most 50)", body = PaginatedResponse<CustomerTestRun>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -345,7 +345,7 @@ async fn run_one(
     path = "/api/v1/admin/customer-tests/{id}/run",
     tag = "admin",
     operation_id = "run_customer_test",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The customer test")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Create)])))),
     responses(
         (status = 200, description = "The run: nothing the test did is kept", body = CustomerTestRunResult),

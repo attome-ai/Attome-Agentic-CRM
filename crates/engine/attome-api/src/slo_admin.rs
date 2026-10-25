@@ -225,7 +225,7 @@ async fn get_overview(
     path = "/api/v1/admin/slo/targets/{class_id}",
     tag = "admin",
     operation_id = "set_slo_target",
-    params(("class_id" = String, Path)),
+    params(("class_id" = String, Path, description = "The SLO class")),
     request_body = SloTargetBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -314,7 +314,7 @@ async fn set_target(
     path = "/api/v1/admin/slo/targets/{class_id}",
     tag = "admin",
     operation_id = "clear_slo_target",
-    params(("class_id" = String, Path)),
+    params(("class_id" = String, Path, description = "The SLO class")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "The reference targets apply again"),

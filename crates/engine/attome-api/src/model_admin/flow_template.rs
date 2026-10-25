@@ -50,7 +50,7 @@ pub(crate) struct InstantiateResponse {
     tag = "admin",
     operation_id = "model_flow_template_instantiate",
     description = "Fills a published flow template with its arguments and answers the graph, or the arguments' issues (M6-T4). Writes nothing; save the graph as a new flow's draft.",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The flow template")),
     request_body = InstantiateRequest,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::DryRun,

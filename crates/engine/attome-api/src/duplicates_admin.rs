@@ -357,7 +357,7 @@ struct UpdateMatchRuleBody {
     put,
     path = "/api/v1/admin/data/match-rules/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The match rule")),
     request_body = UpdateMatchRuleBody,
     responses(
         (status = 200, description = "Success", body = MatchRuleView),
@@ -504,7 +504,7 @@ struct MatchScanStarted {
     post,
     path = "/api/v1/admin/data/match-rules/{id}/scan",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The match rule")),
     responses(
         (status = 202, description = "The scan is queued", body = MatchScanStarted),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -571,7 +571,7 @@ async fn scan_match_rule(
     delete,
     path = "/api/v1/admin/data/match-rules/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The match rule")),
     responses(
         (status = 204, description = "Success"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -846,7 +846,7 @@ async fn create_survivorship_rule(
     delete,
     path = "/api/v1/admin/data/survivorship-rules/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The survivorship rule")),
     responses(
         (status = 204, description = "Success"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1018,7 +1018,7 @@ async fn list_candidates(
     get,
     path = "/api/v1/admin/data/duplicates/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The duplicate")),
     responses(
         (status = 200, description = "Success", body = DuplicateCandidateView),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1087,7 +1087,7 @@ struct MergeCandidateBody {
     post,
     path = "/api/v1/admin/data/duplicates/{id}/merge",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The duplicate")),
     request_body = MergeCandidateBody,
     responses(
         (status = 200, description = "Success", body = entity_crud::MergeResponse),
@@ -1148,7 +1148,7 @@ struct DismissCandidateBody {
     post,
     path = "/api/v1/admin/data/duplicates/{id}/dismiss",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The duplicate")),
     request_body = DismissCandidateBody,
     responses(
         (status = 200, description = "Success", body = DuplicateCandidateView),
@@ -1403,7 +1403,7 @@ struct CandidateExplanation {
     get,
     path = "/api/v1/admin/data/duplicates/{id}/explain",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The duplicate")),
     responses(
         (status = 200, description = "The per-field explanation", body = CandidateExplanation),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

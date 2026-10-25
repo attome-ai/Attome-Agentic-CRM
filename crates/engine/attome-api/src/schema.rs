@@ -235,7 +235,7 @@ pub(crate) fn not_modified(if_none_match: Option<&str>, etag: &str) -> bool {
     get,
     path = "/api/v1/schema/{logicalname}",
     tag = "schema",
-    params(("logicalname" = String, Path), SchemaQuery),
+    params(("logicalname" = String, Path, description = "The entity's logical name"), SchemaQuery),
     responses(
         (status = 200, description = "Success; `ETag` validates it", body = EntitySchemaDef),
         (status = 304, description = "`If-None-Match` names the current `ETag`; no body"),

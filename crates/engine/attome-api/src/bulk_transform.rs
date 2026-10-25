@@ -193,7 +193,7 @@ struct DryRunResponse {
     post,
     path = "/api/v1/{entity}/bulk-transform/dry-run",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BulkTransformRequestBody,
     responses(
         (status = 200, description = "Success", body = DryRunResponse),
@@ -245,7 +245,7 @@ struct BulkTransformApprovalPending {
     post,
     path = "/api/v1/{entity}/bulk-transform",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BulkTransformRequestBody,
     responses(
         (status = 202, description = "Success", body = BulkTransformEnqueueResponse),
@@ -441,7 +441,7 @@ struct BulkTransformStatus {
     get,
     path = "/api/v1/{entity}/bulk-transform/{id}",
     tag = "entity",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The bulk transform")),
     responses(
         (status = 200, description = "Success", body = BulkTransformStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

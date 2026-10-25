@@ -222,7 +222,7 @@ pub(super) async fn list_archive(
     get,
     path = "/api/v1/admin/metadata/recovery-archive/{archive_id}",
     tag = "admin",
-    params(("archive_id" = Uuid, Path)),
+    params(("archive_id" = Uuid, Path, description = "The archive row")),
     responses(
         (status = 200, description = "The row and its decrypted value", body = ArchiveValue),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -524,7 +524,7 @@ pub(super) fn tally(counts: &mut RestoreCounts, one: RestoreOne) {
     post,
     path = "/api/v1/admin/metadata/recovery-archive/{archive_id}/restore",
     tag = "admin",
-    params(("archive_id" = Uuid, Path)),
+    params(("archive_id" = Uuid, Path, description = "The archive row")),
     responses(
         (status = 200, description = "Restored, or skipped (counts say why)", body = RestoreCounts),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

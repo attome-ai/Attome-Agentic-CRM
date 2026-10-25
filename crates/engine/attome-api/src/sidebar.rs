@@ -675,7 +675,7 @@ pub(crate) async fn deactivate_sidebar_item_in_tx(
     patch,
     path = "/api/v1/sidebar/admin/{id}",
     tag = "sidebar",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The sidebar item")),
     request_body = SidebarMutation,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -764,7 +764,7 @@ struct SidebarDelete {
     delete,
     path = "/api/v1/sidebar/admin/{id}",
     tag = "sidebar",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The sidebar item")),
     request_body = SidebarDelete,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(

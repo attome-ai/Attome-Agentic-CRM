@@ -248,7 +248,7 @@ struct GlossaryTermRow {
     // See `list_entities`'s own comment above — same collision, this time
     // with `admin::entity::get_entity`.
     operation_id = "catalog_get_entity",
-    params(("logicalname" = String, Path)),
+    params(("logicalname" = String, Path, description = "The entity's logical name")),
     responses(
         (status = 200, description = "Success", body = CatalogEntityDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
