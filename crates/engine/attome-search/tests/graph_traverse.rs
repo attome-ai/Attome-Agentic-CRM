@@ -90,6 +90,7 @@ fn attr(logicalname: &str, lookup_entity_ref: Uuid) -> AttrInfo {
         lookup_entity_ref: Some(lookup_entity_ref),
         on_target_delete: OnTargetDelete::Orphan,
         data_classification: Default::default(),
+        sensitivity: Default::default(),
         options: None,
     }
 }

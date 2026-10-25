@@ -156,6 +156,7 @@ mod tests {
             lookup_entity_ref: lookup.then(Uuid::now_v7),
             on_target_delete: OnTargetDelete::default(),
             data_classification: DataClassification::default(),
+            sensitivity: Default::default(),
             options: None,
         }
     }

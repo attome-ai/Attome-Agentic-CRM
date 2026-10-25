@@ -1,6 +1,6 @@
 use attome_audit::{AuditCategory, AuditEvent, AuditOperation, AuditRequestContext, AuditSource};
 use attome_core::changeset::{Op, Recording, RecordingCtx};
-use attome_core::{EngineState, FieldType};
+use attome_core::{EngineState, FieldType, Sensitivity};
 use attome_metadata::provision;
 use attome_metadata::provision::{
     AttributeDesc, RECONCILE_SCHEMA_CHANGE_INLINE_ROW_LIMIT, ReconcilePolicy, RecordAs,
@@ -83,6 +83,8 @@ struct AttrRow {
     is_active: Option<bool>,
     on_target_delete: Option<String>,
     data_classification: Option<String>,
+    sensitivity: Option<String>,
+    sensitivity_confirmed: Option<bool>,
     purpose: Option<String>,
     options: Option<serde_json::Value>,
     owner_layer: String,
@@ -119,6 +121,11 @@ pub struct AttributeMeta {
     /// (which keeps its narrower audit-masking-only meaning). Always
     /// present, matching the column's `NOT NULL DEFAULT 'general'`.
     data_classification: String,
+    /// A1-T1: `public | internal | personal | financial | health | secret`.
+    sensitivity: String,
+    /// A1-T1: whether a builder set `sensitivity`; `false` while it is still
+    /// the value mapped from `data_classification`.
+    sensitivity_confirmed: bool,
     /// Developer-facing note on why this field exists / what it's used for —
     /// locale-less, internal, distinct from `metadata_label`'s
     /// per-locale end-user-presentation `description` (D-426). `None` when
@@ -211,6 +218,9 @@ pub(crate) struct CreateAttributeBody {
     /// P-data-protection-governance §4. Omitted → the column's own default,
     /// `"general"`.
     data_classification: Option<String>,
+    /// A1-T1: the sensitivity label; setting it confirms it. Omitted →
+    /// `internal`, unconfirmed.
+    sensitivity: Option<String>,
     /// Developer-facing note on why this field exists / what it's used for.
     /// Omitted → `NULL`. Distinct from the label-store `description`
     /// (D-426) — see `AttributeMeta::purpose`'s doc comment.
@@ -258,6 +268,9 @@ pub(crate) struct UpdateAttributeBody {
     lookup_entity_ref: Option<Uuid>,
     on_target_delete: Option<String>,
     data_classification: Option<String>,
+    /// A1-T1: the sensitivity label; setting it confirms it. Omitted →
+    /// unchanged.
+    sensitivity: Option<String>,
     /// Omitted → left unchanged (same "absent means no change" convention
     /// every other `Option<String>` field on this body uses).
     purpose: Option<String>,
@@ -310,6 +323,19 @@ fn valid_data_classification(s: &str) -> bool {
     matches!(s, "general" | "personal" | "sensitive_special_category")
 }
 
+/// A1-T1: the label a request names, or a validation error listing them.
+fn parse_sensitivity(s: Option<&str>) -> Result<Option<Sensitivity>, AppError> {
+    s.map(|s| {
+        Sensitivity::parse(&s.to_lowercase()).ok_or_else(|| {
+            AppError::Validation(
+                "sensitivity must be one of: public, internal, personal, financial, health, secret"
+                    .into(),
+            )
+        })
+    })
+    .transpose()
+}
+
 /// F004/F012: shape-checks a candidate `options` blob against `field_type`
 /// BEFORE it's ever persisted (`attome_field::validate_options`) — a malformed
 /// mask pattern or choice list is a 422 at attribute-create/update time, not
@@ -344,6 +370,7 @@ fn update_body_changes_more_than_logicalname(body: &UpdateAttributeBody) -> bool
         lookup_entity_ref,
         on_target_delete,
         data_classification,
+        sensitivity,
         purpose,
         options,
         dry_run: _,
@@ -360,6 +387,7 @@ fn update_body_changes_more_than_logicalname(body: &UpdateAttributeBody) -> bool
         || lookup_entity_ref.is_some()
         || on_target_delete.is_some()
         || data_classification.is_some()
+        || sensitivity.is_some()
         || purpose.is_some()
         || options.is_some()
         || default_value.is_some()
@@ -388,6 +416,8 @@ fn attr_from_row(r: AttrRow, index: i32) -> AttributeMeta {
         data_classification: r
             .data_classification
             .unwrap_or_else(|| "general".to_owned()),
+        sensitivity: r.sensitivity.unwrap_or_else(|| "internal".to_owned()),
+        sensitivity_confirmed: r.sensitivity_confirmed.unwrap_or(false),
         purpose: r.purpose,
         options: r.options,
         owner_layer: r.owner_layer,
@@ -408,6 +438,8 @@ pub(crate) async fn fetch_attributes(
                   a.is_active,
                   a.on_target_delete,
                   a.data_classification,
+                  a.sensitivity,
+                  a.sensitivity_confirmed,
                   a.purpose,
                   a.options,
                   a.owner_layer
@@ -627,6 +659,7 @@ pub(crate) async fn do_create_attribute_recorded(
                 .into(),
         ));
     }
+    let sensitivity = parse_sensitivity(body.sensitivity.as_deref())?;
 
     let purpose = body
         .purpose
@@ -752,6 +785,10 @@ pub(crate) async fn do_create_attribute_recorded(
         }),
     )
     .await?;
+    if let Some(label) = sensitivity {
+        provision::sensitivity::set_attribute_sensitivity(&state.base.db_migrator, id, label)
+            .await?;
+    }
 
     if expensive {
         // P-online-schema-change §4(b): record the target contract on the
@@ -941,6 +978,8 @@ pub(crate) async fn do_create_attribute_recorded(
             is_active: true,
             on_target_delete,
             data_classification,
+            sensitivity: sensitivity.unwrap_or_default().as_str().to_owned(),
+            sensitivity_confirmed: sensitivity.is_some(),
             purpose,
             options: body.options,
             owner_layer,
@@ -1129,6 +1168,8 @@ pub(crate) async fn do_update_attribute_recorded(
                   a.is_active,
                   a.on_target_delete,
                   a.data_classification,
+                  a.sensitivity,
+                  a.sensitivity_confirmed,
                   a.purpose,
                   a.options,
                   a.owner_layer
@@ -1248,6 +1289,7 @@ pub(crate) async fn do_update_attribute_recorded(
                 .into(),
         ));
     }
+    let new_sensitivity = parse_sensitivity(body.sensitivity.as_deref())?;
     let new_purpose = body
         .purpose
         .as_deref()
@@ -1383,6 +1425,10 @@ pub(crate) async fn do_update_attribute_recorded(
         return Err(AppError::Conflict(
             "field was replaced concurrently; reload and retry",
         ));
+    }
+    if let Some(label) = new_sensitivity {
+        provision::sensitivity::set_attribute_sensitivity(&state.base.db_migrator, attr_id, label)
+            .await?;
     }
 
     if expensive {
@@ -1589,6 +1635,16 @@ pub(crate) async fn do_update_attribute_recorded(
         is_active: true,
         on_target_delete: new_on_target_delete,
         data_classification: new_data_classification,
+        sensitivity: new_sensitivity.map_or_else(
+            || {
+                cur.sensitivity
+                    .clone()
+                    .unwrap_or_else(|| "internal".to_owned())
+            },
+            |l| l.as_str().to_owned(),
+        ),
+        sensitivity_confirmed: new_sensitivity.is_some()
+            || cur.sensitivity_confirmed.unwrap_or(false),
         purpose: new_purpose,
         options: new_options,
         owner_layer: cur.owner_layer,

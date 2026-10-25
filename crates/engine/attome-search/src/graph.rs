@@ -904,6 +904,7 @@ mod tests {
             lookup_entity_ref,
             on_target_delete: OnTargetDelete::Orphan,
             data_classification: Default::default(),
+            sensitivity: Default::default(),
             options: None,
         }
     }

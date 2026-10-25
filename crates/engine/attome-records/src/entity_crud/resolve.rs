@@ -93,6 +93,7 @@ pub async fn resolve_entity_from_db(
             lookup_entity_ref: r.lookup_entity_ref,
             on_target_delete: OnTargetDelete::from_db_str(&r.on_target_delete),
             data_classification: DataClassification::from_db_str(&r.data_classification),
+            sensitivity: Default::default(),
             options: r.options,
         })
         .collect();

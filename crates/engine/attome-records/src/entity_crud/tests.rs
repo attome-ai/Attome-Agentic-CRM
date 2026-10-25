@@ -23,6 +23,7 @@ fn attr(field_type_int: i32, options: Option<Value>) -> AttrInfo {
         lookup_entity_ref: None,
         on_target_delete: OnTargetDelete::Orphan,
         data_classification: Default::default(),
+        sensitivity: Default::default(),
         options,
     }
 }

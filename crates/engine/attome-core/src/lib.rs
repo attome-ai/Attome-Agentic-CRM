@@ -225,6 +225,7 @@ pub use label_store::{
 pub use legal_hold::{LegalHoldInfo, record_is_held};
 pub use meta_registry::{
     AttrInfo, DataClassification, EntityMeta, EntityMetaRegistry, OnTargetDelete, SchemaEntity,
+    Sensitivity,
     SchemaField, apply_change_log, build_registry, fetch_entity_snapshot, fetch_entity_snapshots,
     fetch_schema_facts, load_snapshot, save_snapshot, verify_ids_exist,
 };

@@ -57,6 +57,65 @@ impl OnTargetDelete {
     }
 }
 
+/// A1-T1: how sensitive a field's values are. `internal` until a builder
+/// says otherwise; `public` may be shown to anyone who can see the record,
+/// `personal`, `financial` and `health` carry their own handling rules, and
+/// `secret` is the strictest.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Sensitivity {
+    Public,
+    #[default]
+    Internal,
+    Personal,
+    Financial,
+    Health,
+    Secret,
+}
+
+impl Sensitivity {
+    /// Every label, least sensitive first.
+    pub const ALL: [Self; 6] = [
+        Self::Public,
+        Self::Internal,
+        Self::Personal,
+        Self::Financial,
+        Self::Health,
+        Self::Secret,
+    ];
+
+    /// The stored value.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Public => "public",
+            Self::Internal => "internal",
+            Self::Personal => "personal",
+            Self::Financial => "financial",
+            Self::Health => "health",
+            Self::Secret => "secret",
+        }
+    }
+
+    /// The label a stored value names; an unknown one reads as `internal`.
+    pub fn from_db_str(s: &str) -> Self {
+        Self::parse(s).unwrap_or_default()
+    }
+
+    /// The label `s` names, if it names one.
+    pub fn parse(s: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|l| l.as_str() == s.trim())
+    }
+
+    /// The label an older `data_classification` maps to.
+    pub fn from_classification(c: DataClassification) -> Self {
+        match c {
+            DataClassification::General => Self::Internal,
+            DataClassification::Personal => Self::Personal,
+            DataClassification::SensitiveSpecialCategory => Self::Health,
+        }
+    }
+}
+
 /// P-data-protection-governance §4 "Classification metadata" — a broader
 /// governance taxonomy alongside (not replacing) `AttrInfo::is_sensitive`,
 /// which keeps its narrower, already-relied-upon meaning (audit-output
@@ -139,6 +198,11 @@ pub struct AttrInfo {
     /// before this field existed still deserializes.
     #[serde(default)]
     pub data_classification: DataClassification,
+
+    /// A1-T1: the attribute's sensitivity label. `#[serde(default)]` so a
+    /// pre-existing Redis snapshot still decodes.
+    #[serde(default)]
+    pub sensitivity: Sensitivity,
 
     /// F004/F012 (migration 0029): type-specific config — `ChoiceOptions` for
     /// Choice fields, `TextOptions` for masked Text fields (see `attome-field`).
@@ -472,6 +536,7 @@ struct AttrRow {
     lookup_entity_ref: Option<Uuid>,
     on_target_delete: String,
     data_classification: String,
+    sensitivity: String,
     options: Option<serde_json::Value>,
 }
 
@@ -489,6 +554,7 @@ impl From<AttrRow> for AttrInfo {
             lookup_entity_ref: row.lookup_entity_ref,
             on_target_delete: OnTargetDelete::from_db_str(&row.on_target_delete),
             data_classification: DataClassification::from_db_str(&row.data_classification),
+            sensitivity: Sensitivity::from_db_str(&row.sensitivity),
             options: row.options,
         }
     }
@@ -539,6 +605,7 @@ pub async fn build_registry(db: &DbPool) -> Result<EntityMetaRegistry, AppError>
                   lookup_entity_ref,
                   COALESCE(on_target_delete, 'orphan') AS on_target_delete,
                   COALESCE(data_classification, 'general') AS data_classification,
+                  COALESCE(sensitivity, 'internal') AS sensitivity,
                   {OPTIONS_SQL} AS options
            FROM attribute_info
            WHERE (is_active IS NULL OR is_active = true)
@@ -733,6 +800,7 @@ pub async fn fetch_entity_snapshots(
                   lookup_entity_ref,
                   COALESCE(on_target_delete, 'orphan') AS on_target_delete,
                   COALESCE(data_classification, 'general') AS data_classification,
+                  COALESCE(sensitivity, 'internal') AS sensitivity,
                   {OPTIONS_SQL} AS options
            FROM attribute_info
            WHERE (is_active IS NULL OR is_active = true)
@@ -964,6 +1032,7 @@ mod tests {
             lookup_entity_ref: None,
             on_target_delete: OnTargetDelete::Orphan,
             data_classification: DataClassification::General,
+            sensitivity: Default::default(),
             options: None,
         }
     }

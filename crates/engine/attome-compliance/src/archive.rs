@@ -525,6 +525,7 @@ mod tests {
             lookup_entity_ref: None,
             on_target_delete: Default::default(),
             data_classification: Default::default(),
+            sensitivity: Default::default(),
             options,
         }
     }

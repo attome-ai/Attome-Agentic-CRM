@@ -696,6 +696,7 @@ mod tests {
             lookup_entity_ref: None,
             on_target_delete: OnTargetDelete::default(),
             data_classification: DataClassification::default(),
+            sensitivity: Default::default(),
             options: None,
         }
     }

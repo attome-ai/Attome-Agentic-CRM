@@ -51,6 +51,8 @@ pub mod index_advisor;
 /// generic many-to-many relationship metadata object.
 mod relationship;
 mod schema_change;
+/// A1-T1: write an attribute's or entity's sensitivity label.
+pub mod sensitivity;
 mod table;
 
 #[cfg(test)]

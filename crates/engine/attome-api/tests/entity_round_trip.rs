@@ -4882,6 +4882,86 @@ fn hierarchy_path_follows_moves() {
     })
 }
 
+/// A1-T1: a field's sensitivity label is set on create, changed on update,
+/// marked confirmed once written, and an unknown label is refused.
+#[test]
+fn sensitivity_label_round_trips() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (_, entity_id) = create_entity(&app, &admin_cookie, "senslabel").await;
+
+        let send = |method: &'static str, uri: String, body: &'static str| {
+            let app = app.clone();
+            let cookie = admin_cookie.clone();
+            async move {
+                let req = Request::builder()
+                    .method(method)
+                    .uri(uri)
+                    .header("cookie", &cookie)
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))
+                    .unwrap();
+                let res = app.oneshot(req).await.expect("send");
+                let status = res.status();
+                (status, body_json(res).await)
+            }
+        };
+        let fields = format!("/api/v1/admin/entities/{entity_id}/fields");
+
+        let (status, created) = send(
+            "POST",
+            fields.clone(),
+            r#"{"logicalname":"salary","name":"Salary","field_type":"decimal","sensitivity":"financial"}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{created:?}");
+        assert_eq!(created["sensitivity"], "financial");
+        assert_eq!(created["sensitivity_confirmed"], true);
+
+        let (status, plain) = send(
+            "POST",
+            fields.clone(),
+            r#"{"logicalname":"note","name":"Note","field_type":"text"}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{plain:?}");
+        assert_eq!(plain["sensitivity"], "internal");
+        assert_eq!(plain["sensitivity_confirmed"], false);
+
+        let (status, refused) = send(
+            "POST",
+            fields.clone(),
+            r#"{"logicalname":"other","name":"Other","field_type":"text","sensitivity":"top"}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused:?}");
+
+        let note_id = plain["id"].as_str().unwrap().to_owned();
+        let (status, updated) = send(
+            "PATCH",
+            format!("{fields}/{note_id}"),
+            r#"{"sensitivity":"health"}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{updated:?}");
+        assert_eq!(updated["sensitivity"], "health");
+        assert_eq!(updated["sensitivity_confirmed"], true);
+
+        let (status, entity) = send("GET", format!("/api/v1/admin/entities/{entity_id}"), "").await;
+        assert_eq!(status, StatusCode::OK, "{entity:?}");
+        let items = entity["attributes"]
+            .as_array()
+            .expect("the entity's fields");
+        let note = items
+            .iter()
+            .find(|f| f["logicalname"] == "note")
+            .expect("note");
+        assert_eq!(note["sensitivity"], "health");
+    })
+}
+
 /// F019: `GET .../ancestors` and `GET .../descendants` walk a self-referencing
 /// `parent_ref` chain (`a` -> `b` -> `c`) via the recursive-CTE endpoints,
 /// nearest-first for ancestors, breadth order for descendants.
