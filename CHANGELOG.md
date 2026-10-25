@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- OpenAPI overlay (S2-T16): `GET`/`PUT /api/v1/admin/openapi/overlay` store an OpenAPI Overlay 1.0
+  document whose actions set `summary`, `description` or `example` on `/api/v1/` paths and their
+  operations; `GET /api/v1/openapi/deployment.json` applies it after filtering for the caller.
+  Migration 0253 adds the one-row `openapi_overlay` table.
 - Form layout (A12-T1): a `form` can now have tabs, section columns, related lists and embedded
   components, a kind (`main`, `quick_create`, `quick_view`, `card`) and targeting by role, record
   type and stage; forms saved before keep working. `GET /api/v1/model/entities/{entity}/default-form`

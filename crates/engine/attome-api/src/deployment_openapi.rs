@@ -8,15 +8,28 @@
 //! Only the entities the caller may read appear. The whole document is
 //! built once per metadata snapshot (the registry swaps a new `Arc` on every
 //! metadata change, which is the cache key) and filtered per caller.
+//!
+//! S2-T16: a builder describes their own entities with an OpenAPI Overlay
+//! (`GET`/`PUT /api/v1/admin/openapi/overlay`). Its actions target a path
+//! (`$.paths['/api/v1/deal']`) or one of its operations
+//! (`$.paths['/api/v1/deal'].get`) and may set only `summary`,
+//! `description` and `example`. It is applied after the caller's filter, so
+//! an action aimed at an entity the caller cannot read has nothing to land
+//! on.
 
 use std::sync::{Arc, Mutex};
 
+use attome_audit::AuditOperation;
+use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::{AttrInfo, EngineState, EntityMetaRegistry, FieldType};
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Authorized, SelfService};
+use attome_server::authz::{Admin, Authorized, SelfService};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::get};
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
+use utoipa::ToSchema;
+use uuid::Uuid;
 
 /// The registry snapshot a document was built from (held, so its address
 /// cannot be reused by a later snapshot) and the document.
@@ -288,21 +301,311 @@ pub(crate) async fn deployment_openapi(
     ctx: Authorized<SelfService>,
 ) -> Result<Json<Value>, AppError> {
     let doc = document_for(&state);
-    Ok(Json(filter_document(&doc, |entity| {
-        ctx.require(entity, "read").is_ok()
-    })))
+    let mut filtered = filter_document(&doc, |entity| ctx.require(entity, "read").is_ok());
+    // S2-T16: the builder's overlay, after the filter.
+    let overlay: Option<Value> = sqlx::query_scalar("SELECT overlay FROM openapi_overlay LIMIT 1")
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    if let Some(overlay) = overlay {
+        apply_overlay(&mut filtered, &overlay);
+    }
+    Ok(Json(filtered))
+}
+
+// ── S2-T16: the builder's overlay ───────────────────────────────────────────
+
+/// The most actions one overlay holds.
+pub const MAX_OVERLAY_ACTIONS: usize = 2_000;
+/// The longest summary or description an action sets.
+pub const MAX_OVERLAY_TEXT: usize = 4_000;
+/// The keys an action may set.
+const UPDATABLE: [&str; 3] = ["summary", "description", "example"];
+const METHODS: [&str; 5] = ["get", "put", "post", "patch", "delete"];
+
+/// An action's target as (path, operation): `$.paths['/api/v1/…']`,
+/// optionally followed by `.get`, `.put`, `.post`, `.patch` or `.delete`.
+/// Anything else is `None`. Pure.
+pub fn parse_overlay_target(target: &str) -> Option<(&str, Option<&str>)> {
+    let rest = target.strip_prefix("$.paths['")?;
+    let (path, tail) = rest.split_once("']")?;
+    if !path.starts_with("/api/v1/") || path.contains(['\'', '[', ']']) {
+        return None;
+    }
+    if tail.is_empty() {
+        return Some((path, None));
+    }
+    let method = tail.strip_prefix('.')?;
+    METHODS.contains(&method).then_some((path, Some(method)))
+}
+
+/// Why an overlay is refused, every problem at once; empty when it fits.
+/// Pure.
+pub fn check_overlay(overlay: &Value) -> Vec<String> {
+    let mut problems = Vec::new();
+    let Some(object) = overlay.as_object() else {
+        return vec!["the overlay is a JSON object".to_owned()];
+    };
+    let Some(actions) = object.get("actions").and_then(Value::as_array) else {
+        return vec!["the overlay has a list of `actions`".to_owned()];
+    };
+    if actions.len() > MAX_OVERLAY_ACTIONS {
+        problems.push(format!(
+            "the overlay has {} actions; the limit is {MAX_OVERLAY_ACTIONS}",
+            actions.len()
+        ));
+    }
+    for (i, action) in actions.iter().enumerate() {
+        let target = action["target"].as_str().unwrap_or_default();
+        if parse_overlay_target(target).is_none() {
+            problems.push(format!(
+                "actions[{i}].target must be $.paths['/api/v1/…'] or one of its operations"
+            ));
+        }
+        if action.get("remove").is_some() {
+            problems.push(format!("actions[{i}] may not remove anything"));
+        }
+        match action["update"].as_object() {
+            Some(update) if !update.is_empty() => {
+                for (key, value) in update {
+                    if !UPDATABLE.contains(&key.as_str()) {
+                        problems.push(format!(
+                            "actions[{i}].update may set only summary, description and example, not `{key}`"
+                        ));
+                    } else if key != "example"
+                        && !value
+                            .as_str()
+                            .is_some_and(|text| text.chars().count() <= MAX_OVERLAY_TEXT)
+                    {
+                        problems.push(format!(
+                            "actions[{i}].update.{key} is text of at most {MAX_OVERLAY_TEXT} characters"
+                        ));
+                    }
+                }
+            }
+            _ => problems.push(format!("actions[{i}] has an `update` object to apply")),
+        }
+    }
+    problems
+}
+
+/// Applies `overlay`'s actions to `doc`, in order. An action whose target is
+/// not in the document, or that does not fit [`check_overlay`], changes
+/// nothing. Pure.
+pub fn apply_overlay(doc: &mut Value, overlay: &Value) {
+    for action in overlay["actions"].as_array().into_iter().flatten() {
+        let Some((path, method)) = action["target"].as_str().and_then(parse_overlay_target) else {
+            continue;
+        };
+        let Some(update) = action["update"].as_object() else {
+            continue;
+        };
+        let Some(item) = doc.get_mut("paths").and_then(|paths| paths.get_mut(path)) else {
+            continue;
+        };
+        let node = match method {
+            Some(method) => match item.get_mut(method) {
+                Some(operation) => operation,
+                None => continue,
+            },
+            None => item,
+        };
+        let Some(node) = node.as_object_mut() else {
+            continue;
+        };
+        for (key, value) in update {
+            if UPDATABLE.contains(&key.as_str()) {
+                node.insert(key.clone(), value.clone());
+            }
+        }
+    }
+}
+
+/// The deployment's OpenAPI overlay.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OverlayView {
+    /// The overlay document, or `null` when none is set.
+    #[schema(value_type = Object)]
+    pub overlay: Option<Value>,
+    /// Send back to replace it; 0 when none is set.
+    pub row_version: i64,
+}
+
+/// A new overlay.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct PutOverlay {
+    /// An OpenAPI Overlay 1.0 document whose actions set summary,
+    /// description or example on this deployment's paths.
+    #[schema(value_type = Object)]
+    pub overlay: Value,
+    /// The overlay's current `row_version`; 0 when none is set yet.
+    pub row_version: i64,
+}
+
+/// The deployment's OpenAPI overlay
+///
+/// The overlay applied to the deployment document. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/openapi/overlay",
+    tag = "openapi",
+    responses(
+        (status = 200, description = "The overlay, or null with row_version 0", body = OverlayView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_overlay(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<OverlayView>, AppError> {
+    let row: Option<(Value, i64)> =
+        sqlx::query_as("SELECT overlay, row_version FROM openapi_overlay LIMIT 1")
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(Json(match row {
+        Some((overlay, row_version)) => OverlayView {
+            overlay: Some(overlay),
+            row_version,
+        },
+        None => OverlayView {
+            overlay: None,
+            row_version: 0,
+        },
+    }))
+}
+
+/// Replace the OpenAPI overlay
+///
+/// Sets the overlay applied to the deployment document: its actions may set
+/// only summary, description and example on `/api/v1/` paths and their
+/// operations. Send the current `row_version` (0 for the first). Administrators
+/// only.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/openapi/overlay",
+    tag = "openapi",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    request_body = PutOverlay,
+    responses(
+        (status = 200, description = "Saved", body = OverlayView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 409, description = "row_version is stale", body = ErrorResponse),
+        (status = 422, description = "The overlay does not fit; every problem is named", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn put_overlay(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<PutOverlay>,
+) -> Result<Json<OverlayView>, AppError> {
+    let problems = check_overlay(&body.overlay);
+    if !problems.is_empty() {
+        return Err(AppError::Validation(problems.join("; ")));
+    }
+    let mut tx = SecurityTx::begin(
+        &state,
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "openapi_overlay",
+            None,
+        )
+        .named("openapi.overlay.update"),
+    )
+    .await?;
+    let saved: Option<i64> = if body.row_version == 0 {
+        sqlx::query_scalar(
+            "INSERT INTO openapi_overlay (id, overlay, updated_by) VALUES ($1, $2, $3) \
+             ON CONFLICT DO NOTHING RETURNING row_version",
+        )
+        .bind(Uuid::now_v7())
+        .bind(&body.overlay)
+        .bind(ctx.user_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+    } else {
+        sqlx::query_scalar(
+            "UPDATE openapi_overlay SET overlay = $1, row_version = row_version + 1, \
+                 updated_at = now(), updated_by = $2 \
+             WHERE row_version = $3 RETURNING row_version",
+        )
+        .bind(&body.overlay)
+        .bind(ctx.user_id)
+        .bind(body.row_version)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+    };
+    let row_version = saved.ok_or(AppError::VersionConflict)?;
+    tx.commit().await?;
+    Ok(Json(OverlayView {
+        overlay: Some(body.overlay),
+        row_version,
+    }))
 }
 
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/openapi/deployment.json", get(deployment_openapi))
+    Router::new()
+        .route("/api/v1/openapi/deployment.json", get(deployment_openapi))
+        .route(
+            "/api/v1/admin/openapi/overlay",
+            get(get_overlay).put(put_overlay),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(deployment_openapi))]
+#[openapi(
+    paths(deployment_openapi, get_overlay, put_overlay),
+    components(schemas(OverlayView, PutOverlay))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod overlay_tests {
+    use super::*;
+
+    #[test]
+    fn overlay_rejects_targets_outside_paths() {
+        let overlay = json!({ "actions": [
+            { "target": "$.info", "update": { "description": "x" } },
+            { "target": "$.paths['/internal/metrics']", "update": { "description": "x" } },
+            { "target": "$.paths['/api/v1/deal'].trace", "update": { "description": "x" } },
+            { "target": "$.paths['/api/v1/deal']", "update": { "security": [] } },
+            { "target": "$.paths['/api/v1/deal']", "remove": true, "update": { "summary": "x" } },
+            { "target": "$.paths['/api/v1/deal'].get", "update": { "summary": "Deals" } }
+        ]});
+        let problems = check_overlay(&overlay);
+        assert_eq!(problems.len(), 5, "{problems:?}");
+        assert!(check_overlay(&json!({ "actions": [] })).is_empty());
+        assert!(!check_overlay(&json!([])).is_empty());
+    }
+
+    #[test]
+    fn overlay_sets_descriptions_on_paths_and_operations() {
+        let mut doc = json!({ "paths": { "/api/v1/deal": { "get": { "summary": "List" } } } });
+        let overlay = json!({ "actions": [
+            { "target": "$.paths['/api/v1/deal']", "update": { "description": "Our deals" } },
+            { "target": "$.paths['/api/v1/deal'].get", "update": { "summary": "صفقات" } },
+            { "target": "$.paths['/api/v1/deal'].post", "update": { "summary": "missing" } },
+            { "target": "$.paths['/api/v1/hidden']", "update": { "summary": "missing" } }
+        ]});
+        apply_overlay(&mut doc, &overlay);
+        assert_eq!(doc["paths"]["/api/v1/deal"]["description"], "Our deals");
+        assert_eq!(doc["paths"]["/api/v1/deal"]["get"]["summary"], "صفقات");
+        assert!(doc["paths"]["/api/v1/deal"].get("post").is_none());
+        assert!(doc["paths"].get("/api/v1/hidden").is_none());
+    }
 }
 
 #[cfg(test)]

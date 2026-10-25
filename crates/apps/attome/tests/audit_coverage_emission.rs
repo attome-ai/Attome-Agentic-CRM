@@ -2651,6 +2651,19 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 ]})),
             )
         }
+        // S2-T16: the deployment document's overlay.
+        "PUT /api/v1/admin/openapi/overlay" => {
+            sqlx::query("DELETE FROM openapi_overlay")
+                .execute(&fx.base.db)
+                .await
+                .expect("clear the overlay");
+            request(
+                "PUT",
+                "/api/v1/admin/openapi/overlay",
+                t,
+                Some(json!({"overlay": {"overlay": "1.0.0", "actions": []}, "row_version": 0})),
+            )
+        }
         // J1-T1: the caller's own email signature.
         "PUT /api/v1/me/email-signature" => {
             let (user, _) = seed_user(&fx.base, "email-signature").await;
