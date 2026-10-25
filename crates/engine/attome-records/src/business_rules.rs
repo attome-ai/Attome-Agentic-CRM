@@ -630,6 +630,19 @@ impl<'a> WritePipeline<'a> {
                     }
                     None => ctx,
                 };
+                // T6-T2: the customer flags it reads, as they are now.
+                let ctx = match self.state {
+                    Some(state) if attome_core::customer_flags::references(src) => {
+                        let flags = attome_core::customer_flags::load(&state.base.db)
+                            .await
+                            .map_err(|e| ComputeFailure {
+                                reason: e.to_string(),
+                                transient: true,
+                            })?;
+                        ctx.with_flags(flags)
+                    }
+                    _ => ctx,
+                };
                 compiled
                     .eval(&ctx)
                     .map(|v| crate::rule_engine::json_from_rules_value(&v))

@@ -1497,7 +1497,11 @@ async fn execute_node(
     // A30-T2: a condition that reads `env.<name>` depends on this
     // deployment's values, which a cached run's output does not record.
     let reads_env = node_type == NodeType::Condition && crate::condition::reads_env(&node.config);
-    if node_type.is_cacheable() && !reads_env {
+    // T6-T2: so does one that reads a customer flag, which can change (an
+    // emergency off) between runs.
+    let reads_flags =
+        node_type == NodeType::Condition && crate::condition::reads_flags(&node.config);
+    if node_type.is_cacheable() && !reads_env && !reads_flags {
         let hash = output_hash(node, input);
         if let Some(cached) =
             cache_lookup(&state.base.db, instance.definition_version_id, &hash).await?
@@ -1524,13 +1528,17 @@ async fn execute_node(
             output: instance.context.clone(),
         }),
         NodeType::Condition => {
-            let value = input.get("value").cloned().unwrap_or(Value::Null);
-            let taken = if reads_env {
+            let mut value = input.get("value").cloned().unwrap_or(Value::Null);
+            if reads_env {
                 let env = attome_core::env_vars::context_for(&state.base.db).await?;
-                eval_condition(&node.config, &attome_core::env_vars::with_env(&value, env))
+                value = attome_core::env_vars::with_env(&value, env);
+            }
+            let flags = if reads_flags {
+                attome_core::customer_flags::load(&state.base.db).await?
             } else {
-                eval_condition(&node.config, &value)
+                std::collections::HashMap::new()
             };
+            let taken = eval_condition_with_flags(&node.config, &value, &flags);
             Ok(NodeOutcome::Branch {
                 taken_port: if taken { "true" } else { "false" },
                 output: value,
@@ -1897,11 +1905,21 @@ async fn kind_guard(
 }
 
 pub(crate) fn eval_condition(config: &Value, value: &Value) -> bool {
+    eval_condition_with_flags(config, value, &std::collections::HashMap::new())
+}
+
+/// [`eval_condition`] with the customer flags a V2 expression's `flag(name)`
+/// reads (T6-T2).
+pub(crate) fn eval_condition_with_flags(
+    config: &Value,
+    value: &Value,
+    flags: &std::collections::HashMap<String, bool>,
+) -> bool {
     // Z11-T15: a V2 expression wins over the legacy comparison.
     if let Some(expression) = crate::condition::expression_of(config) {
         return expression
             .as_str()
-            .is_some_and(|src| crate::condition::expression_holds(src, value));
+            .is_some_and(|src| crate::condition::expression_holds_with_flags(src, value, flags));
     }
     let op = config.get("op").and_then(Value::as_str).unwrap_or("eq");
     let expected = config.get("value").cloned().unwrap_or(Value::Null);

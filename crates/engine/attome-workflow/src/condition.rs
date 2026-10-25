@@ -34,6 +34,13 @@ pub(crate) fn reads_env(config: &Value) -> bool {
         .is_some_and(|src| !attome_core::env_vars::references(src).is_empty())
 }
 
+/// T6-T2: whether a condition's V2 expression calls `flag(...)`.
+pub(crate) fn reads_flags(config: &Value) -> bool {
+    expression_of(config)
+        .and_then(Value::as_str)
+        .is_some_and(attome_core::customer_flags::references)
+}
+
 /// Parses `src` as V2 rule text, for graph validation.
 pub fn check_expression(src: &str) -> Result<(), String> {
     if src.trim().is_empty() {
@@ -46,7 +53,17 @@ pub fn check_expression(src: &str) -> Result<(), String> {
 
 /// Evaluates `src` against `input`; anything but `true` is `false`.
 pub fn expression_holds(src: &str, input: &Value) -> bool {
+    expression_holds_with_flags(src, input, &HashMap::new())
+}
+
+/// [`expression_holds`] with the customer flags `flag(name)` reads (T6-T2).
+pub fn expression_holds_with_flags(
+    src: &str,
+    input: &Value,
+    flags: &HashMap<String, bool>,
+) -> bool {
     let (schema, ctx) = bind_input(input);
+    let ctx = ctx.with_flags(flags.clone());
     let compiled = match attome_rules::compile_versioned(
         src,
         &schema,
@@ -231,6 +248,25 @@ mod tests {
 
     use super::*;
     use crate::scheduler::eval_condition;
+
+    /// T6-T2: a flow branch follows a customer flag; an unknown or
+    /// emergency-off flag (absent from the loaded set) takes the off branch.
+    #[test]
+    fn flag_function_drives_a_flow_branch() {
+        let config = json!({ "expression": "flag('new_checkout') && amount > 5" });
+        assert!(reads_flags(&config));
+        assert!(!reads_flags(&json!({ "expression": "amount > 5" })));
+        let on = HashMap::from([("new_checkout".to_owned(), true)]);
+        let off = HashMap::from([("new_checkout".to_owned(), false)]);
+        let input = json!({ "amount": 9 });
+        assert!(crate::scheduler::eval_condition_with_flags(
+            &config, &input, &on
+        ));
+        assert!(!crate::scheduler::eval_condition_with_flags(
+            &config, &input, &off
+        ));
+        assert!(!eval_condition(&config, &input), "no flags loaded: off");
+    }
 
     #[test]
     fn legacy_condition_converts_to_expression() {

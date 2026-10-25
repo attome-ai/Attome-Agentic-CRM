@@ -148,6 +148,9 @@ pub struct Context {
     /// A11-T2: the record's fields before this write (an update only), which
     /// `prev(field)` reads and `changed(field)` compares with.
     previous: Option<HashMap<String, Value>>,
+    /// T6-T2: the deployment's customer flags, which `flag(name)` reads; a
+    /// name not here reads as off.
+    flags: HashMap<String, bool>,
 }
 
 impl Context {
@@ -161,6 +164,7 @@ impl Context {
             calendar: None,
             paths: HashMap::new(),
             previous: None,
+            flags: HashMap::new(),
         }
     }
 
@@ -183,6 +187,18 @@ impl Context {
 
     pub(crate) fn previous(&self) -> Option<&HashMap<String, Value>> {
         self.previous.as_ref()
+    }
+
+    /// T6-T2: the customer flags `flag(name)` reads.
+    #[must_use]
+    pub fn with_flags(mut self, flags: HashMap<String, bool>) -> Self {
+        self.flags = flags;
+        self
+    }
+
+    /// Whether customer flag `name` is on; an unknown flag is off.
+    pub(crate) fn flag(&self, name: &str) -> bool {
+        self.flags.get(name).copied().unwrap_or(false)
     }
 
     /// Z11-T5: the rates `convert` uses. `rates` gives, per currency, the
@@ -303,6 +319,7 @@ impl Context {
             calendar: self.calendar.clone(),
             paths: HashMap::new(),
             previous: None,
+            flags: self.flags.clone(),
         }
     }
 

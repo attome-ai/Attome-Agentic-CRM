@@ -399,6 +399,12 @@ fn typecheck_call(
             arity(name, args.len(), 1, 1)?;
             Ok(Type::Bool)
         }
+        // T6-T2: whether a customer flag is on.
+        "flag" => {
+            arity(name, args.len(), 1, 1)?;
+            require(&arg_types[0], &Type::Text, name)?;
+            Ok(Type::Bool)
+        }
         // A11-T2: a field of this record before the write, and whether the
         // write changes it.
         "prev" | "changed" => {

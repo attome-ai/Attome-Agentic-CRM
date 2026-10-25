@@ -73,6 +73,8 @@ const ADDED: &[(&str, LanguageVersion)] = &[
     // A11-T2: the value before this write, and whether the write changes it.
     ("prev", LanguageVersion::V2),
     ("changed", LanguageVersion::V2),
+    // T6-T2: a customer flag.
+    ("flag", LanguageVersion::V2),
 ];
 
 /// The version a function needs.

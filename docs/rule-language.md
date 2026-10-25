@@ -42,6 +42,7 @@ is an unknown function. V2 accepts every V1 expression unchanged.
 | `to_zone(date, zone)` | The same instant, with an IANA zone checked (`rules.context.unknown_timezone` otherwise). |
 | `prev(field)` | The field's value before this write: the stored value on an update, null on a create. The argument is a field of this record. |
 | `changed(field)` | Whether this write changes the field: on an update, whether it differs from the stored value; on a create, whether it has a value. |
+| `flag(name)` | Whether the deployment's customer flag `name` is on. A flag the deployment does not define, or one switched off in an emergency, is off. |
 
 The working-day functions count on the business calendar the caller puts in the context; without
 one they fail with `rules.calendar.missing` (never counting calendar days instead), and a calendar
@@ -49,6 +50,9 @@ with no working days in reach fails with `rules.calendar.no_working_time`.
 
 `prev` and `changed` read the stored row when the caller puts it on the context (business-rule
 values on an update do); elsewhere every write counts as a create.
+
+`flag` reads the flags the caller puts on the context (`Context::with_flags`); flow conditions
+that call it read the deployment's flags (`/api/v1/admin/customer-flags`) when they run.
 
 Text results respect the string-length budget and number results must be finite, as for every
 function.

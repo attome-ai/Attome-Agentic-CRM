@@ -1895,6 +1895,34 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
         }
 
+        // ── customer flags (T6-T2) ──────────────────────────────────────────
+        // A fresh name each run: setting a flag that exists needs its
+        // row_version.
+        "PUT /api/v1/admin/customer-flags/{name}" => request(
+            "PUT",
+            &format!(
+                "/api/v1/admin/customer-flags/emission_{}",
+                &Uuid::now_v7().simple().to_string()[..12]
+            ),
+            t,
+            Some(json!({"value": true, "description": "emission test"})),
+        ),
+        "POST /api/v1/admin/customer-flags/{name}/emergency-off" => {
+            sqlx::query(
+                "INSERT INTO customer_flag (name, value, updated_by) VALUES ('emission_flag', true, $1) ON CONFLICT (name) DO NOTHING",
+            )
+            .bind(Uuid::nil())
+            .execute(&fx.base.db)
+            .await
+            .expect("seed a customer flag");
+            request(
+                "POST",
+                "/api/v1/admin/customer-flags/emission_flag/emergency-off",
+                t,
+                None,
+            )
+        }
+
         // ── environment variables (A30-T1) ──────────────────────────────────
         "DELETE /api/v1/admin/env-variables/{name}" => {
             sqlx::query(

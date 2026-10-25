@@ -533,6 +533,15 @@ impl Evaluator<'_> {
                 let v = self.eval_only(args, 1, name, trace)?;
                 Ok(Value::Bool(v[0].is_null()))
             }
+            // T6-T2: a customer flag; unknown or null is off.
+            "flag" => {
+                let v = self.eval_only(args, 1, name, trace)?;
+                match &v[0] {
+                    Value::Text(s) => Ok(Value::Bool(self.ctx.flag(s))),
+                    Value::Null => Ok(Value::Bool(false)),
+                    other => Err(eval_type_err(name, "text", other)),
+                }
+            }
             // A11-T2.
             "prev" | "changed" => {
                 if args.len() != 1 {
