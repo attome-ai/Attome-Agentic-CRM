@@ -73,7 +73,7 @@ pub struct PatternInputs {
     pub as_of: Option<NaiveDate>,
 }
 
-fn period_of<'a>(date: NaiveDate, periods: &'a [FiscalPeriod]) -> Result<&'a FiscalPeriod, String> {
+fn period_of(date: NaiveDate, periods: &[FiscalPeriod]) -> Result<&FiscalPeriod, String> {
     periods
         .iter()
         .find(|p| p.start <= date && p.end >= date)

@@ -8,6 +8,7 @@ use attome_types::AppError;
 use uuid::Uuid;
 
 /// Resolves `queue:<uuid>` to the queue's active members.
+#[derive(Debug)]
 pub struct QueueResolver;
 
 impl ApproverResolver for QueueResolver {

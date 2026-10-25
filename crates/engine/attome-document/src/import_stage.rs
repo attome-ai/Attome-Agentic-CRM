@@ -119,7 +119,7 @@ pub async fn stage_rows(
         let first_row_no = i32::try_from(start + written + 1).map_err(AppError::internal)?;
         let csv = copy_csv(job_id, names, part, first_row_no);
         let mut tx = attome_db::tx::begin(db).await?;
-        let mut copy = (&mut *tx)
+        let mut copy = tx
             .copy_in_raw("COPY import_stage (job_id, row_no, raw) FROM STDIN (FORMAT csv)")
             .await
             .map_err(AppError::internal)?;

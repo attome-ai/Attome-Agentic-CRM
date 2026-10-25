@@ -360,9 +360,17 @@ mod tests {
             files: vec![("guide-en.html".into(), guide_html(false).into_bytes())],
             rendered: false,
         };
-        let bytes = build_zip(std::slice::from_ref(&run), &[public.clone()], &guides).unwrap();
+        let bytes = build_zip(
+            std::slice::from_ref(&run),
+            std::slice::from_ref(&public),
+            &guides,
+        )
+        .unwrap();
         let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
-        let mut names: Vec<String> = archive.file_names().map(str::to_owned).collect();
+        let mut names: Vec<String> = archive
+            .file_names()
+            .map(|name| name.unwrap().into_owned())
+            .collect();
         names.sort();
         assert_eq!(
             names,

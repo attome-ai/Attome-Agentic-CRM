@@ -98,7 +98,7 @@ pub fn emirates_id(input: &str) -> Option<String> {
             }
         })
         .sum();
-    (sum % 10 == 0).then_some(digits)
+    sum.is_multiple_of(10).then_some(digits)
 }
 
 /// The account level UAE Pass reports.

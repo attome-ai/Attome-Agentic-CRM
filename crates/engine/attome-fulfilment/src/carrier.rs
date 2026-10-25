@@ -323,12 +323,14 @@ pub(crate) async fn track(
     ctx: Authorized<Privilege<FulfilmentOrderUpdate>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Tracked>, AppError> {
-    let row: Option<(
+    /// Carrier, tracking number, status and last event key.
+    type ShipmentRow = (
         Option<String>,
         Option<String>,
         Option<String>,
         Option<String>,
-    )> = sqlx::query_as(
+    );
+    let row: Option<ShipmentRow> = sqlx::query_as(
         "SELECT carrier::text, tracking_number, status::text, last_event_key FROM shipment \
               WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
     )

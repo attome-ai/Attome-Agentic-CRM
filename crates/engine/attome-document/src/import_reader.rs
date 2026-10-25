@@ -83,7 +83,7 @@ pub fn decode_text(bytes: &[u8]) -> String {
     text.into_owned()
 }
 
-const DELIMITERS: [u8; 4] = [b',', b';', b'\t', b'|'];
+const DELIMITERS: [u8; 4] = *b",;\t|";
 
 /// How many times `delimiter` occurs outside quotes on each of the first
 /// five lines.

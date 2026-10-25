@@ -335,7 +335,7 @@ pub async fn allocate_contract(
     let mut ssps = Vec::with_capacity(obligations.len());
     for ((_, product, _), line) in obligations.iter().zip(&line_amounts) {
         let found = match product {
-            Some(product) => ssp_for(&mut **tx, *product, on, fallback).await?,
+            Some(product) => ssp_for(tx, *product, on, fallback).await?,
             None => None,
         };
         ssps.push(found.ok_or(*line));

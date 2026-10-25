@@ -139,7 +139,7 @@ async fn schedule_timers(
 ) -> Result<(), AppError> {
     for (stage, due_at) in timer_plan(deadline, now) {
         attome_core::timer::schedule(
-            &mut **tx,
+            tx,
             &NewTimer {
                 kind: TIMER_KIND.to_owned(),
                 target_entity: Some(ENTITY.to_owned()),
@@ -153,6 +153,9 @@ async fn schedule_timers(
     }
     Ok(())
 }
+
+/// A security case's breach fields, read for update.
+type CaseRow = (String, String, String, DateTime<Utc>, Option<Uuid>);
 
 /// The breach record of a security case, created on first call. `actor`
 /// becomes its owner.
@@ -170,7 +173,7 @@ pub async fn create_from_case(
     let now = Utc::now();
     let due = |opened: DateTime<Utc>| deadline(opened, deployment_country(state).as_deref());
     let mut tx = attome_db::tx::begin(db).await?;
-    let row: Option<(String, String, String, DateTime<Utc>, Option<Uuid>)> = sqlx::query_as(
+    let row: Option<CaseRow> = sqlx::query_as(
         "SELECT rule, severity, summary, opened_at, breach_ref FROM security_case \
           WHERE id = $1 FOR UPDATE",
     )

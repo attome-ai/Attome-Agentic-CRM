@@ -117,7 +117,9 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
     };
     // The lines and their promises are read before the transaction: the
     // stock seam may do its own reads, never while the split holds its lock.
-    let rows: Vec<(Uuid, Option<Uuid>, Option<f64>, Option<String>)> = sqlx::query_as(
+    /// Line id, product, quantity and the product's fulfilment kind.
+    type LineRow = (Uuid, Option<Uuid>, Option<f64>, Option<String>);
+    let rows: Vec<LineRow> = sqlx::query_as(
         "SELECT l.id, l.product_ref, l.quantity::float8, p.fulfilment_kind::text \
            FROM order_line l LEFT JOIN product p ON p.id = l.product_ref \
           WHERE l.order_ref = $1 AND (l.is_active IS NULL OR l.is_active = true) ORDER BY l.id",

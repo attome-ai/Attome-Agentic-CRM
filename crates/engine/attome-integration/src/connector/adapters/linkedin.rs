@@ -420,27 +420,29 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(responses.len(), 1);
-        let asked = transport.asked.lock().unwrap();
-        assert!(
-            asked[0]
-                .url
-                .ends_with("/leadForms/urn%3Ali%3AleadGenForm%3A9")
-        );
-        assert!(
-            asked[1]
-                .url
-                .contains("owner=(sponsoredAccount:urn%3Ali%3AsponsoredAccount%3A5072)")
-        );
-        assert!(
-            asked[1]
-                .url
-                .contains("submittedAtTimeRange=(start:1729800000000)")
-        );
-        assert!(
-            asked[1]
-                .headers
-                .contains(&("LinkedIn-Version".into(), API_VERSION.into()))
-        );
+        {
+            let asked = transport.asked.lock().unwrap();
+            assert!(
+                asked[0]
+                    .url
+                    .ends_with("/leadForms/urn%3Ali%3AleadGenForm%3A9")
+            );
+            assert!(
+                asked[1]
+                    .url
+                    .contains("owner=(sponsoredAccount:urn%3Ali%3AsponsoredAccount%3A5072)")
+            );
+            assert!(
+                asked[1]
+                    .url
+                    .contains("submittedAtTimeRange=(start:1729800000000)")
+            );
+            assert!(
+                asked[1]
+                    .headers
+                    .contains(&("LinkedIn-Version".into(), API_VERSION.into()))
+            );
+        }
         assert!(client.form("leadGenForm:9").await.is_err());
     }
 

@@ -43,8 +43,10 @@ pub const GAUGE: &str = "ops_live_rpo_seconds";
 /// How old the remembered values may be before the route measures afresh.
 const REUSE: Duration = Duration::from_secs(120);
 
-static LATEST: LazyLock<Mutex<Option<(Instant, Vec<RpoSource>)>>> =
-    LazyLock::new(|| Mutex::new(None));
+/// When the sources were last read, and what they said.
+type Reading = Option<(Instant, Vec<RpoSource>)>;
+
+static LATEST: LazyLock<Mutex<Reading>> = LazyLock::new(|| Mutex::new(None));
 
 static OVER: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
 

@@ -91,18 +91,20 @@ struct Owned {
     status: String,
 }
 
+/// The upload session and multipart row `owned` reads.
+type OwnedRow = (String, i64, Option<String>, i64, i32, String, Option<Uuid>);
+
 async fn owned(state: &EngineState, user_id: Uuid, session_id: Uuid) -> Result<Owned, AppError> {
-    let row: Option<(String, i64, Option<String>, i64, i32, String, Option<Uuid>)> =
-        sqlx::query_as(
-            "SELECT s.quarantine_key, s.declared_max_size_bytes, s.declared_checksum_sha256, \
+    let row: Option<OwnedRow> = sqlx::query_as(
+        "SELECT s.quarantine_key, s.declared_max_size_bytes, s.declared_checksum_sha256, \
                     m.part_size, m.part_count, m.status, s.owner_user_ref \
                FROM upload_multipart m JOIN upload_session s ON s.id = m.session_id \
               WHERE m.session_id = $1",
-        )
-        .bind(session_id)
-        .fetch_optional(&state.base.db)
-        .await
-        .map_err(AppError::internal)?;
+    )
+    .bind(session_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
     let (key, size, declared_checksum, part_size, part_count, status, owner) =
         row.ok_or(AppError::NotFound)?;
     // Someone else's upload is not there for this caller.
