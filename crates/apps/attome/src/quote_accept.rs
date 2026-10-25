@@ -31,6 +31,8 @@ fn licensed(state: &EngineState) -> Result<(), AppError> {
         .map_err(|_| AppError::NotFound)
 }
 
+/// Make a quote's guest link
+///
 /// Makes a sent quote's guest link.
 #[utoipa::path(
     post,
@@ -60,6 +62,8 @@ async fn post_guest_link(
     ))
 }
 
+/// A quote from its guest link
+///
 /// The quote a guest link shows.
 #[utoipa::path(
     get,
@@ -81,6 +85,8 @@ async fn get_quote(
     ))
 }
 
+/// Accept or reject a quote
+///
 /// Accepts or rejects the quote a guest link shows.
 #[utoipa::path(
     post,

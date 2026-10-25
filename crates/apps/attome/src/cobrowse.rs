@@ -114,7 +114,9 @@ pub struct SessionStarted {
     pub expires_at: DateTime<Utc>,
 }
 
-/// Starts a co-browse session (J9-T2).
+/// Start a co-browse session
+///
+/// Starts a co-browse session.
 #[utoipa::path(
     post,
     path = "/api/v1/cobrowse/sessions",
@@ -198,7 +200,7 @@ pub struct SessionJoined {
     pub token: String,
 }
 
-/// Joins a co-browse session with its code (J9-T2).
+/// Joins a co-browse session with its code.
 ///
 /// The code works once, for ten minutes; any other code answers 404.
 #[utoipa::path(
@@ -377,12 +379,14 @@ async fn read(
     Ok(CursorPage::new(frames, next))
 }
 
-/// Sends an agent frame (J9-T2).
+/// Send an agent frame
+///
+/// Sends an agent frame.
 #[utoipa::path(
     post,
     path = "/api/v1/cobrowse/sessions/{id}/messages",
     tag = "omnichannel",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The session")),
     request_body = SendFrame,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Telemetry,
@@ -409,12 +413,14 @@ async fn agent_send(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// The customer's frames after `after` (J9-T2).
+/// The customer's frames
+///
+/// The customer's frames after `after`.
 #[utoipa::path(
     get,
     path = "/api/v1/cobrowse/sessions/{id}/messages",
     tag = "omnichannel",
-    params(("id" = Uuid, Path), ReadQuery),
+    params(("id" = Uuid, Path, description = "The session"), ReadQuery),
     responses(
         (status = 200, description = "The customer's frames, oldest first", body = CursorPage<Frame>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -458,12 +464,14 @@ async fn end_session(state: &EngineState, id: Uuid, actor: Uuid, by: &str) -> Re
     tx.commit().await.map_err(AppError::internal)
 }
 
-/// Ends a session from the agent's side (J9-T2).
+/// End a co-browse session
+///
+/// Ends a session from the agent's side.
 #[utoipa::path(
     post,
     path = "/api/v1/cobrowse/sessions/{id}/end",
     tag = "omnichannel",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The session")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 204, description = "Ended (or already ended)"),
@@ -482,7 +490,9 @@ async fn agent_end(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Sends a customer frame (J9-T2).
+/// Send a customer frame
+///
+/// Sends a customer frame.
 #[utoipa::path(
     post,
     path = "/api/v1/cobrowse/visitor/messages",
@@ -510,7 +520,9 @@ async fn visitor_send(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// The agent's frames after `after`, for the customer (J9-T2).
+/// The agent's frames
+///
+/// The agent's frames after `after`, for the customer.
 #[utoipa::path(
     get,
     path = "/api/v1/cobrowse/visitor/messages",
@@ -537,7 +549,9 @@ pub struct VisitorEnd {
     pub token: String,
 }
 
-/// Ends a session from the customer's side (J9-T2).
+/// Leave a co-browse session
+///
+/// Ends a session from the customer's side.
 #[utoipa::path(
     post,
     path = "/api/v1/cobrowse/visitor/end",

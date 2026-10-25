@@ -589,6 +589,8 @@ pub struct PlacedCall {
     pub activity_id: Uuid,
 }
 
+/// Place a call
+///
 /// Rings the caller's own phone, then the number, and logs the call.
 #[utoipa::path(
     post,
@@ -660,6 +662,8 @@ pub struct SoftphoneConfig {
 
 const SOFTPHONE_TTL_SECS: i64 = 3600;
 
+/// Softphone settings
+///
 /// The softphone's settings and an access token for the caller.
 #[utoipa::path(
     get,
@@ -740,6 +744,8 @@ pub struct LookupQuery {
     pub number: String,
 }
 
+/// Who a phone number belongs to
+///
 /// The contact, lead or account a number belongs to, when the caller may
 /// see it.
 #[utoipa::path(
@@ -786,6 +792,8 @@ async fn get_lookup(
 
 // ── Public: the providers' callbacks ────────────────────────────────────────
 
+/// A browser softphone call
+///
 /// Twilio asks what to do with a call placed from the browser softphone:
 /// dial the number of the call the softphone created (`CallRef`), never a
 /// number the browser sends.
@@ -862,6 +870,8 @@ async fn post_twilio_client(
     )))
 }
 
+/// The answered call's instructions
+///
 /// Twilio fetches what to do when the caller answers: dial the customer.
 #[utoipa::path(
     post,
@@ -905,6 +915,8 @@ async fn post_twiml(
     )))
 }
 
+/// Twilio call events
+///
 /// Twilio's reports on one call.
 #[utoipa::path(
     post,
@@ -931,6 +943,8 @@ async fn post_events(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// An inbound Twilio call
+///
 /// A call to the deployment's Twilio number.
 #[utoipa::path(
     post,
@@ -982,6 +996,8 @@ async fn post_twilio_inbound(
     )))
 }
 
+/// PBX call events
+///
 /// A PBX's call events.
 #[utoipa::path(
     post,

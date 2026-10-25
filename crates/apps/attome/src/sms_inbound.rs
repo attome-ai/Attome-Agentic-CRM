@@ -139,7 +139,9 @@ async fn opt_out(
     Ok(purposes.len())
 }
 
-/// J4-T2: a text someone sent to the deployment's number.
+/// An inbound text message
+///
+/// A text someone sent to the deployment's number.
 #[utoipa::path(
     post,
     path = "/api/v1/sms/inbound/{key}",

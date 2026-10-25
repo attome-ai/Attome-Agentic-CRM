@@ -84,6 +84,8 @@ async fn challenge(
     Ok(Some(refused))
 }
 
+/// A booking page
+///
 /// A booking page: its name and the times that can be booked.
 #[utoipa::path(
     get,
@@ -108,6 +110,8 @@ async fn get_page(
     ))
 }
 
+/// Book a meeting
+///
 /// Books a meeting at one of the page's free times.
 #[utoipa::path(
     post,
@@ -157,6 +161,8 @@ async fn post_booking(
     Ok((StatusCode::CREATED, Json(booked)).into_response())
 }
 
+/// A booking from its manage link
+///
 /// The booking a manage link names.
 #[utoipa::path(
     get,
@@ -176,6 +182,8 @@ async fn get_managed(
     Ok(Json(attome_sales::booking::managed(&state, &token).await?))
 }
 
+/// Cancel a booking
+///
 /// Cancels the booking and its meeting.
 #[utoipa::path(
     post,
@@ -198,6 +206,8 @@ async fn post_cancel(
     Ok(Json(attome_sales::booking::cancel(&state, &token).await?))
 }
 
+/// Reschedule a booking
+///
 /// Moves the booking to another free time with the same person.
 #[utoipa::path(
     post,

@@ -100,6 +100,8 @@ async fn record_inbound(
     Ok(())
 }
 
+/// Meta's subscription check
+///
 /// Meta's subscription check.
 #[utoipa::path(
     get,
@@ -128,6 +130,8 @@ async fn meta_verify(
     meta::verify_challenge(&params, &token).ok_or(AppError::NotFound)
 }
 
+/// Meta's webhook events
+///
 /// Meta's signed events: messages and comments.
 #[utoipa::path(
     post,
@@ -186,6 +190,8 @@ pub struct SocialReplySent {
     pub provider_id: Option<String>,
 }
 
+/// Reply to a social message
+///
 /// Answers a social message, comment or review through its provider.
 #[utoipa::path(
     post,
