@@ -4986,6 +4986,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/rehearse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rehearse a field change on the copy database
+         * @description Y12-T11: runs the same schema change the real update would run, on
+         *     `metadata.rehearsal_database_url`, and answers each step's time and the
+         *     rows it touched. Admin only. Writes only to the copy.
+         */
+        post: operations["rehearse_entity_field_change"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/scaffold-ui": {
         parameters: {
             query?: never;
@@ -49181,6 +49203,31 @@ export interface components {
             /** @description One of `"public"`/`"invite"`/`"disabled"` — see `AuthSection::registration_mode`. */
             mode: string;
         };
+        /** @description What the rehearsal measured. */
+        RehearsalReportDto: {
+            per_change: components["schemas"]["RehearsalStepDto"][];
+            /** Format: int64 */
+            total_ms: number;
+        };
+        /** @description One timed step on the copy. */
+        RehearsalStepDto: {
+            /** Format: int64 */
+            duration_ms: number;
+            name: string;
+            /** Format: int64 */
+            rows?: number | null;
+        };
+        /**
+         * @description The change to rehearse: the field and its target contract; absent
+         *     values keep the field's current ones.
+         */
+        RehearseRequest: {
+            /** @description The field's logical name. */
+            field: string;
+            is_required?: boolean | null;
+            /** Format: int32 */
+            max_length?: number | null;
+        };
         RejectionWord: {
             /** Format: int64 */
             count: number;
@@ -71763,6 +71810,78 @@ export interface operations {
             };
             /** @description orphan_scan_required: the table is over the inline limit and no scan has finished; POST /api/v1/admin/data-step-runs/orphan-scans */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rehearse_entity_field_change: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RehearseRequest"];
+            };
+        };
+        responses: {
+            /** @description Each step's time on the copy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RehearsalReportDto"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No rehearsal database is configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The copy did not answer, has no such table, or the change fails there */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

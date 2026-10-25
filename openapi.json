@@ -26397,6 +26397,119 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/entities/{entity_id}/rehearse": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Rehearse a field change on the copy database",
+        "description": "Y12-T11: runs the same schema change the real update would run, on\n`metadata.rehearsal_database_url`, and answers each step's time and the\nrows it touched. Admin only. Writes only to the copy.",
+        "operationId": "rehearse_entity_field_change",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RehearseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each step's time on the copy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RehearsalReportDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No rehearsal database is configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The copy did not answer, has no such table, or the change fails there",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "runs the change on the configured copy database only; this deployment is not written",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/entities/{entity_id}/scaffold-ui": {
       "post": {
         "tags": [
@@ -188971,6 +189084,79 @@
           }
         }
       },
+      "RehearsalReportDto": {
+        "type": "object",
+        "description": "What the rehearsal measured.",
+        "required": [
+          "per_change",
+          "total_ms"
+        ],
+        "properties": {
+          "per_change": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RehearsalStepDto"
+            }
+          },
+          "total_ms": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "RehearsalStepDto": {
+        "type": "object",
+        "description": "One timed step on the copy.",
+        "required": [
+          "name",
+          "duration_ms"
+        ],
+        "properties": {
+          "duration_ms": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string"
+          },
+          "rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "RehearseRequest": {
+        "type": "object",
+        "description": "The change to rehearse: the field and its target contract; absent\nvalues keep the field's current ones.",
+        "required": [
+          "field"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "The field's logical name."
+          },
+          "is_required": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "max_length": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "RejectionWord": {
         "type": "object",
         "required": [
@@ -206389,6 +206575,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -206441,6 +206628,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }
