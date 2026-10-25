@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Record forms check fields as you type (A3-T7): a field's pattern, its A2-T2 format and a number's
+  range are checked in the browser with the server's own rules (Arabic digits normalised the same
+  way), and each failure shows under its field in English or Arabic; a 422 from the server still
+  lands under every failing field.
 - Text formats (A2-T2): a text attribute may declare `options.format`, one of `email`, `phone`
   (E.164), `url`, `iban` (mod 97 and the country's length), `saudi_national_id`, `iqama`,
   `uae_emirates_id` (check digits), `percent` or `duration`. Every write normalises the value first

@@ -136,6 +136,23 @@ export const xrmEn = {
     saving: 'Saving…', saved: 'Saved', update: 'Update', create: 'Create',
     conflict: 'This record was changed by another user. Reload to review the latest version.',
     mergedOver: 'Saved. Someone else had changed {fields}; their changes were kept.',
+    // A3-T7: the server's checks, shown as the person types.
+    check: {
+      pattern: 'Use this format: {description}.',
+      min: 'The smallest allowed value is {min}.',
+      max: 'The largest allowed value is {max}.',
+      format: {
+        email: 'Enter an email address, such as name@example.com.',
+        phone: 'Enter a phone number with its country code, such as +966501234567.',
+        url: 'Enter a web address starting with http:// or https://.',
+        iban: 'Enter a valid IBAN; check the country code and digits.',
+        saudi_national_id: 'Enter a valid Saudi national ID (10 digits starting with 1).',
+        iqama: 'Enter a valid iqama number (10 digits starting with 2).',
+        uae_emirates_id: 'Enter a valid Emirates ID (15 digits starting with 784).',
+        percent: 'Enter a percentage from 0 to 100.',
+        duration: 'Enter a duration such as 1:30 or PT30M.',
+      },
+    },
     fieldError: {
       required: 'This field is required.',
       invalid: 'This value is not valid here.',

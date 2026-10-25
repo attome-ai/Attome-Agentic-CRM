@@ -328,6 +328,9 @@
       {{ 'fieldPolicy.requiredLocked' | translate: { field: field().display_name || field().name, rule: lock()?.ruleName ?? '' } }}
     </p>
   }
+  @if (checkError(); as failure) {
+    <p class="field-error" role="alert" data-testid="field-check-error">{{ failure.key | translate: failure.params }}</p>
+  }
   @if (serverError(); as message) {
     <p class="field-error" role="alert" data-testid="field-server-error">{{ message }}</p>
   }

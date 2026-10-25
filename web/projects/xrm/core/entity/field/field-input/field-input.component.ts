@@ -26,6 +26,7 @@ import { RichTextEditorComponent } from '../rich-text-editor/rich-text-editor.co
 import { FieldHistoryComponent } from '../field-history/field-history.component';
 import { ImageUploadComponent } from '../image-upload/image-upload.component';
 import { ScanFieldOptions, scanToValues } from './scan-to-values';
+import { checkFailure } from '../field-checks';
 
 /** Y2-T1: a stored moment as a `datetime-local` value in the viewer's zone;
  *  empty for none or one that does not parse. */
@@ -358,6 +359,13 @@ export class FieldInputComponent implements OnInit, OnDestroy {
 
   showRequiredError(): boolean {
     return this.field().is_required && this.ctrl.invalid && this.ctrl.touched;
+  }
+
+  /** A3-T7: a failed pattern, format or range check, once the field was
+   * touched; `required` shows on its own. */
+  checkError(): { key: string; params: Record<string, unknown> } | null {
+    if (!this.ctrl || !(this.ctrl.touched || this.ctrl.dirty)) return null;
+    return checkFailure(this.ctrl.errors);
   }
 
   toggleChoice(c: string): void {

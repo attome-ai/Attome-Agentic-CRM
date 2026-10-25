@@ -54,7 +54,13 @@ export interface TextOptions {
   pattern?:          string | null;
   mask_description?: string | null;
   text_type?:        'text' | 'email' | 'tel' | 'url' | null;
+  /** A2-T2: a built-in format every write must match (`attome_field::formats`). */
+  format?:           string | null;
 }
+
+// Mirrors attome_field::NumberOptions: an inclusive range for number and
+// currency fields.
+export interface NumberOptions { min?: number | null; max?: number | null; }
 
 export interface FieldSchema {
   id:           string;
@@ -62,7 +68,7 @@ export interface FieldSchema {
   name:         string;        // logicalname — used as form control key
   display_name: string;        // human-readable label
   field_type:   FieldType;
-  options:      ChoiceOptions | LookupOptions | FileOptions | TextOptions | FormulaOptions | DateOptions | null;
+  options:      ChoiceOptions | LookupOptions | FileOptions | TextOptions | FormulaOptions | DateOptions | NumberOptions | null;
   sort_order:   number;
   is_required:  boolean;
 }

@@ -2,7 +2,7 @@ import {
   computed, DestroyRef, Directive, effect, inject, Injector, input, OnInit, signal, untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiError, CommandRegistry, LangService, MetadataVersion, VersionConflictState } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
@@ -20,6 +20,7 @@ import { RecordChange, RecordChangeNotifier } from '../services/record-change-no
 import { DuplicatesService } from '@attome/xrm/core/admin/data';
 import { DuplicateNotice, duplicateWarningsOf } from '../duplicate-banner/duplicate-notice';
 import { ConflictChoices } from '../conflict-dialog/conflict-dialog.component';
+import { fieldValidators } from '../field/field-checks';
 
 /**
  * How long the post-save tick holds before the submit button returns to its
@@ -419,7 +420,9 @@ export abstract class EngineFormBase implements OnInit {
         controls[f.name] = [{ value: def, disabled: true }];
         continue;
       }
-      controls[f.name] = [def, f.is_required ? [Validators.required] : []];
+      // A3-T7: the server's own checks (required, pattern, format, range),
+      // shown under the field as the person types.
+      controls[f.name] = [def, fieldValidators(f)];
     }
     return this.fb.group(controls);
   }
