@@ -444,6 +444,7 @@ dependencies = [
  "attome-outbound",
  "attome-project",
  "attome-records",
+ "attome-rules",
  "attome-sales",
  "attome-search",
  "attome-security",

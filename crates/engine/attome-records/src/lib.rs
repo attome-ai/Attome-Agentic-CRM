@@ -47,6 +47,8 @@ pub mod data_mapping;
 pub mod duplicate_check;
 pub mod entity_crud;
 pub mod entity_mutation;
+/// Z11-T12: one expression checked for an editor or agent.
+pub mod expression_check;
 pub mod import_choice_match;
 /// C-10 — the shared mutation-commit orchestration helper (creator share,
 /// file mirror, audit write, commit, post-commit invalidation, rw-pin).

@@ -196,6 +196,7 @@ impl EngineSystem {
             // Z15-T13: customer tests.
             .merge(crate::customer_test_admin::routes())
             .merge(crate::business_rule_admin::routes())
+            .merge(crate::expression_admin::routes())
             .merge(crate::metadata_label_admin::routes())
             .merge(
                 // P-environment-promotion: the bundle engine's admin surface

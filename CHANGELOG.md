@@ -7,6 +7,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
 
 ## [Unreleased]
 
+### Added
+- Expression checks for editors and agents (Z11-T12): `POST /api/v1/admin/expressions/validate`
+  checks a rule-language expression against an entity and returns its result type, or each error
+  with its code and byte span, whether it runs in the database, and for a sample record the
+  caller can read its value and evaluation trace; nothing is written. `GET
+  /api/v1/admin/expressions/spec?version=` lists the 50 built-in functions with parameters, result
+  type, English and Arabic descriptions and an example, plus grammar notes. Agents get the same as
+  the read-only tools `expression.validate` and `expression.spec`.
+
 ### Security
 - Passkey building block (Z4-T6): `attome-auth`'s `webauthn` module registers and verifies passkeys
   (WebAuthn, pure-Rust `webauthn_rp`, no OpenSSL): Ed25519, ES256, ES384 and RS256 keys. Ceremony

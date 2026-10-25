@@ -121,6 +121,17 @@ pub fn compile_versioned(
     compile_inner(src, schema, version, budgets).map_err(RulesDiagnostic::into_error)
 }
 
+/// Z11-T12: [`compile_versioned`] keeping the error's byte span, for an
+/// editor or agent that points at the failing sub-expression.
+pub fn compile_diagnostic(
+    src: &str,
+    schema: &Schema,
+    version: crate::LanguageVersion,
+    budgets: Budgets,
+) -> Result<Compiled, RulesDiagnostic> {
+    compile_inner(src, schema, version, budgets)
+}
+
 fn compile_inner(
     src: &str,
     schema: &Schema,

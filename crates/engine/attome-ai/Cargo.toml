@@ -32,6 +32,7 @@ attome-notification.workspace = true
 attome-ops.workspace          = true
 attome-outbound.workspace     = true
 attome-records.workspace      = true
+attome-rules.workspace        = true
 attome-search.workspace       = true
 attome-sales.workspace        = true
 attome-workforce.workspace    = true

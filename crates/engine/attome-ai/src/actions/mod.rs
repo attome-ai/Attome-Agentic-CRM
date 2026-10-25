@@ -38,6 +38,8 @@ pub mod deliverability;
 pub mod draft_article;
 pub mod draft_email;
 pub mod duplicates;
+/// Z11-T12: expression.validate and expression.spec.
+pub mod expression;
 pub mod extract_document;
 pub mod followup;
 /// L3-T8: governance.list_overdue, governance.propose_domains, governance.draft_policy.
@@ -140,6 +142,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(governance::descriptors());
     all.extend(master::descriptors());
     all.extend(identity_assist::descriptors());
+    all.extend(expression::descriptors());
     all.push(extract_document::descriptor());
     all.push(ai_field::descriptor());
     all.extend(crate::mcp_client::descriptors());
@@ -229,6 +232,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(governance::executors());
     all.extend(master::executors());
     all.extend(identity_assist::executors());
+    all.extend(expression::executors());
     all.push(Box::new(extract_document::DocumentExtract));
     all.push(Box::new(ai_field::RecordAiField));
     all.extend(crate::mcp_client::executors());

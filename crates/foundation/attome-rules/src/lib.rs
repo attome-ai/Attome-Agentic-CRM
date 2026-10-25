@@ -108,6 +108,8 @@
 pub mod arabic;
 mod ast;
 mod budget;
+/// Z11-T12: the built-in functions as data.
+pub mod catalog;
 mod compile;
 mod context;
 pub mod currency;
@@ -127,7 +129,7 @@ mod version;
 pub use ast::{BinaryOp, Expr, FieldRef, UnaryOp};
 pub use budget::{Budgets, HARD_MAX_DEPTH, HARD_MAX_NODES, HARD_MAX_SOURCE_BYTES};
 pub use chrono_tz::Tz;
-pub use compile::{Compiled, compile, compile_versioned, compile_with_budgets};
+pub use compile::{Compiled, compile, compile_diagnostic, compile_versioned, compile_with_budgets};
 pub use context::{Context, Schema};
 pub use decision_table::{CompiledTable, DecisionRow, DecisionTable, HitPolicy, TableIssue};
 pub use error::{BudgetKind, RulesDiagnostic, RulesError, Spans};

@@ -153,6 +153,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::relationship_admin::openapi_fragment(), "core"),
         (crate::quality_admin::openapi_fragment(), "core"),
         (crate::business_rule_admin::openapi_fragment(), "core"),
+        (crate::expression_admin::openapi_fragment(), "core"),
         (
             crate::omnichannel_metrics::openapi_fragment(),
             "omnichannel",
