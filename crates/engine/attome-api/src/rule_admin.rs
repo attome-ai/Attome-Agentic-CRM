@@ -940,7 +940,7 @@ async fn check_business(
         return Ok(());
     };
     // A11-T2: value expressions may read related records through lookups.
-    let registry = state.entities.load_full();
+    let registry = std::sync::Arc::clone(&state.entities.load());
     let spec = BusinessRuleSpec {
         applies_to: input.applies_to,
         staff_role_count: input.role_ids.len(),

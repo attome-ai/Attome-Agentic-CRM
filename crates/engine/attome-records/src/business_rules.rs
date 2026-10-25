@@ -213,7 +213,7 @@ async fn compile_set_value(
     // A11-T2: with the related records the expression reads declared.
     let schema = match state {
         Some(state) => {
-            let registry = state.entities.load_full();
+            let registry = state.entities.load();
             attome_core::business_rules::with_related_schema(
                 condition_schema(attrs),
                 &attome_core::business_rules::related_refs(src, attrs, &registry),
@@ -614,7 +614,7 @@ impl<'a> WritePipeline<'a> {
                 let ctx = match self.state {
                     Some(state) => {
                         let refs = {
-                            let registry = state.entities.load_full();
+                            let registry = state.entities.load();
                             attome_core::business_rules::related_refs(src, self.attrs, &registry)
                         };
                         if refs.is_empty() {

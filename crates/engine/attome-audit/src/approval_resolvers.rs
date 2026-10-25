@@ -296,8 +296,9 @@ async fn record_user(
     let (Some(entity), Some(id)) = (ctx.regarding_entity, ctx.regarding_id) else {
         return Ok(None);
     };
-    let registry = state.entities.load();
-    if registry.get(entity).is_none() {
+    // Checked and dropped before the query: the registry guard is not held
+    // across an await.
+    if state.entities.load().get(entity).is_none() {
         return Ok(None);
     }
     let sql = format!(
