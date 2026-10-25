@@ -154,6 +154,8 @@
         @if (allowCreate()) {
         <!-- A27-T4: a split button when the entity has record types. -->
         <xrm-record-type-picker [entity]="entityName()" (create)="handleAdd($event)" />
+        <!-- B8-T3: a new record from a template the caller may use. -->
+        <xrm-record-template-picker [entity]="entityName()" />
         }
         <button type="button" class="btn btn-secondary" (click)="refresh()">{{ 'entityList.refresh' | translate }}</button>
         <button type="button" class="btn btn-secondary" [disabled]="bulkActionRunning()" (click)="exportList('csv')">

@@ -57,6 +57,8 @@
               {{ 'xrmForm.duplicate' | translate }}
             </button>
           }
+          <!-- B8-T3 — the record's values as a new draft template (admins). -->
+          <xrm-save-as-template [entity]="f.name()" [recordId]="recordId" data-advanced />
           <!-- U7 Phase A — admin-only Assign / Share (renders nothing otherwise);
                a read-only form cannot be reassigned. -->
           @if (!readOnly()) {

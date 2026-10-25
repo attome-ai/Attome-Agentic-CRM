@@ -4668,4 +4668,19 @@ export const xrmEn = {
       requested: 'Requested. A second person in the Operations role must approve it (approval {id}).',
     },
   },
+  // B8-T3: record templates on New and Save as template.
+  recordTemplates: {
+    fromTemplate: 'New from template',
+    create: 'Create',
+    cancel: 'Cancel',
+    children: '{count, plural, one {Creates # related record too.} other {Creates # related records too.}}',
+    required: 'Answer: {fields}',
+    saveAs: 'Save as template',
+    name: 'Template name',
+    labelEn: 'Label (English)',
+    labelAr: 'Label (Arabic)',
+    save: 'Save',
+    nameRule: 'Give the template a name (up to 100 characters) and an English label.',
+    saved: 'Saved as the draft template {name} with {values} values. Publish it to offer it on New.',
+  },
 };

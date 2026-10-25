@@ -11,6 +11,11 @@
 //!   tracks progress and audits each record.
 //! - `POST /api/v1/record-templates/from-record` saves a record's values as
 //!   a new draft template, published like any metadata.
+//! - `GET /api/v1/record-templates?entity=&type=&stage=` (B8-T3) lists the
+//!   published templates of an entity the caller may create records of,
+//!   offered only when their `when` condition holds for the record's type
+//!   and stage and the caller's role names (`roles`), with the prompts the
+//!   New dialog asks.
 //!
 //! A template's expression values are V2 rule text evaluated with no record
 //! context (`today() + 30`); its attributes are named by id and resolved
@@ -28,9 +33,9 @@ use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
-    routing::post,
+    routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -604,8 +609,147 @@ async fn save_as_template(
     ))
 }
 
+/// The list's filter: the entity and what the new record will be.
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct TemplateFilter {
+    /// The entity's logical name.
+    pub entity: String,
+    /// The new record's type, for a template whose condition reads `type`.
+    #[serde(default, rename = "type")]
+    pub record_type: Option<String>,
+    /// The new record's stage, for a template whose condition reads `stage`.
+    #[serde(default)]
+    pub stage: Option<String>,
+}
+
+/// One question a template asks.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TemplatePrompt {
+    /// The field it fills.
+    pub field: String,
+    pub label_en: String,
+    pub label_ar: Option<String>,
+    pub required: bool,
+}
+
+/// One template the caller may use.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OfferedTemplate {
+    pub id: Uuid,
+    pub label_en: String,
+    pub label_ar: Option<String>,
+    pub prompts: Vec<TemplatePrompt>,
+    /// How many child records it creates with the record.
+    pub children: usize,
+}
+
+/// Whether a template's `when` holds for `input`; no condition always does.
+pub fn offered(when: Option<&str>, input: &Value) -> bool {
+    match when.map(str::trim).filter(|w| !w.is_empty()) {
+        None => true,
+        Some(src) => attome_workflow::condition::expression_holds(src, input),
+    }
+}
+
+/// List record templates
+///
+/// B8-T3: the published templates of an entity the caller may create
+/// records of, those whose condition holds for the new record's type and
+/// stage and the caller's roles, each with its prompts.
+#[utoipa::path(
+    get,
+    path = "/api/v1/record-templates",
+    operation_id = "list_record_templates",
+    tag = "entity",
+    params(TemplateFilter),
+    responses(
+        (status = 200, description = "The templates offered", body = attome_types::PaginatedResponse<OfferedTemplate>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such entity, or one the caller cannot create records of", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_templates(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Query(filter): Query<TemplateFilter>,
+) -> Result<Json<attome_types::PaginatedResponse<OfferedTemplate>>, AppError> {
+    ctx.require(&filter.entity, "create")
+        .map_err(|_| AppError::NotFound)?;
+    let entity_id = state
+        .entities
+        .load()
+        .get(&filter.entity)
+        .map(|meta| meta.entity_id)
+        .ok_or(AppError::NotFound)?;
+    let role_ids = ctx.role_ids.clone().unwrap_or_default();
+    let roles: Vec<String> = if role_ids.is_empty() {
+        Vec::new()
+    } else {
+        sqlx::query_scalar("SELECT name FROM role WHERE id = ANY($1) AND is_deleted = false")
+            .bind(&role_ids)
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?
+    };
+    let input = json!({
+        "type": filter.record_type,
+        "stage": filter.stage,
+        "roles": roles,
+    });
+    let (_, attrs) = entity_attrs(&state, entity_id).await?;
+    let mut items = Vec::new();
+    for (key, _) in crate::model_admin::cooked().hashes("record_template") {
+        let Some(id) = key
+            .strip_prefix("record_template:")
+            .and_then(|s| Uuid::parse_str(s).ok())
+        else {
+            continue;
+        };
+        let Ok(doc) = template(id) else {
+            continue;
+        };
+        if uuid_at(&doc["entity"]) != Some(entity_id) || !offered(doc["when"].as_str(), &input) {
+            continue;
+        }
+        let prompts = doc["values"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|v| {
+                let prompt = v.get("prompt")?;
+                let attr =
+                    uuid_at(&v["attribute"]).and_then(|a| attrs.iter().find(|x| x.id == a))?;
+                Some(TemplatePrompt {
+                    field: attr.name.clone(),
+                    label_en: prompt["label_en"].as_str().unwrap_or(&attr.name).to_owned(),
+                    label_ar: prompt["label_ar"].as_str().map(str::to_owned),
+                    required: prompt["required"].as_bool().unwrap_or(false),
+                })
+            })
+            .collect();
+        items.push(OfferedTemplate {
+            id,
+            label_en: doc["label_en"].as_str().unwrap_or_default().to_owned(),
+            label_ar: doc["label_ar"].as_str().map(str::to_owned),
+            prompts,
+            children: doc["children"].as_array().map_or(0, Vec::len),
+        });
+    }
+    items.sort_by(|a, b| a.label_en.cmp(&b.label_en));
+    let n = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(attome_types::PaginatedResponse::new(
+        items,
+        n,
+        1,
+        n.max(1),
+    )))
+}
+
 pub(crate) fn routes() -> Router<EngineState> {
     Router::new()
+        .route("/api/v1/record-templates", get(list_templates))
         .route(
             "/api/v1/record-templates/{id}/create",
             post(create_from_template),
@@ -619,8 +763,10 @@ pub(crate) fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(create_from_template, apply_template, save_as_template),
+    paths(create_from_template, apply_template, save_as_template, list_templates),
     components(schemas(
+        OfferedTemplate,
+        TemplatePrompt,
         CreateFromTemplate,
         CreatedFromTemplate,
         TemplateRecord,
@@ -639,6 +785,17 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_template_is_offered_when_its_condition_holds() {
+        let input = json!({ "type": "renewal", "stage": null, "roles": ["Sales"] });
+        assert!(offered(None, &input));
+        assert!(offered(Some(" "), &input));
+        assert!(offered(Some("type == \"renewal\""), &input));
+        assert!(!offered(Some("type == \"new\""), &input));
+        // A condition that does not compile against the input is not offered.
+        assert!(!offered(Some("region == \"riyadh\""), &input));
+    }
 
     #[test]
     fn template_apply_fills_only_empty_fields_unless_overwrite() {

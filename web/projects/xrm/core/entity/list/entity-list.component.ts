@@ -46,6 +46,7 @@ import { RecordAccessActionsComponent } from '../record-access/record-access-act
 import { ImageThumbComponent } from '../field/image-thumb/image-thumb.component';
 import { ListCardsComponent, SwipeAction, mobileOptions } from './list-cards.component';
 import { EmptyStateComponent, type EmptyReason } from './empty-state.component';
+import { RecordTemplatePickerComponent } from '../record-template/record-template-picker.component';
 import { RecordTypePickerComponent } from '../record-type-picker/record-type-picker.component';
 
 /** A lowercase or uppercase hyphenated UUID. */
@@ -175,7 +176,7 @@ export function richTextToPlainText(html: string): string {
   imports:     [
     FormsModule, NgComponentOutlet, RouterLink, TranslatePipe, ChoicePillComponent, BulkEditDialogComponent,
     AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent, BulkTagComponent,
-    ListCardsComponent, RecordTypePickerComponent, EmptyStateComponent,
+    ListCardsComponent, RecordTypePickerComponent, RecordTemplatePickerComponent, EmptyStateComponent,
   ],
   host: { '(document:click)': 'handleDocumentClick($event)' },
   templateUrl: './entity-list.component.html',
