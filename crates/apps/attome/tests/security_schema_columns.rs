@@ -79,3 +79,12 @@ async fn session_policy_columns_exist() {
         assert!(refresh.iter().any(|x| x == c), "refresh_token.{c}");
     }
 }
+
+#[tokio::test]
+async fn sign_in_rule_columns_exist() {
+    let db = skip_if_no_db!(pool().await);
+    let policy = columns(&db, "role_auth_policy").await;
+    for c in ["login_calendar_ref", "allowed_countries"] {
+        assert!(policy.iter().any(|x| x == c), "role_auth_policy.{c}");
+    }
+}

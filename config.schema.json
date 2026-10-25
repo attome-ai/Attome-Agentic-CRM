@@ -401,6 +401,14 @@
             "null"
           ]
         },
+        "geoip_database": {
+          "default": null,
+          "description": "Q9-T1: an offline country database in the MaxMind DB format (`.mmdb`:\nGeoLite2-Country, DB-IP or IPinfo country files), read by the sign-in\ncountry rules of roles. Unset, a role with a country rule refuses every\nsign-in. A file that cannot be read stops boot. Replace the file and\nrestart to update it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "jwt_audience": {
           "default": "",
           "description": "P-key-rotation-and-jwt (c) — the `aud` claim every session/pending\ntoken carries and is validated against. Empty (the default) means\n\"use `jwt_issuer`\" (`AppConfig::jwt_audience`) — a deployment only\nneeds to set this explicitly if it wants a distinct audience string.",

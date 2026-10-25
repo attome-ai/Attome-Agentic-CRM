@@ -183,6 +183,13 @@ pub struct AuthSection {
     /// Been Pwned's when unset).
     #[serde(default)]
     pub breach_range_url: Option<String>,
+    /// Q9-T1: an offline country database in the MaxMind DB format (`.mmdb`:
+    /// GeoLite2-Country, DB-IP or IPinfo country files), read by the sign-in
+    /// country rules of roles. Unset, a role with a country rule refuses every
+    /// sign-in. A file that cannot be read stops boot. Replace the file and
+    /// restart to update it.
+    #[serde(default)]
+    pub geoip_database: Option<String>,
 }
 
 /// `auth.kdf` — see [`AuthSection::kdf`]. Every default is the value the
@@ -290,6 +297,7 @@ impl std::fmt::Debug for AuthSection {
             )
             .field("registration_mode", &self.registration_mode)
             .field("kdf", &self.kdf)
+            .field("geoip_database", &self.geoip_database)
             .finish()
     }
 }

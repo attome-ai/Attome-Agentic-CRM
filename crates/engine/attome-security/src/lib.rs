@@ -26,6 +26,8 @@ pub mod rollout;
 pub mod scim;
 pub mod seed;
 pub mod session_policy;
+/// Q9-T1 — the sign-in network, hours and country rules of held roles.
+pub mod sign_in_rules;
 pub mod strict_authz;
 pub mod visibility;
 

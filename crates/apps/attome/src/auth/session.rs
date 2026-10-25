@@ -27,6 +27,52 @@ use attome_types::ErrorResponse;
 
 // ── Session issuance (shared by register/login/google) ───────────────────────
 
+/// Q9-T1: refuses the sign-in (`403`) when a role `user_id` holds restricts
+/// where or when they may sign in and this attempt is outside it. The
+/// caller's address is the trusted client IP the request-meta layer
+/// captured; with none, a network or country rule refuses. A refusal during
+/// a sign-in is audited as a failed login naming the rule kind.
+async fn enforce_sign_in_rules(
+    state: &AppState,
+    user_id: Uuid,
+    login: Option<(&SecurityAuditor, &str)>,
+) -> Result<(), AppError> {
+    use attome_server::login_restrictions::{Refusal, evaluate, geoip};
+
+    let rules = attome_security::sign_in_rules::load(&state.db, user_id, Utc::now()).await?;
+    if rules.is_empty() {
+        return Ok(());
+    }
+    let caller_ip = attome_server::middleware::request_meta::current()
+        .ip_address
+        .and_then(|ip| ip.parse::<std::net::IpAddr>().ok());
+    let Err(refusal) = evaluate(&rules, caller_ip, geoip::country) else {
+        return Ok(());
+    };
+    if refusal == Refusal::Country && !geoip::is_loaded() {
+        tracing::error!(
+            %user_id,
+            "auth: a role restricts sign-in countries but auth.geoip_database is not set"
+        );
+    }
+    tracing::warn!(%user_id, rule = refusal.as_str(), "auth: sign-in refused by a held role's rule");
+    if let Some((auditor, method)) = login {
+        let event = SecurityEvent::new(
+            MandatoryCategory::Security,
+            AuditOperation::Login,
+            user_id,
+            "user_account",
+            Some(user_id),
+        )
+        .named(format!("login {method} refused: {}", refusal.as_str()))
+        .outcome(AuditOutcome::Failed);
+        if let Err(error) = auditor.write(event).await {
+            tracing::error!(%user_id, %error, "auth: the refused sign-in's audit event failed");
+        }
+    }
+    Err(AppError::Forbidden)
+}
+
 /// Mints a fresh session for `user_id` after a credential verification and
 /// returns both `Set-Cookie` values. The refresh cookie is scoped to
 /// `/api/v1/auth` — the only paths that ever need to read it (`/refresh`,
@@ -48,6 +94,9 @@ pub(super) async fn issue_session_cookies_for(
     context: &AuthContext,
     login: Option<(&SecurityAuditor, &str)>,
 ) -> Result<[(header::HeaderName, String); 2], AppError> {
+    // Q9-T1: the held roles' network, hours and country rules, before any
+    // session or catch-up work.
+    enforce_sign_in_rules(state, user_id, login).await?;
     // Retry the idempotent catch-up on every successful session issuance so
     // a transient queue failure is recovered on the user's next login.
     enqueue_notification_backfill(state, user_id, "session").await;

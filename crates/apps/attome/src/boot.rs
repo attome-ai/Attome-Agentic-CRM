@@ -361,6 +361,13 @@ pub async fn init(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Error>
             .map_err(|e| format!("auth.breach_list_file ({path}): {e}"))?;
         tracing::info!(count, "breached password set loaded");
     }
+    // Q9-T1: the country database behind role sign-in country rules; like
+    // the breached-password file, one that cannot be read stops boot.
+    if let Some(path) = config.auth.geoip_database.as_deref() {
+        let nodes = attome_server::login_restrictions::geoip::load_file(std::path::Path::new(path))
+            .map_err(|e| format!("auth.geoip_database ({path}): {e}"))?;
+        tracing::info!(nodes, "GeoIP country database loaded");
+    }
     // Q21-T1: the operator's proxy for calls to public hosts, before any
     // client is built (validated with the rest of the configuration).
     attome_outbound::http::configure_proxy(
