@@ -1621,8 +1621,17 @@ dependencies = [
  "attome-modules",
  "attome-types",
  "axum",
+ "base64 0.23.1",
+ "chrono",
+ "ed25519-dalek",
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.21",
  "tokio",
+ "utoipa",
+ "uuid",
 ]
 
 [[package]]

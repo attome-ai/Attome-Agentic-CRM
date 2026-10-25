@@ -9,6 +9,8 @@
 //! roles come from the `attome-ops` platform bundle.
 
 pub mod error;
+/// AB4-T2: the signed `attome-evidence/v1` record every drill writes.
+pub mod evidence;
 pub mod model;
 
 pub use error::OpsError;
