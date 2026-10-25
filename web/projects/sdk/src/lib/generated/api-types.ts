@@ -2208,6 +2208,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/content/pages/{id}/seo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A page's search settings
+         * @description E13-T8: the title, description, canonical URL, robots flags and Open
+         *     Graph card stored on the page, with its row version.
+         */
+        get: operations["get_page_seo"];
+        /**
+         * Change a page's search settings
+         * @description E13-T8: replaces the settings at the `If-Match` row version. A change to
+         *     the canonical URL or the noindex flag is recorded as a configuration
+         *     event in the same transaction.
+         */
+        put: operations["put_page_seo"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/pages/{id}/seo/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Audit a page now
+         * @description E13-T8: runs the page audit at once (whether or not audits run on save)
+         *     and replaces the stored findings and score.
+         */
+        post: operations["audit_page_now"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/pages/{id}/seo/findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A page's search findings
+         * @description E13-T8: the findings of the page's last audit, errors first.
+         */
+        get: operations["page_findings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/content/pages/{id}/stats": {
         parameters: {
             query?: never;
@@ -2357,6 +2425,100 @@ export interface paths {
          *     request's id) like any other publish.
          */
         post: operations["restore_content_page_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/seo/topics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Topic clusters
+         * @description E13-T8: every topic, by name.
+         */
+        get: operations["list_topics"];
+        put?: never;
+        /**
+         * Create a topic cluster
+         * @description E13-T8: a topic with its language and, optionally, its pillar page.
+         */
+        post: operations["create_topic"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/seo/topics/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a topic cluster
+         * @description E13-T8: name, language and pillar page, at the `If-Match` row version.
+         */
+        put: operations["update_topic"];
+        post?: never;
+        /**
+         * Delete a topic cluster
+         * @description E13-T8: the topic and its page links; the pages stay.
+         */
+        delete: operations["delete_topic"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/seo/topics/{id}/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set a topic's cluster pages
+         * @description E13-T8: replaces the pages of the cluster (at most 500).
+         */
+        put: operations["set_topic_pages"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/sites/{site_key}/robots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A site's robots.txt
+         * @description E13-T8: the stored body and what crawlers are served.
+         */
+        get: operations["get_robots"];
+        /**
+         * Set a site's robots.txt
+         * @description E13-T8: stores the body; portal-only and preview paths stay closed to
+         *     crawlers whatever it says. The change is a configuration event with the
+         *     body before and after.
+         */
+        put: operations["put_robots"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2550,6 +2712,68 @@ export interface paths {
         get: operations["list_customer_test_runs"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard-embeds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Stop an embed
+         * @description P8-T1: tokens already issued for it stop working at once.
+         */
+        delete: operations["revoke_embed"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard-embeds/{id}/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a viewer token for an embed
+         * @description P8-T1: called by the host site's server, never its browser. The token
+         *     fixes the given dashboard parameters for one viewer and lives at most an
+         *     hour.
+         */
+        post: operations["issue_token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboards/{id}/embeds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Embed a dashboard
+         * @description P8-T1: lets the given sites frame the dashboard, reading as the caller.
+         */
+        post: operations["create_embed"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4272,6 +4496,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/features/expired": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Feature flags past their expiry date
+         * @description T6-T1: every flag whose `expires_on` has passed, with its owner, so it
+         *     can be removed or given a new date.
+         */
+        get: operations["expired_features"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/features/{key}": {
         parameters: {
             query?: never;
@@ -4281,8 +4526,9 @@ export interface paths {
         };
         get?: never;
         /**
-         * Sets a flag's stored policy value (deployment default, user/role
-         *     overrides, rollout percentage). Rejects an unknown key (404) and rejects
+         * Sets a flag's stored policy value (deployment default, user, team, unit
+         *     and role overrides, rollout percentage, owner, expiry and scheduled
+         *     changes). Rejects an unknown key (404) and rejects
          *     turning `deployment` on while a `requires` prerequisite is not itself
          *     enabled deployment-wide (422, M95 checklist item 3).
          */
@@ -4894,6 +5140,32 @@ export interface paths {
          *     doc comment.
          */
         post: operations["place_hold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/legal-holds/{id}/custodians": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A hold's custodians
+         * @description R4-T1: who was told, when, and who has acknowledged.
+         */
+        get: operations["list_custodians"];
+        put?: never;
+        /**
+         * Ask people to keep what a hold covers
+         * @description R4-T1: adds custodians to an active hold and emails each new one the
+         *     notice with a link to acknowledge it. Someone already a custodian is not
+         *     told again.
+         */
+        post: operations["add_custodians"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12804,6 +13076,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/content/robots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A site's robots.txt (E13-T8).
+         * @description The body an administrator stored for the site (else allow all), with
+         *     portal-only and preview paths always disallowed. Published at
+         *     `/robots.txt` by the edge, which passes its host as `site`.
+         */
+        get: operations["site_robots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/content/rss": {
         parameters: {
             query?: never;
@@ -12841,6 +13135,28 @@ export interface paths {
          *     page, or an unlicensed deployment.
          */
         get: operations["site_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/sitemap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A site's sitemap (E13-T8).
+         * @description The sitemap stored for the site and language (built by the sitemap
+         *     job), as XML; a site with none answers an empty `urlset`. Published at
+         *     `/sitemap.xml` by the edge, which passes its host as `site`.
+         */
+        get: operations["site_sitemap"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13354,6 +13670,28 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_onboard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/embed/dashboard/data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read a page of an embedded dashboard
+         * @description P8-T1: public; the signed viewer token is the credential. Answers the
+         *     page's widgets as the embed's creator sees them, with the token's fixed
+         *     parameters, and only the embed's sites may frame it.
+         */
+        post: operations["embed_data"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13946,6 +14284,27 @@ export interface paths {
         get: operations["ledger_trial_balance"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/legal-holds/{id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Acknowledge a legal hold notice
+         * @description R4-T1: the signed-in custodian confirms they received the notice. Only a
+         *     custodian of the hold may; acknowledging again changes nothing.
+         */
+        post: operations["acknowledge_hold"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15445,6 +15804,88 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/odata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The OData service document
+         * @description S7-T1: one entity set per entity the caller may read.
+         */
+        get: operations["odata_service_document"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/odata/$metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The OData schema
+         * @description S7-T1: the CSDL (XML) of every entity set the caller may read, with the
+         *     attributes they may read.
+         */
+        get: operations["odata_metadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/odata/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Records of one entity set
+         * @description S7-T1: `$select`, `$filter`, `$orderby`, `$top`, `$count`, and the next
+         *     page through `@odata.nextLink`.
+         */
+        get: operations["odata_entity_set"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/odata/{entity}/$count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The number of records of one entity set
+         * @description S7-T1: honours `$filter`; the answer is plain text.
+         */
+        get: operations["odata_entity_count"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -22239,6 +22680,10 @@ export interface components {
             /** @description The stored value (1..100 chars). Re-adding a removed value is allowed. */
             value: string;
         };
+        /** @description People to ask to keep what a hold covers. */
+        AddCustodiansBody: {
+            user_ids: string[];
+        };
         /** @description `POST /api/v1/chat/channels/{id}/members`. */
         AddMember: {
             /** Format: uuid */
@@ -27968,6 +28413,20 @@ export interface components {
             /** Format: uuid */
             test_id: string;
         };
+        /** @description An embed. */
+        DashboardEmbed: {
+            allowed_origins: string[];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+            /** Format: uuid */
+            dashboard_id: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            revoked_at?: string | null;
+        };
         /** @enum {string} */
         DataClass: "structured" | "kpi" | "query" | "none";
         /**
@@ -29366,6 +29825,18 @@ export interface components {
              */
             record_id?: string | null;
         };
+        /** @description A page of an embedded dashboard to read. */
+        EmbedRead: {
+            /** Format: uuid */
+            page_id: string;
+            token: string;
+        };
+        /** @description An issued viewer token. */
+        EmbedToken: {
+            /** Format: date-time */
+            expires_at: string;
+            token: string;
+        };
         Enforcement: {
             /** @description `check`, `label`, `attribute_security`, `retention` or `residency`. */
             kind: string;
@@ -30208,6 +30679,16 @@ export interface components {
             row_version: number;
             status: string;
         };
+        /** @description T6-T1: a flag past its expiry date, for the expiry report. */
+        ExpiredFlag: {
+            /** Format: date */
+            expires_on: string;
+            key: string;
+            owner?: string | null;
+        };
+        ExpiredFlagsResponse: {
+            items: components["schemas"]["ExpiredFlag"][];
+        };
         /** @description What the planner expects of a query; nothing is run. */
         ExplainResponse: {
             /** Format: int64 */
@@ -30367,6 +30848,14 @@ export interface components {
             /** @description The deployment-wide base value. */
             deployment?: boolean;
             /**
+             * Format: date
+             * @description T6-T1: when the flag should be gone; listed by the expiry report from
+             *     the day after. It changes nothing by itself.
+             */
+            expires_on?: string | null;
+            /** @description T6-T1: who answers for the flag (a name, an email or a user id). */
+            owner?: string | null;
+            /**
              * Format: int32
              * @description `0..=100`. When present, `deployment: true` is additionally narrowed
              *     to a deterministic hash-of-user-id bucket of that size — the same
@@ -30383,6 +30872,27 @@ export interface components {
              *     deployment/percentage tier.
              */
             role_overrides?: {
+                [key: string]: boolean;
+            };
+            /**
+             * @description T6-T1: changes to the deployment value and rollout that take effect at
+             *     a time. The latest one whose time has come replaces `deployment` and
+             *     `percentage`; overrides stay as stored.
+             */
+            schedule?: components["schemas"]["ScheduledChange"][];
+            /**
+             * @description T6-T1: team id -> override, checked after the user's own and before
+             *     the privileges'. A person in several teams gets `true` if any says so.
+             */
+            team_overrides?: {
+                [key: string]: boolean;
+            };
+            /**
+             * @description T6-T1: organisation (unit) id -> override, matched against the units
+             *     the person reaches (`SecurityContext::accessible_org_ids`), after
+             *     teams. A person resolved without units is never matched.
+             */
+            unit_overrides?: {
                 [key: string]: boolean;
             };
             /** @description Stringified user UUID -> explicit override. Highest precedence. */
@@ -31447,6 +31957,16 @@ export interface components {
              *     is undone, each field going back to its value before the set began.
              */
             group_id?: string | null;
+        };
+        /** @description One custodian of a hold. */
+        HoldCustodian: {
+            /** Format: date-time */
+            acknowledged_at?: string | null;
+            email?: string | null;
+            /** Format: date-time */
+            notified_at: string;
+            /** Format: uuid */
+            user_id: string;
         };
         HolidayBody: {
             hijri_date?: null | components["schemas"]["HijriDateBody"];
@@ -33745,6 +34265,11 @@ export interface components {
             /** @description The branch or unit the device invoices for. */
             organization_unit: string;
         };
+        /** @description An embed to make. */
+        NewEmbed: {
+            /** @description `https://` origins that may frame the dashboard. */
+            allowed_origins: string[];
+        };
         /** @description An entry to post. */
         NewEntry: {
             description?: string | null;
@@ -33956,6 +34481,16 @@ export interface components {
             to_kind: components["schemas"]["ToKind"];
             /** Format: uuid */
             to_ref: string;
+        };
+        /** @description A viewer token to issue. */
+        NewToken: {
+            /** @description The dashboard parameters this viewer is fixed to. */
+            parameters?: Record<string, never>;
+            /**
+             * Format: int64
+             * @description Seconds the token lives: 1 to 3600, 600 by default.
+             */
+            ttl_secs?: number | null;
         };
         NewWritePolicy: {
             /** @description A write action id, such as `record.update`. */
@@ -34718,6 +35253,27 @@ export interface components {
             /** @description `pending | crawled | failed`. */
             status: string;
             url_path: string;
+        };
+        /** @description A page's search settings. */
+        PageSeo: {
+            canonical_url?: string | null;
+            description?: string | null;
+            nofollow?: boolean;
+            noindex?: boolean;
+            og_description?: string | null;
+            /** Format: uuid */
+            og_image_ref?: string | null;
+            og_title?: string | null;
+            title?: string | null;
+        };
+        /** @description A page's search settings, as the SEO panel reads them. */
+        PageSeoView: {
+            /**
+             * Format: int64
+             * @description Send back as `If-Match` on the next `PUT`.
+             */
+            row_version: number;
+            settings: components["schemas"]["PageSeo"];
         };
         /**
          * @description The read model `attome_content::analytics::rollup_page_stats` maintains
@@ -37899,6 +38455,29 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_HoldCustodian: {
+            items: {
+                /** Format: date-time */
+                acknowledged_at?: string | null;
+                email?: string | null;
+                /** Format: date-time */
+                notified_at: string;
+                /** Format: uuid */
+                user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_InboundHookView: {
             items: {
                 /** @description `{kind, preset?, header?, encoding?, prefix?, timestamp_header?, id_header?}`. */
@@ -40420,6 +40999,60 @@ export interface components {
                 set: boolean;
                 /** @description The features that use it. */
                 used_by: string[];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SeoFinding: {
+            items: {
+                block_ref?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                /** @description The catalog key of the message. */
+                message_key?: string | null;
+                rule: string;
+                /** @description `info`, `warning` or `error`. */
+                severity: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SeoTopic: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                language: string;
+                name: string;
+                /** Format: uuid */
+                pillar_page_ref?: string | null;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: date-time */
+                updated_at: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -45990,6 +46623,14 @@ export interface components {
             row_version: number;
             status?: string | null;
         };
+        /** @description T6-T1: one scheduled change of a flag. */
+        ScheduledChange: {
+            /** Format: date-time */
+            at: string;
+            deployment: boolean;
+            /** Format: int32 */
+            percentage?: number | null;
+        };
         /**
          * @description P-online-schema-change §4(d) — separately polled resource, same reasoning
          *     as `AttributeIndexStatus` above.
@@ -46231,6 +46872,73 @@ export interface components {
             send_ref: string;
             /** Format: int64 */
             sent: number;
+        };
+        /** @description What an audit run found. */
+        SeoAuditRun: {
+            /** Format: date-time */
+            audited_at: string;
+            /**
+             * Format: int32
+             * @description 0 to 100.
+             */
+            score: number;
+        };
+        /** @description One stored finding. */
+        SeoFinding: {
+            block_ref?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /** @description The catalog key of the message. */
+            message_key?: string | null;
+            rule: string;
+            /** @description `info`, `warning` or `error`. */
+            severity: string;
+        };
+        /** @description A robots body to store. */
+        SeoRobotsBody: {
+            body: string;
+        };
+        /** @description A site's robots.txt as stored. */
+        SeoRobotsView: {
+            /** @description The stored body; `null` when the site has none (the default applies). */
+            body?: string | null;
+            /** Format: int64 */
+            row_version?: number | null;
+            /**
+             * @description What crawlers are served: the body (or the default) with the paths
+             *     that are always closed appended.
+             */
+            served: string;
+            site_key: string;
+        };
+        /** @description A topic cluster. */
+        SeoTopic: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            language: string;
+            name: string;
+            /** Format: uuid */
+            pillar_page_ref?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description A topic to create or change. */
+        SeoTopicBody: {
+            /** @description `en`, `ar`, or a regional form such as `ar-SA`. */
+            language: string;
+            name: string;
+            /** Format: uuid */
+            pillar_page_ref?: string | null;
+        };
+        /** @description A topic's cluster pages. */
+        SeoTopicPagesBody: {
+            page_ids: string[];
         };
         /**
          * @description P-session-refresh-hardening (D-129) — `GET /api/v1/auth/session`'s
@@ -57760,6 +58468,251 @@ export interface operations {
             };
         };
     };
+    get_page_seo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page's search settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageSeoView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_page_seo: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The row_version last read */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The page */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageSeo"];
+            };
+        };
+        responses: {
+            /** @description The saved settings and the new row version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageSeoView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The page changed since that row version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed, or a setting out of bounds */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    audit_page_now: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new score */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoAuditRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    page_findings: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The page */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of findings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SeoFinding"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Paging out of bounds */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     page_stats: {
         parameters: {
             query?: never;
@@ -58189,6 +59142,412 @@ export interface operations {
                 };
             };
             /** @description The restored blocks fail today's block validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_topics: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of topics */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SeoTopic"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Paging out of bounds */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_topic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoTopicBody"];
+            };
+        };
+        responses: {
+            /** @description The topic */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoTopic"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A name or language out of bounds, or no such pillar page */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_topic: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The row_version last read */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The topic */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoTopicBody"];
+            };
+        };
+        responses: {
+            /** @description The topic */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoTopic"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such topic */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The topic changed since that row version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing, or a value out of bounds */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_topic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The topic */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such topic */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_topic_pages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The topic */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoTopicPagesBody"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such topic */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A page that does not exist, or too many */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_robots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The site's host name */
+                site_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The site's robots.txt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoRobotsView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a host name */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_robots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The site's host name */
+                site_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoRobotsBody"];
+            };
+        };
+        responses: {
+            /** @description The stored robots.txt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoRobotsView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another change to this site's robots.txt is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a host name, or the body is too long */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -59329,6 +60688,180 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revoke_embed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The embed */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stopped */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live embed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    issue_token: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The embed */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewToken"];
+            };
+        };
+        responses: {
+            /** @description The token */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedToken"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live embed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The fixed parameters do not fit in a token */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_embed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The dashboard */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewEmbed"];
+            };
+        };
+        responses: {
+            /** @description The embed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardEmbed"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No origins, too many, or one that is not an https origin */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -65275,6 +66808,44 @@ export interface operations {
             };
         };
     };
+    expired_features: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The flags past their expiry date, by key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpiredFlagsResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     put_feature_flag: {
         parameters: {
             query?: never;
@@ -67578,6 +69149,121 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_custodians: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The hold */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of custodians */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_HoldCustodian"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_custodians: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The hold */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCustodiansBody"];
+            };
+        };
+        responses: {
+            /** @description The users newly told */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such active hold */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No users, too many, or a user that does not exist */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -93276,6 +94962,47 @@ export interface operations {
             };
         };
     };
+    site_robots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The site's host name. */
+                site: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The robots.txt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": unknown;
+                };
+            };
+            /** @description Content Management isn't licensed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a host name */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     site_rss: {
         parameters: {
             query?: never;
@@ -93345,6 +95072,49 @@ export interface operations {
             };
             /** @description No site on this host, or no published page at this path */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    site_sitemap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The site's host name. */
+                site: string;
+                /** @description The language, such as `en` or `ar`; the first stored when absent. */
+                lang: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sitemap */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/xml": unknown;
+                };
+            };
+            /** @description Content Management isn't licensed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a host name or a language code */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -94795,6 +96565,48 @@ export interface operations {
             };
             /** @description A bad OTP, or ZATCA refused a step (the reason is kept on the device) */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    embed_data: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmbedRead"];
+            };
+        };
+        responses: {
+            /** @description The page's widgets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageDataResponse"];
+                };
+            };
+            /** @description A token that is malformed, forged or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The embed was stopped, or no such page */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -96614,6 +98426,45 @@ export interface operations {
             };
             /** @description from after to */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    acknowledge_hold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The hold */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Acknowledged */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller is not a custodian of this hold */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -100694,6 +102545,182 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OAuthErrorBody"];
+                };
+            };
+        };
+    };
+    odata_service_document: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The service document (OData JSON) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    odata_metadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The CSDL document (application/xml) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    odata_entity_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of records (OData JSON) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description A $skiptoken this deployment did not issue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or one the caller may not read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An option the feed does not support, or a $filter outside its grammar */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The query ran past the statement time limit */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    odata_entity_count: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The count, as text */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or one the caller may not read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An option the feed does not support */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

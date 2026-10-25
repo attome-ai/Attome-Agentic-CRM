@@ -12511,6 +12511,400 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/content/pages/{id}/seo": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A page's search settings",
+        "description": "E13-T8: the title, description, canonical URL, robots flags and Open\nGraph card stored on the page, with its row version.",
+        "operationId": "get_page_seo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page's search settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageSeoView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Change a page's search settings",
+        "description": "E13-T8: replaces the settings at the `If-Match` row version. A change to\nthe canonical URL or the noindex flag is recorded as a configuration\nevent in the same transaction.",
+        "operationId": "put_page_seo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The row_version last read",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageSeo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The saved settings and the new row version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageSeoView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The page changed since that row version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing or malformed, or a setting out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/seo/audit": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Audit a page now",
+        "description": "E13-T8: runs the page audit at once (whether or not audits run on save)\nand replaces the stored findings and score.",
+        "operationId": "audit_page_now",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The new score",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoAuditRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "recomputes the page's derived search findings and score; changes no content or setting",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/seo/findings": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A page's search findings",
+        "description": "E13-T8: the findings of the page's last audit, errors first.",
+        "operationId": "page_findings",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SeoFinding"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Paging out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/content/pages/{id}/stats": {
       "get": {
         "tags": [
@@ -13204,6 +13598,663 @@
           },
           "422": {
             "description": "The restored blocks fail today's block validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/seo/topics": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Topic clusters",
+        "description": "E13-T8: every topic, by name.",
+        "operationId": "list_topics",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of topics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SeoTopic"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Paging out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Create a topic cluster",
+        "description": "E13-T8: a topic with its language and, optionally, its pillar page.",
+        "operationId": "create_topic",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoTopicBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoTopic"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A name or language out of bounds, or no such pillar page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/seo/topics/{id}": {
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Change a topic cluster",
+        "description": "E13-T8: name, language and pillar page, at the `If-Match` row version.",
+        "operationId": "update_topic",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The topic",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The row_version last read",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoTopicBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoTopic"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The topic changed since that row version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing, or a value out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      },
+      "delete": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Delete a topic cluster",
+        "description": "E13-T8: the topic and its page links; the pages stay.",
+        "operationId": "delete_topic",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The topic",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/content/seo/topics/{id}/pages": {
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Set a topic's cluster pages",
+        "description": "E13-T8: replaces the pages of the cluster (at most 500).",
+        "operationId": "set_topic_pages",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The topic",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoTopicPagesBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Saved"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A page that does not exist, or too many",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/sites/{site_key}/robots": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A site's robots.txt",
+        "description": "E13-T8: the stored body and what crawlers are served.",
+        "operationId": "get_robots",
+        "parameters": [
+          {
+            "name": "site_key",
+            "in": "path",
+            "description": "The site's host name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The site's robots.txt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoRobotsView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a host name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Set a site's robots.txt",
+        "description": "E13-T8: stores the body; portal-only and preview paths stay closed to\ncrawlers whatever it says. The change is a configuration event with the\nbody before and after.",
+        "operationId": "put_robots",
+        "parameters": [
+          {
+            "name": "site_key",
+            "in": "path",
+            "description": "The site's host name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoRobotsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The stored robots.txt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoRobotsView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another change to this site's robots.txt is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a host name, or the body is too long",
             "content": {
               "application/json": {
                 "schema": {
@@ -15042,6 +16093,296 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/dashboard-embeds/{id}": {
+      "delete": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Stop an embed",
+        "description": "P8-T1: tokens already issued for it stop working at once.",
+        "operationId": "revoke_embed",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The embed",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Stopped"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such live embed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/dashboard-embeds/{id}/tokens": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Issue a viewer token for an embed",
+        "description": "P8-T1: called by the host site's server, never its browser. The token\nfixes the given dashboard parameters for one viewer and lives at most an\nhour.",
+        "operationId": "issue_token",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The embed",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbedToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such live embed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The fixed parameters do not fit in a token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "signs a short-lived viewer token; nothing is stored",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/dashboards/{id}/embeds": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Embed a dashboard",
+        "description": "P8-T1: lets the given sites frame the dashboard, reading as the caller.",
+        "operationId": "create_embed",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The dashboard",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewEmbed"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The embed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardEmbed"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No origins, too many, or one that is not an https origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/admin/data-step-runs/orphan-scans": {
@@ -25068,12 +26409,68 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/features/expired": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Feature flags past their expiry date",
+        "description": "T6-T1: every flag whose `expires_on` has passed, with its owner, so it\ncan be removed or given a new date.",
+        "operationId": "expired_features",
+        "responses": {
+          "200": {
+            "description": "The flags past their expiry date, by key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpiredFlagsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/features/{key}": {
       "put": {
         "tags": [
           "admin"
         ],
-        "summary": "Sets a flag's stored policy value (deployment default, user/role\noverrides, rollout percentage). Rejects an unknown key (404) and rejects\nturning `deployment` on while a `requires` prerequisite is not itself\nenabled deployment-wide (422, M95 checklist item 3).",
+        "summary": "Sets a flag's stored policy value (deployment default, user, team, unit\nand role overrides, rollout percentage, owner, expiry and scheduled\nchanges). Rejects an unknown key (404) and rejects\nturning `deployment` on while a `requires` prerequisite is not itself\nenabled deployment-wide (422, M95 checklist item 3).",
         "operationId": "put_feature_flag",
         "parameters": [
           {
@@ -28886,6 +30283,204 @@
             {
               "category": "security",
               "operation": "activated"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/legal-holds/{id}/custodians": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A hold's custodians",
+        "description": "R4-T1: who was told, when, and who has acknowledged.",
+        "operationId": "list_custodians",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The hold",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of custodians",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_HoldCustodian"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Ask people to keep what a hold covers",
+        "description": "R4-T1: adds custodians to an active hold and emails each new one the\nnotice with a link to acknowledge it. Someone already a custodian is not\ntold again.",
+        "operationId": "add_custodians",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The hold",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCustodiansBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The users newly told",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such active hold",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No users, too many, or a user that does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "update"
             }
           ],
           "policy": "mandatory"
@@ -70741,6 +72336,64 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/content/robots": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A site's robots.txt (E13-T8).",
+        "description": "The body an administrator stored for the site (else allow all), with\nportal-only and preview paths always disallowed. Published at\n`/robots.txt` by the edge, which passes its host as `site`.",
+        "operationId": "site_robots",
+        "parameters": [
+          {
+            "name": "site",
+            "in": "path",
+            "description": "The site's host name.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The robots.txt",
+            "content": {
+              "text/plain": {}
+            }
+          },
+          "404": {
+            "description": "Content Management isn't licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a host name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/content/rss": {
       "get": {
         "tags": [
@@ -70824,6 +72477,76 @@
           },
           "404": {
             "description": "No site on this host, or no published page at this path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/content/sitemap": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A site's sitemap (E13-T8).",
+        "description": "The sitemap stored for the site and language (built by the sitemap\njob), as XML; a site with none answers an empty `urlset`. Published at\n`/sitemap.xml` by the edge, which passes its host as `site`.",
+        "operationId": "site_sitemap",
+        "parameters": [
+          {
+            "name": "site",
+            "in": "path",
+            "description": "The site's host name.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "path",
+            "description": "The language, such as `en` or `ar`; the first stored when absent.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The sitemap",
+            "content": {
+              "application/xml": {}
+            }
+          },
+          "404": {
+            "description": "Content Management isn't licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a host name or a language code",
             "content": {
               "application/json": {
                 "schema": {
@@ -73179,6 +74902,72 @@
         "x-idempotent": "key",
         "x-module": "billing",
         "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/embed/dashboard/data": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Read a page of an embedded dashboard",
+        "description": "P8-T1: public; the signed viewer token is the credential. Answers the\npage's widgets as the embed's creator sees them, with the token's fixed\nparameters, and only the embed's sites may frame it.",
+        "operationId": "embed_data",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbedRead"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The page's widgets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDataResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A token that is malformed, forged or expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The embed was stopped, or no such page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "reads one embedded dashboard page; writes nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -76190,6 +77979,76 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/legal-holds/{id}/acknowledge": {
+      "post": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Acknowledge a legal hold notice",
+        "description": "R4-T1: the signed-in custodian confirms they received the notice. Only a\ncustodian of the hold may; acknowledging again changes nothing.",
+        "operationId": "acknowledge_hold",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The hold",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Acknowledged"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The caller is not a custodian of this hold",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/limits/me": {
@@ -82997,6 +84856,268 @@
         "x-privilege": "public",
         "x-rate-class": "credential",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/odata": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "The OData service document",
+        "description": "S7-T1: one entity set per entity the caller may read.",
+        "operationId": "odata_service_document",
+        "responses": {
+          "200": {
+            "description": "The service document (OData JSON)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/odata/$metadata": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "The OData schema",
+        "description": "S7-T1: the CSDL (XML) of every entity set the caller may read, with the\nattributes they may read.",
+        "operationId": "odata_metadata",
+        "responses": {
+          "200": {
+            "description": "The CSDL document (application/xml)",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/odata/{entity}": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Records of one entity set",
+        "description": "S7-T1: `$select`, `$filter`, `$orderby`, `$top`, `$count`, and the next\npage through `@odata.nextLink`.",
+        "operationId": "odata_entity_set",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of records (OData JSON)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A $skiptoken this deployment did not issue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, or one the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An option the feed does not support, or a $filter outside its grammar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "The query ran past the statement time limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/odata/{entity}/$count": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "The number of records of one entity set",
+        "description": "S7-T1: honours `$filter`; the answer is plain text.",
+        "operationId": "odata_entity_count",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The count, as text",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, or one the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An option the feed does not support",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/offline/profile": {
@@ -118761,6 +120882,22 @@
           }
         }
       },
+      "AddCustodiansBody": {
+        "type": "object",
+        "description": "People to ask to keep what a hold covers.",
+        "required": [
+          "user_ids"
+        ],
+        "properties": {
+          "user_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "AddMember": {
         "type": "object",
         "description": "`POST /api/v1/chat/channels/{id}/members`.",
@@ -133375,6 +135512,48 @@
           }
         }
       },
+      "DashboardEmbed": {
+        "type": "object",
+        "description": "An embed.",
+        "required": [
+          "id",
+          "dashboard_id",
+          "allowed_origins",
+          "created_by",
+          "created_at"
+        ],
+        "properties": {
+          "allowed_origins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dashboard_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revoked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "DataClass": {
         "type": "string",
         "enum": [
@@ -137038,6 +139217,41 @@
           }
         }
       },
+      "EmbedRead": {
+        "type": "object",
+        "description": "A page of an embedded dashboard to read.",
+        "required": [
+          "token",
+          "page_id"
+        ],
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "EmbedToken": {
+        "type": "object",
+        "description": "An issued viewer token.",
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
       "Enforcement": {
         "type": "object",
         "required": [
@@ -138801,6 +141015,43 @@
           }
         }
       },
+      "ExpiredFlag": {
+        "type": "object",
+        "description": "T6-T1: a flag past its expiry date, for the expiry report.",
+        "required": [
+          "key",
+          "expires_on"
+        ],
+        "properties": {
+          "expires_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "key": {
+            "type": "string"
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ExpiredFlagsResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpiredFlag"
+            }
+          }
+        }
+      },
       "ExplainResponse": {
         "type": "object",
         "description": "What the planner expects of a query; nothing is run.",
@@ -139281,6 +141532,21 @@
             "type": "boolean",
             "description": "The deployment-wide base value."
           },
+          "expires_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "T6-T1: when the flag should be gone; listed by the expiry report from\nthe day after. It changes nothing by itself."
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "T6-T1: who answers for the flag (a name, an email or a user id)."
+          },
           "percentage": {
             "type": [
               "integer",
@@ -139293,6 +141559,33 @@
           "role_overrides": {
             "type": "object",
             "description": "Privilege key -> override. A caller holding any matching privilege is\nin scope; \"most permissive role wins\" if more than one matches (same\nposture the record-level access-level resolution uses elsewhere in\nthis codebase). Checked after `user_overrides`, before the\ndeployment/percentage tier.",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "schedule": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduledChange"
+            },
+            "description": "T6-T1: changes to the deployment value and rollout that take effect at\na time. The latest one whose time has come replaces `deployment` and\n`percentage`; overrides stay as stored."
+          },
+          "team_overrides": {
+            "type": "object",
+            "description": "T6-T1: team id -> override, checked after the user's own and before\nthe privileges'. A person in several teams gets `true` if any says so.",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "unit_overrides": {
+            "type": "object",
+            "description": "T6-T1: organisation (unit) id -> override, matched against the units\nthe person reaches (`SecurityContext::accessible_org_ids`), after\nteams. A person resolved without units is never matched.",
             "additionalProperties": {
               "type": "boolean"
             },
@@ -141902,6 +144195,37 @@
               "null"
             ],
             "description": "A `group_id` from the history: every change of that set to this record\nis undone, each field going back to its value before the set began."
+          }
+        }
+      },
+      "HoldCustodian": {
+        "type": "object",
+        "description": "One custodian of a hold.",
+        "required": [
+          "user_id",
+          "notified_at"
+        ],
+        "properties": {
+          "acknowledged_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notified_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -147872,6 +150196,23 @@
           }
         }
       },
+      "NewEmbed": {
+        "type": "object",
+        "description": "An embed to make.",
+        "required": [
+          "allowed_origins"
+        ],
+        "properties": {
+          "allowed_origins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "`https://` origins that may frame the dashboard."
+          }
+        },
+        "additionalProperties": false
+      },
       "NewEntry": {
         "type": "object",
         "description": "An entry to post.",
@@ -148464,6 +150805,25 @@
           "to_ref": {
             "type": "string",
             "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NewToken": {
+        "type": "object",
+        "description": "A viewer token to issue.",
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "description": "The dashboard parameters this viewer is fixed to."
+          },
+          "ttl_secs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Seconds the token lives: 1 to 3600, 600 by default."
           }
         },
         "additionalProperties": false
@@ -150584,6 +152944,73 @@
           },
           "url_path": {
             "type": "string"
+          }
+        }
+      },
+      "PageSeo": {
+        "type": "object",
+        "description": "A page's search settings.",
+        "properties": {
+          "canonical_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nofollow": {
+            "type": "boolean"
+          },
+          "noindex": {
+            "type": "boolean"
+          },
+          "og_description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "og_image_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "og_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PageSeoView": {
+        "type": "object",
+        "description": "A page's search settings, as the SEO panel reads them.",
+        "required": [
+          "settings",
+          "row_version"
+        ],
+        "properties": {
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Send back as `If-Match` on the next `PUT`."
+          },
+          "settings": {
+            "$ref": "#/components/schemas/PageSeo"
           }
         }
       },
@@ -158866,6 +161293,71 @@
           }
         }
       },
+      "PaginatedResponse_HoldCustodian": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One custodian of a hold.",
+              "required": [
+                "user_id",
+                "notified_at"
+              ],
+              "properties": {
+                "acknowledged_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "notified_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_InboundHookView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -165645,6 +168137,157 @@
                     "type": "string"
                   },
                   "description": "The features that use it."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_SeoFinding": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One stored finding.",
+              "required": [
+                "id",
+                "rule",
+                "severity",
+                "created_at"
+              ],
+              "properties": {
+                "block_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "message_key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The catalog key of the message."
+                },
+                "rule": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string",
+                  "description": "`info`, `warning` or `error`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_SeoTopic": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A topic cluster.",
+              "required": [
+                "id",
+                "name",
+                "language",
+                "row_version",
+                "created_at",
+                "updated_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "language": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "pillar_page_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
                 }
               }
             }
@@ -179943,6 +182586,31 @@
           }
         }
       },
+      "ScheduledChange": {
+        "type": "object",
+        "description": "T6-T1: one scheduled change of a flag.",
+        "required": [
+          "at",
+          "deployment"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deployment": {
+            "type": "boolean"
+          },
+          "percentage": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "SchemaChangeStatus": {
         "type": "object",
         "description": "P-online-schema-change §4(d) — separately polled resource, same reasoning\nas `AttributeIndexStatus` above.",
@@ -180567,6 +183235,194 @@
             "format": "int64"
           }
         }
+      },
+      "SeoAuditRun": {
+        "type": "object",
+        "description": "What an audit run found.",
+        "required": [
+          "score",
+          "audited_at"
+        ],
+        "properties": {
+          "audited_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32",
+            "description": "0 to 100."
+          }
+        }
+      },
+      "SeoFinding": {
+        "type": "object",
+        "description": "One stored finding.",
+        "required": [
+          "id",
+          "rule",
+          "severity",
+          "created_at"
+        ],
+        "properties": {
+          "block_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The catalog key of the message."
+          },
+          "rule": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "description": "`info`, `warning` or `error`."
+          }
+        }
+      },
+      "SeoRobotsBody": {
+        "type": "object",
+        "description": "A robots body to store.",
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeoRobotsView": {
+        "type": "object",
+        "description": "A site's robots.txt as stored.",
+        "required": [
+          "site_key",
+          "served"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The stored body; `null` when the site has none (the default applies)."
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "served": {
+            "type": "string",
+            "description": "What crawlers are served: the body (or the default) with the paths\nthat are always closed appended."
+          },
+          "site_key": {
+            "type": "string"
+          }
+        }
+      },
+      "SeoTopic": {
+        "type": "object",
+        "description": "A topic cluster.",
+        "required": [
+          "id",
+          "name",
+          "language",
+          "row_version",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pillar_page_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SeoTopicBody": {
+        "type": "object",
+        "description": "A topic to create or change.",
+        "required": [
+          "name",
+          "language"
+        ],
+        "properties": {
+          "language": {
+            "type": "string",
+            "description": "`en`, `ar`, or a regional form such as `ar-SA`."
+          },
+          "name": {
+            "type": "string"
+          },
+          "pillar_page_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeoTopicPagesBody": {
+        "type": "object",
+        "description": "A topic's cluster pages.",
+        "required": [
+          "page_ids"
+        ],
+        "properties": {
+          "page_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "SessionInfo": {
         "type": "object",
