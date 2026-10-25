@@ -286,6 +286,11 @@
             </div>
           }
 
+          @if (page(); as p) {
+            <attome-seo-panel [pageId]="p.id" [pageTitle]="p.title" [pageUrl]="p.url_path"
+                              (goToBlock)="goToBlock($event)" />
+          }
+
           <div class="cpe-related">
             <span class="cpe-field-label">RELATED PAGES</span>
             <input type="text" placeholder="Search pages in this space…"

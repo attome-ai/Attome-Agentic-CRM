@@ -199,6 +199,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Search settings in the page editor (E13-T12): page settings gain a search and sharing panel with
+  title and description length counters (Arabic marks don't count), search-result and sharing-card
+  previews (right to left for Arabic), a page check with its score and findings, and "go to block".
+  `/content/seo` lists search topics and edits a site's robots.txt, showing the lines changed and
+  asking before it saves.
 - Promised dates (F6-T5): when an order is split, each goods line is promised from the location's free
   stock (today plus a handling day), the first incoming receipt that covers it, or a 7-day lead time when
   stock is not tracked; the fulfilment order gets the latest line's date and short lines their expected

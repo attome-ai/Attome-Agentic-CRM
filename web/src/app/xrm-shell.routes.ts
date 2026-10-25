@@ -565,6 +565,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/content').then(m => m.ContentPageEditorComponent),
           },
           {
+            // E13-T12: search topics and robots.txt.
+            path: 'content/seo',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/content').then(m => m.SeoTopicsPageComponent),
+          },
+          {
             // D-778: Module Management. The `license/` URL is kept because
             // sidebar items and bookmarks point at it; licence upload and
             // usage pages are gone.

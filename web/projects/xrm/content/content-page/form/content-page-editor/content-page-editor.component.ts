@@ -7,6 +7,7 @@ import {
 } from '../../../services/content-admin.service';
 import { ContentBlockViewComponent } from '@attome/xrm/content/view';
 import { ContentPageTreeComponent } from '../../tree/content-page-tree/content-page-tree.component';
+import { SeoPanelComponent } from '../seo-panel/seo-panel.component';
 
 interface BlockTypeInfo { kind: BlockKind; label: string; icon: string; description: string; category: string; }
 
@@ -46,7 +47,7 @@ type LibraryTarget = 'canvas' | { columnsBlockId: string; columnIndex: number };
 @Component({
   selector: 'attome-content-page-editor',
   standalone: true,
-  imports: [FormsModule, RouterLink, ContentPageTreeComponent, ContentBlockViewComponent],
+  imports: [FormsModule, RouterLink, ContentPageTreeComponent, ContentBlockViewComponent, SeoPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../../../../styles/admin-page.css', './content-page-editor.component.css'],
   templateUrl: './content-page-editor.component.html',
@@ -157,6 +158,13 @@ export class ContentPageEditorComponent {
   selectBlock(id: string): void {
     this.selectedBlockId.set(id);
     this.inspectorTab.set('content');
+  }
+
+  /** E13-T12: an audit finding's block — close settings and select it. */
+  goToBlock(id: string): void {
+    this.showSettings.set(false);
+    this.previewMode.set(false);
+    this.selectBlock(id);
   }
 
   strProp(block: Block, key: string): string {
