@@ -13,6 +13,7 @@ publish.workspace      = true
 [dependencies]
 arc-swap.workspace     = true
 attome-db.workspace    = true
+attome-rules.workspace = true
 attome-types.workspace = true
 chrono.workspace       = true
 hex.workspace          = true

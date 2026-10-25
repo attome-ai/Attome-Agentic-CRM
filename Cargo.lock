@@ -1527,6 +1527,7 @@ version = "0.1.0"
 dependencies = [
  "arc-swap",
  "attome-db",
+ "attome-rules",
  "attome-testkit",
  "attome-types",
  "chrono",

@@ -38,6 +38,8 @@ fn registered_kinds() -> Vec<Arc<dyn Kind>> {
         Arc::new(attome_model::kinds::BusinessEventKind),
         Arc::new(attome_model::kinds::DependencyKind),
         Arc::new(attome_model::kinds::EntitySettingsKind),
+        Arc::new(attome_model::kinds::RuleFunctionKind),
+        Arc::new(attome_model::kinds::DecisionTableKind),
     ];
     for adapter in crate::kinds::ADAPTER_KINDS {
         kinds.push(Arc::new(adapter));
