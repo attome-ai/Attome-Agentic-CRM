@@ -1055,7 +1055,7 @@ async fn check_business(
     // of the entity is refused where a person edits it. Bundle and pack
     // reconciles (no caller) keep their behaviour.
     if ctx.is_some() && compiled.is_some() && input.is_active {
-        conflict_issues(state, input, condition, self_id, &mut out);
+        conflict_issues(state, input, condition, self_id, out);
     }
 
     if compiled.is_some() {
