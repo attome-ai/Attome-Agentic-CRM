@@ -13,8 +13,15 @@
 //! and the entity engine (which evaluates it) need: the options shape, the
 //! field-type -> `attome_rules::Type` map, and the compile check. It lives here
 //! because `attome-metadata` sits below the entity engine.
+//!
+//! Y2-T11 (V2-D116): a formula saved with `"generated": true` is instead a
+//! PostgreSQL `GENERATED ALWAYS AS (...) STORED` column, so the database
+//! keeps it right whichever path writes the row. Only the part of the
+//! language whose SQL meaning is the evaluator's translates
+//! ([`to_generated_sql`]); any other expression is refused at save. The
+//! entity engine skips such a field when it computes formulas.
 
-use attome_rules::{Compiled, Schema, Type, compile};
+use attome_rules::{BinaryOp, Compiled, Expr, Schema, Type, UnaryOp, compile};
 use attome_types::AppError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -34,6 +41,9 @@ pub struct FormulaOptions {
     pub expression: String,
     /// One of [`FORMULA_RESULT_TYPES`]; picks the column type.
     pub result_type: String,
+    /// Y2-T11: stored as a database generated column.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub generated: bool,
 }
 
 /// Parses and shape-checks a formula field's options. Does not compile the
@@ -67,7 +77,126 @@ pub fn parse_options(options: Option<&Value>) -> Result<FormulaOptions, AppError
     Ok(FormulaOptions {
         expression: expression.to_owned(),
         result_type: opts.result_type,
+        generated: opts.generated,
     })
+}
+
+/// The SQL types a generated expression is tracked in.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SqlTy {
+    Number,
+    Text,
+    /// A `null` literal, which takes the type of what it is combined with.
+    Null,
+}
+
+fn sql_ty_of(ft: &FieldType) -> Option<SqlTy> {
+    match ft {
+        FieldType::Number | FieldType::Currency => Some(SqlTy::Number),
+        FieldType::Text | FieldType::Icon | FieldType::Color | FieldType::RichText => {
+            Some(SqlTy::Text)
+        }
+        _ => None,
+    }
+}
+
+fn generated_part(expr: &Expr, attrs: &[AttrInfo]) -> Option<(String, SqlTy)> {
+    match expr {
+        Expr::NullLit => Some(("NULL".to_owned(), SqlTy::Null)),
+        Expr::NumberLit(n) if n.is_finite() => Some((format!("{n}::numeric"), SqlTy::Number)),
+        Expr::StringLit(s) => Some((format!("'{}'::text", s.replace('\'', "''")), SqlTy::Text)),
+        Expr::FieldRef(field) if field.hop.is_none() => {
+            let attr = attrs
+                .iter()
+                .find(|a| a.logicalname == field.base && !a.is_formula())?;
+            let ty = sql_ty_of(&attr.storage_type())?;
+            Some((crate::quote_ident(&attr.logicalname), ty))
+        }
+        Expr::Unary {
+            op: UnaryOp::Neg,
+            expr,
+        } => {
+            let (sql, ty) = generated_part(expr, attrs)?;
+            (ty == SqlTy::Number).then(|| (format!("(-{sql})"), SqlTy::Number))
+        }
+        Expr::Binary { op, lhs, rhs } => {
+            let (l, lt) = generated_part(lhs, attrs)?;
+            let (r, rt) = generated_part(rhs, attrs)?;
+            match (op, lt, rt) {
+                (BinaryOp::Add, SqlTy::Number, SqlTy::Number) => {
+                    Some((format!("({l} + {r})"), SqlTy::Number))
+                }
+                (BinaryOp::Add, SqlTy::Text, SqlTy::Text) => {
+                    Some((format!("({l} || {r})"), SqlTy::Text))
+                }
+                (BinaryOp::Sub, SqlTy::Number, SqlTy::Number) => {
+                    Some((format!("({l} - {r})"), SqlTy::Number))
+                }
+                (BinaryOp::Mul, SqlTy::Number, SqlTy::Number) => {
+                    Some((format!("({l} * {r})"), SqlTy::Number))
+                }
+                // Division and remainder stay in the evaluator: a zero
+                // divisor blocks the write there with a 422, while a
+                // generated column would fail the statement.
+                _ => None,
+            }
+        }
+        Expr::Call { name, args } if name == "coalesce" && !args.is_empty() => {
+            let mut parts = Vec::with_capacity(args.len());
+            let mut ty = SqlTy::Null;
+            for arg in args {
+                let (sql, t) = generated_part(arg, attrs)?;
+                match (ty, t) {
+                    (_, SqlTy::Null) => {}
+                    (SqlTy::Null, t) => ty = t,
+                    (a, b) if a == b => {}
+                    _ => return None,
+                }
+                parts.push(sql);
+            }
+            Some((format!("COALESCE({})", parts.join(", ")), ty))
+        }
+        _ => None,
+    }
+}
+
+/// Y2-T11: `expression` as the SQL of a generated column over `attrs`, or
+/// `None` when it uses anything beyond number and text fields of this
+/// entity (no formulas, no lookups), number and text literals, `+ - *`,
+/// unary `-`, text joins (`+` of two texts) and `coalesce`. Pure.
+pub fn to_generated_sql(expression: &str, attrs: &[AttrInfo]) -> Option<String> {
+    let expr = attome_rules::parse(expression).ok()?;
+    generated_part(&expr, attrs).map(|(sql, _)| sql)
+}
+
+/// Y2-T11: the generated column SQL of a formula saved with
+/// `"generated": true`, `None` for any other formula, and a 422 when the
+/// expression cannot be a generated column or does not produce the
+/// `result_type`.
+pub fn generated_sql(
+    attrs: &[AttrInfo],
+    options: Option<&Value>,
+) -> Result<Option<String>, AppError> {
+    let opts = parse_options(options)?;
+    if !opts.generated {
+        return Ok(None);
+    }
+    let refuse = || {
+        AppError::Validation(
+            "a generated formula may use only this entity's number and text fields, \
+             literals, + - *, text joins and coalesce, and must produce a number or text"
+                .into(),
+        )
+    };
+    let expr = attome_rules::parse(&opts.expression).map_err(|_| refuse())?;
+    let (sql, ty) = generated_part(&expr, attrs).ok_or_else(refuse)?;
+    let wanted = FieldType::try_from(opts.result_type.as_str())
+        .ok()
+        .and_then(|ft| sql_ty_of(&ft));
+    if wanted != Some(ty) {
+        return Err(refuse());
+    }
+    Ok(Some(sql))
 }
 
 /// The `attome_rules::Type` a value of storage type `ft` evaluates as. `None`
@@ -209,6 +338,44 @@ mod tests {
         ));
         let opts = json!({"expression": "total * 2", "result_type": "number"});
         assert!(compile_formula(&attrs, Some(&opts)).is_err());
+    }
+
+    #[test]
+    fn translates_arithmetic_and_rejects_lookups() {
+        let mut attrs = fields();
+        attrs.push(attr("account", 11, None));
+        assert_eq!(
+            to_generated_sql("quantity * unit_price + 1", &attrs).as_deref(),
+            Some(r#"(("quantity" * "unit_price") + 1::numeric)"#)
+        );
+        assert_eq!(
+            to_generated_sql(r#"coalesce(name, "-") + "x""#, &attrs).as_deref(),
+            Some(r#"(COALESCE("name", '-'::text) || 'x'::text)"#)
+        );
+        assert_eq!(
+            to_generated_sql("-quantity", &attrs).as_deref(),
+            Some(r#"(-"quantity")"#)
+        );
+        assert!(to_generated_sql("account.name", &attrs).is_none());
+        assert!(to_generated_sql("account", &attrs).is_none());
+        assert!(to_generated_sql("quantity / unit_price", &attrs).is_none());
+        assert!(to_generated_sql("quantity + name", &attrs).is_none());
+        assert!(to_generated_sql("due", &attrs).is_none());
+        assert!(to_generated_sql("round(quantity, 2)", &attrs).is_none());
+    }
+
+    #[test]
+    fn generated_sql_needs_the_flag_and_a_matching_type() {
+        let attrs = fields();
+        let plain = json!({"expression": "quantity + 1", "result_type": "number"});
+        assert_eq!(generated_sql(&attrs, Some(&plain)).unwrap(), None);
+        let on = json!({"expression": "quantity + 1", "result_type": "number", "generated": true});
+        assert!(generated_sql(&attrs, Some(&on)).unwrap().is_some());
+        let wrong = json!({"expression": "quantity + 1", "result_type": "text", "generated": true});
+        assert!(generated_sql(&attrs, Some(&wrong)).is_err());
+        let division =
+            json!({"expression": "quantity / 2", "result_type": "number", "generated": true});
+        assert!(generated_sql(&attrs, Some(&division)).is_err());
     }
 
     #[test]

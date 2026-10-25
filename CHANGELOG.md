@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Generated formula fields (Y2-T11): a formula saved with `"generated": true` in its options is a
+  database `GENERATED ALWAYS AS (...) STORED` column, kept right by PostgreSQL whichever path
+  writes the row. Only number and text fields of the entity, literals, `+ - *`, text joins and
+  `coalesce` translate; anything else, or a later change to its expression or flag, is a 422.
 - Conflicting business rules are refused (A11-T4, part): saving or validating an active rule that
   makes a field required while it or another active rule of the entity hides it, or that sets a field
   another active rule also sets, under conditions that can hold together, answers `rule_conflict`

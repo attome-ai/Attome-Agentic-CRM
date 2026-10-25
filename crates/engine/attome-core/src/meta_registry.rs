@@ -189,6 +189,18 @@ impl AttrInfo {
         self.field_type() == crate::FieldType::Formula
     }
 
+    /// Y2-T11: a formula the database computes (`"generated": true`): the
+    /// entity engine neither computes nor writes it.
+    pub fn is_generated_formula(&self) -> bool {
+        self.is_formula()
+            && self
+                .options
+                .as_ref()
+                .and_then(|o| o.get("generated"))
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false)
+    }
+
     /// `true` for a field whose column holds uploaded-file object keys
     /// (`file`, and `image`, which is a `file` restricted to images).
     pub fn is_file_backed(&self) -> bool {

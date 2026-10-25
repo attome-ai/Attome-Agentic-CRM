@@ -337,7 +337,8 @@ pub fn cache_key(rule_id: Uuid, version: i32, row_version: i64) -> String {
 pub fn formula_rules(entity_name: &str, attrs: &[AttrInfo]) -> Vec<(String, RuleDef)> {
     attrs
         .iter()
-        .filter(|a| a.is_formula())
+        // Y2-T11: a generated formula is the database's to compute.
+        .filter(|a| a.is_formula() && !a.is_generated_formula())
         .filter_map(|attr| {
             let opts = attome_core::formula::parse_options(attr.options.as_ref()).ok()?;
             Some((

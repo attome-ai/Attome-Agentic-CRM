@@ -792,7 +792,8 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
         physical_type,
     };
     validate_attribute_state(key, &desired)?;
-    validate_formula_field(db, key, &desired, current.as_ref()).await?;
+    // Y2-T11: `Some` for a formula the database computes.
+    let generated = validate_formula_field(db, key, &desired, current.as_ref()).await?;
 
     let state_differs = current
         .as_ref()
@@ -825,6 +826,7 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
                 logicalname,
                 physical_type,
                 is_multi,
+                generated.as_deref(),
             )
             .await?;
             let outcome = match step {
@@ -853,6 +855,7 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
                 policy,
                 step,
                 is_multi,
+                generated.as_deref(),
                 desired_id,
                 rec,
             )
@@ -1022,13 +1025,18 @@ fn validate_attribute_state(
 ///   the same check the engine applies at write time) — an invalid
 ///   expression is a 422 here, before the field exists;
 /// - an existing formula's `result_type` cannot change: the column was
-///   provisioned as that type, and D-055 has no type-change path.
+///   provisioned as that type, and D-055 has no type-change path;
+/// - Y2-T11: a formula saved with `"generated": true` must translate to a
+///   generated column, and neither its expression nor the flag changes
+///   afterwards (the column already holds that expression).
+///
+/// Returns the generated column's SQL for a generated formula.
 async fn validate_formula_field(
     db: &DbPool,
     key: AttributeKey<'_>,
     desired: &AttributeState,
     current: Option<&AttributeRow>,
-) -> Result<(), AppError> {
+) -> Result<Option<String>, AppError> {
     let AttributeKey {
         entity_id,
         entity_logicalname,
@@ -1037,7 +1045,7 @@ async fn validate_formula_field(
         physical_type,
     } = key;
     if field_type != attome_core::FieldType::Formula.as_str() {
-        return Ok(());
+        return Ok(None);
     }
     if desired.required {
         return Err(AppError::Validation(format!(
@@ -1059,17 +1067,27 @@ async fn validate_formula_field(
                  {current_physical} to {physical_type} is not supported; create a new field"
             )));
         }
+        let before = attome_core::formula::parse_options(row.options.as_ref()).ok();
+        let after = attome_core::formula::parse_options(desired.options.as_ref()).ok();
+        if let (Some(before), Some(after)) = (before, after)
+            && (before.generated || after.generated)
+            && (before.generated != after.generated || before.expression != after.expression)
+        {
+            return Err(AppError::Validation(format!(
+                "{entity_logicalname}.{logicalname}: a generated formula's expression and \
+                 `generated` flag cannot change; create a new field"
+            )));
+        }
     }
     let attrs = fetch_live_attr_infos(db, entity_id, logicalname).await?;
-    attome_core::formula::compile_formula(&attrs, desired.options.as_ref()).map_err(
-        |e| match e {
-            AppError::Validation(msg) => {
-                AppError::Validation(format!("{entity_logicalname}.{logicalname}: {msg}"))
-            }
-            other => other,
-        },
-    )?;
-    Ok(())
+    let named = |e: AppError| match e {
+        AppError::Validation(msg) => {
+            AppError::Validation(format!("{entity_logicalname}.{logicalname}: {msg}"))
+        }
+        other => other,
+    };
+    attome_core::formula::compile_formula(&attrs, desired.options.as_ref()).map_err(named)?;
+    attome_core::formula::generated_sql(&attrs, desired.options.as_ref()).map_err(named)
 }
 
 /// The entity's live attributes other than `except`, as the minimal
@@ -1240,6 +1258,7 @@ async fn write_attribute_row(
     policy: ReconcilePolicy,
     step: WriteStep,
     is_multi: bool,
+    generated: Option<&str>,
     desired_id: Option<Uuid>,
     rec: Option<RecordAs<'_>>,
 ) -> Result<Uuid, AppError> {
@@ -1251,7 +1270,15 @@ async fn write_attribute_row(
         field_type,
         physical_type,
     } = key;
-    provision_column(db, entity_logicalname, logicalname, physical_type, is_multi).await?;
+    provision_column(
+        db,
+        entity_logicalname,
+        logicalname,
+        physical_type,
+        is_multi,
+        generated,
+    )
+    .await?;
 
     let mut tx = attome_db::tx::begin(db).await?;
     attome_core::acquire_metadata_write_lock(&mut tx).await?;

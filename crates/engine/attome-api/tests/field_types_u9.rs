@@ -714,6 +714,90 @@ fn formula_field_is_compiled_at_save_computed_on_write_and_never_client_written(
     })
 }
 
+/// Y2-T11: a formula saved with `"generated": true` is a STORED generated
+/// column the database computes; an expression outside the translatable
+/// part is refused at save.
+#[test]
+fn formula_is_generated_column() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let (_admin_id, _admin_email, admin_cookie) = seed_user(&db, true).await;
+        let app = full_app(system);
+
+        let (entity, entity_id) = create_entity(&app, &admin_cookie, "y2_generated").await;
+        for field in [
+            json!({"logicalname": "a", "name": "A", "field_type": "number"}),
+            json!({"logicalname": "b", "name": "B", "field_type": "number"}),
+        ] {
+            let (status, body) = create_field(&app, &admin_cookie, entity_id, field).await;
+            assert_eq!(status, StatusCode::CREATED, "{body}");
+        }
+        let (status, err) = create_field(
+            &app,
+            &admin_cookie,
+            entity_id,
+            json!({"logicalname": "ratio", "name": "Ratio", "field_type": "formula",
+               "options": {"expression": "a / b", "result_type": "number", "generated": true}}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{err}");
+        let (status, body) = create_field(
+            &app,
+            &admin_cookie,
+            entity_id,
+            json!({"logicalname": "total", "name": "Total", "field_type": "formula",
+               "options": {"expression": "a + b", "result_type": "number", "generated": true}}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        let generated: String = sqlx::query_scalar(
+            "SELECT is_generated FROM information_schema.columns              WHERE table_schema = current_schema() AND table_name = $1 AND column_name = 'total'",
+        )
+        .bind(&entity)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(generated, "ALWAYS", "the formula is a generated column");
+        sync_registry(&state).await;
+
+        let (status, created) = send(
+            &app,
+            "POST",
+            &format!("/api/v1/{entity}"),
+            &admin_cookie,
+            Some(&json!({"a": 2, "b": 3})),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{created}");
+        assert_eq!(created["data"]["total"].as_f64(), Some(5.0), "{created}");
+
+        let id = created["id"].as_str().unwrap().to_owned();
+        let rv = created["row_version"].as_i64().unwrap();
+        let (status, updated) = patch(
+            &app,
+            &format!("/api/v1/{entity}/{id}"),
+            &admin_cookie,
+            rv,
+            &json!({"a": 10}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{updated}");
+        assert_eq!(updated["data"]["total"].as_f64(), Some(13.0), "{updated}");
+
+        let (status, err) = patch(
+            &app,
+            &format!("/api/v1/{entity}/{id}"),
+            &admin_cookie,
+            updated["row_version"].as_i64().unwrap(),
+            &json!({"total": 1}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{err}");
+    })
+}
+
 // ── rich_text (B-R7, D-605) ─────────────────────────────────────────────────
 
 const XSS: &str = r#"<p onclick="steal()">Hello <strong>team</strong></p><script>alert(document.cookie)</script><img src=x onerror="alert(1)"><iframe src="https://evil.example"></iframe><a href="javascript:alert(1)">click</a><a href="https://ok.example">ok</a><style>body{display:none}</style>"#;

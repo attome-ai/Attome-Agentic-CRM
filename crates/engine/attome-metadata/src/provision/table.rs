@@ -590,12 +590,15 @@ async fn lz4_available(db: &DbPool) -> bool {
 
 /// Adds the physical column backing an attribute, if it doesn't already exist.
 /// Idempotent and self-healing, same rationale as `provision_table`.
+/// `generated` (Y2-T11) is the SQL of a generated formula: the column is
+/// then `GENERATED ALWAYS AS (<sql>) STORED`.
 pub(super) async fn provision_column(
     db: &DbPool,
     entity_logicalname: &str,
     field_logicalname: &str,
     field_type: &str,
     is_multi: bool,
+    generated: Option<&str>,
 ) -> Result<(), AppError> {
     if !valid_identifier(entity_logicalname) || !valid_identifier(field_logicalname) {
         return Err(AppError::internal(format!(
@@ -620,11 +623,14 @@ pub(super) async fn provision_column(
     } else {
         ""
     };
+    let generated = generated
+        .map(|sql| format!(" GENERATED ALWAYS AS ({sql}) STORED"))
+        .unwrap_or_default();
     exec_ddl_locked(
         db,
         &[],
         &format!(
-            r#"ALTER TABLE "{entity_logicalname}" ADD COLUMN IF NOT EXISTS "{field_logicalname}" {pg_type}{compression}"#,
+            r#"ALTER TABLE "{entity_logicalname}" ADD COLUMN IF NOT EXISTS "{field_logicalname}" {pg_type}{compression}{generated}"#,
         ),
     )
     .await
