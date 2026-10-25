@@ -178,10 +178,14 @@ pub(super) struct CreateRecordShareBody {
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub(super) struct ListRecordSharesQuery {
+    /// Only this entity (its logical name).
     entity: String,
+    /// Only this record.
     record_id: Uuid,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -621,9 +625,12 @@ pub(super) struct CreateEntityDefaultShareBody {
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub(super) struct ListEntityDefaultSharesQuery {
+    /// Only this entity (its logical name).
     entity: String,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

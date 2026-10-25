@@ -844,6 +844,7 @@ pub(super) async fn update_entity(
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub(super) struct DeleteEntityParams {
+    /// Delete the entity's table too, not only retire it.
     #[serde(default)]
     hard: bool,
 }
