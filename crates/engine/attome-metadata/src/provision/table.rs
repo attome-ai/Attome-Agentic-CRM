@@ -651,8 +651,14 @@ pub(super) async fn ensure_hierarchy_path(
         ),
         format!(
             "CREATE OR REPLACE FUNCTION {set_fn}() RETURNS trigger LANGUAGE plpgsql AS $fn$ \
+             DECLARE recompute boolean := NEW.hier_path IS NULL; \
              BEGIN \
-               IF TG_OP = 'INSERT' OR NEW.{col} IS DISTINCT FROM OLD.{col} OR NEW.hier_path IS NULL THEN \
+               IF TG_OP = 'INSERT' THEN \
+                 recompute := true; \
+               ELSIF NEW.{col} IS DISTINCT FROM OLD.{col} THEN \
+                 recompute := true; \
+               END IF; \
+               IF recompute THEN \
                  IF NEW.{col} IS NULL THEN \
                    NEW.hier_path := NEW.id::text; \
                  ELSE \
