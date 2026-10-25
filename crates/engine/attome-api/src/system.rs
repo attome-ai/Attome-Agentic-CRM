@@ -169,6 +169,7 @@ impl EngineSystem {
             .merge(crate::approval_metrics::routes())
             .merge(crate::live::routes())
             .merge(crate::calendar_admin::routes())
+            .merge(crate::calendar_feed::routes())
             // M65 Phase 1 — Application Builder: same "core, always-on,
             // Admin-privilege-gated" posture as `view_admin`/`calendar_admin`
             // immediately above — not wrapped in `license_gate` (core

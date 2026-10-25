@@ -2982,6 +2982,8 @@ const DEDUP_KEY_FULFILMENT_TRACKING: &str = "fulfilment-tracking";
 /// O1-T2: the weekly drift check of active prediction models.
 const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
+/// Z12-T8: the daily calendar feed fetch (a registered job type).
+const DEDUP_KEY_CALENDAR_FEED_FETCH: &str = "calendar-feed-fetch";
 /// E13-T10: the daily search-console pull (a registered job type).
 const DEDUP_KEY_CONTENT_SEARCH_CONSOLE: &str = "content-search-console";
 /// R11-T1: evidence collectors (a registered job type).
@@ -3279,6 +3281,10 @@ pub const CONTENT_SITEMAP: attome_jobs::JobType =
 /// E13-T9: every published page re-audited when `content.seo_audit` is on.
 pub const CONTENT_SEO_AUDIT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_content::seo::audit::NIGHTLY_JOB, 1);
+
+/// Z12-T8: holidays read from calendar iCal feeds, daily.
+pub const CALENDAR_FEED_FETCH: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::calendar_feed::JOB, 1);
 
 /// E13-T10: yesterday's search statistics from connected engines, daily.
 pub const CONTENT_SEARCH_CONSOLE: attome_jobs::JobType =
@@ -4285,6 +4291,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CALENDAR_FEED_FETCH,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let read = attome_api::calendar_feed::fetch_all(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if read > 0 {
+                    tracing::info!(read, "calendar feeds read");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CONTENT_SEARCH_CONSOLE,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let pulled = attome_content::seo::console::pull_daily(&state)
@@ -4840,6 +4860,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
+        }
+        EngineJob::Registered(job) if job.name == CALENDAR_FEED_FETCH.name => {
+            DEDUP_KEY_CALENDAR_FEED_FETCH
         }
         EngineJob::Registered(job) if job.name == CONTENT_SEARCH_CONSOLE.name => {
             DEDUP_KEY_CONTENT_SEARCH_CONSOLE
@@ -5899,6 +5922,21 @@ pub fn spawn_content_seo_audit_scheduler(db: DbPool, interval: std::time::Durati
             "content seo audit",
         ),
         Err(error) => tracing::error!(%error, "content seo audit: not scheduled"),
+    }
+}
+
+/// Z12-T8: daily, the calendar iCal feeds.
+pub fn spawn_calendar_feed_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CALENDAR_FEED_FETCH.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CALENDAR_FEED_FETCH,
+            "calendar feeds",
+        ),
+        Err(error) => tracing::error!(%error, "calendar feeds: not scheduled"),
     }
 }
 

@@ -3941,6 +3941,27 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"decision": "approve", "row_version": submitted.row_version})),
             )
         }
+        "POST /api/v1/calendar-feeds" => {
+            // Z12-T8: a public literal address passes the guard without DNS.
+            let calendar = calendar(fx).await;
+            request(
+                "POST",
+                "/api/v1/calendar-feeds",
+                t,
+                Some(json!({"calendar_id": calendar, "url": "https://8.8.8.8/holidays.ics"})),
+            )
+        }
+        "DELETE /api/v1/calendar-feeds/{id}" => {
+            let calendar = calendar(fx).await;
+            let feed: Uuid = sqlx::query_scalar(
+                "INSERT INTO calendar_feed (calendar_id, url) VALUES ($1, 'https://8.8.8.8/h.ics') RETURNING id",
+            )
+            .bind(calendar)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("insert a calendar feed");
+            request("DELETE", &format!("/api/v1/calendar-feeds/{feed}"), t, None)
+        }
         "POST /api/v1/approvals/{id}/recall" => {
             // Z10-T10: the caller recalls their own pending request.
             let submitted = attome_approval::submit(
@@ -7673,6 +7694,19 @@ async fn rule(fx: &Fx) -> Uuid {
             "POST",
             "/api/v1/admin/business-rules",
             Some(rule_body(fx, &uniq("rule"), "USD")),
+        )
+        .await,
+    )
+}
+
+/// Z12-T8: a calendar to hang a feed on.
+async fn calendar(fx: &Fx) -> Uuid {
+    id_of(
+        &admin(
+            fx,
+            "POST",
+            "/api/v1/admin/calendars",
+            Some(json!({ "name": uniq("calendar"), "tz": "Asia/Riyadh" })),
         )
         .await,
     )
