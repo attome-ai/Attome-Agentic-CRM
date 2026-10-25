@@ -27704,6 +27704,177 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/expressions/spec": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Expression language spec",
+        "description": "The built-in functions of a language version (parameters, result type,\nEnglish and Arabic descriptions, an example) and notes on the grammar.\nAdministrators only.",
+        "operationId": "expression_spec",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "description": "`v1` or `v2`; absent means the latest.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The functions and grammar notes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpressionSpec"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown language version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/expressions/validate": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Validate an expression",
+        "description": "Checks an expression against an entity: its result type or each error\nwith its byte span, whether it runs in the database, and for a sample\nrecord its value and evaluation trace. Writes nothing. Administrators\nonly.",
+        "operationId": "validate_expression",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateExpressionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the check found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpressionCheck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or cannot read the sample record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or sample record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown language version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "read-only validation: compiles and optionally evaluates an expression; writes nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/features": {
       "get": {
         "tags": [
@@ -150884,6 +151055,131 @@
           }
         }
       },
+      "ExpressionCheck": {
+        "type": "object",
+        "description": "What the check found.",
+        "required": [
+          "ok",
+          "diagnostics",
+          "sql_translatable"
+        ],
+        "properties": {
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpressionDiagnostic"
+            }
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "result_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The language type of the result (`number`, `text`, `bool`, ...)."
+          },
+          "sql_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why it does not, when it does not."
+          },
+          "sql_translatable": {
+            "type": "boolean",
+            "description": "Whether the expression runs in the database as a filter."
+          },
+          "trace": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExpressionTraceStep"
+            }
+          },
+          "value": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The value for the sample record, when one was given."
+          }
+        }
+      },
+      "ExpressionDiagnostic": {
+        "type": "object",
+        "description": "One problem with the expression. `start`/`end` are byte offsets into the\nexpression; absent when the error has no single place (a length limit).",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "end": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "message": {
+            "type": "string"
+          },
+          "start": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      },
+      "ExpressionSpec": {
+        "type": "object",
+        "required": [
+          "version",
+          "functions",
+          "grammar"
+        ],
+        "properties": {
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FunctionSpecWire"
+            }
+          },
+          "grammar": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "ExpressionTraceStep": {
+        "type": "object",
+        "description": "One evaluated sub-expression, in evaluation order.",
+        "required": [
+          "expr",
+          "value"
+        ],
+        "properties": {
+          "expr": {
+            "type": "string"
+          },
+          "value": {
+            "type": "object"
+          }
+        }
+      },
       "FailoverEvent": {
         "type": "object",
         "description": "One recorded failover.",
@@ -152362,6 +152658,60 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "FunctionParamWire": {
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "FunctionSpecWire": {
+        "type": "object",
+        "required": [
+          "name",
+          "params",
+          "returns",
+          "description_en",
+          "description_ar",
+          "example",
+          "since"
+        ],
+        "properties": {
+          "description_ar": {
+            "type": "string"
+          },
+          "description_en": {
+            "type": "string"
+          },
+          "example": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FunctionParamWire"
+            }
+          },
+          "returns": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string",
+            "description": "The language version that added it."
           }
         }
       },
@@ -182679,6 +183029,38 @@
           }
         }
       },
+      "ParamDecl": {
+        "type": "object",
+        "description": "One declared parameter.",
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "`^[a-z][a-z0-9_]*$`."
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ParamType"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ParamType": {
+        "type": "string",
+        "description": "A parameter's type; a supplied value must already be of it.",
+        "enum": [
+          "text",
+          "number",
+          "date",
+          "uuid",
+          "bool"
+        ]
+      },
       "PartUpload": {
         "type": "object",
         "required": [
@@ -187040,6 +187422,23 @@
           "owner_layer": {
             "type": "string",
             "description": "Solution 7 (D-785): the layer that owns this query."
+          },
+          "parameters": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ParamDecl"
+            },
+            "description": "S4-T9: its declared parameters, `[{name, type, required}]`."
+          },
+          "query_spec": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "S4-T9: the saved QuerySpec, run by id through `query/run`."
           },
           "required_privilege": {
             "type": [
@@ -192346,6 +192745,13 @@
         "type": "object",
         "description": "A query, as `spec` (the QuerySpec JSON form) or as `q` (its text form),\nexactly one. `params` and `explain` apply to either; a text query takes\nthem only from here.",
         "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "S4-T9: with `query_id`, the previous page's `next_cursor`."
+          },
           "explain": {
             "type": "boolean",
             "description": "Plan the query and return the plan's summary instead of rows."
@@ -192359,6 +192765,14 @@
               "null"
             ],
             "description": "The text form: `SELECT … FROM … [WHERE …] [GROUP BY …] [HAVING …]\n[ORDER BY …] [LIMIT n]`."
+          },
+          "query_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "S4-T9: run the stored query with this id (its saved QuerySpec);\n`params` are its parameter values and `spec` and `q` are absent."
           },
           "spec": {
             "type": [
@@ -204728,6 +205142,38 @@
           }
         }
       },
+      "ValidateExpressionRequest": {
+        "type": "object",
+        "required": [
+          "expression",
+          "entity"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "The entity's logical name; its fields are the expression's fields."
+          },
+          "expression": {
+            "type": "string",
+            "description": "The expression text."
+          },
+          "language_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`v1` or `v2`; absent means the latest."
+          },
+          "sample_record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A record of `entity` to evaluate the expression on; the response then\ncarries its value and evaluation trace. The record is read as the\ncaller."
+          }
+        }
+      },
       "ValidateRequest": {
         "type": "object",
         "required": [
@@ -206575,7 +207021,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -206628,5 +207073,6 @@
       }
     }
   },
+  "x-api-version": "2026-10",
   "x-version-adapters": []
 }

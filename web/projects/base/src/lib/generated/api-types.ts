@@ -5196,6 +5196,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/expressions/spec": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Expression language spec
+         * @description The built-in functions of a language version (parameters, result type,
+         *     English and Arabic descriptions, an example) and notes on the grammar.
+         *     Administrators only.
+         */
+        get: operations["expression_spec"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/expressions/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate an expression
+         * @description Checks an expression against an entity: its result type or each error
+         *     with its byte span, whether it runs in the database, and for a sample
+         *     record its value and evaluation trace. Writes nothing. Administrators
+         *     only.
+         */
+        post: operations["validate_expression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/features": {
         parameters: {
             query?: never;
@@ -34545,6 +34590,40 @@ export interface components {
              */
             stream_token?: string | null;
         };
+        /** @description What the check found. */
+        ExpressionCheck: {
+            diagnostics: components["schemas"]["ExpressionDiagnostic"][];
+            ok: boolean;
+            /** @description The language type of the result (`number`, `text`, `bool`, ...). */
+            result_type?: string | null;
+            /** @description Why it does not, when it does not. */
+            sql_reason?: string | null;
+            /** @description Whether the expression runs in the database as a filter. */
+            sql_translatable: boolean;
+            trace?: components["schemas"]["ExpressionTraceStep"][] | null;
+            /** @description The value for the sample record, when one was given. */
+            value?: Record<string, never> | null;
+        };
+        /**
+         * @description One problem with the expression. `start`/`end` are byte offsets into the
+         *     expression; absent when the error has no single place (a length limit).
+         */
+        ExpressionDiagnostic: {
+            code: string;
+            end?: number | null;
+            message: string;
+            start?: number | null;
+        };
+        ExpressionSpec: {
+            functions: components["schemas"]["FunctionSpecWire"][];
+            grammar: string[];
+            version: string;
+        };
+        /** @description One evaluated sub-expression, in evaluation order. */
+        ExpressionTraceStep: {
+            expr: string;
+            value: Record<string, never>;
+        };
         /** @description One recorded failover. */
         FailoverEvent: {
             cause?: string | null;
@@ -35175,6 +35254,20 @@ export interface components {
             id: string;
             scopes: components["schemas"]["ScopeExportResult"][];
             status: string;
+        };
+        FunctionParamWire: {
+            name: string;
+            type: string;
+        };
+        FunctionSpecWire: {
+            description_ar: string;
+            description_en: string;
+            example: string;
+            name: string;
+            params: components["schemas"]["FunctionParamWire"][];
+            returns: string;
+            /** @description The language version that added it. */
+            since: string;
         };
         /** @description The latest baseline. */
         GanttBaseline: {
@@ -46680,6 +46773,18 @@ export interface components {
              */
             warnings?: components["schemas"]["Warning"][];
         };
+        /** @description One declared parameter. */
+        ParamDecl: {
+            /** @description `^[a-z][a-z0-9_]*$`. */
+            name: string;
+            required?: boolean;
+            type: components["schemas"]["ParamType"];
+        };
+        /**
+         * @description A parameter's type; a supplied value must already be of it.
+         * @enum {string}
+         */
+        ParamType: "text" | "number" | "date" | "uuid" | "bool";
         PartUpload: {
             /** Format: int64 */
             expires_in_secs: number;
@@ -48418,6 +48523,10 @@ export interface components {
             name: string;
             /** @description Solution 7 (D-785): the layer that owns this query. */
             owner_layer: string;
+            /** @description S4-T9: its declared parameters, `[{name, type, required}]`. */
+            parameters?: components["schemas"]["ParamDecl"][] | null;
+            /** @description S4-T9: the saved QuerySpec, run by id through `query/run`. */
+            query_spec?: Record<string, never> | null;
             /**
              * @description P1.1e: when set, `query/execute` requires this exact privilege key
              *     instead of the coarse admin-only default.
@@ -50561,6 +50670,8 @@ export interface components {
          *     them only from here.
          */
         RunRequest: {
+            /** @description S4-T9: with `query_id`, the previous page's `next_cursor`. */
+            cursor?: string | null;
             /** @description Plan the query and return the plan's summary instead of rows. */
             explain?: boolean;
             params?: Record<string, never>;
@@ -50569,6 +50680,12 @@ export interface components {
              *     [ORDER BY …] [LIMIT n]`.
              */
             q?: string | null;
+            /**
+             * Format: uuid
+             * @description S4-T9: run the stored query with this id (its saved QuerySpec);
+             *     `params` are its parameter values and `spec` and `q` are absent.
+             */
+            query_id?: string | null;
             /**
              * @description The QuerySpec: `entity`, `select`, `where` (a condition tree of
              *     `and`/`or`/`not`/`compare`/`param`/`exists`/`not_exists` nodes, tagged
@@ -55138,6 +55255,21 @@ export interface components {
         ValidateConfigResponse: {
             errors?: string[];
             valid: boolean;
+        };
+        ValidateExpressionRequest: {
+            /** @description The entity's logical name; its fields are the expression's fields. */
+            entity: string;
+            /** @description The expression text. */
+            expression: string;
+            /** @description `v1` or `v2`; absent means the latest. */
+            language_version?: string | null;
+            /**
+             * Format: uuid
+             * @description A record of `entity` to evaluate the expression on; the response then
+             *     carries its value and evaluation trace. The record is read as the
+             *     caller.
+             */
+            sample_record_id?: string | null;
         };
         ValidateRequest: {
             /** @description The document to check, as it would be saved. */
@@ -72589,6 +72721,116 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    expression_spec: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `v1` or `v2`; absent means the latest. */
+                version: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The functions and grammar notes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpressionSpec"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown language version */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    validate_expression: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateExpressionRequest"];
+            };
+        };
+        responses: {
+            /** @description What the check found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpressionCheck"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or cannot read the sample record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or sample record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown language version */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
