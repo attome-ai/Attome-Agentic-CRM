@@ -64,6 +64,8 @@ pub mod ops_cluster;
 /// AB4-T12: drill freshness and one drill's evidence, read only.
 pub mod ops_drills;
 pub mod ops_slo;
+/// AB8-T9: the latest platform upgrade, read only.
+pub mod ops_upgrade;
 /// L6-T8: profile.summary, profile.explain.
 pub mod profile;
 /// L2-T9: quality.explain_drop, quality.record_score, quality.propose_rules.
@@ -144,6 +146,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(ops_cluster::descriptors());
     all.extend(ops_drills::descriptors());
     all.push(ops_slo::descriptor());
+    all.push(ops_upgrade::descriptor());
     all.extend(approvals::descriptors());
     all.extend(calendar::descriptors());
     all.push(secrets_list::descriptor());
@@ -231,6 +234,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(ops_cluster::executors());
     all.extend(ops_drills::executors());
     all.push(Box::new(ops_slo::OpsSloHealth));
+    all.push(Box::new(ops_upgrade::OpsUpgradeStatus));
     all.extend(approvals::executors());
     all.extend(calendar::executors());
     all.push(Box::new(secrets_list::SecretsList));

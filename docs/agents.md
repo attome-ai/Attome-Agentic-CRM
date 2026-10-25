@@ -156,6 +156,8 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Recovery drills (with the ops module, `ops.read`, reads only): `ops.drill_freshness` says whether each
   drill kind is fresh, stale, failed or never run, with the checks the last run failed;
   `ops.drill_evidence` reads one drill's numbers and check results. No tool uploads or changes evidence.
+- Upgrades (with the ops module, `ops.read`, read only): `ops.upgrade_status` reads the latest upgrade, its
+  check report and how it ended; starting or rolling back an upgrade stays with people.
 - Secrets (administrators, reads only): `secrets.list` names every configured secret with the
   features that use it, whether it is set and how many days its active key has been in use. It never
   returns a value or a key id, and there is no tool that writes or rotates a secret.

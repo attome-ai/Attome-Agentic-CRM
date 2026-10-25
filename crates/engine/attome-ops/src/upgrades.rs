@@ -345,6 +345,17 @@ async fn list_upgrades(
     )))
 }
 
+/// AB8-T9: the most recently started upgrade (the `ops.upgrade_status`
+/// agent action reads it).
+pub async fn latest(db: &attome_db::DbPool) -> Result<Option<Upgrade>, AppError> {
+    sqlx::query_as(&format!(
+        "SELECT {COLUMNS} FROM ops_upgrade ORDER BY started_at DESC NULLS LAST, id DESC LIMIT 1"
+    ))
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)
+}
+
 pub(crate) fn routes() -> Router<EngineState> {
     Router::new()
         .route(
