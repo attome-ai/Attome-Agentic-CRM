@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Conflicting business rules are refused (A11-T4, part): saving or validating an active rule that
+  makes a field required while it or another active rule of the entity hides it, or that sets a field
+  another active rule also sets, under conditions that can hold together, answers `rule_conflict`
+  naming both rules. Rules applied from packs and bundles are not checked.
 - Prediction model versions and drift (O1-T2): training records the holdout AUC and each feature's
   mean and spread; a retrain more than 0.02 AUC worse than the active version is recorded and the
   active version kept. A weekly job compares recent records with the stored profile and lists

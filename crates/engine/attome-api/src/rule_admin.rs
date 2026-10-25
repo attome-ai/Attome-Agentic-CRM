@@ -1051,10 +1051,68 @@ async fn check_business(
         }
     }
 
+    // A11-T4: a rule that conflicts with itself or with another active rule
+    // of the entity is refused where a person edits it. Bundle and pack
+    // reconciles (no caller) keep their behaviour.
+    if ctx.is_some() && compiled.is_some() && input.is_active {
+        conflict_issues(state, input, condition, self_id, &mut out);
+    }
+
     if compiled.is_some() {
         out.warnings = warnings(conn, state, input, self_id, attrs).await?;
     }
     Ok(())
+}
+
+/// A11-T4: one issue per conflict between this rule and itself, and between
+/// it and each other active business rule of its entity, naming both rules.
+fn conflict_issues(
+    state: &EngineState,
+    input: &RuleInput,
+    condition: &ConditionTree,
+    self_id: Option<Uuid>,
+    out: &mut Checked,
+) {
+    for c in br::conflicts_between(condition, &input.policies, condition, &input.policies, true) {
+        out.issues.push(issue(
+            "policies",
+            "rule_conflict",
+            format!(
+                "'{}' is both required and hidden by this rule under the same condition",
+                c.field
+            ),
+        ));
+    }
+    let registry = state.rules.load();
+    let Some(entry) = registry.get(&input.entity) else {
+        return;
+    };
+    for other in entry
+        .business
+        .iter()
+        .filter(|r| r.is_active && Some(r.id) != self_id && r.name != input.name)
+    {
+        for c in br::conflicts_between(
+            condition,
+            &input.policies,
+            &other.condition,
+            &other.policies,
+            false,
+        ) {
+            let what = match c.code {
+                "two_set_values" => "both rules set",
+                _ => "one rule makes required what the other hides:",
+            };
+            out.issues.push(issue(
+                "policies",
+                "rule_conflict",
+                format!(
+                    "conflicts with rule '{}' ({}): {what} '{}' when both conditions can hold",
+                    other.name, other.id, c.field
+                ),
+            ));
+        }
+    }
 }
 
 /// The editor warnings of design §6.4. Never blocking.

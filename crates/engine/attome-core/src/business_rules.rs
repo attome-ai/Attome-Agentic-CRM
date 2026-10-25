@@ -779,6 +779,103 @@ pub fn combine_locks<'a>(
     out
 }
 
+// ── Conflicts (A11-T4) ──────────────────────────────────────────────────────
+
+/// The `field = value` pairs a condition requires to hold: a single `eq`
+/// leaf, or the `eq` leaves of an `all`. Anything else requires nothing
+/// that can rule an overlap out.
+fn required_equalities(tree: &ConditionTree) -> Vec<(&str, &Value)> {
+    match tree {
+        ConditionTree::Leaf(leaf) if leaf.op == BusinessRuleOp::Eq => leaf
+            .value
+            .as_ref()
+            .map(|v| vec![(leaf.field.as_str(), v)])
+            .unwrap_or_default(),
+        ConditionTree::All(all) => all.all.iter().flat_map(required_equalities).collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// Whether two conditions can hold at once. Conservative: only two
+/// conditions that require the same field to equal different values are
+/// known to exclude each other; everything else may overlap. Pure.
+pub fn may_overlap(a: &ConditionTree, b: &ConditionTree) -> bool {
+    let left = required_equalities(a);
+    let right = required_equalities(b);
+    !left
+        .iter()
+        .any(|(f, v)| right.iter().any(|(g, w)| f == g && v != w))
+}
+
+/// One conflict between two business rules on one field.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuleConflict {
+    /// `required_and_hidden` or `two_set_values`.
+    pub code: &'static str,
+    pub field: String,
+}
+
+fn fields_of(policies: &[PolicyDef], kind: PolicyType) -> Vec<&str> {
+    policies
+        .iter()
+        .filter(|p| p.policy_type == kind)
+        .filter_map(|p| p.field.as_deref())
+        .collect()
+}
+
+/// A11-T4: the conflicts between a rule (`condition`, `policies`) and
+/// another (`other_condition`, `other_policies`) when their conditions may
+/// hold together: a field one makes required while the other hides it, and
+/// a field both set. Pass the same rule twice to check it against itself
+/// (only `required_and_hidden` applies then). Pure.
+pub fn conflicts_between(
+    condition: &ConditionTree,
+    policies: &[PolicyDef],
+    other_condition: &ConditionTree,
+    other_policies: &[PolicyDef],
+    same_rule: bool,
+) -> Vec<RuleConflict> {
+    if !may_overlap(condition, other_condition) {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    let required = fields_of(policies, PolicyType::Required);
+    let hidden = fields_of(policies, PolicyType::Hidden);
+    let other_required = fields_of(other_policies, PolicyType::Required);
+    let other_hidden = fields_of(other_policies, PolicyType::Hidden);
+    for field in &required {
+        if other_hidden.contains(field) {
+            out.push(RuleConflict {
+                code: "required_and_hidden",
+                field: (*field).to_owned(),
+            });
+        }
+    }
+    if !same_rule {
+        for field in &hidden {
+            if other_required.contains(field) {
+                out.push(RuleConflict {
+                    code: "required_and_hidden",
+                    field: (*field).to_owned(),
+                });
+            }
+        }
+        let sets = fields_of(policies, PolicyType::SetValue);
+        let other_sets = fields_of(other_policies, PolicyType::SetValue);
+        for field in &sets {
+            if other_sets.contains(field) {
+                out.push(RuleConflict {
+                    code: "two_set_values",
+                    field: (*field).to_owned(),
+                });
+            }
+        }
+    }
+    out.sort_by(|a, b| (a.code, &a.field).cmp(&(b.code, &b.field)));
+    out.dedup();
+    out
+}
+
 // ── Issues ──────────────────────────────────────────────────────────────────
 
 /// One validation problem, addressed by a path into the rule body
@@ -2716,5 +2813,54 @@ mod tests {
         use utoipa::PartialSchema;
         let schema = serde_json::to_string(&ConditionTree::schema()).expect("schema");
         assert!(schema.contains("ConditionAll") || schema.contains("oneOf"));
+    }
+
+    fn policy(kind: PolicyType, field: &str) -> PolicyDef {
+        PolicyDef {
+            policy_type: kind,
+            field: Some(field.into()),
+            message: None,
+            severity: None,
+            value: None,
+            expression: None,
+            mode: None,
+            stage: None,
+            enforce_from: None,
+            ordinal: 0,
+        }
+    }
+
+    fn eq(field: &str, value: &str) -> ConditionTree {
+        ConditionTree::Leaf(ConditionLeaf {
+            field: field.into(),
+            op: BusinessRuleOp::Eq,
+            value: Some(serde_json::json!(value)),
+        })
+    }
+
+    #[test]
+    fn conflicting_rules_are_found_and_exclusive_conditions_are_not() {
+        let required = [policy(PolicyType::Required, "amount")];
+        let hidden = [policy(PolicyType::Hidden, "amount")];
+        let open = eq("status", "open");
+        let closed = eq("status", "closed");
+        let found = conflicts_between(&open, &required, &open, &hidden, false);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].code, "required_and_hidden");
+        // status = open and status = closed never hold together.
+        assert!(conflicts_between(&open, &required, &closed, &hidden, false).is_empty());
+        assert!(!may_overlap(&open, &closed));
+        assert!(may_overlap(&open, &ConditionTree::always()));
+
+        let set = [policy(PolicyType::SetValue, "stage")];
+        let found = conflicts_between(&open, &set, &ConditionTree::always(), &set, false);
+        assert_eq!(found[0].code, "two_set_values");
+
+        // One rule requiring and hiding the same field conflicts with itself.
+        let both = [
+            policy(PolicyType::Required, "amount"),
+            policy(PolicyType::Hidden, "amount"),
+        ];
+        assert_eq!(conflicts_between(&open, &both, &open, &both, true).len(), 1);
     }
 }
