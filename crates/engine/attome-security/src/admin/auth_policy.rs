@@ -244,7 +244,7 @@ async fn remove_break_glass(
     if !ids.contains(&user_id) {
         return Err(AppError::NotFound);
     }
-    if ids.len() == 1 && crate::auth_policy::any_sso_only(&mut *tx).await? {
+    if ids.len() == 1 && crate::auth_policy::any_sso_only(&mut tx).await? {
         return Err(AppError::Conflict(
             "the last break-glass account cannot be removed while an SSO-only rule is in force",
         ));
