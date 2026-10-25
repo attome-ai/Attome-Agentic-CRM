@@ -68,6 +68,7 @@
 //! design question before wiring it.)
 
 use attome_approval::{ApprovalRequest, ApprovalStatus, Decision};
+use attome_audit::approval::Recommendation;
 use attome_audit::security::{AuditHook, HookEvent, MandatoryCategory, SecurityEvent};
 use attome_audit::{AuditOperation, audit_service};
 use attome_core::EngineState;
@@ -2418,6 +2419,107 @@ async fn bulk_decide_approvals(
     Ok(Json(BulkDecideResponse { results }))
 }
 
+// ── Z10-T11: recommendations ────────────────────────────────────────────────
+
+#[derive(Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+struct RecommendBody {
+    /// `approve` or `reject`.
+    recommended: String,
+    /// Why, 1 to 2000 characters.
+    reasons: String,
+}
+
+/// List an approval request's recommendations
+///
+/// Z10-T11: what eligible approvers (or agents acting for them) recommend,
+/// oldest first. The requester and the current step's eligible approvers
+/// may read them.
+#[utoipa::path(
+    get,
+    path = "/api/v1/approvals/{id}/recommendations",
+    tag = "approvals",
+    operation_id = "list_approval_recommendations",
+    params(("id" = Uuid, Path, description = "The approval request")),
+    responses(
+        (status = 200, description = "The recommendations, at most 100", body = PaginatedResponse<Recommendation>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Neither the requester nor an eligible approver", body = ErrorResponse),
+        (status = 404, description = "No such request", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_recommendations(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<PaginatedResponse<Recommendation>>, AppError> {
+    let request = attome_approval::get(&state.base.db, id).await?;
+    if request.requested_by != ctx.user_id
+        && !crate::my_work_approvals::is_eligible(&state, &ctx, &request).await?
+    {
+        return Err(AppError::Forbidden);
+    }
+    let items = attome_audit::approval::recommendations(&state, id).await?;
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        1,
+        attome_audit::approval::MAX_RECOMMENDATIONS,
+    )))
+}
+
+/// Recommend a decision on an approval request
+///
+/// Z10-T11: an eligible approver (or an agent acting for one) recommends
+/// approving or rejecting, with reasons. It decides nothing; the approver
+/// still decides.
+#[utoipa::path(
+    post,
+    path = "/api/v1/approvals/{id}/recommendations",
+    tag = "approvals",
+    operation_id = "create_approval_recommendation",
+    params(("id" = Uuid, Path, description = "The approval request")),
+    request_body = RecommendBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 201, description = "The recommendation", body = Recommendation),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Not an eligible approver of the current step", body = ErrorResponse),
+        (status = 404, description = "No such request", body = ErrorResponse),
+        (status = 409, description = "The request is no longer pending", body = ErrorResponse),
+        (status = 422, description = "recommended is not approve or reject, or the reasons are empty or too long", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn create_recommendation(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<RecommendBody>,
+) -> Result<(axum::http::StatusCode, Json<Recommendation>), AppError> {
+    attome_audit::approval::check_recommendation(&body.recommended, &body.reasons)?;
+    let request = attome_approval::get(&state.base.db, id).await?;
+    if request.status != ApprovalStatus::Pending {
+        return Err(AppError::Conflict(
+            "this approval request is no longer pending",
+        ));
+    }
+    if !crate::my_work_approvals::is_eligible(&state, &ctx, &request).await? {
+        return Err(AppError::Forbidden);
+    }
+    let row = attome_audit::approval::record_recommendation(
+        &state,
+        id,
+        ctx.user_id,
+        &body.recommended,
+        &body.reasons,
+    )
+    .await?;
+    Ok((axum::http::StatusCode::CREATED, Json(row)))
+}
+
 /// Shared body of [`decide_approval`] (admin, any request) and
 /// [`decide_approval_eligible`] (any authenticated caller, plan-bearing
 /// requests only). Eligibility for a plan-bearing request is enforced by
@@ -2464,6 +2566,11 @@ async fn do_decide(
 
     let existing = attome_approval::get(&state.base.db, id).await?;
     if require == RequirePlan::PlanOnly && existing.plan.is_none() {
+        return Err(AppError::Forbidden);
+    }
+    // Z10-T11: a step that asks for a person is never decided by an agent.
+    if attome_audit::approval::agent_blocked_from(&existing) {
+        tracing::warn!(request = %id, "approval: an agent tried to decide a human-only step");
         return Err(AppError::Forbidden);
     }
     let grant = decision_evidence(state, decider_id, caller, &existing, &body).await?;
@@ -2969,6 +3076,11 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/approvals/{id}/recall", post(recall_approval))
         .route("/api/v1/approvals/{id}/resubmit", post(resubmit_approval))
         .route("/api/v1/approvals/bulk-decide", post(bulk_decide_approvals))
+        // Z10-T11: recommendations from approvers and their agents.
+        .route(
+            "/api/v1/approvals/{id}/recommendations",
+            get(list_recommendations).post(create_recommendation),
+        )
         .route(
             "/api/v1/approvals/out-of-office",
             axum::routing::put(put_out_of_office).delete(delete_out_of_office),
@@ -2993,6 +3105,8 @@ pub fn routes() -> Router<EngineState> {
         recall_approval,
         resubmit_approval,
         bulk_decide_approvals,
+        list_recommendations,
+        create_recommendation,
         put_out_of_office,
         delete_out_of_office
     ),
@@ -3005,6 +3119,8 @@ pub fn routes() -> Router<EngineState> {
         BulkDecideBody,
         BulkDecideResult,
         BulkDecideResponse,
+        RecommendBody,
+        Recommendation,
         OutOfOfficeBody,
         OutOfOfficeResponse,
         OutOfOfficeEnded

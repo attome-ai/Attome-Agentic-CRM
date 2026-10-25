@@ -18,6 +18,8 @@ pub mod agent_playground;
 pub mod agent_stats;
 pub mod agent_supervise;
 pub mod ai_field;
+/// Z10-T11: read approvals and recommend, never decide.
+pub mod approvals;
 pub mod billing;
 pub mod billing_payment;
 pub mod billing_subscription;
@@ -87,12 +89,12 @@ pub mod transition;
 pub mod translate;
 // T2-T5: a page drafted from a description.
 pub mod draft_page;
+/// F6-T16: read-only fulfilment tools.
+pub mod fulfilment;
 /// E13-T11: search titles, descriptions, FAQ and links drafted for a page.
 pub mod seo_draft;
 pub mod workflow;
 pub mod workforce;
-/// F6-T16: read-only fulfilment tools.
-pub mod fulfilment;
 
 use crate::descriptor::ActionDescriptor;
 
@@ -134,6 +136,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(search_records::descriptor());
     all.push(system_status::descriptor());
     all.push(ops_slo::descriptor());
+    all.extend(approvals::descriptors());
     all.push(secrets_list::descriptor());
     all.push(settings::list_descriptor());
     all.push(settings::set_descriptor());
@@ -217,6 +220,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(system_status::SystemStatus));
     all.push(Box::new(ops_slo::OpsSloHealth));
+    all.extend(approvals::executors());
     all.push(Box::new(secrets_list::SecretsList));
     all.push(Box::new(settings::SettingsList));
     all.push(Box::new(settings::SettingsSet));

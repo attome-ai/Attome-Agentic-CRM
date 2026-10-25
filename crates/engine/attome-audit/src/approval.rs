@@ -1072,6 +1072,119 @@ pub async fn apply_and_audit_step_timeout_with(
     Ok(Some((request, outcome, notify_ids)))
 }
 
+// ── Z10-T11: recommendations ──────────────────────────────────────────────────
+
+/// One recommendation on an approval request: approve or reject and why,
+/// from an eligible approver or an agent acting for one. It decides nothing.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, sqlx::FromRow, utoipa::ToSchema)]
+pub struct Recommendation {
+    pub id: Uuid,
+    pub request_id: Uuid,
+    /// `approve` or `reject`.
+    pub recommended: String,
+    pub reasons: String,
+    pub recommended_by: Uuid,
+    /// The agent session that wrote it, when an agent did.
+    pub agent_session: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// The most recommendations one request lists.
+pub const MAX_RECOMMENDATIONS: i64 = 100;
+
+/// Checks a recommendation and answers its trimmed reasons. Pure.
+pub fn check_recommendation(recommended: &str, reasons: &str) -> Result<String, AppError> {
+    if !matches!(recommended, "approve" | "reject") {
+        return Err(AppError::Validation(
+            "recommended is approve or reject".into(),
+        ));
+    }
+    let reasons = reasons.trim();
+    let n = reasons.chars().count();
+    if n == 0 || n > 2000 {
+        return Err(AppError::Validation(
+            "reasons are 1 to 2000 characters".into(),
+        ));
+    }
+    Ok(reasons.to_owned())
+}
+
+/// Stores a recommendation by `by` (eligibility is the caller's to check)
+/// with its BusinessEvent, in one transaction. Inside an agent's scope the
+/// session is recorded too.
+pub async fn record_recommendation(
+    state: &EngineState,
+    request_id: Uuid,
+    by: Uuid,
+    recommended: &str,
+    reasons: &str,
+) -> Result<Recommendation, AppError> {
+    let reasons = check_recommendation(recommended, reasons)?;
+    let agent_session = attome_core::agent_scope::current().map(|a| a.session_id);
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row: Recommendation = sqlx::query_as(
+        "INSERT INTO approval_recommendation \
+             (request_id, recommended, reasons, recommended_by, agent_session) \
+         VALUES ($1, $2, $3, $4, $5) \
+         RETURNING id, request_id, recommended, reasons, recommended_by, agent_session, created_at",
+    )
+    .bind(request_id)
+    .bind(recommended)
+    .bind(&reasons)
+    .bind(by)
+    .bind(agent_session)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    crate::business::write_business_event_in_tx(
+        &mut tx,
+        &crate::audit_service(state),
+        crate::business::BusinessEvent::new(
+            "approval_request",
+            request_id,
+            crate::AuditOperation::Create,
+            "approval.recommendation",
+            by,
+        )
+        .comment(format!("recommended {recommended}")),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(row)
+}
+
+/// A request's recommendations, oldest first.
+pub async fn recommendations(
+    state: &EngineState,
+    request_id: Uuid,
+) -> Result<Vec<Recommendation>, AppError> {
+    sqlx::query_as(
+        "SELECT id, request_id, recommended, reasons, recommended_by, agent_session, created_at \
+           FROM approval_recommendation WHERE request_id = $1 \
+          ORDER BY created_at, id LIMIT $2",
+    )
+    .bind(request_id)
+    .bind(MAX_RECOMMENDATIONS)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Z10-T11: whether the caller is an agent and the request's current step
+/// must be decided by a person.
+pub fn agent_blocked_from(request: &ApprovalRequest) -> bool {
+    attome_core::agent_scope::current().is_some()
+        && request
+            .plan
+            .as_ref()
+            .and_then(|plan| {
+                usize::try_from(request.step)
+                    .ok()
+                    .and_then(|i| plan.steps.get(i))
+            })
+            .is_some_and(|step| step.extras.requires_human)
+}
+
 #[cfg(test)]
 mod condition_permits_tests {
     use super::*;
@@ -1231,5 +1344,21 @@ mod backstop_ttl_tests {
                 .collect(),
         };
         assert_eq!(plan_backstop_ttl(&plan), chrono::Duration::MAX);
+    }
+}
+
+#[cfg(test)]
+mod recommendation_tests {
+    use super::*;
+
+    #[test]
+    fn recommendation_needs_a_verdict_and_reasons() {
+        assert_eq!(
+            check_recommendation("approve", "  within budget  ").unwrap(),
+            "within budget"
+        );
+        assert!(check_recommendation("maybe", "x").is_err());
+        assert!(check_recommendation("reject", "   ").is_err());
+        assert!(check_recommendation("reject", &"x".repeat(2001)).is_err());
     }
 }

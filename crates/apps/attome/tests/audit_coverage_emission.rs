@@ -3962,6 +3962,37 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             .expect("insert a calendar feed");
             request("DELETE", &format!("/api/v1/calendar-feeds/{feed}"), t, None)
         }
+        "POST /api/v1/approvals/{id}/recommendations" => {
+            // Z10-T11: a plan-bearing request whose step names the caller.
+            let (requester, _) = seed_user(&fx.base, "recommend-requester").await;
+            let plan = attome_approval::ApprovalPlan {
+                steps: vec![attome_approval::ApprovalStep {
+                    mode: attome_approval::StepMode::Any,
+                    threshold: None,
+                    approvers: vec![format!("user:{}", fx.admin_id)],
+                    sla_minutes: None,
+                    on_timeout: attome_approval::OnTimeout::Escalate,
+                    extras: Default::default(),
+                }],
+            };
+            let submitted = attome_approval::submit_with_plan(
+                &fx.base.db,
+                attome_compliance::rewrap_admin::ACTION_SECURITY_REWRAP,
+                json!({"domain": "mfa"}),
+                requester,
+                plan,
+                chrono::Duration::hours(1),
+                None,
+            )
+            .await
+            .expect("submit plan-bearing approval request");
+            request(
+                "POST",
+                &format!("/api/v1/approvals/{}/recommendations", submitted.id),
+                t,
+                Some(json!({"recommended": "approve", "reasons": "within the policy"})),
+            )
+        }
         "POST /api/v1/approvals/{id}/recall" => {
             // Z10-T10: the caller recalls their own pending request.
             let submitted = attome_approval::submit(
