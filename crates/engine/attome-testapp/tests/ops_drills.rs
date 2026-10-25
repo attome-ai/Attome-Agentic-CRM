@@ -61,6 +61,8 @@ fn report(kind: EvidenceKind, key: &SigningKey) -> Value {
     serde_json::to_value(evidence::sign(&e, key).unwrap()).unwrap()
 }
 
+// feature: AB4
+// op: record_ops_drill_evidence, get_ops_drill
 #[test]
 fn upload_valid_evidence_is_stored_once() {
     attome_testkit::run_shared(async {
@@ -97,6 +99,8 @@ fn upload_valid_evidence_is_stored_once() {
     });
 }
 
+// feature: AB4
+// negative: record_ops_drill_evidence
 #[test]
 fn upload_with_bad_signature_is_422() {
     attome_testkit::run_shared(async {
@@ -118,6 +122,8 @@ fn upload_with_bad_signature_is_422() {
     });
 }
 
+// feature: AB4
+// op: record_ops_drill_evidence
 #[test]
 fn delete_within_retention_is_refused() {
     attome_testkit::run_shared(async {
@@ -144,6 +150,8 @@ fn delete_within_retention_is_refused() {
     });
 }
 
+// feature: AB4
+// op: list_ops_drills
 #[test]
 fn history_is_paged_one_based() {
     attome_testkit::run_shared(async {
@@ -183,6 +191,8 @@ fn history_is_paged_one_based() {
     });
 }
 
+// feature: AB4
+// negative: record_ops_drill_evidence, list_ops_drills, list_ops_drills_due, list_ops_drill_schedules, export_ops_auditor_pack
 #[test]
 fn a_person_without_ops_privileges_reaches_nothing() {
     attome_testkit::run_shared(async {
@@ -208,6 +218,9 @@ fn a_person_without_ops_privileges_reaches_nothing() {
     });
 }
 
+// feature: AB4
+// op: list_ops_drill_schedules, list_ops_drills_due, record_ops_drill_evidence
+// negative: update_ops_drill_schedule
 #[test]
 fn default_monthly_restore_is_seeded_disabled_and_upload_advances_next_due() {
     attome_testkit::run_shared(async {
@@ -295,6 +308,8 @@ fn default_monthly_restore_is_seeded_disabled_and_upload_advances_next_due() {
     });
 }
 
+// feature: AB4
+// op: export_ops_auditor_pack
 #[test]
 fn the_auditor_pack_is_bounded_to_400_days() {
     attome_testkit::run_shared(async {
@@ -351,6 +366,9 @@ async fn operations_role(app: &TestApp) {
         .unwrap();
 }
 
+// feature: AB2
+// op: request_ops_switchover
+// negative: request_ops_switchover
 #[test]
 fn request_creates_pending_approval_and_no_patroni_call() {
     attome_testkit::run_shared(async {
@@ -393,6 +411,8 @@ fn request_creates_pending_approval_and_no_patroni_call() {
     });
 }
 
+// feature: AB2, Z10
+// op: request_ops_switchover
 #[test]
 fn self_approval_is_refused() {
     attome_testkit::run_shared(async {
@@ -436,6 +456,9 @@ fn self_approval_is_refused() {
     });
 }
 
+// feature: AB2
+// op: get_ops_cluster
+// negative: request_ops_switchover
 #[test]
 fn non_ops_user_gets_403() {
     attome_testkit::run_shared(async {
@@ -464,6 +487,8 @@ fn non_ops_user_gets_403() {
     });
 }
 
+// feature: AB2
+// op: list_ops_failovers
 #[test]
 fn failovers_are_paged_one_based() {
     attome_testkit::run_shared(async {
@@ -495,6 +520,8 @@ fn failovers_are_paged_one_based() {
     });
 }
 
+// feature: AB4
+// op: list_ops_drill_freshness, record_ops_drill_evidence
 #[test]
 fn freshness_turns_fresh_after_a_passing_upload() {
     attome_testkit::run_shared(async {
@@ -546,6 +573,8 @@ async fn target(app: &TestApp, profile: &str, scenario: &str) -> Value {
         .expect("migration 0268 seeds every profile and scenario")
 }
 
+// feature: AB3
+// op: list_ops_recovery_targets
 #[test]
 fn seeded_targets_are_not_proven_without_evidence() {
     attome_testkit::run_shared(async {
@@ -568,6 +597,9 @@ fn seeded_targets_are_not_proven_without_evidence() {
     });
 }
 
+// feature: AB3
+// op: list_ops_recovery_targets, update_ops_recovery_target
+// negative: update_ops_recovery_target
 #[test]
 fn fresh_recovery_evidence_within_target_marks_proven_and_over_target_does_not() {
     attome_testkit::run_shared(async {
@@ -620,6 +652,8 @@ fn fresh_recovery_evidence_within_target_marks_proven_and_over_target_does_not()
     });
 }
 
+// feature: AB3
+// op: get_ops_dr_runbook
 #[test]
 fn the_dr_runbook_answers_in_both_languages() {
     attome_testkit::run_shared(async {
@@ -643,6 +677,8 @@ fn the_dr_runbook_answers_in_both_languages() {
     });
 }
 
+// feature: AB3
+// op: get_ops_live_rpo
 #[test]
 fn the_live_rpo_names_three_sources_with_their_targets() {
     attome_testkit::run_shared(async {
