@@ -23350,6 +23350,83 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/email/domains/{domain}/check": {
+      "get": {
+        "tags": [
+          "email"
+        ],
+        "summary": "Check a sending domain",
+        "description": "Z8-T4: the domain's SPF, DKIM and DMARC records as DNS holds them now,\neach `ok`, `missing`, `wrong`, `not_configured` or `unknown`, with the\nrecord to publish. Admin only.",
+        "operationId": "check_sending_domain",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "description": "The sending domain (`example.com`)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each record's verdict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendingDomainCheck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a domain name, or no usable resolver configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/email/suppressions": {
       "get": {
         "tags": [
@@ -90649,6 +90726,91 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/ops/cluster/switchover": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Ask for a planned switchover",
+        "description": "AB2-T8: submits an approval a second person in the Operations role\ndecides; nothing touches the cluster until then. Needs\n`ops.cluster.switchover` and a configured Patroni cluster. Audited.",
+        "operationId": "request_ops_switchover",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchoverRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The approval the switchover waits on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwitchoverApproval"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.cluster.switchover",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A reason out of bounds, a bad candidate name, no Patroni cluster configured, or no Operations role to approve",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "submitted"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/ops/disasters": {
       "post": {
         "tags": [
@@ -91045,6 +91207,211 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/ops/drill-schedules": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "List drill schedules",
+        "description": "AB4-T7: every drill schedule, soonest due first. Needs `ops.read`.",
+        "operationId": "list_ops_drill_schedules",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of schedules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DrillSchedule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/drill-schedules/{id}": {
+      "patch": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Change a drill schedule",
+        "description": "AB4-T7: turn it on or off, change its cadence or set when it is next\ndue; turning it on with no due date makes it due now. `If-Match` names\nthe row version. Needs `ops.drill.manage`. Audited.",
+        "operationId": "update_ops_drill_schedule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The schedule",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The schedule's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDrillSchedule"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DrillSchedule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.drill.manage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A stale row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing If-Match, an unknown cadence or nothing to change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/ops/drills": {
       "get": {
         "tags": [
@@ -91118,6 +91485,178 @@
           },
           "422": {
             "description": "An unknown kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/drills/auditor-pack": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Export the auditor pack",
+        "description": "AB4-T10: a zip of every signed drill report finished in the period (at\nmost 400 days), the drill public keys, and how to verify them offline in\nEnglish and Arabic. Needs `ops.auditor.read`. The export is audited.",
+        "operationId": "export_ops_auditor_pack",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "First day (YYYY-MM-DD, UTC).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Last day (YYYY-MM-DD, UTC).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pack",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.auditor.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A period that ends before it starts or is longer than 400 days",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/drills/due": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Drills due now",
+        "description": "AB4-T7: the enabled schedules whose time has come, for the drill agent\n(a key holding only `ops.drill.run` is enough). Needs `ops.drill.run`.",
+        "operationId": "list_ops_drills_due",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of due schedules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DrillSchedule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.drill.run",
             "content": {
               "application/json": {
                 "schema": {
@@ -91236,6 +91775,62 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/drills/freshness": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Drill freshness",
+        "description": "AB4-T9: for every drill kind, `fresh`, `stale`, `failed` or `never`,\nwith when it last ran and passed and the checks it failed. Needs\n`ops.read`.",
+        "operationId": "list_ops_drill_freshness",
+        "responses": {
+          "200": {
+            "description": "Every drill kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_Freshness"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/ops/drills/{id}": {
@@ -146015,6 +146610,48 @@
           }
         }
       },
+      "DomainRecordCheck": {
+        "type": "object",
+        "description": "One record's verdict (`attome_email::domain_check::RecordCheck`).",
+        "required": [
+          "kind",
+          "name",
+          "status",
+          "found",
+          "expected"
+        ],
+        "properties": {
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expected": {
+            "type": "string",
+            "description": "The TXT record to publish."
+          },
+          "found": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What DNS holds there now."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`spf`, `dkim` or `dmarc`."
+          },
+          "name": {
+            "type": "string",
+            "description": "The DNS name the record lives at."
+          },
+          "status": {
+            "type": "string",
+            "description": "`ok`, `missing`, `wrong`, `not_configured` or `unknown`."
+          }
+        }
+      },
       "DomainReport": {
         "type": "object",
         "required": [
@@ -146327,6 +146964,67 @@
             "format": "date-time"
           },
           "uploaded_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "DrillSchedule": {
+        "type": "object",
+        "description": "One drill schedule.",
+        "required": [
+          "id",
+          "kind",
+          "cadence",
+          "enabled",
+          "row_version"
+        ],
+        "properties": {
+          "cadence": {
+            "type": "string",
+            "description": "`weekly`, `monthly` or `quarterly`."
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "The evidence kind the schedule is for (`restore`, `failover`, ...)."
+          },
+          "last_run_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The drill run whose evidence last moved the schedule on."
+          },
+          "next_due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_by": {
             "type": [
               "string",
               "null"
@@ -150630,6 +151328,51 @@
           "sender": {
             "type": "string",
             "description": "`agent` or `customer`."
+          }
+        }
+      },
+      "Freshness": {
+        "type": "object",
+        "description": "One kind's freshness.",
+        "required": [
+          "kind",
+          "status",
+          "period_days",
+          "failing_checks"
+        ],
+        "properties": {
+          "failing_checks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The checks the last run failed (or skipped)."
+          },
+          "kind": {
+            "type": "string"
+          },
+          "last_ok_run_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_run_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "period_days": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How old a passing run may be."
+          },
+          "status": {
+            "type": "string",
+            "description": "`fresh`, `stale`, `failed` or `never`."
           }
         }
       },
@@ -168003,6 +168746,101 @@
           }
         }
       },
+      "PaginatedResponse_DrillSchedule": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One drill schedule.",
+              "required": [
+                "id",
+                "kind",
+                "cadence",
+                "enabled",
+                "row_version"
+              ],
+              "properties": {
+                "cadence": {
+                  "type": "string",
+                  "description": "`weekly`, `monthly` or `quarterly`."
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "The evidence kind the schedule is for (`restore`, `failover`, ...)."
+                },
+                "last_run_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The drill run whose evidence last moved the schedule on."
+                },
+                "next_due_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "updated_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "updated_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_DsrRequestSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -169313,6 +170151,85 @@
                 "version_no": {
                   "type": "integer",
                   "format": "int32"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_Freshness": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One kind's freshness.",
+              "required": [
+                "kind",
+                "status",
+                "period_days",
+                "failing_checks"
+              ],
+              "properties": {
+                "failing_checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The checks the last run failed (or skipped)."
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "last_ok_run_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "last_run_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "period_days": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "How old a passing run may be."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`fresh`, `stale`, `failed` or `never`."
                 }
               }
             }
@@ -192797,6 +193714,30 @@
           }
         }
       },
+      "SendingDomainCheck": {
+        "type": "object",
+        "description": "A domain's verdict.",
+        "required": [
+          "domain",
+          "records",
+          "ok"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean",
+            "description": "Every record is `ok` (or DKIM is not configured)."
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DomainRecordCheck"
+            }
+          }
+        }
+      },
       "SeoAuditRun": {
         "type": "object",
         "description": "What an audit run found.",
@@ -197901,6 +198842,44 @@
           }
         }
       },
+      "SwitchoverApproval": {
+        "type": "object",
+        "description": "The approval a switchover waits on.",
+        "required": [
+          "approval_id",
+          "status"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "SwitchoverRequest": {
+        "type": "object",
+        "description": "A switchover asked for.",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "candidate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The member to promote; Patroni picks one when absent."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why, for the approver and the audit trail (10 to 500 characters)."
+          }
+        },
+        "additionalProperties": false
+      },
       "SyncDirection": {
         "type": "string",
         "description": "Which way to sync.",
@@ -200850,6 +201829,33 @@
             "description": "Absent = leave unchanged. There is deliberately no way to explicitly\nclear an already-set steward/deputy back to unassigned in this pass\n— reassign to a different systemuser, or delete and recreate the\ndomain, until a real need for clearing is demonstrated."
           }
         }
+      },
+      "UpdateDrillSchedule": {
+        "type": "object",
+        "description": "A schedule change; absent fields stay as they are.",
+        "properties": {
+          "cadence": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`weekly`, `monthly` or `quarterly`."
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "next_due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
       },
       "UpdateEntityBody": {
         "type": "object",
@@ -203953,8 +204959,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -204006,5 +205010,7 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }

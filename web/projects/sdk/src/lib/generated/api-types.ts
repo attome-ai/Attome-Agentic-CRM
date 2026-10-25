@@ -4405,6 +4405,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/email/domains/{domain}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check a sending domain
+         * @description Z8-T4: the domain's SPF, DKIM and DMARC records as DNS holds them now,
+         *     each `ok`, `missing`, `wrong`, `not_configured` or `unknown`, with the
+         *     record to publish. Admin only.
+         */
+        get: operations["check_sending_domain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/email/suppressions": {
         parameters: {
             query?: never;
@@ -18312,6 +18334,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ops/cluster/switchover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a planned switchover
+         * @description AB2-T8: submits an approval a second person in the Operations role
+         *     decides; nothing touches the cluster until then. Needs
+         *     `ops.cluster.switchover` and a configured Patroni cluster. Audited.
+         */
+        post: operations["request_ops_switchover"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ops/disasters": {
         parameters: {
             query?: never;
@@ -18394,6 +18438,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ops/drill-schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List drill schedules
+         * @description AB4-T7: every drill schedule, soonest due first. Needs `ops.read`.
+         */
+        get: operations["list_ops_drill_schedules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/drill-schedules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a drill schedule
+         * @description AB4-T7: turn it on or off, change its cadence or set when it is next
+         *     due; turning it on with no due date makes it due now. `If-Match` names
+         *     the row version. Needs `ops.drill.manage`. Audited.
+         */
+        patch: operations["update_ops_drill_schedule"];
+        trace?: never;
+    };
     "/api/v1/ops/drills": {
         parameters: {
             query?: never;
@@ -18407,6 +18493,49 @@ export interface paths {
          *     optionally of one kind. Needs `ops.read`.
          */
         get: operations["list_ops_drills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/drills/auditor-pack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the auditor pack
+         * @description AB4-T10: a zip of every signed drill report finished in the period (at
+         *     most 400 days), the drill public keys, and how to verify them offline in
+         *     English and Arabic. Needs `ops.auditor.read`. The export is audited.
+         */
+        get: operations["export_ops_auditor_pack"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/drills/due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Drills due now
+         * @description AB4-T7: the enabled schedules whose time has come, for the drill agent
+         *     (a key holding only `ops.drill.run` is enough). Needs `ops.drill.run`.
+         */
+        get: operations["list_ops_drills_due"];
         put?: never;
         post?: never;
         delete?: never;
@@ -18432,6 +18561,28 @@ export interface paths {
          *     with the evidence's SHA-256.
          */
         post: operations["record_ops_drill_evidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/drills/freshness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Drill freshness
+         * @description AB4-T9: for every drill kind, `fresh`, `stale`, `failed` or `never`,
+         *     with when it last ran and passed and the checks it failed. Needs
+         *     `ops.read`.
+         */
+        get: operations["list_ops_drill_freshness"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -32762,6 +32913,20 @@ export interface components {
             /** Format: date-time */
             released_at?: string | null;
         };
+        /** @description One record's verdict (`attome_email::domain_check::RecordCheck`). */
+        DomainRecordCheck: {
+            detail?: string | null;
+            /** @description The TXT record to publish. */
+            expected: string;
+            /** @description What DNS holds there now. */
+            found: string[];
+            /** @description `spf`, `dkim` or `dmarc`. */
+            kind: string;
+            /** @description The DNS name the record lives at. */
+            name: string;
+            /** @description `ok`, `missing`, `wrong`, `not_configured` or `unknown`. */
+            status: string;
+        };
         DomainReport: {
             classification_breakdown: components["schemas"]["ClassificationBreakdown"];
             /** Format: uuid */
@@ -32887,6 +33052,29 @@ export interface components {
             started_at: string;
             /** Format: uuid */
             uploaded_by?: string | null;
+        };
+        /** @description One drill schedule. */
+        DrillSchedule: {
+            /** @description `weekly`, `monthly` or `quarterly`. */
+            cadence: string;
+            enabled: boolean;
+            /** Format: uuid */
+            id: string;
+            /** @description The evidence kind the schedule is for (`restore`, `failover`, ...). */
+            kind: string;
+            /**
+             * Format: uuid
+             * @description The drill run whose evidence last moved the schedule on.
+             */
+            last_run_id?: string | null;
+            /** Format: date-time */
+            next_due_at?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: date-time */
+            updated_at?: string | null;
+            /** Format: uuid */
+            updated_by?: string | null;
         };
         /** @enum {string} */
         Drillability: "exact" | "explain_only" | "none";
@@ -34739,6 +34927,23 @@ export interface components {
             payload: Record<string, never>;
             /** @description `agent` or `customer`. */
             sender: string;
+        };
+        /** @description One kind's freshness. */
+        Freshness: {
+            /** @description The checks the last run failed (or skipped). */
+            failing_checks: string[];
+            kind: string;
+            /** Format: date-time */
+            last_ok_run_at?: string | null;
+            /** Format: date-time */
+            last_run_at?: string | null;
+            /**
+             * Format: int64
+             * @description How old a passing run may be.
+             */
+            period_days: number;
+            /** @description `fresh`, `stale`, `failed` or `never`. */
+            status: string;
         };
         FulfillErasureBody: {
             scopes: components["schemas"]["DsrScope"][];
@@ -41338,6 +41543,42 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DrillSchedule: {
+            items: {
+                /** @description `weekly`, `monthly` or `quarterly`. */
+                cadence: string;
+                enabled: boolean;
+                /** Format: uuid */
+                id: string;
+                /** @description The evidence kind the schedule is for (`restore`, `failover`, ...). */
+                kind: string;
+                /**
+                 * Format: uuid
+                 * @description The drill run whose evidence last moved the schedule on.
+                 */
+                last_run_id?: string | null;
+                /** Format: date-time */
+                next_due_at?: string | null;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: date-time */
+                updated_at?: string | null;
+                /** Format: uuid */
+                updated_by?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_DsrRequestSummary: {
             items: {
                 block_reason?: string | null;
@@ -41866,6 +42107,36 @@ export interface components {
                 uploaded_by_portal_user?: string | null;
                 /** Format: int32 */
                 version_no: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Freshness: {
+            items: {
+                /** @description The checks the last run failed (or skipped). */
+                failing_checks: string[];
+                kind: string;
+                /** Format: date-time */
+                last_ok_run_at?: string | null;
+                /** Format: date-time */
+                last_run_at?: string | null;
+                /**
+                 * Format: int64
+                 * @description How old a passing run may be.
+                 */
+                period_days: number;
+                /** @description `fresh`, `stale`, `failed` or `never`. */
+                status: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -50875,6 +51146,13 @@ export interface components {
             /** Format: int64 */
             sent: number;
         };
+        /** @description A domain's verdict. */
+        SendingDomainCheck: {
+            domain: string;
+            /** @description Every record is `ok` (or DKIM is not configured). */
+            ok: boolean;
+            records: components["schemas"]["DomainRecordCheck"][];
+        };
         /** @description What an audit run found. */
         SeoAuditRun: {
             /** Format: date-time */
@@ -52816,6 +53094,19 @@ export interface components {
             scope_key: string;
             scope_kind: string;
         };
+        /** @description The approval a switchover waits on. */
+        SwitchoverApproval: {
+            /** Format: uuid */
+            approval_id: string;
+            status: string;
+        };
+        /** @description A switchover asked for. */
+        SwitchoverRequest: {
+            /** @description The member to promote; Patroni picks one when absent. */
+            candidate?: string | null;
+            /** @description Why, for the approver and the audit trail (10 to 500 characters). */
+            reason: string;
+        };
         /**
          * @description Which way to sync.
          * @enum {string}
@@ -53955,6 +54246,14 @@ export interface components {
              *     domain, until a real need for clearing is demonstrated.
              */
             steward_ref?: string | null;
+        };
+        /** @description A schedule change; absent fields stay as they are. */
+        UpdateDrillSchedule: {
+            /** @description `weekly`, `monthly` or `quarterly`. */
+            cadence?: string | null;
+            enabled?: boolean | null;
+            /** Format: date-time */
+            next_due_at?: string | null;
         };
         UpdateEntityBody: {
             /**
@@ -69190,6 +69489,56 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    check_sending_domain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The sending domain (`example.com`) */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each record's verdict */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendingDomainCheck"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a domain name, or no usable resolver configured */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -110369,6 +110718,57 @@ export interface operations {
             };
         };
     };
+    request_ops_switchover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwitchoverRequest"];
+            };
+        };
+        responses: {
+            /** @description The approval the switchover waits on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwitchoverApproval"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.cluster.switchover */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A reason out of bounds, a bad candidate name, no Patroni cluster configured, or no Operations role to approve */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     declare_ops_disaster: {
         parameters: {
             query?: never;
@@ -110613,6 +111013,130 @@ export interface operations {
             };
         };
     };
+    list_ops_drill_schedules: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of schedules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DrillSchedule"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_ops_drill_schedule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The schedule's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The schedule */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDrillSchedule"];
+            };
+        };
+        responses: {
+            /** @description The schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DrillSchedule"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.drill.manage */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such schedule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing If-Match, an unknown cadence or nothing to change */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_ops_drills: {
         parameters: {
             query?: {
@@ -110673,6 +111197,107 @@ export interface operations {
             };
         };
     };
+    export_ops_auditor_pack: {
+        parameters: {
+            query: {
+                /** @description First day (YYYY-MM-DD, UTC). */
+                from: string;
+                /** @description Last day (YYYY-MM-DD, UTC). */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pack */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": number[];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.auditor.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A period that ends before it starts or is longer than 400 days */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ops_drills_due: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of due schedules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DrillSchedule"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.drill.run */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     record_ops_drill_evidence: {
         parameters: {
             query?: never;
@@ -110724,6 +111349,44 @@ export interface operations {
             };
             /** @description Not attome-evidence/v1, a signature that does not hold, or no configured key */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ops_drill_freshness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every drill kind */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Freshness"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
