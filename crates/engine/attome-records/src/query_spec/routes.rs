@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, HashMap};
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, SelfService};
-use attome_server::security::AccessLevel;
+use attome_server::security::{AccessLevel, SecurityContext};
 use attome_types::{AppError, CursorPage, ErrorResponse};
 use axum::{Json, extract::State};
 use chrono::Utc;
@@ -135,7 +135,16 @@ pub(crate) async fn run_query(
     let spec = body.into_spec()?;
     ctx.require(&spec.entity, "read")
         .map_err(|_| AppError::NotFound)?;
+    Ok(Json(execute_spec(&state, &ctx, spec).await?))
+}
 
+/// Compiles and runs one spec for `ctx`, who may already read its entity:
+/// the body of `POST /api/v1/query/run`, shared with the OData feed (S7-T1).
+pub(crate) async fn execute_spec(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    spec: QuerySpec,
+) -> Result<RunResponse, AppError> {
     let levels: HashMap<Uuid, AccessLevel> = if ctx.is_admin {
         HashMap::new()
     } else {
@@ -163,7 +172,7 @@ pub(crate) async fn run_query(
         let env = Env {
             registry: &registry,
             relationships: &relationships,
-            ctx: &ctx,
+            ctx,
             access: &access,
             clock: Clock {
                 now: Utc::now(),
@@ -209,7 +218,7 @@ pub(crate) async fn run_query(
     let top = plan_json.pointer("/0/Plan").cloned().unwrap_or(Value::Null);
     let total_cost = top.get("Total Cost").and_then(Value::as_f64).unwrap_or(0.0);
     if spec.explain {
-        return Ok(Json(RunResponse::Explain(ExplainResponse {
+        return Ok(RunResponse::Explain(ExplainResponse {
             plan_class: if scans_table(&top, &spec.entity) {
                 "scan"
             } else {
@@ -222,7 +231,7 @@ pub(crate) async fn run_query(
                 .map_or(0, |rows| rows.round() as i64),
             total_cost,
             guard_limit: GUARD_LIMIT,
-        })));
+        }));
     }
     if total_cost > GUARD_LIMIT {
         return Err(AppError::Validation(format!(
@@ -250,7 +259,7 @@ pub(crate) async fn run_query(
         .collect();
     drop(tx);
 
-    Ok(Json(match plan {
+    Ok(match plan {
         Plan::Rows(compiled) => {
             let page = usize::try_from(compiled.page_size).unwrap_or(usize::MAX);
             let mut rows = rows;
@@ -267,7 +276,7 @@ pub(crate) async fn run_query(
             ))
         }
         Plan::Aggregate(compiled) => RunResponse::Aggregate(compiled.groups(rows)?),
-    }))
+    })
 }
 
 /// Whether a plan reads the whole of `table` (a sequential scan of it).

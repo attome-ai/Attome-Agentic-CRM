@@ -710,6 +710,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- OData v4 feed (S7-T1): `GET /api/v1/odata` (service document), `/api/v1/odata/$metadata` (CSDL of the
+  entities and attributes the caller may read), `/api/v1/odata/{entity}` (`$select`, `$filter`,
+  `$orderby`, `$top`, `$count`, paging through `@odata.nextLink`) and `/api/v1/odata/{entity}/$count`,
+  each run through the structured query executor with record and field security in the SQL; for Excel
+  and Power BI (`docs/odata.md`). `$expand`, `$search`, `$apply` and `$skip` are refused.
 - Data profiling guide (L6-T10): `docs/data-profiling.md` describes the one-scan profile and its
   sampling, statistics, shapes and Arabic measures, masking of sensitive attributes, personal-data label
   proposals, drift, schedules, file profiles of staged imports and the agent tools.

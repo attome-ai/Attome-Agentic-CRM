@@ -19,6 +19,7 @@
 - [Identity brokers](identity-brokers.md): signing in with a SAML-only identity provider through Entra ID, Okta, AD FS or Keycloak over OpenID Connect.
 - [Hijri calendar](hijri.md): Umm al-Qura dates, corrections, grouping, autonumbers and holidays.
 - [Duplicate rules](duplicates.md): comparators, what saving a duplicate does, scans, merges and undo.
+- [OData feed](odata.md): reading records live from Excel and Power BI.
 - [Data lineage](lineage.md): the graph of what uses what, impact before a field change, hand-documented links and the OpenLineage export.
 - [Data profiling](data-profiling.md): what a profile measures, masking, personal-data proposals, drift and schedules.
 - [Data quality](data-quality.md): dimensions, measure-only rules, targets, issues and their owners, fixes and alerts.

@@ -2989,7 +2989,15 @@ pub async fn execute_stored_query_with_definition(
 /// document even if a future refactor stops referencing one from a response.
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(execute, crate::changes::changes, crate::query_spec::routes::run_query),
+    paths(
+        execute,
+        crate::changes::changes,
+        crate::query_spec::routes::run_query,
+        crate::odata::service_document,
+        crate::odata::metadata,
+        crate::odata::entity_set,
+        crate::odata::entity_count
+    ),
     components(schemas(
         crate::query_spec::routes::RunRequest,
         crate::query_spec::routes::RunResponse,
@@ -3021,6 +3029,8 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/query/run",
             post(crate::query_spec::routes::run_query),
         )
+        // S7-T1: the read-only OData feed for Excel and Power BI.
+        .merge(crate::odata::routes())
 }
 
 #[cfg(test)]

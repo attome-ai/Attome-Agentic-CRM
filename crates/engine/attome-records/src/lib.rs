@@ -61,6 +61,8 @@ pub mod mutation_ring;
 /// C1-T1: note replies moved from the note's JSON to their own records.
 pub mod note_replies;
 pub mod query_admin;
+/// S7-T1: the read-only OData v4 feed.
+pub mod odata;
 pub mod query_exec;
 pub mod query_spec;
 pub mod rejection_log;
