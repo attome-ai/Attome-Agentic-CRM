@@ -5,6 +5,8 @@
 /// E13-T11: what the SEO drafting action reads from a page.
 pub mod agent;
 pub mod audit;
+/// E13-T10: search statistics from the engines and IndexNow on publish.
+pub mod console;
 pub mod routes;
 pub mod settings;
 pub mod site;

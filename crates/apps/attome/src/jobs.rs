@@ -2982,6 +2982,8 @@ const DEDUP_KEY_FULFILMENT_TRACKING: &str = "fulfilment-tracking";
 /// O1-T2: the weekly drift check of active prediction models.
 const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
+/// E13-T10: the daily search-console pull (a registered job type).
+const DEDUP_KEY_CONTENT_SEARCH_CONSOLE: &str = "content-search-console";
 /// R11-T1: evidence collectors (a registered job type).
 const DEDUP_KEY_GRC_EVIDENCE: &str = "grc-evidence-collect";
 /// I10-T2: warranty expiry reminders (a registered job type).
@@ -3277,6 +3279,14 @@ pub const CONTENT_SITEMAP: attome_jobs::JobType =
 /// E13-T9: every published page re-audited when `content.seo_audit` is on.
 pub const CONTENT_SEO_AUDIT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_content::seo::audit::NIGHTLY_JOB, 1);
+
+/// E13-T10: yesterday's search statistics from connected engines, daily.
+pub const CONTENT_SEARCH_CONSOLE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_content::seo::console::PULL_JOB, 1);
+
+/// E13-T10: an IndexNow submission after a publish.
+pub const CONTENT_INDEXNOW: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_content::seo::console::PING_JOB, 1);
 
 /// R11-T1: evidence collectors writing evidence and, on failure, findings.
 pub const GRC_EVIDENCE_COLLECT: attome_jobs::JobType =
@@ -4275,6 +4285,32 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CONTENT_SEARCH_CONSOLE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let pulled = attome_content::seo::console::pull_daily(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if pulled.rows > 0 {
+                    tracing::info!(sites = pulled.sites, rows = pulled.rows, "search statistics stored");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CONTENT_INDEXNOW,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let ping: attome_content::seo::console::PingJob = job.payload()?;
+                attome_content::seo::console::ping(&state, &ping)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SECURITY_DETECTIONS,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let now = chrono::Utc::now();
@@ -4804,6 +4840,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
+        }
+        EngineJob::Registered(job) if job.name == CONTENT_SEARCH_CONSOLE.name => {
+            DEDUP_KEY_CONTENT_SEARCH_CONSOLE
         }
         EngineJob::Registered(job) if job.name == GRC_POLICY_SWEEP.name => {
             DEDUP_KEY_GRC_POLICY_SWEEP
@@ -5860,6 +5899,21 @@ pub fn spawn_content_seo_audit_scheduler(db: DbPool, interval: std::time::Durati
             "content seo audit",
         ),
         Err(error) => tracing::error!(%error, "content seo audit: not scheduled"),
+    }
+}
+
+/// E13-T10: daily, yesterday's search statistics.
+pub fn spawn_content_search_console_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CONTENT_SEARCH_CONSOLE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CONTENT_SEARCH_CONSOLE,
+            "content search console",
+        ),
+        Err(error) => tracing::error!(%error, "content search console: not scheduled"),
     }
 }
 

@@ -18,9 +18,9 @@ pub mod carrier;
 pub mod connection;
 pub mod connector;
 pub mod credential;
+mod crypto;
 /// L9-T1: the enrichment runner: proposals with provenance, per-provider budgets.
 pub mod enrich;
-mod crypto;
 pub mod guard;
 /// M14-T1: checks a builder-defined inbound hook's call passes.
 pub mod inbound;
@@ -33,6 +33,8 @@ pub mod mail_capture;
 pub mod model;
 /// Z1-T11: OAuth 2.0 tokens, stored encrypted and renewed before expiry.
 pub mod oauth;
+/// E13-T10: Google and Bing statistics and IndexNow pings for connected sites.
+pub mod search_console;
 /// J4-T1: SMS sending and delivery receipts.
 pub mod sms;
 pub mod system;

@@ -17,6 +17,7 @@ attome-config.workspace       = true
 attome-core.workspace         = true
 attome-db.workspace           = true
 attome-html.workspace         = true
+attome-integration.workspace  = true
 attome-jobs.workspace         = true
 attome-notification.workspace = true
 attome-records.workspace      = true

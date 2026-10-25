@@ -726,6 +726,8 @@ pub async fn do_publish_page(
     .await?;
 
     tx.commit().await.map_err(AppError::internal)?;
+    // E13-T10: the engines hear of it through IndexNow, when that is on.
+    crate::seo::console::ping_after_publish(state, row.0).await;
     Ok(PublishResult {
         id: row.0,
         status: row.1,

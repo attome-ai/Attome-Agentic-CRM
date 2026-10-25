@@ -21,6 +21,8 @@ pub mod reputation;
 pub mod rest;
 /// S12-T2: SAP Business One over its Service Layer.
 pub mod sap_b1;
+/// E13-T10: Search Console, Bing Webmaster Tools and IndexNow codecs.
+pub mod search_console;
 /// J4-T1: SMS segments, senders and the provider codecs.
 pub mod sms;
 pub mod sms_twilio;

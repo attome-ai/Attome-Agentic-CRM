@@ -230,6 +230,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(86_400),
     );
+    // E13-T10: yesterday's search statistics, daily.
+    crate::jobs::spawn_content_search_console_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // R9-T1: policy reviews, attestations and exceptions, daily.
     crate::jobs::spawn_grc_policy_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // R11-T1: evidence collectors, daily.
