@@ -14,6 +14,8 @@ pub mod error;
 /// AB4-T2: the signed `attome-evidence/v1` record every drill writes.
 pub mod evidence;
 pub mod model;
+/// AB8-T6: the upgrade record and its routes.
+pub mod upgrades;
 
 pub use error::OpsError;
 pub use model::OpsModel;
@@ -21,3 +23,9 @@ pub use model::OpsModel;
 /// This crate's advisory-lock namespace (`"attome-ops/…"` keys), registered
 /// in `crates/apps/attome/tests/advisory_lock_namespaces.rs`.
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 46;
+
+/// This crate's slice of the workspace OpenAPI document, merged in by
+/// `attome::openapi::document()`.
+pub fn openapi() -> utoipa::openapi::OpenApi {
+    upgrades::openapi_fragment()
+}

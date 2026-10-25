@@ -110,6 +110,10 @@ fn build() -> utoipa::openapi::OpenApi {
         "ledger",
     ));
     doc.merge(attome_server::openapi::tag_module(
+        attome_ops::openapi(),
+        "ops",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
         attome_search::engine::openapi(),
         "search",
     ));

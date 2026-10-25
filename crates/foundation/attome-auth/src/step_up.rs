@@ -65,6 +65,8 @@ pub enum Operation {
     AdminMfaReset,
     /// Z10-T9: deciding an approval step that asks for a step-up.
     ApprovalDecision,
+    /// AB8-T6: starting a platform upgrade.
+    PlatformUpgrade,
 }
 
 /// Where an operation's freshness comes from.
@@ -78,13 +80,14 @@ pub enum Freshness {
 }
 
 impl Operation {
-    pub const ALL: [Operation; 6] = [
+    pub const ALL: [Operation; 7] = [
         Operation::MfaDisable,
         Operation::RecoveryCodesRegenerate,
         Operation::IdentityLink,
         Operation::ApiKeyCreate,
         Operation::AdminMfaReset,
         Operation::ApprovalDecision,
+        Operation::PlatformUpgrade,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -95,6 +98,7 @@ impl Operation {
             Operation::ApiKeyCreate => "api_key_create",
             Operation::AdminMfaReset => "admin_mfa_reset",
             Operation::ApprovalDecision => "approval_decision",
+            Operation::PlatformUpgrade => "platform_upgrade",
         }
     }
 
@@ -102,7 +106,7 @@ impl Operation {
     /// (rule 1).
     pub fn max_age_secs(self) -> i64 {
         match self {
-            Operation::ApiKeyCreate => 15 * 60,
+            Operation::ApiKeyCreate | Operation::PlatformUpgrade => 15 * 60,
             Operation::MfaDisable
             | Operation::RecoveryCodesRegenerate
             | Operation::IdentityLink
@@ -119,7 +123,8 @@ impl Operation {
             Operation::IdentityLink
             | Operation::ApiKeyCreate
             | Operation::AdminMfaReset
-            | Operation::ApprovalDecision => Freshness::Elevation,
+            | Operation::ApprovalDecision
+            | Operation::PlatformUpgrade => Freshness::Elevation,
         }
     }
 

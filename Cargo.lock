@@ -1618,10 +1618,12 @@ name = "attome-ops"
 version = "0.1.0"
 dependencies = [
  "attome-audit",
+ "attome-auth",
  "attome-core",
  "attome-db",
  "attome-modules",
  "attome-outbound",
+ "attome-server",
  "attome-types",
  "axum",
  "base64 0.23.1",

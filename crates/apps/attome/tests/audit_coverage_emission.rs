@@ -3941,6 +3941,32 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"decision": "approve", "row_version": submitted.row_version})),
             )
         }
+        // AB8-T6: the admin token holds a fresh step-up.
+        "POST /api/v1/ops/upgrades" => request(
+            "POST",
+            "/api/v1/ops/upgrades",
+            t,
+            Some(
+                json!({"from_version": "2.0.0", "to_version": "2.1.0", "safety_point": "backup-1"}),
+            ),
+        ),
+        "PATCH /api/v1/ops/upgrades/{id}" => {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO ops_upgrade (id, from_version, to_version, started_at, status)                  VALUES (uuidv7(), '2.0.0', '2.1.0', now(), 'started') RETURNING id",
+            )
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("insert an upgrade");
+            with_if_match(
+                request(
+                    "PATCH",
+                    &format!("/api/v1/ops/upgrades/{id}"),
+                    t,
+                    Some(json!({"status": "verified"})),
+                ),
+                1,
+            )
+        }
         "POST /api/v1/calendar-feeds" => {
             // Z12-T8: a public literal address passes the guard without DNS.
             let calendar = calendar(fx).await;

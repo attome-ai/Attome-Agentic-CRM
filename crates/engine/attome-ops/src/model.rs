@@ -21,6 +21,6 @@ impl EngineModel for OpsModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        Router::new()
+        Router::new().merge(crate::upgrades::routes())
     }
 }
