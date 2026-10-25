@@ -710,6 +710,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Vendor risk assessments (R14-T1, vendor-supplier pack `0004`): vendors get a risk tier and rating,
+  questionnaires are published surveys with scoring rules (bool, choice, multi-choice, number and
+  rating questions; unanswered questions earn nothing), and the daily GRC sweep opens an assessment
+  for each due vendor, which the survey sends to the vendor's contact, scores the answers into a
+  low/medium/high/critical rating and schedules the next one by tier (critical twice a year, high
+  yearly, medium every two years, low every three).
 - Yakeen identity checks (AJ3-T1): a national ID or iqama and birth date (Hijri year and month for a
   citizen, Gregorian for a resident) answer matched, not matched or not found, and nothing else; a check
   needs the person's consent first, and `identity_verification` (migration 0246, append-only) keeps the

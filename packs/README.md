@@ -195,6 +195,12 @@ The enterprise-architecture pack's `0002` (X11) adds portfolio fields with TIME 
 interfaces, architecture reviews and roadmap items. The asset-management `0002`, field-service `0003`,
 contract-management `0002`, vendor-supplier `0002`, finance `0002` and human-resources `0003`
 changesets extend those packs (I8, I9, H6, I1, I5, I10, W1, W2, W4, W8).
+The vendor-supplier `0004` (R14-T1) adds third-party risk: a `risk_tier`, `risk_rating` and next
+assessment date on each vendor, `vendor_questionnaire` (a survey's response entity, the tier it is for
+and its scoring rules) and `vendor_assessment`. Publish the questionnaire's survey with
+`send_on` `{entity: vendor_assessment, field: status, value: sent, recipient: contact_ref}` so the
+vendor's contact gets the signed link; the daily GRC sweep opens due assessments, scores the answers
+and sets the next date by tier (`attome_grc::tprm`).
 The asset-management `0003` keys the software catalogue on name and version and seeds
 end-of-support and end-of-life dates for common operating systems, databases, runtimes and office
 software from endoflife.date (H6-T1); its `0004` reports entitled seats against installs and the

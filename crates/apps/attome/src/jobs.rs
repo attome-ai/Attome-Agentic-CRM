@@ -4121,6 +4121,20 @@ pub fn register_job_types() {
                         "grc policies swept"
                     );
                 }
+                // R14-T1: vendor assessments opened, scored and expired.
+                let today = chrono::Utc::now().date_naive();
+                let tprm = attome_grc::tprm::sweep(&state, today)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if tprm != attome_grc::tprm::TprmSweep::default() {
+                    tracing::info!(
+                        opened = tprm.opened,
+                        scored = tprm.scored,
+                        expired = tprm.expired,
+                        unscorable = tprm.unscorable,
+                        "vendor assessments swept"
+                    );
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

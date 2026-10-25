@@ -30,6 +30,8 @@ pub mod policy;
 pub mod reg_change;
 pub mod risk;
 pub mod seed;
+/// R14-T1: vendor questionnaires, answers, scores and assessment cadence.
+pub mod tprm;
 
 pub use model::GrcModel;
 
