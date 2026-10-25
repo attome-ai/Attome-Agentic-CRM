@@ -30,6 +30,7 @@ impl EngineModel for OpsModel {
             .merge(crate::auditor_pack::routes())
             .merge(crate::freshness::routes())
             .merge(crate::recovery_targets::routes())
+            .merge(crate::dr_runbook::routes())
             .merge(crate::switchover::routes())
     }
 }

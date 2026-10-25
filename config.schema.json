@@ -1436,6 +1436,29 @@
       },
       "type": "object"
     },
+    "DrContact": {
+      "description": "AB3-T8: one disaster contact.",
+      "properties": {
+        "name": {
+          "description": "Their name.",
+          "type": "string"
+        },
+        "phone": {
+          "default": "",
+          "description": "How to reach them.",
+          "type": "string"
+        },
+        "role": {
+          "default": "",
+          "description": "What they do in a disaster (`On call`, `Database owner`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
     "EinvoiceSection": {
       "properties": {
         "enabled": {
@@ -2441,6 +2464,14 @@
     },
     "OpsSection": {
       "properties": {
+        "dr_contacts": {
+          "default": [],
+          "description": "AB3-T8: the people the disaster runbook says to call.",
+          "items": {
+            "$ref": "#/$defs/DrContact"
+          },
+          "type": "array"
+        },
         "drill_public_keys": {
           "default": [],
           "description": "Public keys (base64) a drill report's signature is checked against.",

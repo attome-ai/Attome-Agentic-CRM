@@ -17,6 +17,21 @@ pub struct OpsSection {
     /// AB3-T1: the deployment profile recovery targets are read for: `solo`,
     /// `team`, `ha` or `scale`.
     pub profile: String,
+    /// AB3-T8: the people the disaster runbook says to call.
+    pub dr_contacts: Vec<DrContact>,
+}
+
+/// AB3-T8: one disaster contact.
+#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
+pub struct DrContact {
+    /// Their name.
+    pub name: String,
+    /// What they do in a disaster (`On call`, `Database owner`).
+    #[serde(default)]
+    pub role: String,
+    /// How to reach them.
+    #[serde(default)]
+    pub phone: String,
 }
 
 impl Default for OpsSection {
@@ -26,6 +41,7 @@ impl Default for OpsSection {
             drill_signing_key_path: None,
             drill_public_keys: Vec::new(),
             profile: "solo".to_owned(),
+            dr_contacts: Vec::new(),
         }
     }
 }

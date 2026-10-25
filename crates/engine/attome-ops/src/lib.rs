@@ -14,6 +14,8 @@ pub mod auditor_pack;
 /// AB2-T6: failovers and switchovers recorded from Patroni.
 pub mod cluster;
 pub mod disasters;
+/// AB3-T8: the generated disaster runbook.
+pub mod dr_runbook;
 /// AB4-T7: when each kind of drill is due.
 pub mod drill_schedules;
 /// AB4-T6: drill evidence stored in the deployment.
@@ -51,6 +53,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(auditor_pack::openapi_fragment());
     doc.merge(freshness::openapi_fragment());
     doc.merge(recovery_targets::openapi_fragment());
+    doc.merge(dr_runbook::openapi_fragment());
     doc.merge(switchover::openapi_fragment());
     doc
 }

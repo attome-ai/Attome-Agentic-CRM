@@ -619,3 +619,26 @@ fn fresh_recovery_evidence_within_target_marks_proven_and_over_target_does_not()
         assert_eq!(changed["proven"], json!(false));
     });
 }
+
+#[test]
+fn the_dr_runbook_answers_in_both_languages() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        for lang in ["en", "ar"] {
+            let (status, _) = app
+                .request(
+                    Method::GET,
+                    &format!("/api/v1/ops/dr-runbook?lang={lang}"),
+                    None,
+                )
+                .await;
+            assert_eq!(status, StatusCode::OK, "{lang}");
+        }
+        let (status, _) = app
+            .request(Method::GET, "/api/v1/ops/dr-runbook?lang=fr", None)
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    });
+}
