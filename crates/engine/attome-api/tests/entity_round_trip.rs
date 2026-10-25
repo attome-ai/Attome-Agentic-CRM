@@ -4714,6 +4714,83 @@ async fn create_hierarchy_node(
     (id, row_version)
 }
 
+/// S2-T16: an admin's overlay describes an entity's path in the deployment
+/// document, and a target outside `/api/v1/` paths is refused.
+#[test]
+fn overlay_description_appears_in_live_document() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+
+        let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "overlaid").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"name","name":"Name","field_type":"text"}"#,
+        )
+        .await;
+        sync_registry(&state).await;
+        sqlx::query("DELETE FROM openapi_overlay")
+            .execute(&db)
+            .await
+            .expect("clear the overlay");
+
+        let put = |body: serde_json::Value| {
+            Request::builder()
+                .method("PUT")
+                .uri("/api/v1/admin/openapi/overlay")
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(put(serde_json::json!({
+                "overlay": { "actions": [{ "target": "$.info", "update": { "description": "x" } }] },
+                "row_version": 0
+            })))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+        let target = format!("$.paths['/api/v1/{logicalname}'].get");
+        let res = app
+            .clone()
+            .oneshot(put(serde_json::json!({
+                "overlay": { "overlay": "1.0.0", "actions": [
+                    { "target": target, "update": { "summary": "Our overlaid records" } }
+                ] },
+                "row_version": 0
+            })))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let req = Request::builder()
+            .method("GET")
+            .uri("/api/v1/openapi/deployment.json")
+            .header("cookie", &admin_cookie)
+            .body(Body::empty())
+            .unwrap();
+        let res = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let doc = body_json(res).await;
+        assert_eq!(
+            doc["paths"][format!("/api/v1/{logicalname}")]["get"]["summary"],
+            "Our overlaid records"
+        );
+        sqlx::query("DELETE FROM openapi_overlay")
+            .execute(&db)
+            .await
+            .expect("clear the overlay");
+    })
+}
+
 /// A17-T1: a hierarchy-flagged self lookup keeps each row's tree path; a
 /// move rewrites the moved subtree, and descendants are read by prefix.
 #[test]
