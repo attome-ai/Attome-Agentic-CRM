@@ -10,6 +10,8 @@
 
 /// AB2-T6: failovers and switchovers recorded from Patroni.
 pub mod cluster;
+/// AB3-T7: declared disasters under two-person control.
+pub mod disasters;
 pub mod error;
 /// AB4-T2: the signed `attome-evidence/v1` record every drill writes.
 pub mod evidence;
@@ -27,5 +29,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 46;
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    upgrades::openapi_fragment()
+    let mut doc = upgrades::openapi_fragment();
+    doc.merge(disasters::openapi_fragment());
+    doc
 }

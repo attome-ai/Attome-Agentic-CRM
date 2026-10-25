@@ -3941,6 +3941,34 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"decision": "approve", "row_version": submitted.row_version})),
             )
         }
+        // AB3-T7: declared disasters.
+        "POST /api/v1/ops/disasters" => request(
+            "POST",
+            "/api/v1/ops/disasters",
+            t,
+            Some(json!({"scenario": "site_loss", "summary": "the primary site is down"})),
+        ),
+        "POST /api/v1/ops/disasters/{id}/actions" => {
+            let id = ops_disaster(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/ops/disasters/{id}/actions"),
+                t,
+                Some(json!({"action": "switch_site"})),
+            )
+        }
+        "POST /api/v1/ops/disasters/{id}/close" => {
+            let id = ops_disaster(fx).await;
+            with_if_match(
+                request(
+                    "POST",
+                    &format!("/api/v1/ops/disasters/{id}/close"),
+                    t,
+                    None,
+                ),
+                1,
+            )
+        }
         // AB8-T6: the admin token holds a fresh step-up.
         "POST /api/v1/ops/upgrades" => request(
             "POST",
@@ -7754,6 +7782,17 @@ async fn rule(fx: &Fx) -> Uuid {
         )
         .await,
     )
+}
+
+/// AB3-T7: a declared disaster (`row_version` 1).
+async fn ops_disaster(fx: &Fx) -> Uuid {
+    sqlx::query_scalar(
+        "INSERT INTO ops_disaster (id, declared_by, declared_at, scenario, summary)          VALUES (uuidv7(), $1, now(), 'site_loss', 'drill') RETURNING id",
+    )
+    .bind(fx.admin_id)
+    .fetch_one(&fx.base.db)
+    .await
+    .expect("insert a disaster")
 }
 
 /// Z12-T8: a calendar to hang a feed on.
