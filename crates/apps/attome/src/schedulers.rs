@@ -207,6 +207,12 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(300),
     );
+    // E13-T9: sitemaps of changed sites hourly; the SEO audit nightly.
+    crate::jobs::spawn_content_sitemap_scheduler(db.clone(), std::time::Duration::from_secs(3_600));
+    crate::jobs::spawn_content_seo_audit_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // R9-T1: policy reviews, attestations and exceptions, daily.
     crate::jobs::spawn_grc_policy_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // R11-T1: evidence collectors, daily.

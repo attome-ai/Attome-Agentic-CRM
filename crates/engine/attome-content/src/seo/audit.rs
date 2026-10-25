@@ -434,6 +434,51 @@ pub async fn inputs_for(db: &DbPool, page: &PageDetail) -> Result<AuditInputs, A
     Ok(inputs)
 }
 
+/// E13-T9: the nightly job's name.
+pub const NIGHTLY_JOB: &str = "content_seo_audit";
+/// Pages audited per batch by the nightly run.
+pub const NIGHTLY_BATCH: i64 = 500;
+
+/// E13-T9: re-audits every published page, [`NIGHTLY_BATCH`] at a time,
+/// when `content.seo_audit` is on for the deployment; returns how many were
+/// audited. A page that fails is logged and the run goes on.
+pub async fn run_nightly(state: &EngineState) -> Result<usize, AppError> {
+    if !state
+        .feature_flags()
+        .is_on_for_deployment("content.seo_audit")
+    {
+        return Ok(0);
+    }
+    let db = &state.base.db;
+    let mut after = Uuid::nil();
+    let mut audited = 0;
+    loop {
+        let batch: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM content_page \
+              WHERE is_deleted = false AND status = 'published' AND id > $1 \
+              ORDER BY id LIMIT $2",
+        )
+        .bind(after)
+        .bind(NIGHTLY_BATCH)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        let Some(last) = batch.last().copied() else {
+            break;
+        };
+        for page in batch {
+            match crate::seo::site::audit_now(db, page).await {
+                Ok(_) => audited += 1,
+                Err(error) => {
+                    tracing::warn!(%page, %error, "nightly seo audit: page skipped");
+                }
+            }
+        }
+        after = last;
+    }
+    Ok(audited)
+}
+
 /// Audits a page after its save committed, when `content.seo_audit` is on
 /// for `ctx`; a failure is logged and never undoes the save.
 pub async fn audit_after_save(

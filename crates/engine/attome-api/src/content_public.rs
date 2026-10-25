@@ -799,6 +799,9 @@ struct SitemapQuery {
     site: String,
     /// The language, such as `en` or `ar`; the first stored when absent.
     lang: Option<String>,
+    /// E13-T9: a part of a split sitemap (the index, part 0, names them);
+    /// 0 when absent.
+    part: Option<i32>,
 }
 
 /// A site's sitemap (E13-T8).
@@ -834,8 +837,13 @@ async fn site_sitemap(
             "site is a host name and lang a language code".into(),
         ));
     }
+    let part = q.part.unwrap_or(0);
+    if !(0..=10_000).contains(&part) {
+        return Err(AppError::Validation("part is 0 to 10000".into()));
+    }
     let xml =
-        attome_content::seo::site::served_sitemap(&state.base.db, &site, q.lang.as_deref()).await?;
+        attome_content::seo::site::served_sitemap(&state.base.db, &site, q.lang.as_deref(), part)
+            .await?;
     Ok((
         [
             (

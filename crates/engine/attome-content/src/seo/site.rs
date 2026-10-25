@@ -534,11 +534,14 @@ pub async fn put_robots(
 }
 
 /// The sitemap served for a site: the language asked for, else the first
-/// language stored for the site; an empty `urlset` when there is none.
+/// language stored for the site; part 0 (the only `urlset`, or the index of
+/// a split one) unless a part is asked for; an empty `urlset` when there is
+/// none.
 pub async fn served_sitemap(
     db: &DbPool,
     site_key: &str,
     lang: Option<&str>,
+    part: i32,
 ) -> Result<String, AppError> {
     let lang = match lang {
         Some(lang) => Some(lang.to_owned()),
@@ -551,28 +554,30 @@ pub async fn served_sitemap(
         .map_err(AppError::internal)?,
     };
     Ok(match lang {
-        Some(lang) => sitemap(db, site_key, &lang)
+        Some(lang) => sitemap(db, site_key, &lang, part)
             .await?
             .unwrap_or_else(empty_sitemap),
         None => empty_sitemap(),
     })
 }
 
-/// A site's stored sitemap for one language, its parts joined in order.
-pub async fn sitemap(db: &DbPool, site_key: &str, lang: &str) -> Result<Option<String>, AppError> {
-    let parts: Vec<String> = sqlx::query_scalar(
-        "SELECT xml FROM content_sitemap WHERE site_key = $1 AND lang = $2 ORDER BY part",
+/// One stored part of a site's sitemap for one language (E13-T9: part 0
+/// is the only `urlset`, or the index naming parts 1.. of a split one).
+pub async fn sitemap(
+    db: &DbPool,
+    site_key: &str,
+    lang: &str,
+    part: i32,
+) -> Result<Option<String>, AppError> {
+    sqlx::query_scalar(
+        "SELECT xml FROM content_sitemap WHERE site_key = $1 AND lang = $2 AND part = $3",
     )
     .bind(site_key)
     .bind(lang)
-    .fetch_all(db)
+    .bind(part)
+    .fetch_optional(db)
     .await
-    .map_err(AppError::internal)?;
-    Ok(match parts.len() {
-        0 => None,
-        1 => parts.into_iter().next(),
-        _ => Some(parts.concat()),
-    })
+    .map_err(AppError::internal)
 }
 
 #[cfg(test)]

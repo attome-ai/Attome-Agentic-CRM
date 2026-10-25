@@ -306,7 +306,7 @@ pub fn is_arabic_language(language: Option<&str>) -> bool {
 
 /// E13-T5: true for a letter or digit in the Unicode Arabic blocks
 /// (U+0600–U+06FF, U+0750–U+077F).
-fn is_arabic_letter(c: char) -> bool {
+pub(crate) fn is_arabic_letter(c: char) -> bool {
     matches!(c, '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}')
         && (c.is_alphabetic() || c.is_numeric())
 }

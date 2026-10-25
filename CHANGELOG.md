@@ -199,6 +199,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Sitemaps are built (E13-T9): an hourly job rebuilds the stored sitemap of every site whose pages
+  changed (published public pages that are not `noindex`, `lastmod` and `hreflang` alternates per
+  translation), splitting past 50,000 URLs into an index and parts served with
+  `GET /api/v1/content/sitemap?part=N`; a nightly job re-audits every published page while
+  `content.seo_audit` is on.
 - `seo.draft` agent action (E13-T11): drafts a content page's search titles, descriptions and FAQ
   in Arabic and English, internal links to other published pages of its site and an explanation and fix
   for each audit finding; returns a checked draft (lengths flagged, unknown links dropped) and saves

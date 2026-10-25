@@ -8,4 +8,6 @@ pub mod audit;
 pub mod routes;
 pub mod settings;
 pub mod site;
+/// E13-T9: building the stored sitemaps.
+pub mod sitemap;
 pub mod structured_data;

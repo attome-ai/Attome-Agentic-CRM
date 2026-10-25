@@ -2973,6 +2973,8 @@ const DEDUP_KEY_DEVICE_READINGS: &str = "device-readings";
 const DEDUP_KEY_GRC_POLICY_SWEEP: &str = "grc-policy-sweep";
 /// Q22-T1: detection rules over security events (a registered job type).
 const DEDUP_KEY_SECURITY_DETECTIONS: &str = "security-detections";
+const DEDUP_KEY_CONTENT_SITEMAP: &str = "content-sitemap";
+const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
 /// R11-T1: evidence collectors (a registered job type).
 const DEDUP_KEY_GRC_EVIDENCE: &str = "grc-evidence-collect";
 /// I10-T2: warranty expiry reminders (a registered job type).
@@ -3244,6 +3246,14 @@ pub const GRC_POLICY_SWEEP: attome_jobs::JobType =
 /// new-device detections, each a security case.
 pub const SECURITY_DETECTIONS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_audit::detections::JOB, 1);
+
+/// E13-T9: the stored sitemaps of sites whose pages changed, rebuilt.
+pub const CONTENT_SITEMAP: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_content::seo::sitemap::JOB, 1);
+
+/// E13-T9: every published page re-audited when `content.seo_audit` is on.
+pub const CONTENT_SEO_AUDIT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_content::seo::audit::NIGHTLY_JOB, 1);
 
 /// R11-T1: evidence collectors writing evidence and, on failure, findings.
 pub const GRC_EVIDENCE_COLLECT: attome_jobs::JobType =
@@ -4123,6 +4133,37 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CONTENT_SITEMAP,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let counts = attome_content::seo::sitemap::regenerate_all(&state.base.db)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(
+                    sites = counts.sites,
+                    skipped = counts.skipped,
+                    written = counts.written,
+                    unchanged = counts.unchanged,
+                    removed = counts.removed,
+                    "content sitemaps rebuilt"
+                );
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CONTENT_SEO_AUDIT,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let audited = attome_content::seo::audit::run_nightly(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(audited, "nightly seo audit done");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SECURITY_DETECTIONS,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let now = chrono::Utc::now();
@@ -4638,6 +4679,10 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == DEVICE_READINGS.name => DEDUP_KEY_DEVICE_READINGS,
         EngineJob::Registered(job) if job.name == SECURITY_DETECTIONS.name => {
             DEDUP_KEY_SECURITY_DETECTIONS
+        }
+        EngineJob::Registered(job) if job.name == CONTENT_SITEMAP.name => DEDUP_KEY_CONTENT_SITEMAP,
+        EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
+            DEDUP_KEY_CONTENT_SEO_AUDIT
         }
         EngineJob::Registered(job) if job.name == GRC_POLICY_SWEEP.name => {
             DEDUP_KEY_GRC_POLICY_SWEEP
@@ -5604,6 +5649,36 @@ pub fn spawn_security_detections_scheduler(db: DbPool, interval: std::time::Dura
             "security detections",
         ),
         Err(error) => tracing::error!(%error, "security detections: not scheduled"),
+    }
+}
+
+/// E13-T9: hourly, the sitemaps of sites whose pages changed.
+pub fn spawn_content_sitemap_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CONTENT_SITEMAP.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CONTENT_SITEMAP,
+            "content sitemaps",
+        ),
+        Err(error) => tracing::error!(%error, "content sitemaps: not scheduled"),
+    }
+}
+
+/// E13-T9: nightly, the SEO audit of every published page.
+pub fn spawn_content_seo_audit_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CONTENT_SEO_AUDIT.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CONTENT_SEO_AUDIT,
+            "content seo audit",
+        ),
+        Err(error) => tracing::error!(%error, "content seo audit: not scheduled"),
     }
 }
 
