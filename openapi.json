@@ -206576,7 +206576,6 @@
     }
   ],
   "x-api-version": "2026-10",
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -206628,5 +206627,6 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": []
 }
