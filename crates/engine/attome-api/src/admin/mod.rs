@@ -31,6 +31,8 @@ pub(crate) mod orphans;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day recovery archive routes.
 mod recovery_archive;
 /// Solution 7 Phase 2 (D-788 Topic 14, D-791) — the release report routes.
+/// Y12-T11: rehearse a field change on the copy database.
+mod rehearse;
 mod release_report;
 
 use attome_audit::AuditFieldChange;
@@ -162,6 +164,7 @@ pub(crate) fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(change_plan::openapi_fragment());
     doc.merge(orphans::openapi_fragment());
     doc.merge(release_report::openapi_fragment());
+    doc.merge(rehearse::openapi_fragment());
     // Gated like every other reference to this module (lines 18/36/178): the
     // scaffold is physically absent from release binaries, so an unconditional
     // call here fails `cargo build --release` outright — which is exactly what
@@ -226,6 +229,7 @@ pub fn routes() -> Router<EngineState> {
             post(abandon_field_run),
         )
         .merge(recovery_archive::routes())
+        .merge(rehearse::routes())
         .merge(ddl_log::routes())
         .merge(index_proposals::routes())
         .merge(data_step_runs::routes())

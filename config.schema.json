@@ -2235,6 +2235,14 @@
           "description": "Solution 7 Phase 2 (D-788 rule 9): the key-encryption-key ring of the\n30-day recovery archive (`xrm_core_recovery_archive`), its own trust\ndomain (D-069). Empty (the default) means \"not configured\": every\noperation that would archive a value (a field delete with values, a\ntype change that nulls values) is refused with `archive_key_missing`\n(fail closed). When set, every entry must be 64 hex chars (a boot\nerror otherwise). `KeyRing`'s `Debug` redacts the values.",
           "writeOnly": true
         },
+        "rehearsal_database_url": {
+          "description": "Y12-T11: a restored copy of this deployment's database (a PostgreSQL\nURL) where a field change can be rehearsed and timed\n(`POST /api/v1/admin/entities/{entity_id}/rehearse`). Never the main\ndatabase: boot refuses a URL naming the same host, port and database.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "writeOnly": true
+        },
         "release_report": {
           "$ref": "#/$defs/ReleaseReportSection",
           "description": "Solution 7 Phase 2 (design §10.5): the post-apply release-report\nnotification."

@@ -145,6 +145,10 @@ pub const SECRETS: &[SecretSpec] = &[
         "metadata.recovery_archive_key_encryption_key",
         &["metadata recovery archive"],
     ),
+    value(
+        "metadata.rehearsal_database_url",
+        &["schema change rehearsal"],
+    ),
     value("oidc.providers{}.client_secret", &["single sign-on (OIDC)"]),
     value("portal.captcha.secret", &["portal sign-up captcha"]),
     value(

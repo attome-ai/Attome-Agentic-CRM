@@ -1494,6 +1494,27 @@ impl AppConfig {
         if let Err((field, reason)) = self.metadata.release_report.check() {
             return Err(ConfigError::Invalid { field, reason });
         }
+        // Y12-T11 — a rehearsal runs DDL; it must never point at the main
+        // database.
+        if let Some(url) = &self.metadata.rehearsal_database_url {
+            let field = "metadata.rehearsal_database_url".to_string();
+            let Some((host, port, db)) = super::sections::metadata::postgres_target(url.expose())
+            else {
+                return Err(ConfigError::Invalid {
+                    field,
+                    reason: "a postgres:// URL naming a host and a database".into(),
+                });
+            };
+            if host == self.database.host.to_ascii_lowercase()
+                && port == self.database.port
+                && db == self.database.dbname
+            {
+                return Err(ConfigError::Invalid {
+                    field,
+                    reason: "names the main database; point it at a restored copy".into(),
+                });
+            }
+        }
         // Z6-T4 — the file encryption ring is optional, but a configured one
         // must be well formed, and asking for client-side encryption without
         // one is a boot error rather than files silently left in the clear.

@@ -9,6 +9,7 @@
 
 use serde::Deserialize;
 
+use crate::Secret;
 use crate::keyring::KeyRing;
 
 /// `metadata` — additive, every field defaulted, so a config file without it
@@ -43,6 +44,32 @@ pub struct MetadataSection {
     /// Y12-T6: the largest batch a backfill grows to. Unset is 50,000.
     #[serde(default)]
     pub backfill_batch_max: Option<i64>,
+    /// Y12-T11: a restored copy of this deployment's database (a PostgreSQL
+    /// URL) where a field change can be rehearsed and timed
+    /// (`POST /api/v1/admin/entities/{entity_id}/rehearse`). Never the main
+    /// database: boot refuses a URL naming the same host, port and database.
+    #[serde(default)]
+    pub rehearsal_database_url: Option<Secret>,
+}
+
+/// Y12-T11: the host, port and database a PostgreSQL URL names
+/// (`postgres://user:pass@host:port/db?options`; port 5432 when absent).
+/// Pure.
+pub fn postgres_target(url: &str) -> Option<(String, u16, String)> {
+    let rest = url
+        .strip_prefix("postgres://")
+        .or_else(|| url.strip_prefix("postgresql://"))?;
+    let (authority, path) = rest.split_once('/')?;
+    let host_port = authority.rsplit_once('@').map_or(authority, |(_, h)| h);
+    let (host, port) = match host_port.rsplit_once(':') {
+        Some((host, port)) => (host, port.parse().ok()?),
+        None => (host_port, 5432),
+    };
+    let db = path.split('?').next().unwrap_or_default();
+    if host.is_empty() || db.is_empty() {
+        return None;
+    }
+    Some((host.to_ascii_lowercase(), port, db.to_owned()))
 }
 
 /// Most role names `metadata.release_report.notify_roles` accepts.
@@ -224,6 +251,27 @@ impl ChangesetLayer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rehearsal_refuses_main_database() {
+        assert_eq!(
+            postgres_target("postgres://attome:pw@DB.local:5555/attomedb?options=x"),
+            Some(("db.local".into(), 5555, "attomedb".into()))
+        );
+        assert_eq!(
+            postgres_target("postgresql://copy-host/attomedb_copy"),
+            Some(("copy-host".into(), 5432, "attomedb_copy".into()))
+        );
+        assert_eq!(postgres_target("mysql://x/y"), None);
+        assert_eq!(postgres_target("postgres://host:5432/"), None);
+        // `AppConfig::validate` refuses the URL when this target is the main
+        // database's host, port and name.
+        let main = ("db.local".to_owned(), 5555, "attomedb".to_owned());
+        assert_eq!(
+            postgres_target("postgres://other:pw@db.local:5555/attomedb").as_ref(),
+            Some(&main)
+        );
+    }
 
     fn parse(json: &str) -> MetadataSection {
         serde_json::from_str(json).expect("metadata section parses")
