@@ -197,6 +197,21 @@ fn is_inbound_hook_path(path: &str) -> bool {
         .is_some_and(|name| !name.is_empty() && !name.contains('/'))
 }
 
+/// Z8-T5: a sending provider's event webhook, exactly
+/// `/api/v1/email/webhooks/ses` or `/api/v1/email/webhooks/sendgrid`. The
+/// handler (`attome_api::email_webhooks::receive`) verifies the provider's
+/// signature (SNS certificate, SendGrid ECDSA key) before anything is read.
+fn is_email_feedback_path(path: &str) -> bool {
+    // The `{provider}` template is how the OpenAPI document names the
+    // route; it is marked public through this same check.
+    matches!(
+        path,
+        "/api/v1/email/webhooks/ses"
+            | "/api/v1/email/webhooks/sendgrid"
+            | "/api/v1/email/webhooks/{provider}"
+    )
+}
+
 /// F5-T7: a payment gateway's webhook,
 /// `/api/v1/billing/gateways/{system}/webhook`: the same segment-shape match
 /// as [`is_integrations_webhook_path`] (one `{system}` segment, the literal
@@ -365,6 +380,7 @@ pub fn is_bypass(path: &str) -> bool {
             .any(|prefix| path.starts_with(prefix))
         || is_integrations_webhook_path(path)
         || is_inbound_hook_path(path)
+        || is_email_feedback_path(path)
         || is_billing_gateway_webhook_path(path)
         || is_payment_link_path(path)
         || is_service_intake_path(path)
@@ -628,6 +644,14 @@ mod tests {
     #[test]
     fn integration_webhook_prefix_requires_the_slash_boundary() {
         assert!(!is_bypass("/api/v1/integrations-admin"));
+    }
+
+    #[test]
+    fn only_the_two_email_feedback_webhooks_are_public() {
+        assert!(is_bypass("/api/v1/email/webhooks/ses"));
+        assert!(is_bypass("/api/v1/email/webhooks/sendgrid"));
+        assert!(!is_bypass("/api/v1/email/webhooks/other"));
+        assert!(!is_bypass("/api/v1/email/webhooks/ses/admin"));
     }
 
     #[test]

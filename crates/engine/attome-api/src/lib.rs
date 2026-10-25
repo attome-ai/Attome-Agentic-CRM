@@ -127,6 +127,8 @@ pub mod duplicates_admin;
 /// calls; everything else stays module-private.
 pub mod duplicates_match;
 mod email_admin;
+/// Z8-T5: provider bounce, complaint and unsubscribe webhooks.
+mod email_webhooks;
 /// `pub` only for the two re-exports below (`read_record`,
 /// `resolve_entity_public`), which `attome-ai` calls so a read action reuses
 /// this crate's own authorization path instead of growing a second one. Every

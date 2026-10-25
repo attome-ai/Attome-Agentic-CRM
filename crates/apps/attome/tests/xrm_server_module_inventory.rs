@@ -143,6 +143,8 @@ const BASELINE: &[&str] = &[
     "duplicates_admin",
     "duplicates_match",
     "email_admin",
+    // Z8-T5: the public provider webhooks that feed email suppression.
+    "email_webhooks",
     // A30-T1: values of the `environment_variable` model kind, which the
     // changeset and model admin here define; no engine crate owns kinds.
     "env_variable_admin",

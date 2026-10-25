@@ -148,6 +148,24 @@ pub struct EmailSection {
     /// turn (up to a minute), then retries later.
     #[serde(default)]
     pub rate_limits: EmailRateLimits,
+    /// Z8-T5: where providers report bounces, complaints and unsubscribes
+    /// (`POST /api/v1/email/webhooks/{provider}`). Nothing is accepted from a
+    /// provider not configured here.
+    #[serde(default)]
+    pub feedback: EmailFeedback,
+}
+
+/// Z8-T5: `email.feedback`.
+#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
+pub struct EmailFeedback {
+    /// SendGrid's signed event webhook verification key (the base64
+    /// SubjectPublicKeyInfo SendGrid shows); unset refuses SendGrid events.
+    #[serde(default)]
+    pub sendgrid_public_key: Option<String>,
+    /// The SNS topics (ARNs) whose SES notifications are accepted; empty
+    /// refuses SES events.
+    #[serde(default)]
+    pub ses_topic_arns: Vec<String>,
 }
 
 /// Z8-T3: `email.rate_limits`. Each stream's own limits; a stream with

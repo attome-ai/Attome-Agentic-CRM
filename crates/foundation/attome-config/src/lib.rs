@@ -58,7 +58,7 @@ pub use config::{
     AzureStorageSettings, BackupSection, CacheBackend, CacheRole, CacheRoleOverride, CacheRoles,
     CacheSection, CaptchaConfig, CaptchaProvider, CatalogueModel, ChangesetLayer, ChangesetMode,
     ChangesetsSection, ConfigError, DataLabel, DatabasePoolSize, DatabasePools, DatabaseSection,
-    DocgenSection, EinvoiceSection, EmailProviders, EmailRateLimits, EmailSection,
+    DocgenSection, EinvoiceSection, EmailFeedback, EmailProviders, EmailRateLimits, EmailSection,
     EmailStreamRates, EventsSection, FleetSection, GcsStorageSettings, GoogleAiSection,
     InferenceEndpoint, InferenceSection, IntegrationSection, KdfSection, LocalStorageSettings,
     MetadataSection, ModelCapability, ModelPrice, NotificationSection, ObservabilitySection,

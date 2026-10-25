@@ -33,6 +33,8 @@
 
 pub mod delivery;
 mod error;
+/// Z8-T5: provider bounce, complaint and unsubscribe events.
+pub mod feedback;
 pub mod health;
 mod message;
 /// Z8-T1 — SMTP, Amazon SES and SendGrid behind one provider trait.

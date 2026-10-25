@@ -1467,6 +1467,28 @@
       },
       "type": "object"
     },
+    "EmailFeedback": {
+      "description": "Z8-T5: `email.feedback`.",
+      "properties": {
+        "sendgrid_public_key": {
+          "default": null,
+          "description": "SendGrid's signed event webhook verification key (the base64\nSubjectPublicKeyInfo SendGrid shows); unset refuses SendGrid events.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ses_topic_arns": {
+          "default": [],
+          "description": "The SNS topics (ARNs) whose SES notifications are accepted; empty\nrefuses SES events.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "EmailProviders": {
       "description": "Z8-T1: `email.providers`. `by_sender` maps a From address (any case) to\na provider name; every other address takes `default`, SMTP when unset.\nA provider named here needs its own block below.",
       "properties": {
@@ -1528,6 +1550,10 @@
           "default": false,
           "description": "P-account-lifecycle — this section existed but nothing consumed it\n(dead config, audit finding E). `enabled` is the explicit opt-in: when\nfalse, `attome-email` is never constructed and reset/verification\nrequests return 503 `feature_unavailable` instead of silently trying\n(and failing) to reach an SMTP host that was never meant to be live —\nsame \"ships dark behind a flag\" pattern as `audit.chainer_enabled`.",
           "type": "boolean"
+        },
+        "feedback": {
+          "$ref": "#/$defs/EmailFeedback",
+          "description": "Z8-T5: where providers report bounces, complaints and unsubscribes\n(`POST /api/v1/email/webhooks/{provider}`). Nothing is accepted from a\nprovider not configured here."
         },
         "providers": {
           "$ref": "#/$defs/EmailProviders",

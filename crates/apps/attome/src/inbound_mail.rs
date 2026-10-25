@@ -140,6 +140,28 @@ async fn route_message(
     routing: &MailboxRouting,
     message: &MailMessage,
 ) -> Result<Outcome, AppError> {
+    // Z8-T5: a delivery status notification for our own mail suppresses the
+    // address it failed for (5.x.x at once, 4.x.x after five in a week) and
+    // opens nothing.
+    if let Some(text) = message.text.as_deref()
+        && text.to_ascii_lowercase().contains("final-recipient:")
+    {
+        let events = attome_email::feedback::parse_dsn(text);
+        if !events.is_empty() {
+            let suppressed = attome_email::feedback::apply(&state.base.db, &events)
+                .await
+                .map_err(AppError::internal)?;
+            tracing::info!(
+                failures = events.len(),
+                suppressed,
+                "inbound mail: bounce notification read"
+            );
+            if let Some(id) = message.message_id.as_deref() {
+                record(state, system_id, id, "bounce_recorded", None, None).await?;
+            }
+            return Ok(Outcome::Skipped);
+        }
+    }
     if let Some(reason) = skip_reason(message, routing) {
         if let Some(id) = message.message_id.as_deref() {
             record(state, system_id, id, reason.as_str(), None, None).await?;

@@ -602,6 +602,14 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // Z8-T5: provider email events; the two provider paths are
+                // bypass-listed and check the provider's signature.
+                crate::email_webhooks::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // Q3-T1: SCIM provisioning; the `/scim/v2/` routes are
                 // bypass-listed and check their own bearer token.
                 attome_security::scim::routes().layer(middleware::from_fn_with_state(

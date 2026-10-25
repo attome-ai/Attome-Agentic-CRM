@@ -1,0 +1,18 @@
+{
+ "cert_pem": "-----BEGIN CERTIFICATE-----\nMIICxjCCAa6gAwIBAgICBNIwDQYJKoZIhvcNAQELBQAwJjEkMCIGA1UEAwwbc25z\nLnVzLWVhc3QtMS5hbWF6b25hd3MuY29tMB4XDTI2MDEwMTAwMDAwMFoXDTM1MTIz\nMDAwMDAwMFowJjEkMCIGA1UEAwwbc25zLnVzLWVhc3QtMS5hbWF6b25hd3MuY29t\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu3UUyOQaBrVxa0DJILEN\nZQA8jjouN6assbcFaeUCwHviFUE3absr+yzji+LsKkbJKSieq23tEUUGJOW/VDiC\nslqMQHp6zYBao6zDnHVft+hu7UR8/o08eUAaYon7vKvsuefjEFI0N4ehyNUwJVug\nDjH8zV/BxhxMYbMRXpBVM+yiRVTuBnnMM6DTDPJpiJ2MSr805685wU/2ir+glc5Y\nIYac8yxpYd8lrk+KVeTliNr5VZyrjmzFsfuUegC8YLOjLkW/XimpYsAoRG0CoXiQ\n9dRm92gLZThS2Rvn9eOrg4RQSS5YzIMVDxjIytIzeJY+Gb+5mY7hMDuLA+P33pSd\n5wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBkgbK/Z5S5zThSBg0YSk4Q+ZqTQCBl\njWYovrw3ThuM2XYHbQcLPQy9TTbiJ8HMNpDGnFGa/bGgYcKU3g7+DrxACWY/HzSA\nh5UT2cIGy0vFNBsmKFM6sqResXFF5n/t480vTSe9BtubQsXh+cV0ufzNlIv5sVFV\nkaVtglT8czIO9tpOJHEui0EQKoMdb8MAvqbOZinjmKGG+38VxT/VzAbRVUGVB1OP\nwBGZpXQM3M/Xflwt9tdcLKMdcZZrVN38fLmYQfgtjjr9SYA9yGA3zovrSdfKzLPB\n2+ZYO1yF/9JkitAM1iZj/xRiv9eeNli618dBOWKCmhuS9VTURelqzSC/\n-----END CERTIFICATE-----\n",
+ "sns": {
+  "Type": "Notification",
+  "MessageId": "22b80b92-fdea-4c2c-8f9d-bdfb0c7bf324",
+  "TopicArn": "arn:aws:sns:us-east-1:123456789012:ses-feedback",
+  "Subject": "Amazon SES Email Event Notification",
+  "Message": "{\"notificationType\": \"Bounce\", \"bounce\": {\"bounceType\": \"Permanent\", \"bouncedRecipients\": [{\"emailAddress\": \"gone@example.com\", \"diagnosticCode\": \"smtp; 550 5.1.1 user unknown\"}]}, \"mail\": {\"source\": \"noreply@attome.test\"}}",
+  "Timestamp": "2026-10-25T10:00:00.000Z",
+  "SignatureVersion": "2",
+  "SigningCertURL": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-abc.pem",
+  "Signature": "W55bHbQD8/ZXFZdLPB2yUKR+L1OyWbVqMPtiVz9Oi6cmSvCEXLHVGQFdKZQVP2+iRgbO8hdLXmrO8vzhUSwfFvJbF9TPPcvrnGil3jRZdLQL/TtYQnmJmk5lZ/2p9/ASMUAbEwC62Ng2jpwOPbolGAd4XgWOMALrdvaBWzsOwOz6H6DTzRjmaVSzwnJZzC8k878qZ5JoGTgSyUk4p9Psf8QSqb63p5twZugkXllhsZIxvs7kGyei4usJVvSEoqJEaS+FfQRaFcRmiFIeQFlqGTTnUpFIQMhmvF+I4wUjsJ/1BM/STOsevQ+u9dwlTsGa4RNCClqiiVoUW2Lp6VBceA=="
+ },
+ "sg_key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEJSJjbTuCmvnB/gSMCji+KEA9VS3Fa4Xxye7snCCq8JmX0bnncUboDO2GOdluZQAdPmVI6+RrkwQ/DRSb6moBiA==",
+ "sg_ts": "1793001600",
+ "sg_body": "[{\"email\":\"spam@example.com\",\"event\":\"spamreport\",\"timestamp\":1793001600},{\"email\":\"left@example.com\",\"event\":\"unsubscribe\"},{\"email\":\"soft@example.com\",\"event\":\"bounce\",\"type\":\"blocked\",\"reason\":\"mailbox full\"},{\"email\":\"hard@example.com\",\"event\":\"bounce\",\"type\":\"bounce\",\"reason\":\"550 no such user\"}]",
+ "sg_sig": "MEMCICVExne1OBI4asn6TvwuvIKR9T1LbljL1W4zizA6kcsuAh8pprqcPKq12XTBoRrQBvle4/kRVwZ6lSdK5VPPLreO"
+}

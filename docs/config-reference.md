@@ -275,6 +275,8 @@ Required.
 | Key | Type | Default | Secret | Description |
 |---|---|---|---|---|
 | `email.enabled` | boolean | `false` |  | P-account-lifecycle — this section existed but nothing consumed it (dead config, audit finding E). `enabled` is the explicit opt-in: when false, `attome-email` is never constructed and reset/verification requests return 503 `feature_unavailable` instead of silently trying (and failing) to reach an SMTP host that was never meant to be live — same "ships dark behind a flag" pattern as `audit.chainer_enabled`. |
+| `email.feedback.sendgrid_public_key` | string, optional | `null` |  | SendGrid's signed event webhook verification key (the base64 SubjectPublicKeyInfo SendGrid shows); unset refuses SendGrid events. |
+| `email.feedback.ses_topic_arns` | array of string | `[]` |  | The SNS topics (ARNs) whose SES notifications are accepted; empty refuses SES events. |
 | `email.providers.by_sender` | map |  |  |  |
 | `email.providers.default` | string, optional | `null` |  | `"smtp"`, `"ses"` or `"sendgrid"`. |
 | `email.providers.sendgrid.api_key` | string |  | yes |  |

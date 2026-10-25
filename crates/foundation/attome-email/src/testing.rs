@@ -211,6 +211,7 @@ impl FakeInbox {
             test_mode_catch_all: None,
             providers: Default::default(),
             rate_limits: Default::default(),
+            feedback: Default::default(),
         }
     }
 

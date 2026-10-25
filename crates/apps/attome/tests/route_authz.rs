@@ -157,6 +157,11 @@ const MAX_BARE_RECORD_SCOPED: usize = 6;
 /// route silently pre-authorizes whatever later claims that path.
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
+        "POST",
+        "/api/v1/email/webhooks/{provider}",
+        "Z8-T5: a sending provider's event webhook; the provider's own signature (an SNS certificate from an amazonaws.com address for a configured topic, or SendGrid's ECDSA key from config) is the credential, checked before anything is read, and it only adds suppressions. Bypass-listed by its two exact provider paths.",
+    ),
+    (
         "GET",
         "/api/v1/hooks/{name}",
         "M14-T2: Meta's subscription check; it reads nothing but whether the token matches the hook's auth.verify_token (constant-time digest compare) and echoes the caller's own challenge. Bypass-listed by its one-segment shape.",

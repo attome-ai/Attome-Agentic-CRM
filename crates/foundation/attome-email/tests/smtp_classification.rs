@@ -153,6 +153,7 @@ fn cfg_for(port: u16, user: &str) -> EmailSection {
         test_mode_catch_all: None,
         providers: Default::default(),
         rate_limits: Default::default(),
+        feedback: Default::default(),
     }
 }
 

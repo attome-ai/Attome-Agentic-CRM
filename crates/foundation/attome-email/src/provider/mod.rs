@@ -288,6 +288,7 @@ mod tests {
             test_mode_catch_all: None,
             providers,
             rate_limits: Default::default(),
+            feedback: Default::default(),
         }
     }
 
