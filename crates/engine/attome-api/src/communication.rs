@@ -41,6 +41,7 @@ use axum::{
     routing::post,
 };
 use chrono::{DateTime, Utc};
+use object_store::ObjectStoreExt;
 use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -66,6 +67,10 @@ pub struct ComposeRequest {
     /// The author's signature is appended to an email either way.
     #[serde(default)]
     pub send_at: Option<DateTime<Utc>>,
+    /// J1-T2: the record's own files to send with an email, by file key (at
+    /// most 10, 10 MiB together).
+    #[serde(default)]
+    pub attachments: Vec<String>,
 }
 
 impl std::fmt::Debug for ComposeRequest {
@@ -80,6 +85,9 @@ pub struct ReplyRequest {
     /// J1-T1: send no earlier than this (email only, up to 90 days ahead).
     #[serde(default)]
     pub send_at: Option<DateTime<Utc>>,
+    /// J1-T2: the record's own files to send with the reply, by file key.
+    #[serde(default)]
+    pub attachments: Vec<String>,
 }
 
 impl std::fmt::Debug for ReplyRequest {
@@ -212,6 +220,8 @@ async fn compose(
         return Err(AppError::Validation("body is required".into()));
     }
 
+    let attachments =
+        record_attachments(&state, &entity_name, record_id, &body.attachments).await?;
     let outcome = write_communication_with(
         &state,
         &ctx,
@@ -231,6 +241,7 @@ async fn compose(
         SendOptions {
             send_at: body.send_at,
             signature: true,
+            attachments,
         },
     )
     .await?;
@@ -303,6 +314,8 @@ async fn reply(
         format!("Re: {}", parent.subject)
     };
 
+    let attachments =
+        record_attachments(&state, &entity_name, record_id, &body.attachments).await?;
     let outcome = write_communication_with(
         &state,
         &ctx,
@@ -322,6 +335,7 @@ async fn reply(
         SendOptions {
             send_at: body.send_at,
             signature: true,
+            attachments,
         },
     )
     .await?;
@@ -338,6 +352,106 @@ async fn reply(
     }
 
     Ok((StatusCode::CREATED, Json(outcome)))
+}
+
+/// The most files one email carries.
+const MAX_ATTACHMENTS: usize = 10;
+
+/// J1-T2: the record's own files named by `keys` (its live mirrored
+/// documents, `attome_document`), read from storage before any transaction
+/// and refused together over [`attome_email::MAX_ATTACHMENT_BYTES`]. A key
+/// that is not one of the record's files is refused, so an email can never
+/// carry another record's file.
+async fn record_attachments(
+    state: &EngineState,
+    entity_name: &str,
+    record_id: Uuid,
+    keys: &[String],
+) -> Result<Vec<attome_email::EmailAttachment>, AppError> {
+    if keys.is_empty() {
+        return Ok(Vec::new());
+    }
+    if keys.len() > MAX_ATTACHMENTS {
+        return Err(AppError::Validation(format!(
+            "an email carries at most {MAX_ATTACHMENTS} files"
+        )));
+    }
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT DISTINCT ON (file) file, name FROM attome_document \
+         WHERE entity_name = $1 AND record_id = $2 AND file = ANY($3) AND is_active = true",
+    )
+    .bind(entity_name)
+    .bind(record_id.to_string())
+    .bind(keys)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if let Some(missing) = keys
+        .iter()
+        .find(|k| !rows.iter().any(|(file, _)| file == *k))
+    {
+        return Err(AppError::Validation(format!(
+            "attachments: {missing} is not a file of this record"
+        )));
+    }
+    let mut total = 0usize;
+    let mut out = Vec::with_capacity(rows.len());
+    for (file, name) in rows {
+        let path = object_store::path::Path::parse(&file)
+            .map_err(|e| AppError::internal(format!("invalid file key: {e}")))?;
+        let bytes = state
+            .base
+            .storage
+            .store()
+            .get(&path)
+            .await
+            .map_err(|e| AppError::internal(format!("reading an attachment failed: {e}")))?
+            .bytes()
+            .await
+            .map_err(|e| AppError::internal(format!("reading an attachment failed: {e}")))?;
+        total += bytes.len();
+        if total > attome_email::MAX_ATTACHMENT_BYTES {
+            return Err(AppError::Validation(
+                "attachments: the files together are over 10 MiB".into(),
+            ));
+        }
+        out.push(attome_email::EmailAttachment {
+            content_type: content_type_of(&name).to_owned(),
+            filename: name,
+            content_base64: base64::Engine::encode(
+                &base64::engine::general_purpose::STANDARD,
+                &bytes,
+            ),
+        });
+    }
+    Ok(out)
+}
+
+/// A MIME type from a file name's extension; `application/octet-stream`
+/// when unknown. Pure.
+fn content_type_of(name: &str) -> &'static str {
+    let ext = name
+        .rsplit_once('.')
+        .map(|(_, e)| e.to_ascii_lowercase())
+        .unwrap_or_default();
+    match ext.as_str() {
+        "pdf" => "application/pdf",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "txt" => "text/plain",
+        "csv" => "text/csv",
+        "json" => "application/json",
+        "xml" => "application/xml",
+        "zip" => "application/zip",
+        "doc" => "application/msword",
+        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "xls" => "application/vnd.ms-excel",
+        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        _ => "application/octet-stream",
+    }
 }
 
 /// System-authored append to `communication_event`'s delivery-status

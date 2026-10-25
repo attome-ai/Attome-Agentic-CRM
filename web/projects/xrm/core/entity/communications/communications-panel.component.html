@@ -1,6 +1,15 @@
 @if (enabled()) {
 <section class="xf-section" data-testid="communications-grid">
   <div class="xf-section-body">
+    <div class="xcp-actions">
+      <button type="button" class="btn-ghost" (click)="composing.set(!composing())"
+              [attr.aria-expanded]="composing()" data-testid="communications-new-email">
+        <i class="las la-envelope" aria-hidden="true"></i> {{ 'communications.newEmail' | translate }}
+      </button>
+    </div>
+    @if (composing() && recordId(); as id) {
+      <xrm-email-composer [entity]="entityName()" [recordId]="id" (sent)="onSent()" />
+    }
     <!-- The list frame is always shown: headers, then rows or one state row. -->
     <div class="xcp-table" role="table" [attr.aria-label]="'xrmForm.tabs.communications' | translate"
          [attr.aria-busy]="loading() || null">

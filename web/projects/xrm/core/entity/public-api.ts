@@ -28,6 +28,7 @@ export { RelationshipGridComponent }  from './relationship-grid/relationship-gri
 export { DocumentFolderBrowserComponent } from './document-folder/document-folder-browser.component';
 export { ShareTargetComponent } from './share-target/share-target.component';
 export { CommunicationsPanelComponent } from './communications/communications-panel.component';
+export { EmailComposerComponent } from './communications/email-composer.component';
 export { NotesPanelComponent }          from './notes/notes-panel.component';
 // U4 (D-602) — "Remind me" on the record form header.
 export { RemindMeComponent, REMINDER_ENTITY } from './reminders/remind-me.component';

@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Email from a record (J1-T2): the Communications section has a New email composer with a reply
+  template picker, the record's own files to attach, and an optional time to send later. Compose and
+  reply take `attachments` (the record's file keys, at most 10 and 10 MiB together); a key that is not
+  one of the record's files is refused.
 - Dependent values (A6-T1): a `dependency` metadata object says which values a dependent attribute
   may take for each value of a controlling one (the cities of a region), with an optional default.
   Publishing it writes one allowed-values business rule per value through the changeset ledger, so

@@ -40,8 +40,8 @@ impl std::fmt::Debug for CommunicationResponse {
 }
 
 /// J1-T1: how a composed email goes out. The default is what every
-/// engine caller wants: now, without a signature.
-#[derive(Debug, Default, Clone, Copy)]
+/// engine caller wants: now, without a signature or files.
+#[derive(Debug, Default, Clone)]
 pub struct SendOptions {
     /// Send no earlier than this (email only): the `SendEmail` job is
     /// enqueued with this `run_at`, in the same transaction as the row.
@@ -49,6 +49,9 @@ pub struct SendOptions {
     /// Append the author's signature ([`crate::signature`]) to an outbound
     /// email. Set by the compose and reply routes, where a person writes.
     pub signature: bool,
+    /// J1-T2: files sent with an email (the record's own files, read by the
+    /// caller before the transaction), carried in each recipient's job.
+    pub attachments: Vec<attome_email::EmailAttachment>,
 }
 
 /// How far ahead an email may be scheduled.
@@ -558,7 +561,7 @@ pub async fn write_communication_with(
                 in_reply_to: parent_message_id.map(|s| s.to_string()),
                 references: references.clone(),
                 communication_id: Some(communication_id),
-                attachments: Vec::new(),
+                attachments: options.attachments.clone(),
             }));
             match options.send_at {
                 Some(at) => attome_jobs::enqueue_at_in_tx(&mut tx, job, at).await,

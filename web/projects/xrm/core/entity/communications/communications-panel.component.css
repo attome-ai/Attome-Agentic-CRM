@@ -121,3 +121,6 @@
 @media (prefers-reduced-motion: reduce) {
   .xcp-row { animation: none; }
 }
+
+/* J1-T2 */
+.xcp-actions { display: flex; justify-content: flex-end; margin-block-end: 0.5rem; }

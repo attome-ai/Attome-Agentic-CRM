@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { LocalDatePipe, TranslatePipe } from '@attome/base';
 
 import { EntityService } from '../services/entity.service';
+import { EmailComposerComponent } from './email-composer.component';
 import { entityFormRoute } from '../services/entity-url.utils';
 
 /** One message as the panel shows it: only what a reader scans for. */
@@ -49,7 +50,7 @@ const CHANNEL_ICONS: Record<string, string> = {
   selector: 'xrm-communications-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, LocalDatePipe],
+  imports: [TranslatePipe, LocalDatePipe, EmailComposerComponent],
   templateUrl: './communications-panel.component.html',
   styleUrl: './communications-panel.component.css',
 })
@@ -67,6 +68,8 @@ export class CommunicationsPanelComponent {
   readonly total = signal(0);
   readonly loading = signal(false);
   readonly failed = signal(false);
+  /** J1-T2: the email composer is open. */
+  readonly composing = signal(false);
 
   readonly enabled = computed(() =>
     !!this.recordId() && this.entityName() !== CommunicationsPanelComponent.SELF_ENTITY);
@@ -78,6 +81,13 @@ export class CommunicationsPanelComponent {
       if (!this.enabled() || !id) return;
       untracked(() => this.load(entity, id));
     });
+  }
+
+  /** J1-T2: an email went out; the list shows it. */
+  onSent(): void {
+    this.composing.set(false);
+    const id = this.recordId();
+    if (id) this.load(this.entityName(), id);
   }
 
   channelIcon(channel: string): string {
