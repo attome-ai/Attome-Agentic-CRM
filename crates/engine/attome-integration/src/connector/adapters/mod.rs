@@ -1,5 +1,7 @@
 /// D15-T3: two-way calendar sync of meetings.
 pub mod calendar_sync;
+/// K4-T3: DocuSign envelopes and Connect status messages.
+pub mod docusign;
 /// S12-T2: what the ERP connectors exchange with Attome.
 pub mod erp;
 /// J2-T1: the IMAP, Graph and Gmail readers behind `mailbox`.

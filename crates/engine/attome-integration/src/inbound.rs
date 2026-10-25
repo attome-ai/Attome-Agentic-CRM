@@ -19,6 +19,10 @@
 //!   - `standard` (Standard Webhooks): `webhook-signature: v1,<base64> …`
 //!     over `{webhook-id}.{webhook-timestamp}.{body}`, a `whsec_` secret
 //!     base64-decoded.
+//!   - `docusign` (K4-T3, DocuSign Connect): `X-DocuSign-Signature-1`
+//!     (to `-5`, one per Connect key) is the base64 HMAC-SHA256 of the
+//!     body. Connect sends no timestamp; the event, envelope and the time
+//!     DocuSign generated the message guard replay, kept a day.
 //!   - `custom`: the signature in `header` (default `x-signature`), `hex`
 //!     or `base64`, an optional `prefix` (`sha256=`), over the body or, with
 //!     `timestamp_header`, over `{timestamp}.{body}`.
@@ -67,7 +71,7 @@ pub const UNTIMED_NONCE_TTL_SECS: i64 = 24 * 3600;
 pub const MTLS_VERIFIED_HEADER: &str = "x-client-cert-verified";
 
 /// The hook presets.
-pub const PRESETS: [&str; 4] = ["github", "stripe", "standard", "custom"];
+pub const PRESETS: [&str; 5] = ["github", "stripe", "standard", "docusign", "custom"];
 
 /// Why a call was refused before anything ran.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -130,6 +134,21 @@ fn timestamp_ok(raw: &str, now: i64) -> Result<i64, Refusal> {
 
 fn digest_hex(bytes: &[u8]) -> String {
     hex::encode(sha2::Sha256::digest(bytes))
+}
+
+/// K4-T3: a DocuSign Connect message's identity: its event, envelope and
+/// generation time, the same on every retry of one message; the body's
+/// digest when the body is not Connect JSON.
+fn docusign_event_id(body: &[u8]) -> String {
+    let value: Value = serde_json::from_slice(body).unwrap_or(Value::Null);
+    match (
+        value["event"].as_str(),
+        value["data"]["envelopeId"].as_str(),
+        value["generatedDateTime"].as_str(),
+    ) {
+        (Some(event), Some(envelope), Some(at)) => format!("docusign:{event}:{envelope}:{at}"),
+        _ => digest_hex(body),
+    }
 }
 
 /// M14-T1: checks a call's credential against the hook's `auth` and
@@ -229,6 +248,22 @@ pub fn verify(
                 Ok(Verified {
                     nonce: id.to_owned(),
                     ttl_secs: NONCE_TTL_SECS,
+                })
+            }
+            "docusign" => {
+                let expected =
+                    hmac_sha256(secret.as_bytes(), &[body]).ok_or(Refusal::BadCredential)?;
+                let ok = (1..=5).any(|n| {
+                    header(headers, &format!("x-docusign-signature-{n}"))
+                        .and_then(|b64| base64::engine::general_purpose::STANDARD.decode(b64).ok())
+                        .is_some_and(|sig| same(&sig, &expected))
+                });
+                if !ok {
+                    return Err(Refusal::BadCredential);
+                }
+                Ok(Verified {
+                    nonce: docusign_event_id(body),
+                    ttl_secs: UNTIMED_NONCE_TTL_SECS,
                 })
             }
             _ => {
@@ -531,6 +566,33 @@ mod inbound_endpoints {
         assert_eq!(
             verify(&standard, &secret, &h, body, NOW).unwrap().nonce,
             "msg_1"
+        );
+    }
+
+    #[test]
+    fn docusign_connect_signature_and_event_id() {
+        let docusign = json!({ "kind": "hmac", "preset": "docusign" });
+        let body = br#"{"event":"envelope-completed","generatedDateTime":"2026-10-25T09:00:00Z","data":{"envelopeId":"e-1"}}"#;
+        let mac = hmac_sha256(b"connect-key", &[body]).unwrap();
+        let signed = base64::engine::general_purpose::STANDARD.encode(mac);
+        // The second Connect key's signature is accepted too.
+        let h = headers(&[
+            ("x-docusign-signature-1", "bm90LWl0".into()),
+            ("x-docusign-signature-2", signed.clone()),
+        ]);
+        let verified = verify(&docusign, "connect-key", &h, body, NOW).unwrap();
+        assert_eq!(
+            verified.nonce,
+            "docusign:envelope-completed:e-1:2026-10-25T09:00:00Z"
+        );
+        let wrong = headers(&[("x-docusign-signature-1", signed)]);
+        assert_eq!(
+            verify(&docusign, "another-key", &wrong, body, NOW),
+            Err(Refusal::BadCredential)
+        );
+        assert_eq!(
+            verify(&docusign, "connect-key", &headers(&[]), body, NOW),
+            Err(Refusal::BadCredential)
         );
     }
 

@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- DocuSign (K4-T3): a connector adapter sends envelopes for signature (documents, signers in routing
+  order on `/sn1/`-style anchors) and reads an envelope's status; inbound hooks gain a `docusign`
+  preset that checks DocuSign Connect's `X-DocuSign-Signature-n` HMAC, and Connect messages map onto
+  the `esign_envelope` and `esign_signer` statuses.
 - Who still calls deprecated API versions (S8-T4): every API key and S2S client call is counted by
   day, API version and route (a nightly rollup into `api_version_usage`, migration 0251), and
   `GET /api/v1/admin/api-versions/usage` lists the callers of a deprecated version or route with their
