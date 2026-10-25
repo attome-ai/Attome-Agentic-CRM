@@ -4490,6 +4490,102 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/api-versions/usage": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Callers of deprecated API versions and routes",
+        "description": "S8-T4: every API key and S2S client that called a deprecated API\nversion or route in the window, per version and route, with its calls\nand the last day it called, most recent first. Counted by day by the\nnightly usage rollup.",
+        "operationId": "deprecated_usage",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "path",
+            "description": "How many trailing days to look over. Defaults to 30, clamped to\n[1, 90].",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "description": "One-based — the first page is `page=1` (D-347).",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Callers of deprecated versions and routes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DeprecatedUsageRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/approval-policies": {
       "get": {
         "tags": [
@@ -29415,6 +29511,62 @@
           },
           "422": {
             "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/jobs/lanes": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "The job queues",
+        "description": "Z7-T6: each queue's depth, running jobs, retries, dead letters, the age\nof its oldest waiting job and its failure rate over the last hour.",
+        "operationId": "lanes",
+        "responses": {
+          "200": {
+            "description": "Both queues, fast first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_JobLane"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
             "content": {
               "application/json": {
                 "schema": {
@@ -137327,6 +137479,50 @@
           }
         }
       },
+      "DeprecatedUsageRow": {
+        "type": "object",
+        "description": "S8-T4: one caller still calling a deprecated version or route.",
+        "required": [
+          "caller_kind",
+          "caller_id",
+          "api_version",
+          "route_template",
+          "request_count",
+          "last_called_on"
+        ],
+        "properties": {
+          "api_version": {
+            "type": "string"
+          },
+          "caller_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "caller_kind": {
+            "type": "string",
+            "description": "`api_key` or `s2s_client`."
+          },
+          "caller_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The key's or client's name; absent when it was deleted."
+          },
+          "last_called_on": {
+            "type": "string",
+            "format": "date",
+            "description": "The last day it called (counts are kept by day)."
+          },
+          "request_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "route_template": {
+            "type": "string"
+          }
+        }
+      },
       "DescribeQueryBody": {
         "type": "object",
         "required": [
@@ -145516,6 +145712,66 @@
                 "$ref": "#/components/schemas/Problem"
               }
             ]
+          }
+        }
+      },
+      "JobLane": {
+        "type": "object",
+        "description": "Z7-T6: one queue at a glance.",
+        "required": [
+          "queue",
+          "pending",
+          "running",
+          "retrying",
+          "dead_letters",
+          "done_last_hour",
+          "failed_last_hour"
+        ],
+        "properties": {
+          "dead_letters": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "done_last_hour": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "failed_last_hour": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "failure_rate_last_hour": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Failed over failed plus done in the last hour, 0 to 1; absent when\nnothing finished."
+          },
+          "oldest_pending_age_secs": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Seconds since the oldest pending job was due; absent when none is."
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "queue": {
+            "type": "string",
+            "description": "`fast` or `batch`."
+          },
+          "retrying": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Waiting out a retry backoff."
+          },
+          "running": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -159092,6 +159348,84 @@
           }
         }
       },
+      "PaginatedResponse_DeprecatedUsageRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "S8-T4: one caller still calling a deprecated version or route.",
+              "required": [
+                "caller_kind",
+                "caller_id",
+                "api_version",
+                "route_template",
+                "request_count",
+                "last_called_on"
+              ],
+              "properties": {
+                "api_version": {
+                  "type": "string"
+                },
+                "caller_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "caller_kind": {
+                  "type": "string",
+                  "description": "`api_key` or `s2s_client`."
+                },
+                "caller_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The key's or client's name; absent when it was deleted."
+                },
+                "last_called_on": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "The last day it called (counts are kept by day)."
+                },
+                "request_count": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "route_template": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_DeviceRow": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -161706,6 +162040,100 @@
                     "null"
                   ],
                   "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_JobLane": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Z7-T6: one queue at a glance.",
+              "required": [
+                "queue",
+                "pending",
+                "running",
+                "retrying",
+                "dead_letters",
+                "done_last_hour",
+                "failed_last_hour"
+              ],
+              "properties": {
+                "dead_letters": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "done_last_hour": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "failed_last_hour": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "failure_rate_last_hour": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double",
+                  "description": "Failed over failed plus done in the last hour, 0 to 1; absent when\nnothing finished."
+                },
+                "oldest_pending_age_secs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double",
+                  "description": "Seconds since the oldest pending job was due; absent when none is."
+                },
+                "pending": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "queue": {
+                  "type": "string",
+                  "description": "`fast` or `batch`."
+                },
+                "retrying": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Waiting out a retry backoff."
+                },
+                "running": {
+                  "type": "integer",
+                  "format": "int64"
                 }
               }
             }
@@ -194068,8 +194496,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -194121,5 +194547,7 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": [],
+  "x-api-version": "2026-10"
 }

@@ -962,6 +962,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/api-versions/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Callers of deprecated API versions and routes
+         * @description S8-T4: every API key and S2S client that called a deprecated API
+         *     version or route in the window, per version and route, with its calls
+         *     and the last day it called, most recent first. Counted by day by the
+         *     nightly usage rollup.
+         */
+        get: operations["deprecated_usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/approval-policies": {
         parameters: {
             query?: never;
@@ -4944,6 +4967,27 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_dead_letter"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/jobs/lanes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The job queues
+         * @description Z7-T6: each queue's depth, running jobs, retries, dead letters, the age
+         *     of its oldest waiting job and its failure rate over the last hour.
+         */
+        get: operations["lanes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -29109,6 +29153,24 @@ export interface components {
             /** @description Lines added, one per VAT category of the deposit. */
             lines: number;
         };
+        /** @description S8-T4: one caller still calling a deprecated version or route. */
+        DeprecatedUsageRow: {
+            api_version: string;
+            /** Format: uuid */
+            caller_id: string;
+            /** @description `api_key` or `s2s_client`. */
+            caller_kind: string;
+            /** @description The key's or client's name; absent when it was deleted. */
+            caller_name?: string | null;
+            /**
+             * Format: date
+             * @description The last day it called (counts are kept by day).
+             */
+            last_called_on: string;
+            /** Format: int64 */
+            request_count: number;
+            route_template: string;
+        };
         DescribeQueryBody: {
             sql_query: string;
         };
@@ -32472,6 +32534,37 @@ export interface components {
                 record_id?: string | null;
             };
             problem?: null | components["schemas"]["Problem"];
+        };
+        /** @description Z7-T6: one queue at a glance. */
+        JobLane: {
+            /** Format: int64 */
+            dead_letters: number;
+            /** Format: int64 */
+            done_last_hour: number;
+            /** Format: int64 */
+            failed_last_hour: number;
+            /**
+             * Format: double
+             * @description Failed over failed plus done in the last hour, 0 to 1; absent when
+             *     nothing finished.
+             */
+            failure_rate_last_hour?: number | null;
+            /**
+             * Format: double
+             * @description Seconds since the oldest pending job was due; absent when none is.
+             */
+            oldest_pending_age_secs?: number | null;
+            /** Format: int64 */
+            pending: number;
+            /** @description `fast` or `batch`. */
+            queue: string;
+            /**
+             * Format: int64
+             * @description Waiting out a retry backoff.
+             */
+            retrying: number;
+            /** Format: int64 */
+            running: number;
         };
         /** @description `POST /api/v1/cobrowse/join`. */
         JoinSession: {
@@ -37585,6 +37678,37 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DeprecatedUsageRow: {
+            items: {
+                api_version: string;
+                /** Format: uuid */
+                caller_id: string;
+                /** @description `api_key` or `s2s_client`. */
+                caller_kind: string;
+                /** @description The key's or client's name; absent when it was deleted. */
+                caller_name?: string | null;
+                /**
+                 * Format: date
+                 * @description The last day it called (counts are kept by day).
+                 */
+                last_called_on: string;
+                /** Format: int64 */
+                request_count: number;
+                route_template: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_DeviceRow: {
             items: {
                 app_kind: string;
@@ -38605,6 +38729,50 @@ export interface components {
                 invited_by_ref: string;
                 /** Format: date-time */
                 used_at?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_JobLane: {
+            items: {
+                /** Format: int64 */
+                dead_letters: number;
+                /** Format: int64 */
+                done_last_hour: number;
+                /** Format: int64 */
+                failed_last_hour: number;
+                /**
+                 * Format: double
+                 * @description Failed over failed plus done in the last hour, 0 to 1; absent when
+                 *     nothing finished.
+                 */
+                failure_rate_last_hour?: number | null;
+                /**
+                 * Format: double
+                 * @description Seconds since the oldest pending job was due; absent when none is.
+                 */
+                oldest_pending_age_secs?: number | null;
+                /** Format: int64 */
+                pending: number;
+                /** @description `fast` or `batch`. */
+                queue: string;
+                /**
+                 * Format: int64
+                 * @description Waiting out a retry backoff.
+                 */
+                retrying: number;
+                /** Format: int64 */
+                running: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -53713,6 +53881,53 @@ export interface operations {
             };
         };
     };
+    deprecated_usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description How many trailing days to look over. Defaults to 30, clamped to
+                 *     [1, 90].
+                 */
+                days: number | null;
+                /** @description One-based — the first page is `page=1` (D-347). */
+                page: number | null;
+                page_size: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Callers of deprecated versions and routes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeprecatedUsageRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_policies: {
         parameters: {
             query?: never;
@@ -68637,6 +68852,44 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lanes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Both queues, fast first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_JobLane"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
