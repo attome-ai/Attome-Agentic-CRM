@@ -46,6 +46,8 @@ pub mod engine;
 pub mod esign;
 pub mod files;
 pub mod files_scan;
+/// A23-T2: CSV and XLSX import files read into rows of text cells.
+pub mod import_reader;
 /// Z6-T3: the weekly read-back of a sample of stored files.
 pub mod integrity;
 pub mod share;
