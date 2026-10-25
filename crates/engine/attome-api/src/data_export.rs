@@ -184,7 +184,7 @@ impl DatePresentation {
             arab_digits,
             date_columns: attrs
                 .iter()
-                .filter(|a| a.field_type() == attome_core::FieldType::Date)
+                .filter(|a| a.field_type().is_temporal())
                 .map(|a| a.logicalname.clone())
                 .collect(),
             hijri: state.hijri.load_full(),

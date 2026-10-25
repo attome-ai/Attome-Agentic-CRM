@@ -134,6 +134,7 @@ pub(crate) fn field_schema(attr: &AttrInfo, target: Option<&str>) -> Option<Valu
         }
         FieldType::Number | FieldType::Currency => json!({ "type": "number" }),
         FieldType::Date => json!({ "type": "string", "format": "date" }),
+        FieldType::DateTime => json!({ "type": "string", "format": "date-time" }),
         FieldType::Bool => json!({ "type": "boolean" }),
         FieldType::Choice => {
             let choices = attr

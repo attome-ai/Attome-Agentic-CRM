@@ -80,7 +80,7 @@ pub fn fixed_value_fits(field_type: &str, value: &Value) -> bool {
         "text" | "rich_text" | "color" | "icon" => value.is_string(),
         "number" | "currency" => value.is_number(),
         "bool" => value.is_boolean(),
-        "date" => value.as_str().is_some_and(|s| {
+        "date" | "date_time" => value.as_str().is_some_and(|s| {
             chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok()
                 || chrono::DateTime::parse_from_rfc3339(s).is_ok()
         }),

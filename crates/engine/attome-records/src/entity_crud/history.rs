@@ -795,6 +795,7 @@ pub fn restore_value(field_type: Option<FieldType>, raw: Option<&str>) -> Value 
             .map_or_else(|| Value::String(raw.to_owned()), Value::Number),
         Some(FieldType::Bool) => Value::Bool(raw == "true"),
         Some(FieldType::Date) => Value::String(raw.chars().take(10).collect()),
+        Some(FieldType::DateTime) => Value::String(raw.to_owned()),
         _ => Value::String(raw.to_owned()),
     }
 }

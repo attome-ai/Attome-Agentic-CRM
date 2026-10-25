@@ -274,7 +274,7 @@ pub fn field_type_of(meta: &EntityMeta, field: &str) -> Option<(FieldType, bool)
 pub fn system_column_type(field: &str) -> Option<FieldType> {
     Some(match field {
         "id" | "created_by" | "modified_by" | "organization_ref" | "owner_ref" => FieldType::Lookup,
-        "created_at" | "modified_at" => FieldType::Date,
+        "created_at" | "modified_at" => FieldType::DateTime,
         "is_active" => FieldType::Bool,
         "row_version" | "owner_type" => FieldType::Number,
         _ => return None,
@@ -484,7 +484,7 @@ impl DataDefinition {
             if field_type == FieldType::File {
                 errors.push("group.field cannot be a file field".to_string());
             }
-            if group.bucket.is_some() && field_type != FieldType::Date {
+            if group.bucket.is_some() && !field_type.is_temporal() {
                 errors.push("group.bucket needs a date field".to_string());
             }
         }
@@ -501,7 +501,7 @@ impl DataDefinition {
             if let Some((field_type, _)) =
                 lookup(&binding.field, &format!("bindings[{i}].field"), &mut errors)
                 && binding.op == BindingOp::Range
-                && field_type != FieldType::Date
+                && !field_type.is_temporal()
             {
                 errors.push(format!(
                     "bindings[{i}].field must be a date field for a range binding"

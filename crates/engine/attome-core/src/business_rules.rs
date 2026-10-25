@@ -214,7 +214,7 @@ impl ConditionFieldKind {
         Some(match attr.storage_type() {
             FieldType::Text | FieldType::Icon | FieldType::Color | FieldType::Formula => Self::Text,
             FieldType::Number | FieldType::Currency => Self::Number,
-            FieldType::Date => Self::Date,
+            FieldType::Date | FieldType::DateTime => Self::Date,
             FieldType::Bool => Self::Bool,
             FieldType::Choice => {
                 if FieldType::Choice.is_multi_valued(attr.options.as_ref().unwrap_or(&Value::Null))

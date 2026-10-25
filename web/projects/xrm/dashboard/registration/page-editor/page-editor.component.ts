@@ -1074,7 +1074,7 @@ export class PageEditorComponent implements OnInit, AfterViewInit, OnDestroy, Ha
               const options = schema.fields.map((f): ChartFieldOption => ({
                 name: f.name,
                 label: f.display_name,
-                is_date: f.field_type === 'date',
+                is_date: f.field_type === 'date' || f.field_type === 'date_time',
                 is_numeric: f.field_type === 'number' || f.field_type === 'currency',
               }));
               // The system timestamps every table carries: the usual time axis.

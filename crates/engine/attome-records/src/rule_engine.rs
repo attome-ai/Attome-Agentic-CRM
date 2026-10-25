@@ -99,10 +99,21 @@ fn rules_value_of_type(ft: &attome_core::FieldType, v: Option<&Value>) -> RulesV
             .as_f64()
             .map(RulesValue::Number)
             .unwrap_or(RulesValue::Null),
-        FieldType::Date => v
+        // Y2-T1: a day column reads back as `YYYY-MM-DD`, midnight UTC.
+        FieldType::Date | FieldType::DateTime => v
             .as_str()
-            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-            .map(|d| RulesValue::Date(d.with_timezone(&Utc)))
+            .and_then(|s| {
+                DateTime::parse_from_rfc3339(s)
+                    .map(|d| d.with_timezone(&Utc))
+                    .ok()
+                    .or_else(|| {
+                        chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+                            .ok()
+                            .and_then(|d| d.and_hms_opt(0, 0, 0))
+                            .map(|d| d.and_utc())
+                    })
+            })
+            .map(RulesValue::Date)
             .unwrap_or(RulesValue::Null),
         FieldType::Bool => v
             .as_bool()

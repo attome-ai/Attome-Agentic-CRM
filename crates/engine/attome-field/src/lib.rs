@@ -220,7 +220,7 @@ pub fn validate(
                 validate_number_bounds(n, &opts)?;
             }
         }
-        FieldType::Date => {
+        FieldType::Date | FieldType::DateTime => {
             let s = value
                 .as_str()
                 .ok_or_else(|| type_err("date (ISO 8601 string)", value))?;
@@ -616,7 +616,7 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
         FieldType::Formula => {
             attome_core::formula::parse_options(Some(options))?;
         }
-        FieldType::Date => {
+        FieldType::Date | FieldType::DateTime => {
             let opts = serde_json::from_value::<DateOptions>(options.clone())
                 .map_err(|e| AppError::Validation(format!("invalid date options: {e}")))?;
             if let Some(calendar) = opts.display_calendar.as_deref()
@@ -816,7 +816,7 @@ pub fn change_stamp(options: Option<&Value>) -> Option<&str> {
 }
 
 fn validate_change_stamp(field_type: &FieldType, stamp: &Value) -> Result<(), AppError> {
-    if *field_type != FieldType::Date {
+    if !field_type.is_temporal() {
         return Err(AppError::Validation(
             "stamps_changes: only a date field can hold when a field changed".into(),
         ));
@@ -953,7 +953,11 @@ fn validate_unique(field_type: &FieldType, unique: &Value) -> Result<(), AppErro
     if unique == &Value::Bool(true)
         && !matches!(
             field_type,
-            FieldType::Text | FieldType::Number | FieldType::Date | FieldType::Lookup
+            FieldType::Text
+                | FieldType::Number
+                | FieldType::Date
+                | FieldType::DateTime
+                | FieldType::Lookup
         )
     {
         return Err(AppError::Validation(format!(
@@ -1014,7 +1018,7 @@ fn validate_default(field_type: &FieldType, options: &Value) -> Result<(), AppEr
                 AppError::Validation(format!("the default value is not a valid {field_type}"))
             })
         }
-        ("today" | "now", FieldType::Date) => Ok(()),
+        ("today" | "now", FieldType::Date | FieldType::DateTime) => Ok(()),
         ("current_user", FieldType::Lookup) => Ok(()),
         _ => Err(AppError::Validation(format!(
             "default kind '{kind}' does not apply to a {field_type} field"

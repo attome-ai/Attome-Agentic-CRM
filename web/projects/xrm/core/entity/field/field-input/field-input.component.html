@@ -88,6 +88,11 @@
       }
     }
 
+    @case ('date_time') {
+      <input [id]="field().name" type="datetime-local" class="xf-input"
+             [formControlName]="field().name" />
+    }
+
     @case ('date') {
       <input [id]="field().name" type="date" class="xf-input"
              [formControlName]="field().name" />

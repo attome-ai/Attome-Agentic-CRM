@@ -3001,6 +3001,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- Dates and moments are separate field types (Y2-T1): a new `date` attribute is a calendar day in a
+  `DATE` column (`YYYY-MM-DD`, OData `Edm.Date`, OpenAPI `format: date`), and the new `date_time`
+  type (code 19) is a moment in a `TIMESTAMPTZ` column. Date buckets, range bindings, change stamps,
+  defaults (`today`/`now`) and date features accept either. Existing `date` attributes keep their
+  `TIMESTAMPTZ` columns until Y2-T2 relabels them `date_time`.
 - Model calls go through the outbound layer (AB6-T3): each configured model endpoint is an
   `ai_model` service with its own breaker, so a model server that keeps failing (any 5xx, a rate
   limit, a timeout) is refused at once for a while (`InferenceError::Unavailable`, outcome

@@ -77,7 +77,7 @@ pub fn parse_options(options: Option<&Value>) -> Result<FormulaOptions, AppError
 pub fn rules_type(ft: &FieldType) -> Option<Type> {
     match ft {
         FieldType::Number | FieldType::Currency => Some(Type::Number),
-        FieldType::Date => Some(Type::Date),
+        FieldType::Date | FieldType::DateTime => Some(Type::Date),
         FieldType::Bool => Some(Type::Bool),
         FieldType::Choice => Some(Type::Choice),
         FieldType::Lookup => Some(Type::Lookup),

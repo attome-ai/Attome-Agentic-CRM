@@ -540,9 +540,9 @@ async fn date_batch(
 fn date_attribute(state: &EngineState, entity: &str, attribute: &str) -> bool {
     matches!(entity, "contact" | "lead")
         && state.entities.load().get(entity).is_some_and(|m| {
-            m.attrs.iter().any(|a| {
-                a.logicalname == attribute && a.storage_type() == attome_core::FieldType::Date
-            })
+            m.attrs
+                .iter()
+                .any(|a| a.logicalname == attribute && a.storage_type().is_temporal())
         })
 }
 

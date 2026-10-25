@@ -1517,9 +1517,9 @@ export const xrmAr = {
   },
   // C-29 — انظر en.catalog.ts
   fieldTypes: {
-    text: 'نص', number: 'رقم', date: 'تاريخ / وقت', bool: 'قيمة منطقية',
+    text: 'نص', number: 'رقم', date: 'تاريخ', bool: 'قيمة منطقية',
     choice: 'اختيار', lookup: 'بحث مرجعي', file: 'ملف', icon: 'أيقونة', color: 'لون', currency: 'عملة',
-    formula: 'صيغة', rich_text: 'نص منسق', image: 'صورة',
+    formula: 'صيغة', rich_text: 'نص منسق', image: 'صورة', date_time: 'تاريخ ووقت',
   },
   security: {
     accessLevel: {

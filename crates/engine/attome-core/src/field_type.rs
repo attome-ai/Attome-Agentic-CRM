@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// A field's type. Y2-T1: `Date` is a calendar day (`DATE`) and `DateTime`
+/// a moment (`TIMESTAMPTZ`); attributes made before the split hold a
+/// `TIMESTAMPTZ` column and are relabelled `date_time` (Y2-T2).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FieldType {
@@ -17,12 +20,13 @@ pub enum FieldType {
     Formula,
     RichText,
     Image,
+    DateTime,
 }
 
 /// Every variant, in declaration order. The one list callers iterate — the
 /// bundle vocabulary ([`FieldType::NAMES`]), the admin/reconcile validator,
 /// and the round-trip tests below all derive from it.
-pub const ALL_FIELD_TYPES: [FieldType; 13] = [
+pub const ALL_FIELD_TYPES: [FieldType; 14] = [
     FieldType::Text,
     FieldType::Number,
     FieldType::Currency,
@@ -36,12 +40,14 @@ pub const ALL_FIELD_TYPES: [FieldType; 13] = [
     FieldType::Formula,
     FieldType::RichText,
     FieldType::Image,
+    FieldType::DateTime,
 ];
 
 /// The storage types a `formula` field (B-R6, D-604) may declare as its
 /// `options.result_type` — the scalar types `attome-rules` can produce and a
 /// native column can hold.
-pub const FORMULA_RESULT_TYPES: &[&str] = &["text", "number", "currency", "date", "bool"];
+pub const FORMULA_RESULT_TYPES: &[&str] =
+    &["text", "number", "currency", "date", "date_time", "bool"];
 
 impl FieldType {
     /// The wire names of every variant ([`ALL_FIELD_TYPES`]'s `as_str`), the
@@ -61,6 +67,7 @@ impl FieldType {
         "formula",
         "rich_text",
         "image",
+        "date_time",
     ];
 
     /// Whether `name` is one of [`Self::NAMES`] — the one field-type
@@ -85,7 +92,14 @@ impl FieldType {
             Self::Formula => "formula",
             Self::RichText => "rich_text",
             Self::Image => "image",
+            Self::DateTime => "date_time",
         }
+    }
+
+    /// Y2-T1: whether the field holds a day or a moment (`date` or
+    /// `date_time`): what a date bucket, range binding or date feature needs.
+    pub fn is_temporal(&self) -> bool {
+        matches!(self, Self::Date | Self::DateTime)
     }
 
     /// The reverse of [`Self::to_int`] — `attribute_info."type"`
@@ -120,6 +134,7 @@ impl FieldType {
             16 => Self::Formula,
             17 => Self::RichText,
             18 => Self::Image,
+            19 => Self::DateTime,
             _ => Self::Text,
         })
     }
@@ -143,6 +158,7 @@ impl FieldType {
             Self::Formula => 16,
             Self::RichText => 17,
             Self::Image => 18,
+            Self::DateTime => 19,
         }
     }
 
@@ -194,7 +210,8 @@ impl FieldType {
         match self {
             Self::Number => "NUMERIC",
             Self::Currency => "NUMERIC",
-            Self::Date => "TIMESTAMPTZ",
+            Self::Date => "DATE",
+            Self::DateTime => "TIMESTAMPTZ",
             Self::Bool => "BOOLEAN",
             Self::Choice if multi => "TEXT[]",
             Self::Choice => "TEXT",
@@ -223,7 +240,8 @@ impl FieldType {
         match self {
             Self::Number => "::numeric",
             Self::Currency => "::numeric",
-            Self::Date => "::timestamptz",
+            Self::Date => "::date",
+            Self::DateTime => "::timestamptz",
             Self::Bool => "::boolean",
             Self::Lookup => "::uuid",
             Self::Choice if multi => "::text[]",
@@ -270,6 +288,7 @@ impl TryFrom<&str> for FieldType {
             "formula" => Ok(Self::Formula),
             "rich_text" => Ok(Self::RichText),
             "image" => Ok(Self::Image),
+            "date_time" => Ok(Self::DateTime),
             other => Err(format!("unknown field type: {other}")),
         }
     }
@@ -279,7 +298,7 @@ impl TryFrom<&str> for FieldType {
 mod tests {
     use super::*;
 
-    const ALL: [FieldType; 13] = ALL_FIELD_TYPES;
+    const ALL: [FieldType; 14] = ALL_FIELD_TYPES;
 
     #[test]
     fn names_match_every_variant_in_order() {
@@ -297,6 +316,18 @@ mod tests {
         assert_eq!(FieldType::Formula.to_int(), 16);
         assert_eq!(FieldType::RichText.to_int(), 17);
         assert_eq!(FieldType::Image.to_int(), 18);
+        assert_eq!(FieldType::DateTime.to_int(), 19);
+    }
+
+    #[test]
+    fn date_is_date_and_date_time_is_timestamptz() {
+        assert_eq!(FieldType::Date.pg_type(false), "DATE");
+        assert_eq!(FieldType::Date.sql_cast(false), "::date");
+        assert_eq!(FieldType::DateTime.pg_type(false), "TIMESTAMPTZ");
+        assert_eq!(FieldType::DateTime.sql_cast(false), "::timestamptz");
+        assert_eq!(FieldType::try_from("date_time"), Ok(FieldType::DateTime));
+        assert!(FieldType::Date.is_temporal() && FieldType::DateTime.is_temporal());
+        assert!(!FieldType::Text.is_temporal());
     }
 
     #[test]
@@ -325,6 +356,11 @@ mod tests {
         );
         assert_eq!(
             FieldType::Formula.storage(Some(&date)).pg_type(false),
+            "DATE"
+        );
+        let moment = serde_json::json!({"expression": "now()", "result_type": "date_time"});
+        assert_eq!(
+            FieldType::Formula.storage(Some(&moment)).pg_type(false),
             "TIMESTAMPTZ"
         );
     }

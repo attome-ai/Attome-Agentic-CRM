@@ -102,7 +102,10 @@ fn display_value(v: &Value) -> String {
 /// has no single scalar to bind into an equality predicate, so it is refused
 /// rather than silently comparing against the first element.
 fn valid_key_field_type(field_type: &str) -> bool {
-    matches!(field_type, "text" | "number" | "date" | "bool" | "lookup")
+    matches!(
+        field_type,
+        "text" | "number" | "date" | "date_time" | "bool" | "lookup"
+    )
 }
 
 fn push(diff: &mut Diff, entry: PlanEntry) {

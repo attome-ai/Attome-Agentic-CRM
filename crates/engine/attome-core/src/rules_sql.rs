@@ -189,7 +189,7 @@ impl Translator<'_> {
         let ty = match storage {
             FieldType::Number | FieldType::Currency => Ty::Number,
             FieldType::Bool => Ty::Bool,
-            FieldType::Date => Ty::Date,
+            FieldType::Date | FieldType::DateTime => Ty::Date,
             FieldType::Lookup => Ty::Uuid,
             FieldType::Text
             | FieldType::Choice

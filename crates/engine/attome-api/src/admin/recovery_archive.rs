@@ -349,7 +349,17 @@ fn convert_for(value: &Value, target: FieldType, options: Option<&Value>) -> Opt
             },
             _ => None,
         },
+        // Y2-T1: a day column reads back as `YYYY-MM-DD`.
         FieldType::Date => match value {
+            Value::String(s) => {
+                let s = s.trim();
+                (chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok()
+                    || chrono::DateTime::parse_from_rfc3339(s).is_ok())
+                .then(|| Value::String(s.to_owned()))
+            }
+            _ => None,
+        },
+        FieldType::DateTime => match value {
             Value::String(s) => chrono::DateTime::parse_from_rfc3339(s.trim())
                 .ok()
                 .map(|_| Value::String(s.trim().to_owned())),

@@ -34,7 +34,8 @@ fn attribute_schema(attr: &AttrInfo) -> Value {
     let scalar = match storage {
         FieldType::Number | FieldType::Currency => json!({ "type": "number" }),
         FieldType::Bool => json!({ "type": "boolean" }),
-        FieldType::Date => json!({ "type": "string", "format": "date-time" }),
+        FieldType::Date => json!({ "type": "string", "format": "date" }),
+        FieldType::DateTime => json!({ "type": "string", "format": "date-time" }),
         FieldType::Lookup => json!({ "type": "string", "format": "uuid" }),
         FieldType::Choice => {
             let choices: Vec<Value> = attr

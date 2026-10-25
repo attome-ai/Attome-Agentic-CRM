@@ -66,7 +66,15 @@ pub const BUSINESS_KEY_INDEX_PREFIX: &str = "uxbk_";
 /// (`bundle::record_sets::valid_key_field_type`) plus a single-valued choice,
 /// whose stored code is one text value (a pack's stage keyed by pipeline and
 /// stage, V2-D496). A multi-valued field is refused by [`check_key_fields`].
-pub const KEY_FIELD_TYPES: &[&str] = &["text", "number", "date", "bool", "choice", "lookup"];
+pub const KEY_FIELD_TYPES: &[&str] = &[
+    "text",
+    "number",
+    "date",
+    "date_time",
+    "bool",
+    "choice",
+    "lookup",
+];
 
 /// How many characters of the entity name the index name keeps.
 const INDEX_ENTITY_CHARS: usize = 40;

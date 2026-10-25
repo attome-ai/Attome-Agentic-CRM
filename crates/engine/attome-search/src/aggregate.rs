@@ -214,7 +214,7 @@ fn data_type_of_storage(ft: &attome_core::FieldType) -> &'static str {
     use attome_core::FieldType;
     match ft {
         FieldType::Number | FieldType::Currency => "number",
-        FieldType::Date => "date",
+        FieldType::Date | FieldType::DateTime => "date",
         FieldType::Bool => "bool",
         FieldType::Choice => "choice",
         FieldType::Lookup => "lookup",

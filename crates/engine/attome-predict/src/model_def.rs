@@ -174,7 +174,7 @@ pub fn validate(
                 }
             }
             Feature::Time { time, .. } => {
-                if attr_type(&def.entity, time) != Some(FieldType::Date) {
+                if !attr_type(&def.entity, time).is_some_and(|t| t.is_temporal()) {
                     problems.push(format!("{}.{time} is not a date", def.entity));
                 }
             }

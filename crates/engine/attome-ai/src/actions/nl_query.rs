@@ -216,7 +216,7 @@ fn shape_of(attr: &AttrInfo) -> Option<Shape> {
     Some(match attr.field_type() {
         FieldType::Text | FieldType::RichText | FieldType::Icon | FieldType::Color => Shape::Text,
         FieldType::Number | FieldType::Currency => Shape::Number,
-        FieldType::Date => Shape::Date,
+        FieldType::Date | FieldType::DateTime => Shape::Date,
         FieldType::Bool => Shape::Bool,
         FieldType::Choice if is_multi(attr) => Shape::MultiChoice,
         FieldType::Choice => Shape::Choice,

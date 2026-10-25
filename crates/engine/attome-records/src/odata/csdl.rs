@@ -25,7 +25,8 @@ pub struct EntitySet {
 pub fn edm_type(field: FieldType) -> &'static str {
     match field {
         FieldType::Number | FieldType::Currency => "Edm.Decimal",
-        FieldType::Date => "Edm.DateTimeOffset",
+        FieldType::Date => "Edm.Date",
+        FieldType::DateTime => "Edm.DateTimeOffset",
         FieldType::Bool => "Edm.Boolean",
         FieldType::Lookup => "Edm.Guid",
         _ => "Edm.String",
@@ -112,7 +113,8 @@ mod tests {
         assert!(xml.contains("<Property Name=\"id\" Type=\"Edm.Guid\" Nullable=\"false\"/>"));
         assert!(xml.contains("<Property Name=\"annual_revenue\" Type=\"Edm.Decimal\"/>"));
         assert!(xml.contains("<EntitySet Name=\"account\" EntityType=\"Attome.account\"/>"));
-        assert_eq!(edm_type(FieldType::Date), "Edm.DateTimeOffset");
+        assert_eq!(edm_type(FieldType::Date), "Edm.Date");
+        assert_eq!(edm_type(FieldType::DateTime), "Edm.DateTimeOffset");
         assert_eq!(edm_type(FieldType::Lookup), "Edm.Guid");
         assert_eq!(edm_type(FieldType::Choice), "Edm.String");
     }
