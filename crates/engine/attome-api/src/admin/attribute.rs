@@ -436,6 +436,8 @@ struct SchemaChangePending {
     approval_request_id: Uuid,
 }
 
+/// Add a field
+///
 /// D-195: gated behind `approval.required_actions` (empty/off by default,
 /// same opt-in shape as every other wired action) — but only for an actual
 /// mutation. `dry_run: true` never writes anything (see `CreateAttributeBody
@@ -974,6 +976,8 @@ async fn resolve_lookup_target(
     }
 }
 
+/// Update a field
+///
 /// D-195: same gating shape as `create_attribute` above — `dry_run` is
 /// always answered directly, ungated; a real change goes through
 /// `ACTION_SCHEMA_CHANGE`.
@@ -1592,6 +1596,8 @@ pub(crate) async fn do_update_attribute_recorded(
     .into_response())
 }
 
+/// A field's index status
+///
 /// Reports the durable-job and PostgreSQL-catalog state for an attribute's
 /// supporting index. Admin-only because this exposes operational queue state.
 #[utoipa::path(
@@ -1693,6 +1699,8 @@ pub(super) async fn attribute_index_status(
     Ok(Json(AttributeIndexStatus { status }))
 }
 
+/// A field's schema change status
+///
 /// P-online-schema-change §4(d). Deliberately reads its own dedicated
 /// ledger row rather than deriving state the way `attribute_index_status`
 /// derives from `pg_stat_progress_create_index`/`pg_index` above: there is
@@ -1768,6 +1776,8 @@ pub(super) async fn attribute_schema_change_status(
     }))
 }
 
+/// Delete a field
+///
 /// Solution 7 Phase 2 (D-788 rules 4 and 9): a **real delete**. The
 /// field's non-null values are copied to the encrypted 30-day recovery
 /// archive, its references are removed (ours must already be gone — they
@@ -2140,6 +2150,8 @@ async fn audit_structure_change(
     attome_db::tx::commit(tx).await
 }
 
+/// Rename a field
+///
 /// Solution 7 Phase 2 (D-788 rule 3): renames the field **in place** — the
 /// column (`ALTER TABLE … RENAME COLUMN`, no data moved), its index and
 /// CHECK names, the attribute row, and every reference through the hook
@@ -2197,6 +2209,8 @@ pub(super) async fn rename_attribute(
     .await
 }
 
+/// Change a field's type
+///
 /// Solution 7 Phase 2 (D-788 rule 5): converts the field's type **in
 /// place**, same name. Values that do not convert become empty (even for a
 /// required field — required is application-level), are copied to the
@@ -2252,6 +2266,8 @@ pub(super) async fn change_attribute_type(
     .await
 }
 
+/// Add a choice value
+///
 /// Solution 7 Phase 2 (D-788 rule 6): adds a choice value (re-adding a
 /// removed value, with any label, is allowed and makes stored values show
 /// again). Recorded as `add_choice_value`.
@@ -2302,6 +2318,8 @@ pub(super) async fn add_attribute_choice(
     .await
 }
 
+/// Remove a choice value
+///
 /// Solution 7 Phase 2 (D-788 rule 6): removes a choice value. Stored values
 /// stay in place (shown empty; no data step); the result counts the records
 /// that keep it (`records_with_value`). Recorded as `remove_choice_value`.
@@ -2374,6 +2392,8 @@ pub(crate) struct ChoiceUsage {
     pub values: Vec<ChoiceValueUsage>,
 }
 
+/// How choice values are used
+///
 /// A5-T3: how many records hold each value of a choice field, including
 /// values no longer offered, so an administrator sees what removing or
 /// merging one would touch. Reads only.
@@ -2488,6 +2508,8 @@ const LABEL_ABANDON_OP_STAYS: &str = "the change was recorded in its changeset w
 const LABEL_ABANDON_RULES_STAY_OFF: &str = "customer business rules turned off when the type \
      change started stay off; turn them back on";
 
+/// Abandon a failed field run
+///
 /// Solution 7 Phase 2 (D-788): abandons a **failed** batched run of a field
 /// change (a large type change, `retype`; a large delete's archive copy,
 /// `archive`) so the field is no longer `field_busy`. One transaction: the

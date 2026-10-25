@@ -283,6 +283,8 @@ async fn audit_job_discard(
         .map(|_| ())
 }
 
+/// Discard a dead letter
+///
 /// BJB-6c — discards one dead letter: the row is deleted while it is still
 /// `Killed`, so an operator can clear something that will never be replayed
 /// instead of letting the retention sweep delete it untriaged (BJB-F9).
@@ -551,6 +553,8 @@ async fn pending_timers(
     )))
 }
 
+/// A batch job's progress
+///
 /// Z7-T4: a chunked batch job's progress, for the person who started it or
 /// an administrator.
 #[utoipa::path(
@@ -573,6 +577,8 @@ async fn batch_progress(
     Ok(Json(batch_body(visible_batch(&state, &ctx, id).await?)))
 }
 
+/// Cancel a batch job
+///
 /// Z7-T4: asks a running batch job to stop after its current chunk. What
 /// it already did stays done; a finished or cancelled job answers 409.
 #[utoipa::path(

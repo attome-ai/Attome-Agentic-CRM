@@ -912,6 +912,8 @@ struct WorkbenchQuery {
     status: Option<String>,
 }
 
+/// Label translation workbench
+///
 /// A20-T3: every entity, attribute and choice label with its translation in
 /// `locale` and where it stands (untranslated, stale, draft, reviewed),
 /// optionally only one status.
@@ -1098,6 +1100,8 @@ struct XliffImportResult {
     errors: Vec<String>,
 }
 
+/// Export labels as XLIFF
+///
 /// A20-T4: every entity, attribute and choice label as an XLIFF 2.0 file to
 /// translate into `locale`, with the translations already made.
 #[utoipa::path(
@@ -1139,6 +1143,8 @@ async fn export_xliff(
         .into_response())
 }
 
+/// Import translated XLIFF
+///
 /// A20-T4: reads a translated XLIFF 2.0 file and writes its translations as
 /// labels for its `trgLang`. Every unit must name a label that exists and keep
 /// its source's `{placeholders}`; if any unit is refused, nothing is written.
@@ -1279,6 +1285,8 @@ struct UiTextOverrides {
     texts: std::collections::BTreeMap<String, String>,
 }
 
+/// Interface text overrides
+///
 /// B20-T3: the built-in interface text this deployment rewords, in `locale`,
 /// for the app to lay over its own catalogue.
 #[utoipa::path(
@@ -1327,6 +1335,8 @@ struct UiTextOverride {
     text: String,
 }
 
+/// Reword an interface text
+///
 /// B20-T3: rewords one built-in interface text in one language.
 /// Administrators only.
 #[utoipa::path(
@@ -1415,6 +1425,8 @@ struct UiTextKeyQuery {
     key: String,
 }
 
+/// Restore an interface text
+///
 /// B20-T3: goes back to the built-in wording of one text in one language.
 /// Administrators only.
 #[utoipa::path(

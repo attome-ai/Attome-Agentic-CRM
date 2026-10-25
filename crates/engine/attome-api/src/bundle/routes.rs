@@ -212,6 +212,8 @@ struct DriftReport {
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
 
+/// Export the live metadata
+///
 /// `GET /api/v1/admin/metadata/export` — the live metadata as canonical
 /// bundle bytes (byte-identical on a second call with no intervening change).
 #[utoipa::path(
@@ -452,6 +454,8 @@ pub async fn do_apply_plan(
     })
 }
 
+/// List metadata plans
+///
 /// `GET /api/v1/admin/metadata/plans?limit=` — the ledger, newest first.
 /// `succeeded` rows are the applied-bundle history.
 #[utoipa::path(
@@ -493,6 +497,8 @@ async fn list_plans(
     Ok(Json(PaginatedResponse::new(items, total, 0, limit)))
 }
 
+/// One metadata plan
+///
 /// `GET /api/v1/admin/metadata/plans/{id}` — one ledger row in full: the
 /// status endpoint for a running apply (status, cursor, applied_count,
 /// error_message) and the stored bundle/plan for an approver.
@@ -520,6 +526,8 @@ async fn get_plan(
     Ok(Json(row))
 }
 
+/// Metadata drift
+///
 /// `GET /api/v1/admin/metadata/drift` — live metadata planned against the
 /// newest `succeeded` bundle (with `allow_retire`, so an object added by hand
 /// shows as a retire rather than a blocked line). Read-only; no scheduler —
@@ -686,6 +694,8 @@ async fn rollback(
     Ok((StatusCode::ACCEPTED, Json(accepted)).into_response())
 }
 
+/// Sync the deployment bundle
+///
 /// `POST /api/v1/admin/metadata/sync` — re-check `deployment.bundle_ref`
 /// (P-environment-promotion §5 step 23): fetch, Ed25519-verify, plan against
 /// live metadata, and — unless it is all-noop or has blocked entries — queue
@@ -731,6 +741,8 @@ struct MetadataManifest {
     bundles: Vec<ManifestEntry>,
 }
 
+/// The metadata manifest
+///
 /// `GET /api/v1/admin/metadata/manifest` — document/xrm/pending_full_plan/
 /// plan.md Phase 2: "what bundle configuration is currently applied to this
 /// deployment", answerable from one call instead of hand-walking `…/plans`.

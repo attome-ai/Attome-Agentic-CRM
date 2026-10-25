@@ -1561,6 +1561,8 @@ struct ListQuery {
     page_size: Option<i64>,
 }
 
+/// List approval requests
+///
 /// `GET /api/v1/admin/approvals` — `system.admin` only. Lists requests,
 /// newest-first, optionally filtered to one `action_type` and to one or more
 /// `status` values (default `pending`).
@@ -1621,6 +1623,8 @@ async fn list_approvals(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// One approval request
+///
 /// `GET /api/v1/admin/approvals/{id}` — `system.admin` reads any request;
 /// the fleet console's rollout credential (`metadata.rollout`, D-792) reads
 /// only a request it submitted itself (the `metadata.changeset_apply`
@@ -1665,6 +1669,8 @@ struct CancelBody {
     row_version: i64,
 }
 
+/// Cancel an approval request
+///
 /// `POST /api/v1/admin/approvals/{id}/cancel` — `system.admin` only, and
 /// further restricted to the request's own `requested_by` by
 /// `attome_approval::cancel` itself (`Forbidden` otherwise) — the inverse of
@@ -1748,6 +1754,8 @@ struct DecideResponse {
     executed: Option<Value>,
 }
 
+/// Decide an approval request
+///
 /// `POST /api/v1/admin/approvals/{id}/decide` — `system.admin` only.
 /// `attome_approval::decide` enforces the separation-of-duties invariant
 /// (`ctx.user_id` cannot be the request's own `requested_by`) and the
@@ -1829,6 +1837,8 @@ struct BatchDecideResponse {
     items: Vec<BatchOutcome>,
 }
 
+/// Decide many approval requests
+///
 /// `POST /api/v1/admin/approvals/batch-decide` — decide many requests the
 /// same way (roadmap N30-T6). Each is decided on its own through the exact
 /// path a single decision takes ([`do_decide`]): its own row-version check,
@@ -2079,6 +2089,8 @@ async fn do_decide(
     })
 }
 
+/// Decide my approval request
+///
 /// `POST /api/v1/approvals/{id}/decide` — any authenticated caller (Dashboard
 /// 10/10 Phase 6 prerequisite). Refuses a flat (non-plan) request with 403
 /// before ever reaching `decide_step_with` — a flat request has no eligible-
@@ -2129,6 +2141,8 @@ struct RetryExecutionParams {
     acknowledge_unknown_outcome: bool,
 }
 
+/// Retry an approved action
+///
 /// `POST /api/v1/admin/approvals/{id}/retry-execution` — `system.admin`
 /// only. Recovery path for the gap `decide_approval` above has no answer
 /// for: if execution fails AFTER `attome_approval::decide` already committed
@@ -2332,6 +2346,8 @@ struct DelegateResponse {
     delegation_id: Uuid,
 }
 
+/// Delegate an approval request
+///
 /// `POST /api/v1/admin/approvals/{id}/delegate` — `system.admin` only, D-421
 /// / M10. Lets `ctx.user_id` (who must actually be one of the *named*
 /// approvers on this request's current plan step — `create_request_delegation`
@@ -2395,6 +2411,8 @@ struct OutOfOfficeEnded {
     ended: u64,
 }
 
+/// Set my out-of-office delegate
+///
 /// `PUT /api/v1/approvals/out-of-office` (Z10-T7) — the signed-in user hands
 /// their approval standing to another user while they are away. Acts only on
 /// the caller's own id; an overlapping earlier out-of-office delegation is
@@ -2431,6 +2449,8 @@ async fn put_out_of_office(
     Ok(Json(OutOfOfficeResponse { delegation_id }))
 }
 
+/// End my out-of-office
+///
 /// `DELETE /api/v1/approvals/out-of-office` (Z10-T7) — ends the signed-in
 /// user's current and future out-of-office delegations.
 #[utoipa::path(

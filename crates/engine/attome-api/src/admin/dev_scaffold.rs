@@ -275,6 +275,8 @@ fn relative_specifier(from_dir: &std::path::Path, to_path: &std::path::Path) -> 
     }
 }
 
+/// Scaffold an entity's screens
+///
 /// `POST /api/v1/admin/entities/{entity_id}/scaffold-ui` — writes a
 /// three-file (`.ts` / `.html` / `.css`) starting-point form or list component
 /// into the caller's chosen directory and, when that directory sits under

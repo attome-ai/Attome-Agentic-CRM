@@ -522,6 +522,8 @@ pub(super) async fn list_items(
 
 // ── Decisions ───────────────────────────────────────────────────────────────
 
+/// Keep the customer's value
+///
 /// Accept (keep the customer's value): nothing is written but the decision;
 /// the baseline already holds ours, so the next release does not raise it
 /// again unless we change the field again.
@@ -584,6 +586,8 @@ pub(super) async fn accept_item(
     Ok(Json(read_item(&state, item_id).await?))
 }
 
+/// Dismiss a release report item
+///
 /// Dismiss: an item the admin has seen (any kind; open or info).
 #[utoipa::path(
     post,
@@ -644,6 +648,8 @@ pub(super) async fn dismiss_item(
     Ok(Json(read_item(&state, item_id).await?))
 }
 
+/// Use the release's value
+///
 /// Use mine: our value is written now (record: in the decision's
 /// transaction; rule: our definition replayed, then the decision).
 #[utoipa::path(
@@ -817,6 +823,8 @@ pub(super) async fn use_mine_item(
     Ok(Json(read_item(&state, item_id).await?))
 }
 
+/// Restore archived values of an item
+///
 /// Restore: every unrestored, unexpired archived value of an archive-backed
 /// item, through the recovery archive's restore (fills empty targets only).
 #[utoipa::path(

@@ -62,6 +62,8 @@ struct ListScoresQuery {
     page_size: Option<i64>,
 }
 
+/// Data quality scores
+///
 /// `GET /api/v1/admin/data/quality/scores` — `system.admin` only. The
 /// *latest* score per (entity, dimension) — one row per dimension the sweep
 /// has ever computed for that entity, not every historical period. A
@@ -142,6 +144,8 @@ struct ScoreHistoryQuery {
     page_size: Option<i64>,
 }
 
+/// Data quality score history
+///
 /// `GET /api/v1/admin/data/quality/scores/history` — `system.admin` only.
 /// The full period series for one entity+dimension, newest first — what a
 /// trend chart reads.
@@ -241,6 +245,8 @@ struct ListIssuesQuery {
     page_size: Option<i64>,
 }
 
+/// Data quality issues
+///
 /// `GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an
 /// administrator sees every issue; anyone else the issues of entities they
 /// may read, without the records they may not read, and a total that counts
@@ -425,6 +431,8 @@ async fn list_issues(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Resolve a quality issue
+///
 /// `POST /api/v1/admin/data/quality/issues/{id}/resolve` — `system.admin`
 /// only. Marks one issue resolved once a steward has fixed (or accepted) the
 /// underlying record — the sweep never reopens a resolved issue on its own
@@ -538,6 +546,8 @@ fn require_issue_editor(
     }
 }
 
+/// Update a quality issue
+///
 /// `PATCH /api/v1/admin/data/quality/issues/{id}`: the issue's owner (or an
 /// administrator) moves it through its statuses; accepting needs a reason.
 #[utoipa::path(
@@ -726,6 +736,8 @@ async fn config_event(
     .map(|_| ())
 }
 
+/// List quality rules
+///
 /// `GET /api/v1/admin/data/quality/rules` — `system.admin` only.
 #[utoipa::path(
     get,
@@ -770,6 +782,8 @@ async fn list_rules(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Create a quality rule
+///
 /// `POST /api/v1/admin/data/quality/rules` — `system.admin` only. The
 /// expression is checked as the shared condition evaluator reads it.
 #[utoipa::path(
@@ -841,6 +855,8 @@ async fn create_rule(
     Ok((StatusCode::CREATED, Json(rule)))
 }
 
+/// Update a quality rule
+///
 /// `PATCH /api/v1/admin/data/quality/rules/{id}` — `system.admin` only;
 /// `row_version` must match.
 #[utoipa::path(
@@ -916,6 +932,8 @@ async fn update_rule(
     Ok(Json(rule))
 }
 
+/// Delete a quality rule
+///
 /// `DELETE /api/v1/admin/data/quality/rules/{id}` — `system.admin` only.
 #[utoipa::path(
     delete,
@@ -1024,6 +1042,8 @@ fn check_target(body: &PutTargetBody) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Quality targets
+///
 /// `GET /api/v1/admin/data/quality/targets` — `system.admin` only.
 #[utoipa::path(
     get,
@@ -1068,6 +1088,8 @@ async fn list_targets(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Set a quality target
+///
 /// `PUT /api/v1/admin/data/quality/targets/{entity}` — `system.admin` only.
 /// Sets the entity's weights, threshold, timeliness, record scoring and
 /// issue due days; an absent field keeps its value (or default).
@@ -1133,6 +1155,8 @@ async fn put_target(
     Ok(Json(target))
 }
 
+/// Remove a quality target
+///
 /// `DELETE /api/v1/admin/data/quality/targets/{entity}` — `system.admin`
 /// only; the entity reverts to the defaults.
 #[utoipa::path(

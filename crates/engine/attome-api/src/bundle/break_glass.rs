@@ -273,6 +273,8 @@ impl std::fmt::Debug for BreakGlassStatus {
     }
 }
 
+/// Open a break-glass window
+///
 /// `POST /api/v1/admin/metadata/break-glass` — `system.admin` only. Opens a
 /// temporary authoring window on the production profile. Approval-gated
 /// (`metadata.break_glass`): when gated this returns `202` with
@@ -324,6 +326,8 @@ async fn open_break_glass(
     Ok((StatusCode::OK, Json(opened)))
 }
 
+/// Close the break-glass window
+///
 /// `DELETE /api/v1/admin/metadata/break-glass` — `system.admin` only. Closes
 /// the window immediately. Not approval-gated: closing is the safe direction.
 #[utoipa::path(
@@ -345,6 +349,8 @@ async fn close_break_glass(
     Ok(Json(do_close_break_glass(&state, ctx.user_id).await?))
 }
 
+/// The break-glass window
+///
 /// `GET /api/v1/admin/metadata/break-glass` — `system.admin` only. Whether a
 /// window is open and how long it has left.
 #[utoipa::path(

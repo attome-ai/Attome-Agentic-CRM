@@ -258,6 +258,8 @@ fn source_label(source: SettingSource) -> &'static str {
     }
 }
 
+/// List settings
+///
 /// Lists every runtime-eligible setting with its deployment-perspective
 /// effective value (deployment override if one exists, else the code
 /// default) — an administrator's overview, not any one user's resolved
@@ -309,6 +311,8 @@ async fn list_admin_settings(
     Ok(Json(SettingListResponse { items }))
 }
 
+/// Set a setting
+///
 /// Sets a value at an explicit scope — the admin-only path, able to write
 /// deployment defaults or seed an organization's/user's override on their
 /// behalf. Rejects `boot_time_only` keys (M02 §6's required behavior) and
@@ -347,6 +351,8 @@ async fn put_admin_setting(
     Ok(Json(view))
 }
 
+/// My settings
+///
 /// Every runtime-eligible setting that allows the `user` scope, resolved for
 /// the calling user (their own override, else their organization's, else
 /// the deployment default, else the code default) — self-service, same
@@ -395,6 +401,8 @@ async fn get_my_settings(
     Ok(Json(SettingListResponse { items }))
 }
 
+/// Set my own setting
+///
 /// Sets the calling user's own override for one setting. Only settings whose
 /// descriptor `allows_scope(User)` can be set here — everything else is a
 /// 422, the same message shape `write_setting` already produces for an
@@ -489,6 +497,8 @@ fn theme_event(operation: AuditOperation, actor: Uuid, id: Uuid, name: &str) -> 
     .named(name)
 }
 
+/// List theme versions
+///
 /// B13-T4: every theme version, by scope, newest first.
 #[utoipa::path(
     get,
@@ -517,6 +527,8 @@ async fn list_themes(
     )))
 }
 
+/// Save a draft theme
+///
 /// B13-T4: saves a new draft version of a scope's theme.
 #[utoipa::path(
     post,
@@ -558,6 +570,8 @@ async fn create_theme(
     Ok((axum::http::StatusCode::CREATED, Json(row)))
 }
 
+/// One theme version
+///
 /// B13-T4: one theme version.
 #[utoipa::path(
     get,
@@ -580,6 +594,8 @@ async fn get_theme(
     Ok(Json(theme_store::get(&state.base.db, id).await?))
 }
 
+/// Update a draft theme
+///
 /// B13-T4: replaces a draft's tokens. `If-Match: "<row_version>"` is required.
 #[utoipa::path(
     patch,
@@ -618,6 +634,8 @@ async fn update_theme(
     Ok(Json(row))
 }
 
+/// Publish a theme
+///
 /// B13-T3: publishes a version once its colours pass the contrast check; the
 /// scope's previous version is retired. `If-Match: "<row_version>"` is
 /// required. A failing theme is refused naming each pair and its ratio.
@@ -661,6 +679,8 @@ struct ThemeRollbackBody {
     version: i32,
 }
 
+/// Roll a theme back
+///
 /// B13-T3: publishes an earlier version of a scope's theme again.
 #[utoipa::path(
     post,
@@ -701,6 +721,8 @@ async fn rollback_theme(
     Ok(Json(row))
 }
 
+/// Diff a theme version
+///
 /// B13-T3: what a version changes against its scope's published one.
 #[utoipa::path(
     get,
@@ -730,6 +752,8 @@ async fn diff_theme(
     )))
 }
 
+/// Check theme colours
+///
 /// B13-T4: checks colours without saving anything.
 #[utoipa::path(
     post,
@@ -755,6 +779,8 @@ async fn preview_theme(
     Json(attome_core::theme_tokens::check(&body.tokens))
 }
 
+/// Public brand
+///
 /// B13-T5: the published brand for this host, for the sign-in page and the
 /// app shell: CSS variables, fonts and whether to hide the vendor's name.
 /// No session and no user data. Answers `304` to an `If-None-Match` naming
@@ -789,6 +815,8 @@ struct BrandingMeQuery {
     app: Option<String>,
 }
 
+/// My brand
+///
 /// B13-T5: the brand for the signed-in caller: the deployment's, then the
 /// app's (`app`), the caller's business unit's, the domain's.
 #[utoipa::path(
@@ -835,6 +863,8 @@ struct AssetKindQuery {
     kind: String,
 }
 
+/// Upload a theme asset
+///
 /// B13-T4: uploads one asset of a draft theme as the raw request body, with
 /// its `Content-Type`. At most 2 MB; PNG, SVG, ICO, WOFF2 or PDF as the kind
 /// allows. An SVG with a script, event handler, external reference or
@@ -915,6 +945,8 @@ async fn upload_theme_asset(
     Ok(Json(asset))
 }
 
+/// A theme's assets
+///
 /// B13-T4: a theme version's assets.
 #[utoipa::path(
     get,
@@ -943,6 +975,8 @@ async fn list_theme_assets(
     )))
 }
 
+/// A published brand asset
+///
 /// B13-T4: a published logo, favicon or font for this host, without a
 /// session (the sign-in page shows them). Served inert: `nosniff` and a
 /// `sandbox` content security policy, so an SVG opened directly runs
@@ -1050,6 +1084,8 @@ struct BackupStatus {
     last_drill: Option<serde_json::Value>,
 }
 
+/// Backup status
+///
 /// U6-T1: what the daily local backup does and the newest one it wrote, so
 /// the admin console can warn when backups stay on the same disk or have
 /// stopped.

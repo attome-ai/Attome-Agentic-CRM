@@ -378,6 +378,8 @@ struct ImpactQuery {
     depth: Option<u8>,
 }
 
+/// Impact of a draft change
+///
 /// The impact of a draft change, for the publish preview.
 ///
 /// L5-T3: every definition downstream of the change in the lineage graph

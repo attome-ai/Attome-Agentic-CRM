@@ -143,6 +143,8 @@ impl From<RelationshipRow> for RelationshipView {
     }
 }
 
+/// List relationships
+///
 /// `GET /api/v1/admin/relationships` — `system.admin` only. `?entity=`
 /// narrows to relationships touching one entity on either side.
 #[utoipa::path(
@@ -195,6 +197,8 @@ async fn list_relationships(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// One relationship
+///
 /// `GET /api/v1/admin/relationships/{id}` — `system.admin` only.
 #[utoipa::path(
     get,
@@ -364,6 +368,8 @@ struct UpdateRelationshipBody {
     is_active: Option<bool>,
 }
 
+/// Update a relationship
+///
 /// `PATCH /api/v1/admin/relationships/{id}` — `system.admin` only.
 /// `entity_a`/`entity_b`/`name`/`join_table` are immutable (delete and
 /// recreate under a new name to retarget) — same posture
@@ -448,6 +454,8 @@ async fn update_relationship(
 
 // ── DELETE /api/v1/admin/relationships/{id} ─────────────────────────────────
 
+/// Delete a relationship
+///
 /// `DELETE /api/v1/admin/relationships/{id}` — `system.admin` only.
 /// Soft-retires the relationship DEFINITION (`is_deleted = true`); never
 /// drops the physical join table or its data — see

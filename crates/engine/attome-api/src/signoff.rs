@@ -105,6 +105,8 @@ struct SignoffVerifyResponse {
     verified: bool,
 }
 
+/// Verify a sign-off
+///
 /// `GET /api/v1/signoff/{decision_id}/verify` — `system.admin` only, same
 /// gate as the rest of the approval admin surface this sits beside.
 #[utoipa::path(

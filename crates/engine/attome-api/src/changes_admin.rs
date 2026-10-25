@@ -808,6 +808,8 @@ async fn fetch_kind(db: &DbPool, kind: ChangeKind, w: &Window) -> Result<Vec<Fee
 
 // ── HTTP surface ─────────────────────────────────────────────────────────
 
+/// List metadata changes
+///
 /// `GET /api/v1/admin/changes` — `system.admin` only. Unifies the metadata
 /// change log, the bundle apply ledger, every `_version`/publish-style change
 /// this deployment tracks, security grant changes, AI model-registry
@@ -900,6 +902,8 @@ async fn list_changes(
     ))
 }
 
+/// Change-feed consumers
+///
 /// L7-T7: how every change-feed consumer is keeping up, the platform's own
 /// and subscriptions alike.
 #[utoipa::path(
@@ -937,6 +941,8 @@ pub struct RewindBody {
     pub to_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+/// Rewind a change-feed consumer
+///
 /// Y7-T4: moves a consumer back so it reads the feed again from a sequence
 /// number or a time, within what the feed still holds. A consumer applies
 /// each event once, so what it already applied is skipped.

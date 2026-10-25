@@ -35,6 +35,8 @@ struct MyWorkListQuery {
     limit: Option<i64>,
 }
 
+/// My open work counts
+///
 /// Every open item this caller has, across every registered provider.
 /// Cheap: each provider's `count` is documented to skip item bodies.
 #[utoipa::path(
@@ -59,6 +61,8 @@ async fn counts(
     Ok(Json(out))
 }
 
+/// My open work items
+///
 /// A page of this caller's open items from one named provider
 /// (`MyWorkProvider::name()`, e.g. `"approvals"`).
 #[utoipa::path(
@@ -91,6 +95,8 @@ async fn list_provider(
     Ok(Json(page))
 }
 
+/// Actions on a work item
+///
 /// The actions this caller may take on one specific item right now,
 /// re-resolved fresh (never `list`'s earlier snapshot — the trait's own
 /// concurrency posture).

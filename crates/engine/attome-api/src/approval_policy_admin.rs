@@ -144,6 +144,8 @@ struct ListQuery {
     page_size: Option<i64>,
 }
 
+/// List approval policies
+///
 /// `GET /api/v1/admin/approval-policies` — `system.admin` only.
 #[utoipa::path(
     get,
@@ -211,6 +213,8 @@ fn default_true() -> bool {
     true
 }
 
+/// Create an approval policy
+///
 /// `POST /api/v1/admin/approval-policies` — `system.admin` only. `plan` is
 /// validated structurally (`ApprovalPlan::validate`) and by approver-token
 /// shape (`attome_audit::approval::validate_plan_approvers`) before insert.
@@ -296,6 +300,8 @@ async fn create_policy(
     Ok((StatusCode::CREATED, Json(view)))
 }
 
+/// One approval policy
+///
 /// `GET /api/v1/admin/approval-policies/{id}` — `system.admin` only.
 #[utoipa::path(
     get,
@@ -336,6 +342,8 @@ struct UpdatePolicyBody {
     row_version: i64,
 }
 
+/// Replace an approval policy
+///
 /// `PUT /api/v1/admin/approval-policies/{id}` — `system.admin` only.
 /// `action_type` is immutable after creation (delete and recreate to
 /// retarget a policy) — every field that changes what a policy *governs*
@@ -448,6 +456,8 @@ async fn update_policy(
     Ok(Json(view))
 }
 
+/// Delete an approval policy
+///
 /// `DELETE /api/v1/admin/approval-policies/{id}` — `system.admin` only.
 /// Soft-deletes the policy; already-submitted requests it supplied a plan
 /// for are unaffected (their `plan` was copied onto the request at submit

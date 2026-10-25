@@ -60,6 +60,8 @@ pub struct WalkQuery {
     pub version: Option<i64>,
 }
 
+/// Walk the lineage graph
+///
 /// Walks the lineage graph from a node.
 #[utoipa::path(
     get,
@@ -135,6 +137,8 @@ pub struct CompareQuery {
     pub to: i64,
 }
 
+/// Compare lineage versions
+///
 /// Compares the lineage graph at two versions.
 #[utoipa::path(
     get,
@@ -158,6 +162,8 @@ async fn compare(
     Ok(Json(graph::compare(&mut conn, q.from, q.to).await?))
 }
 
+/// Lineage clean-up list
+///
 /// Lists what needs tidying in the lineage graph.
 #[utoipa::path(
     get,
@@ -229,6 +235,8 @@ async fn require_lineage_steward(
     }
 }
 
+/// Add a lineage link
+///
 /// Records a hand-documented lineage link.
 #[utoipa::path(
     post,
@@ -316,6 +324,8 @@ async fn add_manual_link(
     ))
 }
 
+/// Remove a lineage link
+///
 /// Removes a hand-documented lineage link.
 #[utoipa::path(
     delete,

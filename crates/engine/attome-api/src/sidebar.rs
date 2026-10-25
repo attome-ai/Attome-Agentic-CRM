@@ -1122,6 +1122,8 @@ struct SidebarQuery {
     locale: Option<String>,
 }
 
+/// My navigation menu
+///
 /// The caller's own navigation menu. Authenticated-only by design: the route
 /// is not gated, each *row* is filtered below by whether the caller holds the
 /// privileges that sidebar item requires (`$1 = ctx.is_admin`, `$2 =

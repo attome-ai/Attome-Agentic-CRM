@@ -676,6 +676,8 @@ struct ListProposalsQuery {
     page_size: Option<i64>,
 }
 
+/// Personal-data label proposals
+///
 /// Lists personal-data label proposals.
 ///
 /// L6-T4: a profile proposes the `personal` label for an unlabelled text

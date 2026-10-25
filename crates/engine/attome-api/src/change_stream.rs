@@ -231,6 +231,8 @@ async fn audit(
     .map(|_| ())
 }
 
+/// List change-stream subscriptions
+///
 /// Lists change-stream subscriptions.
 #[utoipa::path(
     get,
@@ -328,6 +330,8 @@ async fn create_subscription(
     Ok((StatusCode::CREATED, Json(load(&state, id).await?)))
 }
 
+/// Update a subscription
+///
 /// Changes a subscription. Send its `row_version`.
 #[utoipa::path(
     patch,
@@ -406,6 +410,8 @@ async fn update_subscription(
     Ok(Json(load(&state, id).await?))
 }
 
+/// End a subscription
+///
 /// Ends a subscription.
 #[utoipa::path(
     delete,
@@ -892,6 +898,8 @@ async fn own_subscription(
     Ok(sub)
 }
 
+/// Read subscription events
+///
 /// Reads a subscription's events after a cursor.
 ///
 /// Only the subscription's identity reads it. `410 resync_needed` when the
@@ -938,6 +946,8 @@ pub struct SseQuery {
     pub cursor: Option<String>,
 }
 
+/// Stream subscription events
+///
 /// Streams a subscription's events as server-sent events.
 ///
 /// Each `change` event's `id` is the cursor after it; reconnect with it.

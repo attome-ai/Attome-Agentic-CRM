@@ -156,6 +156,8 @@ struct ListMatchRulesQuery {
     page_size: Option<i64>,
 }
 
+/// List duplicate match rules
+///
 /// `GET /api/v1/admin/data/match-rules` — `system.admin` only.
 #[utoipa::path(
     get,
@@ -230,6 +232,8 @@ fn default_true() -> bool {
     true
 }
 
+/// Create a match rule
+///
 /// `POST /api/v1/admin/data/match-rules` — `system.admin` only.
 #[utoipa::path(
     post,
@@ -343,6 +347,8 @@ struct UpdateMatchRuleBody {
     row_version: i64,
 }
 
+/// Replace a match rule
+///
 /// `PUT /api/v1/admin/data/match-rules/{id}` — `system.admin` only.
 /// `entity` is immutable after creation (delete and recreate to retarget a
 /// rule) — same posture `approval_policy_admin::update_policy` takes for
@@ -488,6 +494,8 @@ struct MatchScanStarted {
     queued: bool,
 }
 
+/// Scan with a match rule
+///
 /// `POST /api/v1/admin/data/match-rules/{id}/scan` — `system.admin` only.
 /// A15-T6: scans every live row of the rule's entity in pages of 500 in the
 /// background (keys written, each row scored against its peers, candidates
@@ -556,6 +564,8 @@ async fn scan_match_rule(
     Ok((StatusCode::ACCEPTED, Json(MatchScanStarted { queued })))
 }
 
+/// Delete a match rule
+///
 /// `DELETE /api/v1/admin/data/match-rules/{id}` — `system.admin` only.
 #[utoipa::path(
     delete,
@@ -664,6 +674,8 @@ struct ListSurvivorshipQuery {
     page_size: Option<i64>,
 }
 
+/// List survivorship rules
+///
 /// `GET /api/v1/admin/data/survivorship-rules` — `system.admin` only.
 #[utoipa::path(
     get,
@@ -727,6 +739,8 @@ struct CreateSurvivorshipRuleBody {
     config: Option<Value>,
 }
 
+/// Create a survivorship rule
+///
 /// `POST /api/v1/admin/data/survivorship-rules` — `system.admin` only.
 /// `409` when an active rule for this `(entity, field)` already exists
 /// (migration `0219`'s partial unique index) — update the existing one
@@ -823,6 +837,8 @@ async fn create_survivorship_rule(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
+/// Delete a survivorship rule
+///
 /// `DELETE /api/v1/admin/data/survivorship-rules/{id}` — `system.admin`
 /// only. The (entity, field) reverts to the implicit `most_complete`
 /// default.
@@ -931,6 +947,8 @@ struct ListCandidatesQuery {
     page_size: Option<i64>,
 }
 
+/// List duplicate pairs
+///
 /// `GET /api/v1/admin/data/duplicates` — `system.admin` only. The steward
 /// queue's list view — filter `status=open` for candidates awaiting a
 /// decision (the default a UI should request).
@@ -993,6 +1011,8 @@ async fn list_candidates(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// One duplicate pair
+///
 /// `GET /api/v1/admin/data/duplicates/{id}` — `system.admin` only.
 #[utoipa::path(
     get,
@@ -1052,6 +1072,8 @@ struct MergeCandidateBody {
     canonical_id: Uuid,
 }
 
+/// Merge a duplicate pair
+///
 /// `POST /api/v1/admin/data/duplicates/{id}/merge` — `system.admin` only.
 /// A steward's manual resolution of a candidate: runs the exact same merge
 /// (`entity_crud::do_merge_core`) the ordinary `/{entity}/{id}/merge`
@@ -1116,6 +1138,8 @@ struct DismissCandidateBody {
     note: Option<String>,
 }
 
+/// Dismiss a duplicate pair
+///
 /// `POST /api/v1/admin/data/duplicates/{id}/dismiss` — `system.admin` only.
 /// Marks the candidate "not actually a duplicate" — the matching job never
 /// re-flags the same pair again (migration `0218`'s unique index covers
@@ -1288,6 +1312,8 @@ struct DuplicateCheckResult {
     hidden: i64,
 }
 
+/// Check values for duplicates
+///
 /// `POST /api/v1/data/duplicates/check` — A15-T7: what saving these values
 /// would meet under the entity's duplicate rules (the check a create or
 /// update runs), without saving anything. The caller needs read access to
@@ -1365,6 +1391,8 @@ struct CandidateExplanation {
     fields: Vec<FieldExplanation>,
 }
 
+/// Explain a duplicate pair
+///
 /// `GET /api/v1/admin/data/duplicates/{id}/explain` — A15-T7: why a pair was
 /// flagged: per field of its rule, the comparator, the weight, the score the
 /// sweep stored and, for key comparators, both records' keys.
@@ -1454,6 +1482,8 @@ struct RulePreviewBody {
     threshold: f64,
 }
 
+/// Preview a match rule
+///
 /// `POST /api/v1/admin/data/match-rules/preview` — A15-T7: how many pairs a
 /// draft rule would flag over a sample of the entity's live records (5,000
 /// rows), with up to 20 examples. Pairs are found on the fields' keys
@@ -1517,6 +1547,8 @@ struct DuplicateStats {
     dismissed: i64,
 }
 
+/// Duplicate statistics
+///
 /// `GET /api/v1/admin/data/duplicates/stats` — A15-T7: duplicate pairs per
 /// entity by status (open, merged, dismissed), for the data-quality view.
 #[utoipa::path(

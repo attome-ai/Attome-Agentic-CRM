@@ -78,6 +78,8 @@ pub fn routes() -> Router<EngineState> {
     )
 }
 
+/// Autonumber gaps
+///
 /// A4-T5: the gap report of the numbers one field holds.
 #[utoipa::path(
     get,

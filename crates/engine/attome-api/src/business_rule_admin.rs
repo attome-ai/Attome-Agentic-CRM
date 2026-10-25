@@ -602,6 +602,8 @@ struct ExplainQuery {
     id: Uuid,
 }
 
+/// Explain a record's rules
+///
 /// A11-T5: why a record looks the way it does: every active rule on its
 /// entity evaluated against the stored record, as `.../{id}/test` evaluates
 /// one: whether it applies, its condition, the policies that fire, the

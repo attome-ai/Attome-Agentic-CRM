@@ -61,6 +61,8 @@ struct ApiUsageSummaryRow {
     total_requests: i64,
 }
 
+/// API usage summary
+///
 /// `GET /api/v1/admin/api-usage/summary` — `system.admin` only. Per-route/
 /// per-identity request counts aggregated over the trailing `days` window,
 /// most-requested first. Counts only, same posture as the source table —

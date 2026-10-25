@@ -741,6 +741,8 @@ async fn get_run(
     Ok(Json(detail))
 }
 
+/// A migration run's errors
+///
 /// `GET .../runs/{run_id}/errors` — a downloadable CSV of every non-passing
 /// row in the linked staged import's `validation_report` (both the
 /// pre-approval `passed`/`failed`/`rejected` vocabulary and the

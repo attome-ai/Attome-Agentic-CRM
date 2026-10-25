@@ -240,6 +240,8 @@ fn vital_area(area: Option<&str>) -> &str {
     }
 }
 
+/// Record web vitals
+///
 /// AA12-T1: records a browser's LCP or INP in the metrics registry, so the
 /// built-in metrics store keeps its sum and count per minute
 /// (`attome_web_vital_ms`).
@@ -330,6 +332,8 @@ struct MetricPoint {
     value: f64,
 }
 
+/// Query a metric
+///
 /// U4-T4: a metric's values over time from the built-in metrics store
 /// (U4-T1), averaged per `step`. Administrators only.
 #[utoipa::path(
@@ -429,6 +433,8 @@ struct RequestTrail {
 /// Rows of each kind a trail lists at most.
 const MAX_TRAIL: i64 = 100;
 
+/// Trace a request
+///
 /// U4-T5: the jobs a request queued and the audit events it wrote, found by
 /// the request id every response carries (`x-request-id`). Administrators
 /// only.
@@ -520,6 +526,8 @@ pub fn degraded_features(down: &[attome_server::Capability]) -> Vec<DegradedFeat
     out
 }
 
+/// System status
+///
 /// AB5-T2: what is down or slow right now, for any signed-in person: the
 /// features affected, as message keys, and whether changes are refused. No
 /// dependency names or errors are shown.
@@ -564,6 +572,8 @@ struct OpsNode {
     healthy: bool,
 }
 
+/// Nodes
+///
 /// U4-T4: the nodes that stored metrics in the last day, from their
 /// once-a-minute heartbeat (`attome_node_up`); a node silent for three
 /// minutes is shown as unhealthy. Administrators only.
@@ -605,6 +615,8 @@ async fn ops_nodes(
     )))
 }
 
+/// Recent deploys
+///
 /// AB7-T8: the most recent deploys and restarts across every node, newest
 /// first.
 #[utoipa::path(
@@ -645,6 +657,8 @@ struct ConflictsQuery {
     days: Option<i64>,
 }
 
+/// Version conflicts
+///
 /// A16-T7: version conflicts of the last `days` days by entity and source
 /// (`api`, `bulk`, `import`), most first: where people overwrite each other.
 #[utoipa::path(
@@ -681,6 +695,8 @@ async fn conflicts(
     )))
 }
 
+/// Metric catalogue
+///
 /// U4-T2: every metric this server emits, with its kind, unit and meaning in
 /// English and Arabic.
 #[utoipa::path(
@@ -707,6 +723,8 @@ async fn metric_catalogue(
     ))
 }
 
+/// Recent metric names
+///
 /// U4-T4: the metric names sampled in the last hour.
 #[utoipa::path(
     get,
@@ -747,6 +765,8 @@ struct LatencyReport {
     routes: Vec<attome_server::metrics::RouteLatency>,
 }
 
+/// Route latency
+///
 /// AA1-T6: per-route p50, p95 and p99 latency on this node since it started,
 /// from the same request-duration histogram `/metrics` exposes. Administrators
 /// only. Empty, with `enabled: false`, when metrics are off.

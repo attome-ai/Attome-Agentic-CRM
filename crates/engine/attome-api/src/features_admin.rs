@@ -78,6 +78,8 @@ fn view_for(state: &EngineState, key: &str) -> Option<FeatureFlagView> {
     })
 }
 
+/// List feature flags
+///
 /// Every registered flag with its current stored policy — the Module
 /// Management "Feature Flags" admin listing.
 #[utoipa::path(
@@ -102,6 +104,8 @@ async fn list_features(
     Ok(Json(FeatureFlagListResponse { items }))
 }
 
+/// Set a feature flag
+///
 /// Sets a flag's stored policy value (deployment default, user, team, unit
 /// and role overrides, rollout percentage, owner, expiry and scheduled
 /// changes). Rejects an unknown key (404) and rejects
@@ -195,6 +199,8 @@ async fn expired_features(
     })
 }
 
+/// My feature flags
+///
 /// Every registered flag, evaluated for the calling user — what `/api/v1/features`
 /// gives Angular's `FeatureService` so the UI and the API agree on what's on.
 #[utoipa::path(

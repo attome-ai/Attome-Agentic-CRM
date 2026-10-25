@@ -687,6 +687,8 @@ async fn create_holiday(
     Ok((StatusCode::CREATED, Json(row.with_hijri(&state))))
 }
 
+/// Add a yearly Hijri holiday
+///
 /// AG1-T6: a holiday that falls on the same Hijri date every year (Eid
 /// al-Fitr is 1 Shawwal), entered once: one holiday per Hijri year from
 /// `from_year` to `to_year` (at most 30 years), each on its Gregorian day
@@ -1774,6 +1776,8 @@ struct CalculateResponse {
     content_hash: String,
 }
 
+/// Business-time arithmetic
+///
 /// Z12-T10: business-time arithmetic on a calendar, for any signed-in
 /// caller: the same answers SLA clocks use, with the calendar version and
 /// content hash they were computed against.
@@ -1857,6 +1861,8 @@ struct HijriYearQuery {
     year: u16,
 }
 
+/// Hijri months of a year
+///
 /// AG1-T3: one Hijri year's months as this deployment counts them, the
 /// published Umm al-Qura starts with any moon-sighting corrections.
 /// Administrators only.
@@ -1892,6 +1898,8 @@ struct HijriCorrection {
     reason: String,
 }
 
+/// Correct a Hijri month start
+///
 /// AG1-T3: a moon-sighting correction. The month starts on
 /// `gregorian_start` (at most one day from the published table) and the
 /// month before it ends the day before; both stay 29 or 30 days. Every node

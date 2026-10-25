@@ -80,6 +80,8 @@ pub fn rubber_stamp(decisions: i64, approved: i64, median_seconds: Option<f64>) 
     share >= STAMP_APPROVE_SHARE && median_seconds.is_some_and(|m| m < STAMP_MEDIAN_SECONDS)
 }
 
+/// Approval metrics
+///
 /// `GET /api/v1/admin/approvals/metrics`
 #[utoipa::path(
     get,

@@ -153,6 +153,8 @@ pub struct OpenLineageExport {
     pub truncated: bool,
 }
 
+/// Export lineage as OpenLineage
+///
 /// Exports the lineage graph as OpenLineage events (metadata only).
 #[utoipa::path(
     get,

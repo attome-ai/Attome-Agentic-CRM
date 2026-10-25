@@ -211,6 +211,8 @@ pub(super) async fn list_archive(
     Ok(Json(PaginatedResponse::new(rows, total, page, page_size)))
 }
 
+/// One archived value
+///
 /// One archive row with its decrypted value. Reading a value is audited
 /// (Security, `recovery_archive.read`, the row id — never the value).
 #[utoipa::path(
@@ -512,6 +514,8 @@ pub(super) fn tally(counts: &mut RestoreCounts, one: RestoreOne) {
     }
 }
 
+/// Restore one archived value
+///
 /// Restores one archived value (fills an empty target only).
 #[utoipa::path(
     post,
@@ -548,6 +552,8 @@ pub(super) async fn restore_one(
     Ok(Json(counts))
 }
 
+/// Restore a field's archived values
+///
 /// Restores every unexpired, unrestored value of a field (fills empty
 /// targets only), up to [`MAX_RESTORE_PER_REQUEST`] per request.
 #[utoipa::path(

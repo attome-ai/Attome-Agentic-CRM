@@ -111,6 +111,8 @@ pub fn registry_findings(meta: &EntityMeta, known: &HashSet<uuid::Uuid>) -> Vec<
     out
 }
 
+/// Metadata model health
+///
 /// `GET /api/v1/admin/model/health`
 #[utoipa::path(
     get,

@@ -279,6 +279,8 @@ fn object_ref(kind: &dyn Kind, id: Uuid) -> ObjectRef {
     }
 }
 
+/// List metadata kinds
+///
 /// Lists every registered kind.
 #[utoipa::path(
     get,
@@ -311,6 +313,8 @@ async fn list_kinds(_ctx: Authorized<Admin>) -> Json<PaginatedResponse<KindView>
     })
 }
 
+/// List a kind's objects
+///
 /// Lists the objects of one kind.
 #[utoipa::path(
     get,
@@ -382,6 +386,8 @@ async fn read_checked(
     Ok(version)
 }
 
+/// Read a metadata object
+///
 /// Reads an object's newest version (its draft, when it has one).
 #[utoipa::path(
     get,
@@ -406,6 +412,8 @@ async fn get_object(
     )))
 }
 
+/// Read an object version
+///
 /// Reads one version of an object.
 #[utoipa::path(
     get,
@@ -435,6 +443,8 @@ async fn get_version(
     )))
 }
 
+/// An object's versions
+///
 /// Lists an object's versions, newest first.
 #[utoipa::path(
     get,
@@ -476,6 +486,8 @@ async fn get_history(
     }))
 }
 
+/// Diff two object versions
+///
 /// The RFC 6902 operations from one version to another.
 #[utoipa::path(
     get,
@@ -516,6 +528,8 @@ async fn get_diff(
     }))
 }
 
+/// An object's references
+///
 /// The references an object makes.
 #[utoipa::path(
     get,
@@ -562,6 +576,8 @@ async fn get_references(
     }))
 }
 
+/// Validate an object
+///
 /// Checks a document as it would be saved, without saving it.
 #[utoipa::path(
     post,
@@ -596,6 +612,8 @@ async fn validate(
     }))
 }
 
+/// Edit an object's draft
+///
 /// Applies edit commands to an object's draft (creating the object on its
 /// first edit) and saves it.
 #[utoipa::path(
@@ -744,6 +762,8 @@ async fn provision_dependency(state: &EngineState, id: Uuid, doc: &Value) -> Res
     crate::changeset::boot::apply_pack_document(state, &document).await
 }
 
+/// Publish an object
+///
 /// Publishes an object's open draft once it passes the publish checks, and
 /// refreshes the cooked metadata.
 #[utoipa::path(
@@ -894,6 +914,8 @@ struct AttributeRow {
     ai: Option<bool>,
 }
 
+/// A form's render plan
+///
 /// The render plan of a published form: its sections and, for each field,
 /// the attribute's logical name, label, type and whether it is required.
 /// The form comes from the cooked registry in memory; the attribute details
@@ -1098,6 +1120,8 @@ fn read_blueprint(request: &ModelFiles) -> Result<Vec<BlueprintObject>, AppError
     }
 }
 
+/// Plan a blueprint
+///
 /// What applying a blueprint would change, without changing anything
 /// (N12-T3): each object new, changed or the same as what is published.
 #[utoipa::path(
@@ -1154,6 +1178,8 @@ async fn blueprint_plan(
     Ok(Json(BlueprintPlan { items }))
 }
 
+/// Apply a blueprint
+///
 /// Applies a blueprint (N12-T3): every new or changed object is saved and
 /// published in one transaction, so a blueprint lands whole or not at all.
 /// Objects already the same are left alone.
@@ -1261,6 +1287,8 @@ async fn blueprint_apply(
     Ok(Json(BlueprintApplied { items }))
 }
 
+/// Roll a blueprint back
+///
 /// Rolls a blueprint back (N12-T3): each object returns to the version it
 /// had before, published again as a new version; an object the blueprint
 /// created is left as it is, for an administrator to retire.
@@ -1413,6 +1441,8 @@ pub(crate) fn menu_for(
     (groups, landing)
 }
 
+/// A published menu
+///
 /// A published menu, filtered to what the caller may see (A21-T2).
 #[utoipa::path(
     get,
@@ -1452,6 +1482,8 @@ pub(crate) struct MenuItemOpened {
     item: String,
 }
 
+/// Count a menu item open
+///
 /// A21-T5: counts one open of a menu item for today.
 #[utoipa::path(
     post,
@@ -1638,6 +1670,8 @@ async fn dependency_impact(
     }))
 }
 
+/// Menu item usage
+///
 /// A21-T5: each item of a published menu with its opens over the last
 /// `days` (default 60), the items nobody opened flagged `unused`.
 /// Administrators only.
@@ -1728,6 +1762,8 @@ pub(crate) struct ImportResponse {
 /// The most files one import takes.
 const MAX_IMPORT_FILES: usize = 5_000;
 
+/// Export metadata objects
+///
 /// Exports the newest version (the draft, when there is one) of every object
 /// in the store, one file per object. Adapter kinds (entities, attributes)
 /// live in their own tables and travel in bundles, not here.
@@ -1777,6 +1813,8 @@ async fn export_files(
     Ok(Json(ModelFiles { files }))
 }
 
+/// Import metadata objects
+///
 /// Imports object files as drafts: an object with the same kind, app and
 /// name gets a new draft, any other is created. Nothing is published. Every
 /// file is read (and upgraded to its kind's current shape) before anything
@@ -2024,6 +2062,8 @@ async fn caller_queues(state: &EngineState, user_id: Uuid) -> Result<Vec<Uuid>, 
     .map_err(AppError::internal)
 }
 
+/// Suggested replies
+///
 /// The likely replies for a record (G6-T3).
 ///
 /// Ranks the reply templates the caller may use by what was used on similar

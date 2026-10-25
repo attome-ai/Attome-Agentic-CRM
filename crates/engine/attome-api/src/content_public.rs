@@ -218,6 +218,8 @@ struct KnowledgeFeedback {
     useful: bool,
 }
 
+/// Rate a suggested article
+///
 /// G11-T2: a signed-in person's helpful/not-helpful on an article suggested
 /// to them, counted with the article page's votes. A cited item that is not a
 /// published article is 404, as a missing one.

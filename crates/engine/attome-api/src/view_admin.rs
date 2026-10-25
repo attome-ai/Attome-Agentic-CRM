@@ -441,6 +441,8 @@ async fn list_views(
     Ok(Json(PaginatedResponse::new(rows, total, page, page_size)))
 }
 
+/// My views of an entity
+///
 /// Views the current caller can actually see for one entity list — system
 /// views gated by the linked query's `required_privilege` (unchanged),
 /// personal views the caller owns (bypasses that gate entirely, D-429), and
@@ -1619,6 +1621,8 @@ pub(crate) struct ViewImpact {
     pub warnings: Vec<String>,
 }
 
+/// Who a view change affects
+///
 /// A13-T6: who would notice a change to this view: the dashboards that show
 /// it, the navigation that links to it, and whether it is every user's
 /// default or a built-in one. Reads only.
