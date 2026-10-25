@@ -205,6 +205,35 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Recovery drills (AB4-T3, T6, T7, T9, T10, T11, T12): `attome drill keygen|verify|readiness` makes the
+  drill signing key, checks a signed `attome-evidence/v1` report offline and runs the preflight checks
+  plus the drill's own. `POST /api/v1/ops/drills/evidence` stores a signed report once (migration
+  0266, not deletable for 400 days, its SHA-256 audited); `GET /api/v1/ops/drills`,
+  `/drills/{id}`, `/drills/freshness` (fresh, stale, failed, never; a daily notice to `ops.read`),
+  `/drills/due` and `/drill-schedules` (migration 0267; the monthly restore drill is proposed, off)
+  and `GET /api/v1/ops/drills/auditor-pack` (a zip of the period's evidence, keys and a bilingual
+  guide). The `/xrm/ops/drills` page shows it all; agents read freshness and evidence only.
+- Recovery targets and the live recovery point (AB3-T1, T2, T8, T10, T11): RPO/RTO per profile
+  (`ops.profile`) and scenario with whether a fresh drill proved it (migration 0268,
+  `GET`/`PATCH /api/v1/ops/recovery-targets`), the live recovery point from WAL archiving, the replica
+  and the newest backup every minute (`GET /api/v1/ops/rpo`, gauge `ops_live_rpo_seconds`, a notice
+  when one goes over), a generated bilingual disaster runbook (`GET /api/v1/ops/dr-runbook`,
+  `ops.dr_contacts`), disaster lists (`GET /api/v1/ops/disasters`, `/disasters/{id}/actions`) and the
+  `/xrm/ops/recovery` page.
+- Database cluster and planned switchover (AB2-T7, T8, T11, T12): `GET /api/v1/ops/cluster` and
+  `/ops/failovers`; `POST /api/v1/ops/cluster/switchover` only creates an approval a second person in
+  the Operations role decides, after which the server asks Patroni once; the `/xrm/ops/cluster` page,
+  and agent tools that read the cluster and propose (never perform) a switchover.
+- Email campaigns (E3-T1): `POST /api/v1/marketing/lists/{id}/email/send` sends a designed email to a
+  list's consenting people on the bulk stream, at most three marketing messages per person per week,
+  with one-click unsubscribe (`List-Unsubscribe`, RFC 8058; `/api/v1/marketing/unsubscribe/{token}`).
+  Migration 0269.
+- Sending-domain checks (Z8-T4): `GET /api/v1/admin/email/domains/{domain}/check` reads a domain's
+  SPF, DKIM and DMARC records from DNS and says what to publish; with `email.domain_check.domains`
+  set, a daily check raises `SendingDomainBroken` when one breaks.
+- Record templates on New (B8-T3): `GET /api/v1/record-templates?entity=` lists the templates a
+  person may use; the entity list offers "New from template" with the template's questions, and an
+  administrator can save a record as a draft template from its form.
 - Search by phone, email and identifier (A25-T2): an attribute named as a phone, mobile, email,
   national id, identity number, code or reference is indexed as an exact key too (a phone in its
   international form, an email lowercased), and a query that is a phone number written locally
