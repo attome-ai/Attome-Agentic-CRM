@@ -373,6 +373,8 @@ fn provider_of(raw: &str) -> Result<Provider, AppError> {
     Provider::parse(raw).ok_or(AppError::NotFound)
 }
 
+/// My mailbox connections
+///
 /// The caller's mailbox connections: at most one per provider, so the whole
 /// list is one page.
 #[utoipa::path(
@@ -401,6 +403,8 @@ async fn list_connections(
     Ok(Json(PaginatedResponse::new(rows, total, 1, total.max(1))))
 }
 
+/// Connect my mailbox
+///
 /// Starts connecting: answers the provider's sign-in URL.
 #[utoipa::path(
     post,
@@ -457,6 +461,8 @@ async fn start(
     }))
 }
 
+/// Mailbox connection callback
+///
 /// Where the provider sends the person back; keeps the tokens and returns
 /// them to their settings page.
 #[utoipa::path(
@@ -651,6 +657,8 @@ pub async fn access_token(
     Ok(Some(tokens.access_token))
 }
 
+/// Disconnect my mailbox
+///
 /// Disconnects: revokes at the provider where it can, then forgets the tokens.
 #[utoipa::path(
     delete,

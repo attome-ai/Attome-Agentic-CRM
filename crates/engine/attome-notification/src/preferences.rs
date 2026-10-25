@@ -298,6 +298,8 @@ pub async fn write_for_user(
 
 // ── Self-service routes ──────────────────────────────────────────────────────
 
+/// My notification preferences
+///
 /// The caller's own notification preferences (U5). Always the session's own
 /// user; there is no way to name another user.
 #[utoipa::path(
@@ -317,6 +319,8 @@ async fn get_my_preferences(
     Ok(Json(read_for_user(&state.base.db, ctx.user_id).await?))
 }
 
+/// Set my notification preferences
+///
 /// Sets the caller's own preferences (U5, B-R5). Mute-only, never for a
 /// mandatory template; audited as a configuration change (D-542).
 #[utoipa::path(

@@ -265,6 +265,8 @@ pub async fn report(
     }
 }
 
+/// Create an online meeting
+///
 /// J7-T1: creates an online meeting with its join link.
 #[utoipa::path(
     post,
@@ -292,6 +294,8 @@ async fn post_meeting(
     Ok(Json(create(&state, ctx.user_id, &body).await?))
 }
 
+/// A meeting's attendance report
+///
 /// J7-T1: who attended and the recordings, after the meeting.
 #[utoipa::path(
     get,

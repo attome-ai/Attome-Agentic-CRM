@@ -608,6 +608,8 @@ fn team_event(operation: AuditOperation, actor: Uuid, list_id: Option<Uuid>) -> 
 
 // ── Routes: recent ──────────────────────────────────────────────────────────
 
+/// My recent records
+///
 /// B9-T2: the records the caller opened lately and may still see, newest
 /// first; a deleted one carries `deleted: true`.
 #[utoipa::path(
@@ -632,6 +634,8 @@ pub(super) async fn list_recent(
     Ok(Json(PaginatedResponse::new(items, total, 1, limit)))
 }
 
+/// Report records I opened
+///
 /// B9-T1: reports records the caller opened, up to 50 at a time.
 #[utoipa::path(
     post,
@@ -659,6 +663,8 @@ pub(super) async fn report_recent(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Clear my recent records
+///
 /// B9-T2: empties the caller's recent list.
 #[utoipa::path(
     delete,
@@ -685,6 +691,8 @@ pub(super) async fn delete_recent(
 
 // ── Routes: the caller's own lists ──────────────────────────────────────────
 
+/// My favourite lists
+///
 /// B9-T2: the caller's own lists, then their teams' shared lists, with the
 /// items the caller may see.
 #[utoipa::path(
@@ -706,6 +714,8 @@ pub(super) async fn list_favourites(
     Ok(Json(PaginatedResponse::new(lists, total, 1, total.max(1))))
 }
 
+/// Create a favourites list
+///
 /// B9-T2: creates one of the caller's own lists.
 #[utoipa::path(
     post,
@@ -736,6 +746,8 @@ pub(super) async fn create_my_list(
     Ok((StatusCode::CREATED, Json(reread(&state, &ctx, id).await?)))
 }
 
+/// Update a favourites list
+///
 /// B9-T2: renames one of the caller's own lists and replaces its items, in
 /// order (drag to reorder, pin and unpin are all a save of the whole list).
 #[utoipa::path(
@@ -772,6 +784,8 @@ pub(super) async fn replace_my_list(
     Ok(Json(reread(&state, &ctx, id).await?))
 }
 
+/// Delete a favourites list
+///
 /// B9-T2: deletes one of the caller's own lists.
 #[utoipa::path(
     delete,
