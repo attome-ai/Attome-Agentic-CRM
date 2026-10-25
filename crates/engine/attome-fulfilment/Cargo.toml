@@ -19,6 +19,7 @@ attome-modules.workspace = true
 attome-server.workspace = true
 attome-types.workspace = true
 axum.workspace = true
+chrono.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true
 sqlx.workspace = true

@@ -598,7 +598,8 @@ async fn export(
 
     let ceiling = Utc::now() - chrono::Duration::seconds(EXPORT_SAFETY_MARGIN_SECS);
     let pool = state.base.readonly_query_pool(ctx.user_id).await.clone();
-    let filter = q.filter();
+    // Q17-T2: a unit auditor's export covers their units only, like search.
+    let filter = q.filter().scoped(scope);
 
     struct CursorState {
         last_id: Option<Uuid>,
