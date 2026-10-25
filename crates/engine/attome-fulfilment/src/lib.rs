@@ -11,6 +11,8 @@ pub mod backorder;
 /// F6-T6: holds that stop a release, and releasing.
 pub mod hold;
 pub mod model;
+/// F6-T8: pick lists and packing.
+pub mod pack;
 pub mod sourcing;
 /// F6-T3: confirmed orders split into fulfilment orders.
 pub mod split;
@@ -26,5 +28,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 38;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = hold::openapi_fragment();
     doc.merge(backorder::openapi_fragment());
+    doc.merge(pack::openapi_fragment());
     doc
 }

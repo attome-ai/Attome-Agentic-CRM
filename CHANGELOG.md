@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Picking and packing (F6-T8): `GET /api/v1/fulfilment/orders/{id}/pick-list` groups the goods still
+  to ship by product, and `POST /api/v1/fulfilment/orders/{id}/packages` records the packages as a
+  shipment with its lines and marks the order packed. The fulfilment pack adds Packing slip and
+  Delivery note document templates, English and Arabic side by side.
 - Dependency editor (A6-T4): `/model/dependencies` edits which dependent values each controlling
   value allows, as a grid or a tree, and before publishing counts the live records the draft would
   no longer allow (`GET /api/v1/admin/model/dependency/{id}/impact`).

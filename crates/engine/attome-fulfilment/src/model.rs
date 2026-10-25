@@ -24,5 +24,6 @@ impl EngineModel for FulfilmentModel {
         Router::new()
             .merge(crate::hold::routes())
             .merge(crate::backorder::routes())
+            .merge(crate::pack::routes())
     }
 }
