@@ -19,6 +19,8 @@
 
 mod access_reviews;
 mod account_state;
+/// Q1-T7: SSO-only roles and break-glass accounts.
+mod auth_policy;
 mod bulk_access;
 pub use bulk_access::{BULK_ACCESS_JOB, BulkAccessPayload, run_bulk_access};
 mod bulk_fields;
@@ -66,6 +68,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = grants::openapi_fragment();
     for fragment in [
         access_reviews::openapi_fragment(),
+        auth_policy::openapi_fragment(),
         bulk_access::openapi_fragment(),
         bulk_fields::openapi_fragment(),
         sessions::openapi_fragment(),
@@ -97,6 +100,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .merge(access_reviews::routes())
+        .merge(auth_policy::routes())
         .merge(bulk_access::routes())
         .merge(bulk_fields::routes())
         .merge(grants::routes())

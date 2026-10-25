@@ -533,6 +533,48 @@ pub(super) async fn login(
     // Q20-T2: the password was right.
     login_guard::clear_streak(&state.redis_coordination, &account_key).await;
 
+    // Q1-T7: an SSO-only domain or role signs in through its provider. The
+    // refusal reads exactly like a wrong password, so it reveals nothing; a
+    // break-glass account keeps its password and its use is recorded.
+    if let failed_login::Subject::Known { user_id, .. } =
+        failed_login_subject(&state, &body.email).await?
+    {
+        use attome_security::auth_policy::{self, PasswordLogin};
+        match auth_policy::password_login(&state.db, user_id, &body.email).await? {
+            PasswordLogin::Refused => {
+                auditor
+                    .write(
+                        SecurityEvent::new(
+                            MandatoryCategory::Security,
+                            AuditOperation::FailedLogin,
+                            user_id,
+                            "user_account",
+                            Some(user_id),
+                        )
+                        .named("password_login_refused_sso_only"),
+                    )
+                    .await?;
+                return Err(AppError::Unauthorized);
+            }
+            PasswordLogin::BreakGlass => {
+                auth_policy::record_break_glass_sign_in();
+                auditor
+                    .write(
+                        SecurityEvent::new(
+                            MandatoryCategory::Security,
+                            AuditOperation::Login,
+                            user_id,
+                            "user_account",
+                            Some(user_id),
+                        )
+                        .named("break_glass_sign_in"),
+                    )
+                    .await?;
+            }
+            PasswordLogin::Allowed => {}
+        }
+    }
+
     match outcome {
         accounts::LoginOutcome::Session(user_id) => {
             let cookies = issue_session_cookies_for(

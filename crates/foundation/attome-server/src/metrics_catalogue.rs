@@ -304,6 +304,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "قيمة 1 عند فتح قاطع تراكم التدقيق ورفض الكتابة.",
     },
     MetricInfo {
+        name: "auth_break_glass_sign_in_total",
+        kind: "counter",
+        unit: "sign-ins",
+        en: "Password sign-ins by break-glass accounts, which SSO-only rules do not bind.",
+        ar: "عمليات الدخول بكلمة المرور لحسابات الطوارئ التي لا تقيّدها قواعد الدخول الموحد.",
+    },
+    MetricInfo {
         name: "auth_kdf_inflight",
         kind: "gauge",
         unit: "hashes",

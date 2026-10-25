@@ -1852,6 +1852,49 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             request("DELETE", "/api/v1/admin/profiler/stats", t, None)
         }
 
+        // ── SSO-only roles and break-glass accounts (Q1-T7) ─────────────────
+        "PUT /api/v1/admin/security/roles/{id}/auth-policy" => {
+            let id = role(fx).await;
+            request(
+                "PUT",
+                &format!("{S}/roles/{id}/auth-policy"),
+                t,
+                Some(json!({"sso_only": false})),
+            )
+        }
+        "POST /api/v1/admin/security/break-glass-accounts" => {
+            let (user, _) = seed_user(&fx.base, "break-glass-add").await;
+            sqlx::query(
+                "INSERT INTO user_mfa (user_ref, secret_encrypted, confirmed_at) VALUES ($1, 'sealed', now())",
+            )
+            .bind(user)
+            .execute(&fx.base.db)
+            .await
+            .expect("seed a confirmed authenticator");
+            request(
+                "POST",
+                &format!("{S}/break-glass-accounts"),
+                t,
+                Some(json!({"user_id": user, "reason": "emission test"})),
+            )
+        }
+        "DELETE /api/v1/admin/security/break-glass-accounts/{user_id}" => {
+            let (user, _) = seed_user(&fx.base, "break-glass-remove").await;
+            sqlx::query(
+                "INSERT INTO break_glass_account (user_ref, reason) VALUES ($1, 'emission test')",
+            )
+            .bind(user)
+            .execute(&fx.base.db)
+            .await
+            .expect("seed a break-glass account");
+            request(
+                "DELETE",
+                &format!("{S}/break-glass-accounts/{user}"),
+                t,
+                None,
+            )
+        }
+
         // ── environment variables (A30-T1) ──────────────────────────────────
         "DELETE /api/v1/admin/env-variables/{name}" => {
             sqlx::query(

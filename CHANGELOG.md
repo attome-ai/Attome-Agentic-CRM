@@ -8,6 +8,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- SSO-only sign-in (Q1-T7): a user whose email domain is a verified SSO-only domain, or who holds an
+  SSO-only role (`PUT /api/v1/admin/security/roles/{id}/auth-policy`), can no longer sign in with a
+  password; the refusal reads like a wrong password and is audited. Break-glass accounts
+  (`POST`/`DELETE /api/v1/admin/security/break-glass-accounts`) keep their password, need a
+  confirmed authenticator, are counted (`auth_break_glass_sign_in_total`) and audited on every use,
+  and the last one cannot be removed while an SSO-only rule is in force.
 - Files encrypted at rest by the server (Z6-T4): with `storage.encryption_key` set, every file on
   local disk (and on S3, Azure or GCS with `storage.encrypt_client_side`) is sealed with its own
   AES-256-GCM data key in 1 MiB chunks, the data key wrapped by that ring and kept in the file's header.

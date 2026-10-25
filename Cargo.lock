@@ -2037,6 +2037,7 @@ dependencies = [
  "chrono",
  "criterion",
  "fred",
+ "metrics",
  "proptest",
  "rand 0.8.8",
  "serde",
