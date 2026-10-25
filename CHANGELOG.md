@@ -3030,6 +3030,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- An email body written as HTML (D16-T2) is cleaned and sent as the HTML part with its text as the
+  plain part, instead of being escaped into the text; with tracking on, its http(s) links go through the
+  click route and the open pixel is placed before `</body>` (`mailto:` and in-page links are kept).
 - Dates and moments are separate field types (Y2-T1): a new `date` attribute is a calendar day in a
   `DATE` column (`YYYY-MM-DD`, OData `Edm.Date`, OpenAPI `format: date`), and the new `date_time`
   type (code 19) is a moment in a `TIMESTAMPTZ` column. Date buckets, range bindings, change stamps,

@@ -179,6 +179,84 @@ pub fn tracked_html(
     out
 }
 
+/// D16-T2: whether an email body is HTML rather than plain text: it carries
+/// one of the tags a composer or template writes. Pure.
+pub fn looks_like_html(body: &str) -> bool {
+    let lower = body.to_ascii_lowercase();
+    [
+        "<p>", "<p ", "<br", "<div", "<a ", "<table", "<html", "<body", "<ul", "<ol", "<h1", "<h2",
+        "<h3", "<strong", "<em>", "<span",
+    ]
+    .iter()
+    .any(|tag| lower.contains(tag))
+}
+
+/// D16-T2: an HTML part with tracking: every `href` to an http(s) address
+/// routed through the click route (other links, such as `mailto:` or an
+/// in-page `#anchor`, kept), and the open pixel before `</body>`, or at the
+/// end without one. `sign` turns a claim into a token; a link it cannot sign
+/// is kept as it was. Pure but for `sign`.
+pub fn tracked_rewrite(
+    html: &str,
+    base_url: &str,
+    communication_id: Uuid,
+    sent_at: i64,
+    sign: impl Fn(&str) -> Option<String>,
+) -> String {
+    let base = base_url.trim_end_matches('/');
+    let lower = html.to_ascii_lowercase();
+    let mut out = String::with_capacity(html.len() + 256);
+    let mut at = 0;
+    while let Some(found) = lower[at..].find("href=") {
+        let attr = at + found + "href=".len();
+        let Some(quote) = html[attr..]
+            .chars()
+            .next()
+            .filter(|c| *c == '"' || *c == '\'')
+        else {
+            out.push_str(&html[at..attr]);
+            at = attr;
+            continue;
+        };
+        let start = attr + 1;
+        let Some(len) = html[start..].find(quote) else {
+            break;
+        };
+        let raw = &html[start..start + len];
+        let url = raw.replace("&amp;", "&");
+        out.push_str(&html[at..start]);
+        let token = safe_url(&url)
+            .then(|| {
+                sign(&claim(&Tracked {
+                    communication_id,
+                    sent_at,
+                    url: Some(url.trim().to_owned()),
+                }))
+            })
+            .flatten();
+        match token {
+            Some(token) => out.push_str(&format!("{base}/api/v1/track/click/{token}")),
+            None => out.push_str(raw),
+        }
+        at = start + len;
+    }
+    out.push_str(&html[at..]);
+    let Some(token) = sign(&claim(&Tracked {
+        communication_id,
+        sent_at,
+        url: None,
+    })) else {
+        return out;
+    };
+    let pixel =
+        format!("<img src=\"{base}/api/v1/track/open/{token}\" width=\"1\" height=\"1\" alt=\"\">");
+    match out.to_ascii_lowercase().rfind("</body>") {
+        Some(end) => out.insert_str(end, &pixel),
+        None => out.push_str(&pixel),
+    }
+    out
+}
+
 /// Whether tracking is on for this deployment.
 pub fn enabled(state: &EngineState) -> bool {
     let settings = state.settings.load();
@@ -348,6 +426,46 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 
 #[cfg(test)]
 mod email_tracking {
+
+    #[test]
+    fn tracking_rewrite_routes_http_links_and_adds_the_pixel() {
+        let id = Uuid::from_u128(9);
+        let sign = |claim: &str| Some(format!("t{}", claim.len()));
+        let html = "<html><body><p>See <a href=\"https://example.sa/offer?a=1&amp;b=2\">the offer</a>, \
+                    <a href='mailto:sales@example.sa'>mail us</a> or <a href=\"#top\">top</a>.</p></body></html>";
+        let out = tracked_rewrite(html, "https://crm.example.sa/", id, 1_800_000_000, sign);
+        assert!(out.contains("href=\"https://crm.example.sa/api/v1/track/click/t"));
+        assert!(!out.contains("https://example.sa/offer"));
+        assert!(out.contains("href='mailto:sales@example.sa'"));
+        assert!(out.contains("href=\"#top\""));
+        assert!(out.contains("/api/v1/track/open/"));
+        assert!(out.ends_with("></body></html>"));
+        // The claim carries the decoded address.
+        let claimed = std::cell::RefCell::new(Vec::new());
+        tracked_rewrite(html, "https://crm.example.sa", id, 1, |c| {
+            claimed.borrow_mut().push(c.to_owned());
+            None
+        });
+        assert!(
+            claimed
+                .borrow()
+                .iter()
+                .filter_map(|c| parse_claim(c))
+                .any(|t| t.url.as_deref() == Some("https://example.sa/offer?a=1&b=2"))
+        );
+        // Unsignable: unchanged, and no pixel.
+        assert_eq!(tracked_rewrite(html, "https://x", id, 1, |_| None), html);
+    }
+
+    #[test]
+    fn tracking_rewrite_tells_html_from_text() {
+        assert!(looks_like_html("<p>Hello</p>"));
+        assert!(looks_like_html("Line one<br>Line two"));
+        assert!(!looks_like_html(
+            "Price < 5 and > 2, see https://example.sa"
+        ));
+    }
+
     use super::*;
 
     fn signer(claim: &str) -> Option<String> {

@@ -405,26 +405,49 @@ pub async fn write_communication(
             .await?;
 
             // D16-T1: tracked links and the open pixel, when tracking is on
-            // and the person the record is about has not opted out.
-            let html_body = if crate::tracking::enabled(state)
-                && !crate::tracking::opted_out(&mut tx, entity_name, record_id).await?
-            {
-                crate::tracking::signing_secret(state).map(|secret| {
-                    crate::tracking::tracked_html(
-                        body,
-                        &state.base.config.frontend_url(),
-                        communication_id,
-                        now.timestamp(),
-                        |claim| crate::tracking::sign(&secret, claim),
-                    )
-                })
-            } else {
-                None
+            // and the person the record is about has not opted out. D16-T2:
+            // an HTML body is cleaned and sent as the HTML part (its links
+            // rewritten when tracked), with its text as the plain part.
+            let is_html = crate::tracking::looks_like_html(body);
+            let clean_html = is_html.then(|| {
+                attome_html::sanitize(
+                    body,
+                    attome_html::SanitizeProfile::InboundEmail {
+                        allow_remote_images: true,
+                    },
+                )
+            });
+            let text_body = match &clean_html {
+                Some(html) => attome_html::html_to_text(html),
+                None => body.to_string(),
+            };
+            let tracked = crate::tracking::enabled(state)
+                && !crate::tracking::opted_out(&mut tx, entity_name, record_id).await?;
+            let secret = tracked
+                .then(|| crate::tracking::signing_secret(state))
+                .flatten();
+            let html_body = match (&clean_html, secret) {
+                (Some(html), Some(secret)) => Some(crate::tracking::tracked_rewrite(
+                    html,
+                    &state.base.config.frontend_url(),
+                    communication_id,
+                    now.timestamp(),
+                    |claim| crate::tracking::sign(&secret, claim),
+                )),
+                (Some(html), None) => Some(html.clone()),
+                (None, Some(secret)) => Some(crate::tracking::tracked_html(
+                    body,
+                    &state.base.config.frontend_url(),
+                    communication_id,
+                    now.timestamp(),
+                    |claim| crate::tracking::sign(&secret, claim),
+                )),
+                (None, None) => None,
             };
             let job = EngineJob::SendEmail(Box::new(EmailMessage {
                 to: to.clone(),
                 subject: subject.to_string(),
-                text_body: body.to_string(),
+                text_body,
                 html_body,
                 delivery_id: None,
                 from_override: None,
