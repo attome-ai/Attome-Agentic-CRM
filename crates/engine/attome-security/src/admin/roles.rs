@@ -76,6 +76,9 @@ type RoleRow = (
 /// `id` (already known from the path param).
 type RoleUpdateRow = (String, Option<String>, bool, Option<Vec<String>>, i64);
 
+/// List roles
+///
+/// Every role. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/roles",
@@ -159,6 +162,9 @@ pub(super) struct CreateRoleBody {
     ip_allowlist: Option<Vec<String>>,
 }
 
+/// Create a role
+///
+/// Creates an empty role; privileges and entity access are added to it separately. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/roles",
@@ -275,11 +281,14 @@ pub(super) struct UpdateRoleBody {
     ip_allowlist: Option<Vec<String>>,
 }
 
+/// Update a role
+///
+/// Updates a role's details. Administrators only; audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/security/roles/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The role")),
     request_body = UpdateRoleBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Update)])))),
     responses(
@@ -454,6 +463,8 @@ type RoleUserRow = (
     Option<chrono::DateTime<chrono::Utc>>,
 );
 
+/// A role's users
+///
 /// Reverse of `user_roles::list_user_roles` — direct assignments only
 /// (`user_account_mm_role`), same team-mediated-roles caveat: a user
 /// holding this role only via team membership does not appear here, mirrored
@@ -464,7 +475,7 @@ type RoleUserRow = (
     get,
     path = "/api/v1/admin/security/roles/{id}/users",
     tag = "admin-security",
-    params(("id" = Uuid, Path), OnePageQuery),
+    params(("id" = Uuid, Path, description = "The role"), OnePageQuery),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<RoleUserItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

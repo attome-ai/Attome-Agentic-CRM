@@ -184,6 +184,9 @@ pub(super) struct ListRecordSharesQuery {
     page_size: Option<i64>,
 }
 
+/// List record shares
+///
+/// Explicit shares and denials on individual records. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/record-shares",
@@ -256,6 +259,8 @@ pub(super) async fn list_record_shares(
     )))
 }
 
+/// Share a record
+///
 /// Creates (or reactivates) a share/deny row on one record. Never touches
 /// the implicit creator-share — that row is written only by
 /// `entity_crud::create_record`, with `principal_id` fixed to the caller
@@ -535,11 +540,14 @@ pub async fn reassign_owner_for(
     })
 }
 
+/// Remove a record share
+///
+/// Ends one share or denial on a record. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/record-shares/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The record share")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "Success"),
@@ -617,6 +625,9 @@ pub(super) struct ListEntityDefaultSharesQuery {
     page_size: Option<i64>,
 }
 
+/// List default shares
+///
+/// Blanket shares that apply to every record of an entity. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/entity-default-shares",
@@ -695,6 +706,9 @@ pub(super) async fn list_entity_default_shares(
     )))
 }
 
+/// Add a default share
+///
+/// Shares every record of an entity with a user, team or role, configured once for the entity. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/entity-default-shares",
@@ -812,11 +826,14 @@ pub(super) async fn create_entity_default_share(
     ))
 }
 
+/// Remove a default share
+///
+/// Removes a blanket share of an entity's records. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/entity-default-shares/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The default share")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "Success"),

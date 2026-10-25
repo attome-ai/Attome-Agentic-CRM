@@ -73,6 +73,9 @@ pub(super) async fn whoami(ctx: Authorized<SelfService>) -> Json<Arc<SecurityCon
     Json(ctx.into_inner())
 }
 
+/// List privilege grants
+///
+/// Privileges granted straight to users, outside their roles. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/grants",
@@ -136,6 +139,9 @@ pub(super) async fn list_grants(
     )))
 }
 
+/// Grant a privilege to a user
+///
+/// Grants one privilege to one user directly. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/grants",
@@ -237,11 +243,14 @@ pub(super) async fn create_grant(
     ))
 }
 
+/// Revoke a privilege grant
+///
+/// Takes a directly granted privilege away from its user at once. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/grants/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The privilege grant")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "Success"),

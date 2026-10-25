@@ -40,6 +40,9 @@ impl std::fmt::Debug for OrganizationItem {
     }
 }
 
+/// List business units
+///
+/// The business units (organizations). Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/organizations",
@@ -108,11 +111,14 @@ async fn organization_exists(
     .map_err(AppError::internal)
 }
 
+/// A business unit's members
+///
+/// The users who belong to a business unit. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/organizations/{id}/members",
     tag = "admin-security",
-    params(("id" = Uuid, Path), OnePageQuery),
+    params(("id" = Uuid, Path, description = "The business unit"), OnePageQuery),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<OrganizationMemberItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -173,11 +179,14 @@ pub(super) struct AddOrganizationMemberBody {
     user_email: String,
 }
 
+/// Add a user to a business unit
+///
+/// Makes a user a member of a business unit. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/organizations/{id}/members",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The business unit")),
     request_body = AddOrganizationMemberBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Grant)])))),
     responses(
@@ -252,13 +261,16 @@ pub(super) async fn add_organization_member(
     ))
 }
 
+/// Remove a user from a business unit
+///
+/// Ends a user's membership of a business unit. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/organizations/{id}/members/{user_id}",
     tag = "admin-security",
     params(
-        ("id" = Uuid, Path),
-        ("user_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The business unit"),
+        ("user_id" = Uuid, Path, description = "The user"),
     ),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(

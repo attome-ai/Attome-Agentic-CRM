@@ -86,11 +86,14 @@ impl std::fmt::Debug for EffectiveAccessPreview {
     }
 }
 
+/// A user's effective access
+///
+/// What a user can do on each entity once their roles, teams and grants are combined. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/users/{id}/effective-access",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The user")),
     responses(
         (status = 200, description = "Success", body = EffectiveAccessPreview),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

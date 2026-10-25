@@ -108,11 +108,14 @@ async fn load_grant_context(
     })
 }
 
+/// A role grant's conditions
+///
+/// The conditions on a role grant. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/role-grants/{grant_id}/conditions",
     tag = "admin-security",
-    params(("grant_id" = Uuid, Path)),
+    params(("grant_id" = Uuid, Path, description = "The role grant")),
     responses(
         (status = 200, description = "Success", body = Vec<RoleGrantConditionItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -158,11 +161,14 @@ pub(super) async fn list_conditions(
     ))
 }
 
+/// Add a condition to a role grant
+///
+/// Adds a field condition to a role grant. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/role-grants/{grant_id}/conditions",
     tag = "admin-security",
-    params(("grant_id" = Uuid, Path)),
+    params(("grant_id" = Uuid, Path, description = "The role grant")),
     request_body = CreateConditionBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Create)])))),
     responses(
@@ -312,13 +318,16 @@ pub(super) async fn create_condition(
     ))
 }
 
+/// Remove a role grant condition
+///
+/// Removes one condition from a role grant. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/role-grants/{grant_id}/conditions/{condition_id}",
     tag = "admin-security",
     params(
-        ("grant_id" = Uuid, Path),
-        ("condition_id" = Uuid, Path),
+        ("grant_id" = Uuid, Path, description = "The role grant"),
+        ("condition_id" = Uuid, Path, description = "The condition"),
     ),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::SoftDelete)])))),
     responses(

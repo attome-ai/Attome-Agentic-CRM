@@ -27,6 +27,9 @@ impl std::fmt::Debug for PrivilegeItem {
     }
 }
 
+/// List privileges
+///
+/// Every privilege key the deployment knows. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/privileges",

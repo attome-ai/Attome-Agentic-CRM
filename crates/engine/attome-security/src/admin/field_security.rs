@@ -91,6 +91,9 @@ pub(super) struct CreateFieldSecurityProfileBody {
     description: Option<String>,
 }
 
+/// List field-security profiles
+///
+/// Every field-security profile. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/field-profiles",
@@ -145,6 +148,9 @@ pub(super) async fn list_field_profiles(
     )))
 }
 
+/// Create a field-security profile
+///
+/// Creates a field-security profile, to assign to roles. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/field-profiles",
@@ -240,11 +246,14 @@ impl std::fmt::Debug for FieldSecurityProfileFieldItem {
     }
 }
 
+/// A profile's field rights
+///
+/// The entity fields a field-security profile can read or update. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/field-profiles/{id}/fields",
     tag = "admin-security",
-    params(("id" = Uuid, Path), OnePageQuery),
+    params(("id" = Uuid, Path, description = "The field-security profile"), OnePageQuery),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<FieldSecurityProfileFieldItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -320,6 +329,8 @@ pub(super) struct SetFieldProfileFieldBody {
     can_update: bool,
 }
 
+/// Set a profile's field right
+///
 /// Upserts one `(entity, field)` row's `can_read`/`can_update` for
 /// `profile_id` — the bulk-set primitive the field-profile admin UI's
 /// per-field checkboxes call one at a time; there's no separate "delete a
@@ -329,7 +340,7 @@ pub(super) struct SetFieldProfileFieldBody {
     post,
     path = "/api/v1/admin/security/field-profiles/{id}/fields",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The field-security profile")),
     request_body = SetFieldProfileFieldBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Update)])))),
     responses(
@@ -474,11 +485,14 @@ pub(super) struct CreateFieldProfileAssignmentBody {
     role_id: Uuid,
 }
 
+/// Assign a profile to a role
+///
+/// Gives a role the field rights of a field-security profile. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/field-profiles/{id}/assignments",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The field-security profile")),
     request_body = CreateFieldProfileAssignmentBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Grant)])))),
     responses(
@@ -599,13 +613,16 @@ pub(super) async fn assign_field_profile(
     Ok(StatusCode::CREATED)
 }
 
+/// Unassign a profile from a role
+///
+/// Takes a field-security profile's rights away from a role. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/field-profiles/{id}/assignments/{role_id}",
     tag = "admin-security",
     params(
-        ("id" = Uuid, Path),
-        ("role_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The field-security profile"),
+        ("role_id" = Uuid, Path, description = "The role"),
     ),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(

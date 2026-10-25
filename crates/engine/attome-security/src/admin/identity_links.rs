@@ -45,6 +45,8 @@ impl std::fmt::Debug for IdentityLinkItem {
     }
 }
 
+/// Link a federated identity
+///
 /// Binds `(provider_key, provider_sub)` to `user_ref` via the same
 /// `link_identity_to_user` primitive the session-gated self-service linking
 /// callback uses (§4.3(a)/(b) share one write path) — idempotent if this

@@ -127,11 +127,14 @@ async fn load(state: &EngineState, role_id: Uuid) -> Result<RoleBulkFields, AppE
     })
 }
 
+/// A role's field access
+///
+/// The field read and update access a role has, for editing many fields at once. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/roles/{id}/bulk-fields",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The role")),
     responses(
         (status = 200, description = "The role's bulk-surface field exposure (D-589)", body = RoleBulkFields),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -148,11 +151,14 @@ pub(super) async fn get_role_bulk_fields(
     Ok(Json(load(&state, role_id).await?))
 }
 
+/// Set a role's field access
+///
+/// Sets a role's read and update access on many fields in one change. Administrators only; audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/security/roles/{id}/bulk-fields",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The role")),
     request_body = RoleBulkFields,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Update)])))),
     responses(

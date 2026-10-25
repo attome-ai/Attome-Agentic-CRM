@@ -94,6 +94,9 @@ fn invitation_row_to_item(row: InvitationRow) -> InvitationItem {
     }
 }
 
+/// List invitations
+///
+/// Pending, used and expired invitations, newest first. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/invitations",
@@ -139,6 +142,8 @@ pub(super) async fn list_invitations(
     )))
 }
 
+/// Invite a person
+///
 /// Mints an invitation and, when this deployment has email configured,
 /// enqueues it (`EngineJob::SendEmail`, never sent on the request path —
 /// guidelines §10) in the same transaction as the token insert — same
@@ -274,6 +279,8 @@ pub(super) async fn create_invitation(
     ))
 }
 
+/// Revoke an invitation
+///
 /// Revokes a pending (unconsumed, unexpired) invitation by stamping `used_at`
 /// — the same single-use marker `validate_and_consume` checks, so a revoked
 /// invitation fails exactly like an already-used one (no separate "revoked"
@@ -282,7 +289,7 @@ pub(super) async fn create_invitation(
     delete,
     path = "/api/v1/admin/security/invitations/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The invitation")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "Success"),

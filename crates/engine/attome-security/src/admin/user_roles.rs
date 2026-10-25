@@ -75,6 +75,8 @@ pub(super) struct AssignUserRoleResponse {
     approval_request_id: Option<Uuid>,
 }
 
+/// A user's roles
+///
 /// Lists roles directly assigned to `user_id` via `user_account_mm_role`
 /// only — team-mediated roles (`role_mm_team` via
 /// `user_account_mm_team`, unioned in by `resolve_entity_access_level`/
@@ -84,7 +86,7 @@ pub(super) struct AssignUserRoleResponse {
     get,
     path = "/api/v1/admin/security/users/{id}/roles",
     tag = "admin-security",
-    params(("id" = Uuid, Path), OnePageQuery),
+    params(("id" = Uuid, Path, description = "The user"), OnePageQuery),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<UserRoleItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -233,7 +235,7 @@ pub fn role_grant_event(actor_user_id: Uuid) -> SecurityEvent {
     post,
     path = "/api/v1/admin/security/users/{id}/roles",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The user")),
     request_body = AssignUserRoleBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Grant)])))),
     responses(
@@ -297,6 +299,8 @@ pub(super) async fn assign_user_role(
     ))
 }
 
+/// Take a role from a user
+///
 /// Revokes a direct role assignment (soft-delete). Team-mediated access to
 /// the same role, if any, is untouched — see `teams::remove_team_role` for
 /// that path.
@@ -305,8 +309,8 @@ pub(super) async fn assign_user_role(
     path = "/api/v1/admin/security/users/{id}/roles/{role_id}",
     tag = "admin-security",
     params(
-        ("id" = Uuid, Path),
-        ("role_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The user"),
+        ("role_id" = Uuid, Path, description = "The role"),
     ),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(

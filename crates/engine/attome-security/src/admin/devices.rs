@@ -118,6 +118,8 @@ fn check_registration(body: &RegisterDeviceBody) -> Result<(String, Option<Strin
     Ok((version.to_owned(), label.map(str::to_owned)))
 }
 
+/// Register this device
+///
 /// Registers this device for the signed-in person, or refreshes it.
 #[utoipa::path(
     post,
@@ -194,12 +196,14 @@ pub(super) async fn register_device(
     Ok(Json(RegisteredDevice { id }))
 }
 
+/// Whether this device must wipe
+///
 /// Whether this device must wipe itself. Only its owner may ask.
 #[utoipa::path(
     get,
     path = "/api/v1/devices/me/{id}",
     tag = "auth",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "This device")),
     responses(
         (status = 200, description = "Success", body = DeviceStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -225,12 +229,14 @@ pub(super) async fn my_device_status(
     Ok(Json(DeviceStatus { wipe }))
 }
 
+/// Report a wipe done
+///
 /// The app reports that it cleared its local data after a wipe request.
 #[utoipa::path(
     post,
     path = "/api/v1/devices/me/{id}/wiped",
     tag = "auth",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "This device")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Security, AuditOperation::Update)])))),
     responses(
         (status = 204, description = "Recorded"),
@@ -274,6 +280,8 @@ pub(super) async fn my_device_wiped(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// List devices
+///
 /// Every registered device, most recently seen first.
 #[utoipa::path(
     get,
@@ -320,12 +328,14 @@ pub(super) async fn list_devices(
     )))
 }
 
+/// Wipe a device
+///
 /// Asks a device to wipe itself and ends its owner's sessions everywhere.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/devices/{id}/wipe",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The device")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Security, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "Wipe requested and sessions ended"),
@@ -375,13 +385,15 @@ pub(super) async fn wipe_device(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Restart a device's offline data
+///
 /// B18-T12: the device starts its offline data again at its next pull: a
 /// fresh manifest, every record re-sent.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/devices/{id}/offline-refresh",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The device")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
         (status = 204, description = "Refresh due at the next pull"),

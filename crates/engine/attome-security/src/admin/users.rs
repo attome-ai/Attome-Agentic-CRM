@@ -35,6 +35,8 @@ pub(super) struct UserListItem {
     is_active: bool,
 }
 
+/// List users
+///
 /// P-admin-list-pagination: previously a flat `LIMIT 500` with no `total` and
 /// no way to see past row 500 — a deployment with more users than that had
 /// rows silently invisible to admins, with no signal that truncation had
@@ -100,6 +102,9 @@ pub(super) struct UserLookupQuery {
     email: String,
 }
 
+/// Look up users
+///
+/// Finds users whose email starts with the text typed, at most 20, for pickers. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/users/lookup",

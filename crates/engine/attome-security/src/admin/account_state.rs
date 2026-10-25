@@ -191,6 +191,8 @@ async fn set_user_active(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Disable a user
+///
 /// `Authorized<Admin>` rather than the delegate's own `require_admin()` doing
 /// all the work: `set_user_active` still performs that check (it is also
 /// reachable from other callers), but the gate now also holds at this route's
@@ -199,7 +201,7 @@ async fn set_user_active(
     post,
     path = "/api/v1/admin/security/users/{id}/disable",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The user")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Security, AuditOperation::AccountDisabled)])))),
     responses(
         (status = 204, description = "Success"),
@@ -217,11 +219,14 @@ pub(super) async fn disable_user(
     set_user_active(&state, &ctx, user_id, false).await
 }
 
+/// Enable a user
+///
+/// Lets a disabled user sign in again. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/users/{id}/enable",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The user")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Security, AuditOperation::AccountEnabled)])))),
     responses(
         (status = 204, description = "Success"),

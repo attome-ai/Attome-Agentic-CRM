@@ -18,6 +18,8 @@ pub(super) struct RevokeSessionBody {
     jti: Uuid,
 }
 
+/// Revoke a session
+///
 /// Denylists `jti` for the max access-token TTL from now: any token carrying
 /// that `jti` was minted at most that long ago, so it cannot outlive the
 /// denylist entry — see `attome_auth::revocation::revoke`'s doc comment.

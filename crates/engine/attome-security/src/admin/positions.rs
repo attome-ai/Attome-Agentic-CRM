@@ -41,6 +41,9 @@ impl std::fmt::Debug for PositionItem {
     }
 }
 
+/// List positions
+///
+/// The position hierarchy used by position-based record access. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/positions",
@@ -109,6 +112,9 @@ async fn position_exists(db: &attome_db::DbPool, position_id: Uuid) -> Result<bo
         .map_err(AppError::internal)
 }
 
+/// Create a position
+///
+/// Adds a position to the hierarchy. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/positions",
@@ -183,6 +189,8 @@ pub(super) struct UpdatePositionParentBody {
     parent_position_id: Option<Uuid>,
 }
 
+/// Move a position
+///
 /// Reparents an existing position — the mutation `create_position` alone
 /// can't cover. Guarded against creating a cycle via
 /// `would_create_position_cycle` before writing;
@@ -192,7 +200,7 @@ pub(super) struct UpdatePositionParentBody {
     put,
     path = "/api/v1/admin/security/positions/{id}/parent",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The position")),
     request_body = UpdatePositionParentBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Update)])))),
     responses(
@@ -272,11 +280,14 @@ pub(super) async fn update_position_parent(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Delete a position
+///
+/// Deletes a position. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/positions/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The position")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),
@@ -336,11 +347,14 @@ pub(super) struct PositionMemberItem {
     user_email: String,
 }
 
+/// Put a user in a position
+///
+/// Assigns a user to a position in the hierarchy. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/positions/{id}/members",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The position")),
     request_body = AddPositionMemberBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Grant)])))),
     responses(
@@ -416,13 +430,16 @@ pub(super) async fn add_position_member(
     ))
 }
 
+/// Take a user out of a position
+///
+/// Ends a user's place in a position. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/positions/{id}/members/{user_id}",
     tag = "admin-security",
     params(
-        ("id" = Uuid, Path),
-        ("user_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The position"),
+        ("user_id" = Uuid, Path, description = "The user"),
     ),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(

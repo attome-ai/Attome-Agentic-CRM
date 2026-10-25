@@ -235,6 +235,9 @@ async fn resolve_manager(
     Ok(manager)
 }
 
+/// Start an access review
+///
+/// Opens an access review campaign over one role's holders, one team's members or one entity's user shares: one item per grant held now, to keep or revoke. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/access-reviews",
@@ -437,6 +440,9 @@ async fn fetch_campaign(
     }))
 }
 
+/// List access reviews
+///
+/// Every access review campaign and its status. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/access-reviews",
@@ -485,11 +491,14 @@ pub(super) async fn list_access_reviews(
     )))
 }
 
+/// One access review
+///
+/// One access review campaign: its scope and status. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/access-reviews/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The access review")),
     responses(
         (status = 200, description = "Success", body = AccessReviewCampaign),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -509,11 +518,14 @@ pub(super) async fn get_access_review(
         .ok_or(AppError::NotFound)
 }
 
+/// An access review's items
+///
+/// The grants under review in a campaign, each with its decision so far. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/access-reviews/{id}/items",
     tag = "admin-security",
-    params(("id" = Uuid, Path), OnePageQuery),
+    params(("id" = Uuid, Path, description = "The access review"), OnePageQuery),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<AccessReviewItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -686,11 +698,14 @@ where
     Ok(())
 }
 
+/// Decide an access review item
+///
+/// Keeps or revokes one grant under review, through the approval engine: nobody decides their own access, and a revoke removes the grant. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/access-reviews/{id}/items/{item_id}/decide",
     tag = "admin-security",
-    params(("id" = Uuid, Path), ("item_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The access review"), ("item_id" = Uuid, Path, description = "The review item")),
     request_body = DecideAccessReviewItemBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Update), (AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(

@@ -109,6 +109,9 @@ type EntityAccessRow = (
     String,
 );
 
+/// List role entity access
+///
+/// Each role's access level per entity. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/role-entity-access",
@@ -227,6 +230,8 @@ fn default_access_level() -> i16 {
     3
 }
 
+/// Set a role's entity access
+///
 /// Upserts one `(role, entity)` grant row — the mutation a deployment
 /// actually uses to opt a role into narrowed record-level scoping for a
 /// specific entity, since a role holding the underlying privilege but no row
@@ -381,6 +386,8 @@ pub(super) async fn upsert_entity_access_grant(
     ))
 }
 
+/// Remove a role's entity access
+///
 /// Soft-deletes one `(role, entity)` grant row — after this, the role holds
 /// no entity-access row for this entity at all, so `resolve_entity_access_level`
 /// falls back to its default (`Global`) for every action on this entity,
@@ -389,7 +396,7 @@ pub(super) async fn upsert_entity_access_grant(
     delete,
     path = "/api/v1/admin/security/role-entity-access/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The role entity access row")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "Success"),
@@ -468,6 +475,8 @@ pub(super) struct UpdatePositionHierarchyEnabledBody {
     position_hierarchy_enabled: bool,
 }
 
+/// Turn position access on for a role
+///
 /// Toggles a role's F138 opt-in flag — the mutation a deployment actually
 /// uses to turn position-hierarchy scoping on for a role after the fact,
 /// mirroring `upsert_entity_access_grant`'s invalidation fan-out exactly
@@ -477,7 +486,7 @@ pub(super) struct UpdatePositionHierarchyEnabledBody {
     put,
     path = "/api/v1/admin/security/roles/{id}/position-hierarchy",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The role")),
     request_body = UpdatePositionHierarchyEnabledBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Update)])))),
     responses(

@@ -91,6 +91,9 @@ pub(super) struct CreateRoleGrantBody {
     privilege_name: Option<String>,
 }
 
+/// List role grants
+///
+/// The privileges each role holds. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/role-grants",
@@ -171,6 +174,9 @@ pub(super) async fn list_role_grants(
     )))
 }
 
+/// Grant a privilege to a role
+///
+/// Gives a role one privilege, for every holder of the role. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/role-grants",
@@ -315,11 +321,14 @@ pub(super) async fn create_role_grant(
     ))
 }
 
+/// Revoke a role grant
+///
+/// Takes a privilege away from a role and every holder of it. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/role-grants/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The role grant")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "Success"),

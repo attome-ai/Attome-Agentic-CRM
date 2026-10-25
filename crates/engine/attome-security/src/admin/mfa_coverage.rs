@@ -106,6 +106,9 @@ SELECT user_id, email, roles, factors, is_admin,
  LIMIT $3
 "#;
 
+/// MFA coverage by user
+///
+/// Each user's second-factor state against the policy that applies to them. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/mfa/coverage",
@@ -141,6 +144,9 @@ async fn coverage(
     }))
 }
 
+/// MFA coverage summary
+///
+/// How many users meet their second-factor policy and how many do not. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/mfa/coverage/summary",

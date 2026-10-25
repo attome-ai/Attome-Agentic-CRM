@@ -43,6 +43,9 @@ impl std::fmt::Debug for TeamItem {
     }
 }
 
+/// List teams
+///
+/// Every team. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/teams",
@@ -100,6 +103,9 @@ pub(super) struct CreateTeamBody {
     description: Option<String>,
 }
 
+/// Create a team
+///
+/// Creates a team, to share records with and to give roles to as a group. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/teams",
@@ -152,11 +158,14 @@ pub(super) async fn create_team(
     ))
 }
 
+/// Delete a team
+///
+/// Deletes a team. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/teams/{id}",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The team")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),
@@ -221,11 +230,14 @@ pub(super) struct TeamMemberItem {
     user_email: String,
 }
 
+/// Add a team member
+///
+/// Adds a user to a team, so they hold the team's roles. Administrators only; audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/teams/{id}/members",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The team")),
     request_body = AddTeamMemberBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Grant)])))),
     responses(
@@ -304,13 +316,16 @@ pub(super) async fn add_team_member(
     ))
 }
 
+/// Remove a team member
+///
+/// Takes a user out of a team. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/teams/{id}/members/{user_id}",
     tag = "admin-security",
     params(
-        ("id" = Uuid, Path),
-        ("user_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The team"),
+        ("user_id" = Uuid, Path, description = "The user"),
     ),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(
@@ -364,6 +379,8 @@ pub(super) struct AddTeamRoleBody {
     role_id: Uuid,
 }
 
+/// Give a team a role
+///
 /// Assigns `role_id` to every member of `team_id` — the D-133 "everyone on
 /// Finance team gets Finance Role" association. Distinct from
 /// `role_grants::create_role_grant` (role → privilege); this is role → team.
@@ -376,7 +393,7 @@ pub(super) struct AddTeamRoleBody {
     post,
     path = "/api/v1/admin/security/teams/{id}/roles",
     tag = "admin-security",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The team")),
     request_body = AddTeamRoleBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Grant)])))),
     responses(
@@ -456,13 +473,16 @@ pub(super) async fn add_team_role(
     ))
 }
 
+/// Take a role from a team
+///
+/// Removes a role from a team. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/teams/{id}/roles/{role_id}",
     tag = "admin-security",
     params(
-        ("id" = Uuid, Path),
-        ("role_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The team"),
+        ("role_id" = Uuid, Path, description = "The role"),
     ),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(
@@ -518,11 +538,14 @@ pub(super) struct TeamMemberListItem {
     user_email: Option<String>,
 }
 
+/// A team's members
+///
+/// The users in a team. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/teams/{id}/members",
     tag = "admin-security",
-    params(("id" = Uuid, Path), OnePageQuery),
+    params(("id" = Uuid, Path, description = "The team"), OnePageQuery),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<TeamMemberListItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -577,11 +600,14 @@ pub(super) async fn list_team_members(
     )))
 }
 
+/// A team's roles
+///
+/// The roles a team gives its members. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/teams/{id}/roles",
     tag = "admin-security",
-    params(("id" = Uuid, Path), OnePageQuery),
+    params(("id" = Uuid, Path, description = "The team"), OnePageQuery),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<TeamRoleItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
