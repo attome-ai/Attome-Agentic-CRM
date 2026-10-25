@@ -4,6 +4,8 @@
 //! matching pack; this crate holds the engine code that acts on them as later tasks add it. Gated
 //! on the `fulfilment` module.
 
+/// F6-T6: holds that stop a release, and releasing.
+pub mod hold;
 pub mod model;
 pub mod sourcing;
 /// F6-T3: confirmed orders split into fulfilment orders.
@@ -16,7 +18,7 @@ pub use model::FulfilmentModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 38;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first route lands.
+/// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    hold::openapi_fragment()
 }

@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Fulfilment holds (F6-T6): releasing a fulfilment order (`POST /api/v1/fulfilment/orders/{id}/release`)
+  first opens the holds it should carry (credit when the customer's credit check refuses the order,
+  prepayment for prepaid terms, address for goods with no delivery address) and is refused while any is
+  open; `POST /api/v1/fulfilment/holds/{id}/clear` needs `fulfilment_hold.release` (fulfilment pack `0002`).
 - Revenue recognition switches and roles (F11-T11): flags `revrec.basic`, `revrec.contracts`,
   `revrec.ssp_allocation`, `revrec.usage_completion`, `revrec.change_rules` and `revrec.disclosure`, all off
   by default (the others need `revrec.basic`; the old `revrec.contracts` setting is gone); the revenue routes

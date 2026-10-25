@@ -1,0 +1,38 @@
+{
+  "author": "packs",
+  "checksum": "sha256:1e1786b0e68b36a3045a6456c8658e870dfba28d5762c0d41d72e2752918d55c",
+  "closed_at": "2026-10-25T00:00:00Z",
+  "description": "Fulfilment holds (F6-T6): the privilege to clear a hold on a fulfilment order, held apart from updating the order so the person who releases is not the person who waives a credit or prepayment hold.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d19-7e18-9b18-18c018c018f7",
+  "layer": "product",
+  "name": "fulfilment-holds",
+  "opened_at": "2026-10-25T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Clear a hold on a fulfilment order (F6-T6)",
+          "key": "fulfilment_hold.release",
+          "name": "fulfilment_hold.release"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "fulfilment_hold.release"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "fulfilment",
+  "seq": 2,
+  "title": "Pack: clearing fulfilment holds"
+}

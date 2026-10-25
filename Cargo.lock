@@ -1225,11 +1225,16 @@ dependencies = [
 name = "attome-fulfilment"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
+ "attome-billing",
  "attome-core",
  "attome-db",
  "attome-modules",
+ "attome-server",
  "attome-types",
  "axum",
+ "rust_decimal",
+ "serde",
  "sqlx",
  "tracing",
  "utoipa",
