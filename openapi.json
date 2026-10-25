@@ -23818,6 +23818,7 @@
           {
             "name": "hard",
             "in": "query",
+            "description": "Delete the entity's table too, not only retire it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -44390,6 +44391,7 @@
           {
             "name": "entity",
             "in": "query",
+            "description": "Only this entity (its logical name).",
             "required": true,
             "schema": {
               "type": "string"
@@ -44402,12 +44404,14 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -47057,6 +47061,7 @@
           {
             "name": "entity",
             "in": "query",
+            "description": "Only this entity (its logical name).",
             "required": true,
             "schema": {
               "type": "string"
@@ -47065,6 +47070,7 @@
           {
             "name": "record_id",
             "in": "query",
+            "description": "Only this record.",
             "required": true,
             "schema": {
               "type": "string",
@@ -47078,12 +47084,14 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -50210,6 +50218,7 @@
           {
             "name": "email",
             "in": "query",
+            "description": "The text the email address starts with.",
             "required": true,
             "schema": {
               "type": "string"
@@ -76826,6 +76835,7 @@
           {
             "name": "entity_name",
             "in": "query",
+            "description": "Only this entity (its logical name).",
             "required": false,
             "schema": {
               "type": "string"
@@ -76834,6 +76844,7 @@
           {
             "name": "record_id",
             "in": "query",
+            "description": "Only this record.",
             "required": false,
             "schema": {
               "type": "string",
@@ -76843,6 +76854,7 @@
           {
             "name": "folder",
             "in": "query",
+            "description": "The folder to list; the root when absent.",
             "required": false,
             "schema": {
               "type": "string"
@@ -77945,6 +77957,335 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/files/uploads/{session_id}": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A multipart upload's progress",
+        "description": "The parts of a multipart upload that have arrived, so a client resumes\nwith only the missing ones. Only the person who started the upload.",
+        "operationId": "multipart_status",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "description": "The upload session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The upload and the parts received",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultipartStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No multipart upload of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "delete": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Abandon a multipart upload",
+        "description": "Stops a multipart upload and removes the parts that arrived. Only the\nperson who started the upload.",
+        "operationId": "abort_multipart_upload",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "description": "The upload session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Abandoned"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No multipart upload of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "abandons an upload that never became a file; nothing it removes was ever attached",
+          "reason": "delegated",
+          "via": "files_scan.rs"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/files/uploads/{session_id}/complete": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Complete a multipart upload",
+        "description": "Checks every part arrived with the right length, assembles them into the\nupload's file and removes the parts; finalize the upload session next, as\nfor a single upload. A declared checksum must match. Only the person who\nstarted the upload.",
+        "operationId": "complete_multipart_upload",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "description": "The upload session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The assembled file's size and checksum",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultipartAssembled"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No multipart upload of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The upload is no longer open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Parts missing or of the wrong length, or a checksum that does not match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "assembles the quarantine object; the scan result and the field promotion are audited on their own paths",
+          "reason": "delegated",
+          "via": "files_scan.rs / entity_crud update"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/files/uploads/{session_id}/parts/{n}": {
+      "put": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Get a part's upload link",
+        "description": "A presigned PUT for part `n` (1-based) of an open multipart upload the\ncaller started; sending a part again replaces it. Only the person who\nstarted the upload.",
+        "operationId": "multipart_part_url",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "description": "The upload session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "description": "The part number, from 1",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Where to PUT the part",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartUpload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No open multipart upload of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The upload is no longer open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No such part number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "issues an upload link and writes nothing",
+          "reason": "delegated",
+          "via": "files_scan.rs / entity_crud update"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/fulfilment/backorders/allocate": {
@@ -79087,6 +79428,93 @@
       }
     },
     "/api/v1/hooks/{name}": {
+      "get": {
+        "tags": [
+          "integration"
+        ],
+        "summary": "Answer a provider's subscription check",
+        "description": "Meta's webhook subscription check (M14-T2): when the hook's `auth.verify_token` matches `hub.verify_token` and `hub.mode` is `subscribe`, the answer is `hub.challenge` as plain text. Public, like the hook's POST; anything else is 403.",
+        "operationId": "verify_inbound_hook",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The hook's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hub.mode",
+            "in": "query",
+            "description": "Always `subscribe`",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hub.verify_token",
+            "in": "query",
+            "description": "The token set on the hook as `auth.verify_token`",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hub.challenge",
+            "in": "query",
+            "description": "The value to echo back",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The challenge",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token does not match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active hook of this name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
       "post": {
         "tags": [
           "integration"
@@ -116457,6 +116885,129 @@
         "x-privilege": "{entity}.read",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/{entity}/{id}/files/{field}/multipart": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Start a multipart upload",
+        "description": "Opens an upload session for a large file sent in parts, with the same\nchecks as a single upload (record access, check-out, type, size and\nquota), and says how many parts of what size to send. Needs update\naccess to the record.",
+        "operationId": "start_multipart_upload",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "field",
+            "in": "path",
+            "description": "The file field",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The session and its parts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultipartStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller cannot update the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The file is checked out by someone else, or a session is being created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A type, size or checksum the field does not take, or more than 10,000 parts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "only records upload intent, as the single upload session does; the scan result and the field promotion are audited on their own paths",
+          "reason": "delegated",
+          "via": "files_scan.rs / entity_crud update"
+        },
+        "x-auth": "session",
+        "x-body-limit": 65536,
+        "x-cache": "no-store",
+        "x-idempotent": false,
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/{entity}/{id}/files/{field}/share-links": {
@@ -154647,6 +155198,93 @@
           }
         }
       },
+      "MultipartAssembled": {
+        "type": "object",
+        "required": [
+          "session_id",
+          "size",
+          "checksum_sha256"
+        ],
+        "properties": {
+          "checksum_sha256": {
+            "type": "string",
+            "description": "Lowercase hex SHA-256 of the assembled file."
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "MultipartStarted": {
+        "type": "object",
+        "required": [
+          "session_id",
+          "part_size",
+          "part_count"
+        ],
+        "properties": {
+          "part_count": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "part_size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Every part but the last is this many bytes.",
+            "minimum": 0
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "MultipartStatus": {
+        "type": "object",
+        "required": [
+          "session_id",
+          "status",
+          "part_size",
+          "part_count",
+          "received"
+        ],
+        "properties": {
+          "part_count": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "part_size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "received": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            },
+            "description": "The parts that arrived, by number."
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`open`, `assembled` or `aborted`."
+          }
+        }
+      },
       "MyLimit": {
         "type": "object",
         "description": "One limit that applies to the caller.",
@@ -176475,6 +177113,30 @@
               "$ref": "#/components/schemas/Warning"
             },
             "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PartUpload": {
+        "type": "object",
+        "required": [
+          "part",
+          "upload_url",
+          "expires_in_secs"
+        ],
+        "properties": {
+          "expires_in_secs": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "part": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "upload_url": {
+            "type": "string",
+            "description": "PUT the part's bytes here."
           }
         }
       },
@@ -199716,7 +200378,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -199769,5 +200430,6 @@
       }
     }
   },
+  "x-version-adapters": [],
   "x-api-version": "2026-10"
 }

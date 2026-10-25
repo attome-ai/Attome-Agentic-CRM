@@ -15449,6 +15449,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/files/uploads/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A multipart upload's progress
+         * @description The parts of a multipart upload that have arrived, so a client resumes
+         *     with only the missing ones. Only the person who started the upload.
+         */
+        get: operations["multipart_status"];
+        put?: never;
+        post?: never;
+        /**
+         * Abandon a multipart upload
+         * @description Stops a multipart upload and removes the parts that arrived. Only the
+         *     person who started the upload.
+         */
+        delete: operations["abort_multipart_upload"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/files/uploads/{session_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete a multipart upload
+         * @description Checks every part arrived with the right length, assembles them into the
+         *     upload's file and removes the parts; finalize the upload session next, as
+         *     for a single upload. A declared checksum must match. Only the person who
+         *     started the upload.
+         */
+        post: operations["complete_multipart_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/files/uploads/{session_id}/parts/{n}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Get a part's upload link
+         * @description A presigned PUT for part `n` (1-based) of an open multipart upload the
+         *     caller started; sending a part again replaces it. Only the person who
+         *     started the upload.
+         */
+        put: operations["multipart_part_url"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fulfilment/backorders/allocate": {
         parameters: {
             query?: never;
@@ -15674,7 +15745,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Answer a provider's subscription check
+         * @description Meta's webhook subscription check (M14-T2): when the hook's `auth.verify_token` matches `hub.verify_token` and `hub.mode` is `subscribe`, the answer is `hub.challenge` as plain text. Public, like the hook's POST; anything else is 403.
+         */
+        get: operations["verify_inbound_hook"];
         put?: never;
         /**
          * Receive an inbound hook
@@ -23314,6 +23389,29 @@ export interface paths {
         get: operations["get_download_url"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/files/{field}/multipart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a multipart upload
+         * @description Opens an upload session for a large file sent in parts, with the same
+         *     checks as a single upload (record access, check-out, type, size and
+         *     quota), and says how many parts of what size to send. Needs update
+         *     access to the record.
+         */
+        post: operations["start_multipart_upload"];
         delete?: never;
         options?: never;
         head?: never;
@@ -36788,6 +36886,37 @@ export interface components {
             new: string;
             start_mrr: string;
         };
+        MultipartAssembled: {
+            /** @description Lowercase hex SHA-256 of the assembled file. */
+            checksum_sha256: string;
+            /** Format: uuid */
+            session_id: string;
+            /** Format: int64 */
+            size: number;
+        };
+        MultipartStarted: {
+            /** Format: int32 */
+            part_count: number;
+            /**
+             * Format: int64
+             * @description Every part but the last is this many bytes.
+             */
+            part_size: number;
+            /** Format: uuid */
+            session_id: string;
+        };
+        MultipartStatus: {
+            /** Format: int32 */
+            part_count: number;
+            /** Format: int64 */
+            part_size: number;
+            /** @description The parts that arrived, by number. */
+            received: number[];
+            /** Format: uuid */
+            session_id: string;
+            /** @description `open`, `assembled` or `aborted`. */
+            status: string;
+        };
         /** @description One limit that applies to the caller. */
         MyLimit: {
             key: string;
@@ -45066,6 +45195,14 @@ export interface components {
              *     omitted when empty.
              */
             warnings?: components["schemas"]["Warning"][];
+        };
+        PartUpload: {
+            /** Format: int64 */
+            expires_in_secs: number;
+            /** Format: int32 */
+            part: number;
+            /** @description PUT the part's bytes here. */
+            upload_url: string;
         };
         PasswordChangeBody: {
             current_password: string;
@@ -68400,6 +68537,7 @@ export interface operations {
     delete_entity: {
         parameters: {
             query?: {
+                /** @description Delete the entity's table too, not only retire it. */
                 hard?: boolean;
             };
             header?: never;
@@ -80994,9 +81132,11 @@ export interface operations {
     list_entity_default_shares: {
         parameters: {
             query: {
+                /** @description Only this entity (its logical name). */
                 entity: string;
                 /** @description One-based: page 1 is the first page. */
                 page?: number;
+                /** @description Rows per page. */
                 page_size?: number;
             };
             header?: never;
@@ -82613,10 +82753,13 @@ export interface operations {
     list_record_shares: {
         parameters: {
             query: {
+                /** @description Only this entity (its logical name). */
                 entity: string;
+                /** @description Only this record. */
                 record_id: string;
                 /** @description One-based: page 1 is the first page. */
                 page?: number;
+                /** @description Rows per page. */
                 page_size?: number;
             };
             header?: never;
@@ -84547,6 +84690,7 @@ export interface operations {
     lookup_users: {
         parameters: {
             query: {
+                /** @description The text the email address starts with. */
                 email: string;
             };
             header?: never;
@@ -100883,8 +101027,11 @@ export interface operations {
     get_tree: {
         parameters: {
             query?: {
+                /** @description Only this entity (its logical name). */
                 entity_name?: string;
+                /** @description Only this record. */
                 record_id?: string;
+                /** @description The folder to list; the root when absent. */
                 folder?: string;
             };
             header?: never;
@@ -101569,6 +101716,206 @@ export interface operations {
             };
         };
     };
+    multipart_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The upload session */
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The upload and the parts received */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MultipartStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No multipart upload of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    abort_multipart_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The upload session */
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Abandoned */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No multipart upload of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    complete_multipart_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The upload session */
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assembled file's size and checksum */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MultipartAssembled"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No multipart upload of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The upload is no longer open */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Parts missing or of the wrong length, or a checksum that does not match */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    multipart_part_url: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The upload session */
+                session_id: string;
+                /** @description The part number, from 1 */
+                n: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where to PUT the part */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartUpload"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No open multipart upload of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The upload is no longer open */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such part number */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     fulfilment_backorders_allocate: {
         parameters: {
             query?: never;
@@ -102237,6 +102584,54 @@ export interface operations {
             };
             /** @description A missing or non-numeric value, a sensitive field, or a malformed cursor */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    verify_inbound_hook: {
+        parameters: {
+            query?: {
+                /** @description Always `subscribe` */
+                "hub.mode"?: string;
+                /** @description The token set on the hook as `auth.verify_token` */
+                "hub.verify_token"?: string;
+                /** @description The value to echo back */
+                "hub.challenge"?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The hook's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The challenge */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The token does not match */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No active hook of this name */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -124844,6 +125239,73 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_multipart_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record */
+                id: string;
+                /** @description The file field */
+                field: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description The session and its parts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MultipartStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller cannot update the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The file is checked out by someone else, or a session is being created */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A type, size or checksum the field does not take, or more than 10,000 parts */
             422: {
                 headers: {
                     [name: string]: unknown;
