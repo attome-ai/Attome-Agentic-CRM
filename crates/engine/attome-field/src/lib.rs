@@ -5,6 +5,9 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, RwLock};
 
+/// A2-T2: built-in text formats.
+pub mod formats;
+
 // ── Field options (stored as `options` JSONB on attribute_info,
 // migration 0029) ─────────────────────────────────────────────────────────
 
@@ -94,6 +97,12 @@ pub struct TextOptions {
     /// for the fallback to keep working exactly as before. Never itself
     /// validated against `pattern` — a deployment wanting both sets both.
     pub text_type: Option<String>,
+    /// A2-T2: a built-in format ([`formats::FORMATS`]: email, phone, url,
+    /// iban, Gulf identity numbers, percent, duration) every write must
+    /// match, after normalising. Checked alongside `pattern` when both are
+    /// set.
+    #[serde(default)]
+    pub format: Option<String>,
 }
 
 /// The only values `TextOptions.text_type` may hold — validated at write
@@ -168,6 +177,10 @@ pub fn normalize(field_type: &FieldType, value: &Value, options: Option<&Value>)
             let opts = options
                 .and_then(|o| serde_json::from_value::<TextOptions>(o.clone()).ok())
                 .unwrap_or_default();
+            if let Some(format) = opts.format.as_deref().filter(|f| formats::is_format(f)) {
+                let shaped = Value::String(formats::normalize(format, text));
+                return (shaped != *value).then_some(shaped);
+            }
             match opts.text_type.as_deref() {
                 Some("tel") => Value::String(phone_e164(text)),
                 Some("email") => Value::String(text.trim().to_lowercase()),
@@ -214,6 +227,9 @@ pub fn validate(
                 && let Ok(opts) = serde_json::from_value::<TextOptions>(opts_val.clone())
             {
                 validate_text_mask(s, &opts)?;
+                if let Some(format) = opts.format.as_deref() {
+                    formats::check(format, s).map_err(AppError::Validation)?;
+                }
             }
         }
         FieldType::Number | FieldType::Currency => {
@@ -618,6 +634,14 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
                 .map_err(|e| AppError::Validation(format!("invalid text options: {e}")))?;
             if let Some(pattern) = opts.pattern.as_deref().filter(|p| !p.is_empty()) {
                 compiled_pattern(pattern)?;
+            }
+            if let Some(format) = opts.format.as_deref()
+                && !formats::is_format(format)
+            {
+                return Err(AppError::Validation(format!(
+                    "format '{format}' is not one of {}",
+                    formats::FORMATS.join("|")
+                )));
             }
             if let Some(text_type) = opts.text_type.as_deref()
                 && !VALID_TEXT_TYPES.contains(&text_type)
@@ -1062,6 +1086,35 @@ fn type_err(expected: &str, got: &Value) -> AppError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A2-T2: a text field with a format refuses a value that does not
+    /// match it, after Arabic digits and separators are normalised.
+    #[test]
+    fn a_format_is_enforced_after_normalising() {
+        let iban = json!({ "format": "iban" });
+        let stored = normalize(
+            &FieldType::Text,
+            &json!("sa03 8000 0000 6080 1016 7519"),
+            Some(&iban),
+        )
+        .expect("spaces dropped and upper-cased");
+        assert_eq!(stored, json!("SA0380000000608010167519"));
+        assert!(validate(&FieldType::Text, &stored, Some(&iban)).is_ok());
+        let err = validate(
+            &FieldType::Text,
+            &json!("SA0380000000608010167518"),
+            Some(&iban),
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("not a valid IBAN"), "{err}");
+
+        let id = json!({ "format": "saudi_national_id" });
+        let stored = normalize(&FieldType::Text, &json!("١٠٠٠٠٠٠٠٠٨"), Some(&id)).expect("digits");
+        assert!(validate(&FieldType::Text, &stored, Some(&id)).is_ok());
+
+        assert!(validate_options(&FieldType::Text, &json!({ "format": "iban" })).is_ok());
+        assert!(validate_options(&FieldType::Text, &json!({ "format": "colour" })).is_err());
+    }
 
     /// A29-T1: a text or number field can hold an external id.
     #[test]

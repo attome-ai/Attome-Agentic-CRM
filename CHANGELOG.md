@@ -199,6 +199,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Text formats (A2-T2): a text attribute may declare `options.format`, one of `email`, `phone`
+  (E.164), `url`, `iban` (mod 97 and the country's length), `saudi_national_id`, `iqama`,
+  `uae_emirates_id` (check digits), `percent` or `duration`. Every write normalises the value first
+  (Arabic digits, spaces and dashes in identifiers, upper-case IBANs) and refuses one that does not
+  match, as a per-field `invalid` error.
 - Business events (Y7-T5): builders define a named event about one entity's records with typed
   attributes (the `business_event` metadata kind); flows raise it with the `events.raise` step and
   code with `attome_api::business_event::raise_event`, which checks the payload and writes it to the
