@@ -710,6 +710,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Data quality guide (L2-T11): `docs/data-quality.md` describes the six dimensions, measure-only rules,
+  targets, incremental and daily scoring, issues with owners and due dates, fixes, alerts, the agent
+  tools and the `/api/v1/admin/data/quality` routes, including what is not built yet (accuracy, issue
+  sources, the Arabic checks in scoring, fills from a trusted source).
 - Breach register intake and deadlines (R5-T2): `attome_compliance::breach::create_from_case` turns a
   security case into a `privacy_breach` (regulator deadline from `core.country`, 72 hours for every
   country pack so far; the case links it), and every open breach with a deadline and no regulator notice

@@ -19,6 +19,7 @@
 - [Identity brokers](identity-brokers.md): signing in with a SAML-only identity provider through Entra ID, Okta, AD FS or Keycloak over OpenID Connect.
 - [Hijri calendar](hijri.md): Umm al-Qura dates, corrections, grouping, autonumbers and holidays.
 - [Duplicate rules](duplicates.md): comparators, what saving a duplicate does, scans, merges and undo.
+- [Data quality](data-quality.md): dimensions, measure-only rules, targets, issues and their owners, fixes and alerts.
 - [Scanning](scanning.md): scannable fields, GS1 codes, finding records by code, scan actions and the deep-link rule.
 - [Offline use](offline.md): offline profiles, what a device gets and never gets, remote wipe and the device view.
 - [Deal teams and splits](deal-teams.md): team members, revenue and overlay splits, won deals and leavers.

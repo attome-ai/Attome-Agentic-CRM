@@ -1,17 +1,12 @@
-//! M14 Phase 1 (Data Quality) — the admin surface: read-only score/issue
-//! listing plus the one issue-resolution action, `/api/v1/admin/data/
-//! quality*`. `system.admin` only, mounted with `strict_authz` — same
-//! posture as every other `/admin/data/*` surface (`duplicates_admin.rs`,
-//! `data_profile_admin.rs`). The scoring sweep itself
-//! (`EngineJob::DataQualityScoreSweep`) lives in `quality_score.rs`; this
-//! file only reads what that job wrote and lets a steward close an issue
-//! its own remediation (a bulk transform, a fixed record) already resolved.
+//! M14 / L2 (Data Quality) — the admin surface, `/api/v1/admin/data/
+//! quality*`: scores and their history, the issue queue, quality rules,
+//! targets and bulk fixes. Scoring itself lives in `quality_score.rs` and
+//! `crate::quality`; this file reads what scoring wrote and authors what it
+//! reads.
 //!
-//! Phase 1 scope note (see `quality_score.rs`'s module doc and migration
-//! `0386`'s comment): two dimensions only, `completeness` and `uniqueness`.
-//! No M27 metric-adapter wiring and no Angular dashboard page yet — both
-//! explicitly deferred to a later pass; this is the minimal read surface the
-//! M51 alert this job raises already links to (`/admin/data/quality`).
+//! Since L2-T2 the scores carry six dimensions (`crate::quality::dimensions`)
+//! and the web app has the quality screen (L2-T8); `docs/data-quality.md`
+//! describes the whole feature.
 //!
 //! L2-T4: issues carry an owner (the domain steward or the record owner,
 //! `crate::quality::routing`) and a due date; the owner moves an issue
