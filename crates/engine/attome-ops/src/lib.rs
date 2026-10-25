@@ -20,6 +20,8 @@ pub mod evidence;
 pub mod model;
 /// AB2-T7: the cluster's status and failover history routes.
 pub mod status;
+/// AB2-T8: planned switchover under two-person control.
+pub mod switchover;
 /// AB8-T6: the upgrade record and its routes.
 pub mod upgrades;
 
@@ -37,5 +39,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(disasters::openapi_fragment());
     doc.merge(status::openapi_fragment());
     doc.merge(drills::openapi_fragment());
+    doc.merge(switchover::openapi_fragment());
     doc
 }

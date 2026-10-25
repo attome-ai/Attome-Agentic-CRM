@@ -404,6 +404,8 @@ fn test_config() -> AppConfig {
     // M14-T1 — an inbound hook's secret is sealed under this ring; creating
     // one refuses without it.
     config.integration.credential_encryption_key = KeyRing::single("34".repeat(32));
+    // AB2-T8 — a switchover is asked for only with a Patroni cluster named.
+    config.ops.patroni_api_urls = vec!["http://127.0.0.1:9".into()];
     // AB4-T6 — drill evidence is accepted only under a configured key.
     config.ops.drill_public_keys = vec![attome_ops::evidence::public_key_base64(
         &attome_ops::evidence::SigningKey::from_bytes(&DRILL_KEY_SEED),
@@ -3976,6 +3978,13 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 1,
             )
         }
+        // AB2-T8: the fixture names a Patroni node; nothing calls it here.
+        "POST /api/v1/ops/cluster/switchover" => request(
+            "POST",
+            "/api/v1/ops/cluster/switchover",
+            t,
+            Some(json!({"candidate": "db2", "reason": "planned kernel patching"})),
+        ),
         // AB4-T6: evidence signed by the key the fixture config trusts.
         "POST /api/v1/ops/drills/evidence" => {
             let key = attome_ops::evidence::SigningKey::from_bytes(&DRILL_KEY_SEED);

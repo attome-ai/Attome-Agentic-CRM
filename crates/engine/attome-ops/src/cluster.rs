@@ -116,7 +116,10 @@ pub async fn record_leader(
     .map_err(internal)?;
     let inserted: Option<Uuid> = sqlx::query_scalar(
         "INSERT INTO ops_failover_event (id, kind, old_leader, new_leader, timeline, started_at) \
-         VALUES (uuidv7(), 'failover', $1, $2, $3, now()) \
+         SELECT uuidv7(), 'failover', $1, $2, $3, now() \
+          WHERE NOT EXISTS (SELECT 1 FROM ops_failover_event \
+                             WHERE kind = 'switchover' AND new_leader = $2 \
+                               AND timeline IS NOT DISTINCT FROM $3) \
          ON CONFLICT (kind, new_leader, timeline) DO NOTHING \
          RETURNING id",
     )

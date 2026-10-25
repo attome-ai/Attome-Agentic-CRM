@@ -187,8 +187,7 @@ pub fn write_signed(
 /// line. Pure.
 pub fn encode_signing_key(key: &SigningKey) -> String {
     format!(
-        "{}
-",
+        "{}\n",
         base64::engine::general_purpose::STANDARD.encode(key.to_bytes())
     )
 }

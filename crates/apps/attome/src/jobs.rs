@@ -4307,6 +4307,13 @@ pub fn register_job_types() {
                 {
                     return Ok::<(), attome_jobs::registry::BoxError>(());
                 }
+                // AB2-T8: approved switchovers first, then the leader they
+                // moved is read like any other.
+                match attome_ops::switchover::run_approved(&state).await {
+                    Ok(0) => {}
+                    Ok(ran) => tracing::info!(ran, "approved switchovers carried out"),
+                    Err(error) => tracing::error!(%error, "ops switchover: not carried out"),
+                }
                 match attome_ops::cluster::poll(&state).await {
                     Ok(true) => tracing::info!("database leader recorded"),
                     Ok(false) => {}
