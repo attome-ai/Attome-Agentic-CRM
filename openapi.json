@@ -4528,6 +4528,7 @@
           {
             "name": "page_size",
             "in": "path",
+            "description": "Rows per page, up to the platform maximum.",
             "required": true,
             "schema": {
               "type": [
@@ -72678,6 +72679,19 @@
                 "null"
               ]
             }
+          },
+          {
+            "name": "part",
+            "in": "path",
+            "description": "E13-T9: a part of a split sitemap (the index, part 0, names them);\n0 when absent.",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32"
+            }
           }
         ],
         "responses": {
@@ -77775,6 +77789,101 @@
             {
               "category": "business_event",
               "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ledger/revrec/ssp": {
+      "put": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Set a product's standalone selling price",
+        "description": "F11-T4: adds the product's next `ssp_entry` version, method `entered`;\nearlier versions stay, so a past allocation can name the one it used.",
+        "operationId": "revrec_ssp_set",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSsp"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The version written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SspVersion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ssp_entry.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another SSP for this product is being written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A zero amount, a malformed currency or an inverted period",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
             }
           ],
           "policy": "entity_policy"
@@ -150991,6 +151100,46 @@
           }
         }
       },
+      "NewSsp": {
+        "type": "object",
+        "description": "A product's next SSP version.",
+        "required": [
+          "product_id",
+          "amount",
+          "currency"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "The SSP, above zero."
+          },
+          "currency": {
+            "type": "string",
+            "description": "The ISO 4217 currency, three letters."
+          },
+          "period_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The last day it applies; open when absent."
+          },
+          "period_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The first day it applies; open when absent."
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
       "NewSubscription": {
         "type": "object",
         "description": "`POST /api/v1/push/subscriptions`.",
@@ -186328,6 +186477,29 @@
           }
         }
       },
+      "SspVersion": {
+        "type": "object",
+        "description": "The SSP version written.",
+        "required": [
+          "id",
+          "product_id",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "Stage": {
         "type": "string",
         "description": "A3-T4: how a refusing check (`error`, `required`, `allowed_values`) is\nrolled out. `Report` only logs a failure, `Warn` lets the write through\nwith a warning, `Enforce` refuses it — from `enforce_from` when set, and\nas a warning before that date.",
@@ -194496,6 +194668,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -194548,6 +194721,5 @@
       }
     }
   },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  "x-version-adapters": []
 }

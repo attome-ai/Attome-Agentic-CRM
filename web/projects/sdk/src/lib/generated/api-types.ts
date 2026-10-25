@@ -14262,6 +14262,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ledger/revrec/ssp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set a product's standalone selling price
+         * @description F11-T4: adds the product's next `ssp_entry` version, method `entered`;
+         *     earlier versions stay, so a past allocation can name the one it used.
+         */
+        put: operations["revrec_ssp_set"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ledger/source-postings": {
         parameters: {
             query?: never;
@@ -34550,6 +34571,25 @@ export interface components {
             /** @description `signer` (the default), `approver` or `witness`. */
             role?: string | null;
         };
+        /** @description A product's next SSP version. */
+        NewSsp: {
+            /** @description The SSP, above zero. */
+            amount: string;
+            /** @description The ISO 4217 currency, three letters. */
+            currency: string;
+            /**
+             * Format: date
+             * @description The last day it applies; open when absent.
+             */
+            period_end?: string | null;
+            /**
+             * Format: date
+             * @description The first day it applies; open when absent.
+             */
+            period_start?: string | null;
+            /** Format: uuid */
+            product_id: string;
+        };
         /** @description `POST /api/v1/push/subscriptions`. */
         NewSubscription: {
             auth?: string | null;
@@ -48092,6 +48132,15 @@ export interface components {
             /** Format: uuid */
             split_type_id: string;
         };
+        /** @description The SSP version written. */
+        SspVersion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            product_id: string;
+            /** Format: int64 */
+            version: number;
+        };
         /**
          * @description A3-T4: how a refusing check (`error`, `required`, `allowed_values`) is
          *     rolled out. `Report` only logs a failure, `Warn` lets the write through
@@ -53893,6 +53942,7 @@ export interface operations {
                 days: number | null;
                 /** @description One-based — the first page is `page=1` (D-347). */
                 page: number | null;
+                /** @description Rows per page, up to the platform maximum. */
                 page_size: number | null;
             };
             cookie?: never;
@@ -95343,6 +95393,11 @@ export interface operations {
                 site: string;
                 /** @description The language, such as `en` or `ar`; the first stored when absent. */
                 lang: string | null;
+                /**
+                 * @description E13-T9: a part of a split sitemap (the index, part 0, names them);
+                 *     0 when absent.
+                 */
+                part: number | null;
             };
             cookie?: never;
         };
@@ -98464,6 +98519,66 @@ export interface operations {
                 };
             };
             /** @description Fewer than two contracts, or of different customers */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revrec_ssp_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewSsp"];
+            };
+        };
+        responses: {
+            /** @description The version written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SspVersion"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ssp_entry.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another SSP for this product is being written */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A zero amount, a malformed currency or an inverted period */
             422: {
                 headers: {
                     [name: string]: unknown;
