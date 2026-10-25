@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Form layout (A12-T1): a `form` can now have tabs, section columns, related lists and embedded
+  components, a kind (`main`, `quick_create`, `quick_view`, `card`) and targeting by role, record
+  type and stage; forms saved before keep working. `GET /api/v1/model/entities/{entity}/default-form`
+  returns the render plan of the form an entity has when none is published (administrators).
 - Generated formula fields (Y2-T11): a formula saved with `"generated": true` in its options is a
   database `GENERATED ALWAYS AS (...) STORED` column, kept right by PostgreSQL whichever path
   writes the row. Only number and text fields of the entity, literals, `+ - *`, text joins and

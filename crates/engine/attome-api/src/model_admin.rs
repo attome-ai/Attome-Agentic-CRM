@@ -1024,6 +1024,74 @@ async fn form_plan(
     Ok(([(header::ETAG, etag_header)], Json(plan)).into_response())
 }
 
+/// An entity's default form
+///
+/// The render plan of the form an entity has when no form is published for
+/// it (A12-T1): one main form whose one section holds the entity's live
+/// attributes, oldest first, up to the form limit. Nothing is stored; a
+/// published form replaces it. Administrators only, like the entity schema.
+#[utoipa::path(
+    get,
+    path = "/api/v1/model/entities/{entity}/default-form",
+    tag = "model",
+    params(("entity" = String, Path, description = "The entity's logical name")),
+    responses(
+        (status = 200, description = "The entity's default render plan", body = FormPlan),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such entity", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn default_form_plan(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(entity): Path<String>,
+) -> Result<Json<FormPlan>, AppError> {
+    let entity_id: Uuid = sqlx::query_scalar(
+        "SELECT id FROM entity_info WHERE logicalname = $1 AND is_active IS NOT FALSE",
+    )
+    .bind(&entity)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let limit = i64::try_from(attome_model::kinds::form::MAX_FIELDS).unwrap_or(i64::MAX);
+    let rows: Vec<AttributeRow> = sqlx::query_as(
+        "SELECT id, logicalname, name, type AS field_type, required,                 (options->'ai'->>'prompt') IS NOT NULL AS ai          FROM attribute_info WHERE entity_ref = $1 AND is_active IS NOT FALSE          ORDER BY id LIMIT $2",
+    )
+    .bind(entity_id)
+    .bind(limit)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let ids: Vec<Uuid> = rows.iter().map(|row| row.id).collect();
+    let doc = attome_model::kinds::form::default_form(entity_id, &ids);
+    let label = doc["sections"][0]["label"]
+        .as_str()
+        .unwrap_or("General")
+        .to_owned();
+    Ok(Json(FormPlan {
+        // A default form has no stored object; its id is nil.
+        id: Uuid::nil(),
+        name: "default".to_owned(),
+        entity,
+        sections: vec![FormPlanSection {
+            label,
+            fields: rows
+                .iter()
+                .map(|row| FormPlanField {
+                    attribute: row.logicalname.clone(),
+                    label: row.name.clone().unwrap_or_else(|| row.logicalname.clone()),
+                    field_type: row.field_type.unwrap_or(0),
+                    required: row.required.unwrap_or(false),
+                    ai: row.ai.unwrap_or(false),
+                })
+                .collect(),
+        }],
+    }))
+}
+
 /// One object of a blueprint and what applying it would do (N12-T3).
 #[derive(Serialize, ToSchema)]
 pub(crate) struct BlueprintItem {
@@ -2520,6 +2588,10 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/admin/model/{kind}/{id}/publish", post(publish))
         .route("/api/v1/model/forms/{id}/plan", get(form_plan))
+        .route(
+            "/api/v1/model/entities/{entity}/default-form",
+            get(default_form_plan),
+        )
         .route("/api/v1/model/tours", get(tours))
         .route("/api/v1/model/reply-suggestions", get(reply_suggestions))
         .route(
@@ -2557,6 +2629,7 @@ pub fn routes() -> Router<EngineState> {
         blueprint_rollback,
         menu,
         form_plan,
+        default_form_plan,
         tours,
         reply_suggestions,
         reply_template_used
