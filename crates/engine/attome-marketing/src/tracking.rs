@@ -4,6 +4,8 @@
 
 pub mod bots;
 pub mod collect;
+/// E14-T7: a visitor identified as a lead or contact.
+pub mod identify;
 pub mod writer;
 
 /// The flags that switch tracking on, in dependency order.

@@ -344,6 +344,32 @@ pub async fn submit(
         Uuid::now_v7(),
     )
     .await?;
+    // E14-T7: the tracking script sends its visitor id as `atm_vid`; the
+    // visitor's sessions and campaign touches go to the person when they
+    // consented to marketing. A failure here never refuses the submission.
+    let visitor = payload
+        .get("atm_vid")
+        .and_then(Value::as_str)
+        .and_then(|v| Uuid::parse_str(v).ok());
+    let target = match def.target.as_str() {
+        "lead" => Some(crate::tracking::identify::IdentifyTarget::Lead(person)),
+        "contact" => Some(crate::tracking::identify::IdentifyTarget::Contact(person)),
+        _ => None,
+    };
+    if let (Some(visitor), Some(target)) = (visitor, target)
+        && let Err(error) = crate::tracking::identify::identify(
+            state,
+            &ctx,
+            user,
+            visitor,
+            target,
+            crate::tracking::identify::Source::FormSubmit,
+            mapped.consents.iter().any(|p| p == "marketing"),
+        )
+        .await
+    {
+        tracing::warn!(%error, form = %def.id, "form visitor not identified");
+    }
     Ok(FormAccepted {
         thank_you: def.thank_you,
         redirect_url: def.redirect_url,

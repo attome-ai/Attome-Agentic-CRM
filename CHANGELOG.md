@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Visitors identified on form submit (E14-T7): with `marketing.tracking_identify` on and marketing
+  consent ticked, a form carrying the tracking script's `atm_vid` links that visitor's web sessions to
+  the lead or contact and writes its first touch (only while empty) and latest touch (marketing pack
+  `0011`) through the generic update path.
 - Microsoft Teams bot (C5-T1): a connector adapter posts messages through the Bot Connector API with
   the customer's own Azure bot app, builds notification and approval Adaptive Cards (an approval card
   opens the request's single-use approval link), and answers link-unfurl invokes with a record card.

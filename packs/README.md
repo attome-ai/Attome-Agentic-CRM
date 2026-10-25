@@ -71,6 +71,8 @@ schedules and shift assignments, preferences, swap requests and overtime offers,
 `workforce` engine's staffing and shift-rule checks work on.
 
 The marketing pack's `0002` adds campaigns with members and marketing lists with combinations.
+Its `0011` adds the first and latest campaign touch (source, medium, campaign, landing page,
+referrer and when) to leads and contacts, written when a web visitor is identified (E14-T7).
 The sales pack's `0007` adds opportunity lines and schedules, `0008` competitors and win-loss reviews.
 `0017` adds the win and loss reports: win rate overall, by competitor and by quarter, reasons by
 competitor and by segment, region and size, discount and cycle length by competitor, and losses on

@@ -1,0 +1,959 @@
+{
+  "author": "packs",
+  "checksum": "sha256:074da9d6c93722b90abe225158d65b43109a5455907141bda865c18071557291",
+  "closed_at": "2026-10-25T00:00:00Z",
+  "description": "Touch attribution (E14-T7): the first and latest campaign touch (source, medium, campaign, landing page, referrer and when) on each lead and contact, written when a web visitor is identified; the first touch is never overwritten.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d19-7e16-9b16-16c016c016f5",
+  "layer": "product",
+  "name": "marketing-touch-attribution",
+  "opened_at": "2026-10-25T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Source",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_source",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "lead",
+        "field": "first_touch_source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Medium",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_medium",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "lead",
+        "field": "first_touch_medium"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Campaign",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_campaign",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "lead",
+        "field": "first_touch_campaign"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Landing Page",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_landing_url",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "lead",
+        "field": "first_touch_landing_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Referrer",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_referrer",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "lead",
+        "field": "first_touch_referrer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch At",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "first_touch_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "lead",
+        "field": "first_touch_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Source",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_source",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "lead",
+        "field": "latest_touch_source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Medium",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_medium",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "lead",
+        "field": "latest_touch_medium"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Campaign",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_campaign",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "lead",
+        "field": "latest_touch_campaign"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Landing Page",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_landing_url",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "lead",
+        "field": "latest_touch_landing_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Referrer",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_referrer",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "lead",
+        "field": "latest_touch_referrer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch At",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "latest_touch_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "lead",
+        "field": "latest_touch_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Source",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_source",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "contact",
+        "field": "first_touch_source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Medium",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_medium",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "contact",
+        "field": "first_touch_medium"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Campaign",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_campaign",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "contact",
+        "field": "first_touch_campaign"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Landing Page",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_landing_url",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "contact",
+        "field": "first_touch_landing_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch Referrer",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "first_touch_referrer",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "contact",
+        "field": "first_touch_referrer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "First Touch At",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "first_touch_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "contact",
+        "field": "first_touch_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Source",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_source",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "contact",
+        "field": "latest_touch_source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Medium",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_medium",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "contact",
+        "field": "latest_touch_medium"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Campaign",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_campaign",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "contact",
+        "field": "latest_touch_campaign"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Landing Page",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_landing_url",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "contact",
+        "field": "latest_touch_landing_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch Referrer",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latest_touch_referrer",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "contact",
+        "field": "latest_touch_referrer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latest Touch At",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "latest_touch_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "contact",
+        "field": "latest_touch_at"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.first_touch_source",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - الوسيط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.first_touch_medium",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - الحملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.first_touch_campaign",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - صفحة الهبوط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.first_touch_landing_url",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - المُحيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.first_touch_referrer",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - الوقت"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.first_touch_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.latest_touch_source",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - الوسيط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.latest_touch_medium",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - الحملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.latest_touch_campaign",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - صفحة الهبوط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.latest_touch_landing_url",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - المُحيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.latest_touch_referrer",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - الوقت"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.latest_touch_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.first_touch_source",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - الوسيط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.first_touch_medium",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - الحملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.first_touch_campaign",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - صفحة الهبوط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.first_touch_landing_url",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - المُحيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.first_touch_referrer",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أول تفاعل - الوقت"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.first_touch_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.latest_touch_source",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - الوسيط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.latest_touch_medium",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - الحملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.latest_touch_campaign",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - صفحة الهبوط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.latest_touch_landing_url",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - المُحيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.latest_touch_referrer",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل - الوقت"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.latest_touch_at",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 11,
+  "title": "Pack: first and latest touch on leads and contacts"
+}
