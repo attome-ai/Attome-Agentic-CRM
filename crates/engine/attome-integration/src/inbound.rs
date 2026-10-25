@@ -23,6 +23,18 @@
 //!     (to `-5`, one per Connect key) is the base64 HMAC-SHA256 of the
 //!     body. Connect sends no timestamp; the event, envelope and the time
 //!     DocuSign generated the message guard replay, kept a day.
+//!   - `shopify` (M14-T2): `X-Shopify-Hmac-Sha256` is the base64 HMAC-SHA256
+//!     of the body; the event id is `X-Shopify-Webhook-Id`.
+//!   - `meta` (M14-T2, WhatsApp Cloud API and other Meta webhooks):
+//!     `X-Hub-Signature-256: sha256=<hex>` with the app secret; Meta sends no
+//!     delivery id, so the body's digest guards replay, kept a day. Its
+//!     subscription check (`hub.mode`, `hub.verify_token`, `hub.challenge`)
+//!     is answered by [`meta_handshake`].
+//!   - `salla` (M14-T2): `X-Salla-Signature` is the hex HMAC-SHA256 of the
+//!     body; the body's digest guards replay, kept a day.
+//!   - `moyasar` (M14-T2): Moyasar signs nothing; the body's `secret_token`
+//!     must equal the secret (compared in constant time) and the payment
+//!     event's `id` guards replay.
 //!   - `custom`: the signature in `header` (default `x-signature`), `hex`
 //!     or `base64`, an optional `prefix` (`sha256=`), over the body or, with
 //!     `timestamp_header`, over `{timestamp}.{body}`.
@@ -71,7 +83,9 @@ pub const UNTIMED_NONCE_TTL_SECS: i64 = 24 * 3600;
 pub const MTLS_VERIFIED_HEADER: &str = "x-client-cert-verified";
 
 /// The hook presets.
-pub const PRESETS: [&str; 5] = ["github", "stripe", "standard", "docusign", "custom"];
+pub const PRESETS: [&str; 9] = [
+    "github", "stripe", "standard", "docusign", "shopify", "meta", "salla", "moyasar", "custom",
+];
 
 /// Why a call was refused before anything ran.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -266,6 +280,63 @@ pub fn verify(
                     ttl_secs: UNTIMED_NONCE_TTL_SECS,
                 })
             }
+            "shopify" => {
+                let sig = header(headers, "x-shopify-hmac-sha256")
+                    .and_then(|b64| base64::engine::general_purpose::STANDARD.decode(b64).ok())
+                    .ok_or(Refusal::BadCredential)?;
+                let expected =
+                    hmac_sha256(secret.as_bytes(), &[body]).ok_or(Refusal::BadCredential)?;
+                if !same(&sig, &expected) {
+                    return Err(Refusal::BadCredential);
+                }
+                let nonce = header(headers, "x-shopify-webhook-id")
+                    .filter(|v| !v.is_empty() && v.len() <= 200)
+                    .map_or_else(
+                        || format!("shopify:{}", digest_hex(body)),
+                        |id| format!("shopify:{id}"),
+                    );
+                Ok(Verified {
+                    nonce,
+                    ttl_secs: UNTIMED_NONCE_TTL_SECS,
+                })
+            }
+            "meta" | "salla" => {
+                let preset = auth["preset"].as_str().unwrap_or_default();
+                let sig = if preset == "meta" {
+                    header(headers, "x-hub-signature-256").and_then(|v| v.strip_prefix("sha256="))
+                } else {
+                    header(headers, "x-salla-signature")
+                }
+                .and_then(|v| hex::decode(v).ok())
+                .ok_or(Refusal::BadCredential)?;
+                let expected =
+                    hmac_sha256(secret.as_bytes(), &[body]).ok_or(Refusal::BadCredential)?;
+                if !same(&sig, &expected) {
+                    return Err(Refusal::BadCredential);
+                }
+                Ok(Verified {
+                    nonce: format!("{preset}:{}", digest_hex(body)),
+                    ttl_secs: UNTIMED_NONCE_TTL_SECS,
+                })
+            }
+            "moyasar" => {
+                let value: Value =
+                    serde_json::from_slice(body).map_err(|_| Refusal::BadCredential)?;
+                let token = value["secret_token"]
+                    .as_str()
+                    .ok_or(Refusal::BadCredential)?;
+                if !same(token.as_bytes(), secret.as_bytes()) {
+                    return Err(Refusal::BadCredential);
+                }
+                let id = value["id"]
+                    .as_str()
+                    .filter(|v| !v.is_empty() && v.len() <= 200)
+                    .ok_or(Refusal::BadCredential)?;
+                Ok(Verified {
+                    nonce: format!("moyasar:{id}"),
+                    ttl_secs: UNTIMED_NONCE_TTL_SECS,
+                })
+            }
             _ => {
                 let name = auth["header"].as_str().unwrap_or("x-signature");
                 let mut raw = header(headers, name).ok_or(Refusal::BadCredential)?;
@@ -303,6 +374,17 @@ pub fn verify(
         },
         _ => Err(Refusal::BadCredential),
     }
+}
+
+/// M14-T2: Meta's subscription check, answered with `hub.challenge` when
+/// `query` carries the hook's `auth.verify_token` (at least 16 characters);
+/// `None` otherwise. Pure.
+pub fn meta_handshake(
+    auth: &Value,
+    query: &std::collections::HashMap<String, String>,
+) -> Option<String> {
+    let token = auth["verify_token"].as_str()?;
+    crate::connector::adapters::social::meta::verify_challenge(query, token)
 }
 
 /// Whether `ip` is inside one of `allow` (CIDRs or addresses); an empty
@@ -594,6 +676,86 @@ mod inbound_endpoints {
             verify(&docusign, "connect-key", &headers(&[]), body, NOW),
             Err(Refusal::BadCredential)
         );
+    }
+
+    /// M14-T2: the Shopify, Meta, Salla and Moyasar presets with sample
+    /// requests signed the way each provider signs them.
+    #[test]
+    fn provider_presets_verify_their_signatures() {
+        let body = br#"{"id":"pay_1","type":"payment_paid","secret_token":"s3cret"}"#;
+        let mac = hmac_sha256(SECRET.as_bytes(), &[body]).unwrap();
+
+        let shopify = json!({ "kind": "hmac", "preset": "shopify" });
+        let h = headers(&[
+            (
+                "x-shopify-hmac-sha256",
+                base64::engine::general_purpose::STANDARD.encode(&mac),
+            ),
+            ("x-shopify-webhook-id", "wh-1".into()),
+        ]);
+        assert_eq!(
+            verify(&shopify, SECRET, &h, body, NOW).unwrap().nonce,
+            "shopify:wh-1"
+        );
+        assert_eq!(
+            verify(&shopify, "wrong", &h, body, NOW),
+            Err(Refusal::BadCredential)
+        );
+
+        let meta = json!({ "kind": "hmac", "preset": "meta" });
+        let h = headers(&[(
+            "x-hub-signature-256",
+            format!("sha256={}", hex::encode(&mac)),
+        )]);
+        assert!(
+            verify(&meta, SECRET, &h, body, NOW)
+                .unwrap()
+                .nonce
+                .starts_with("meta:")
+        );
+
+        let salla = json!({ "kind": "hmac", "preset": "salla" });
+        let h = headers(&[("x-salla-signature", hex::encode(&mac))]);
+        assert!(
+            verify(&salla, SECRET, &h, body, NOW)
+                .unwrap()
+                .nonce
+                .starts_with("salla:")
+        );
+        assert_eq!(
+            verify(&salla, SECRET, &headers(&[]), body, NOW),
+            Err(Refusal::BadCredential)
+        );
+
+        let moyasar = json!({ "kind": "hmac", "preset": "moyasar" });
+        assert_eq!(
+            verify(&moyasar, SECRET, &headers(&[]), body, NOW)
+                .unwrap()
+                .nonce,
+            "moyasar:pay_1"
+        );
+        assert_eq!(
+            verify(&moyasar, "other", &headers(&[]), body, NOW),
+            Err(Refusal::BadCredential)
+        );
+        assert!(check_auth(&moyasar).is_ok());
+    }
+
+    #[test]
+    fn meta_handshake_answers_only_the_right_token() {
+        let auth =
+            json!({ "kind": "hmac", "preset": "meta", "verify_token": "meta-verify-token-01" });
+        let mut query = std::collections::HashMap::new();
+        query.insert("hub.mode".to_owned(), "subscribe".to_owned());
+        query.insert(
+            "hub.verify_token".to_owned(),
+            "meta-verify-token-01".to_owned(),
+        );
+        query.insert("hub.challenge".to_owned(), "1158201444".to_owned());
+        assert_eq!(meta_handshake(&auth, &query).as_deref(), Some("1158201444"));
+        query.insert("hub.verify_token".to_owned(), "nope".to_owned());
+        assert_eq!(meta_handshake(&auth, &query), None);
+        assert_eq!(meta_handshake(&json!({}), &query), None);
     }
 
     #[test]

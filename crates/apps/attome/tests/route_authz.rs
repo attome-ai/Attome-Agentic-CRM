@@ -157,6 +157,11 @@ const MAX_BARE_RECORD_SCOPED: usize = 6;
 /// route silently pre-authorizes whatever later claims that path.
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
+        "GET",
+        "/api/v1/hooks/{name}",
+        "M14-T2: Meta's subscription check; it reads nothing but whether the token matches the hook's auth.verify_token (constant-time digest compare) and echoes the caller's own challenge. Bypass-listed by its one-segment shape.",
+    ),
+    (
         "POST",
         "/api/v1/hooks/{name}",
         "M14-T1: a provider's call to a builder-defined hook; the hook's own address allow-list, mTLS, signature or bearer secret (constant-time), timestamp window and once-only event id are the credential, and its handler runs as the hook's service user through the ordinary write paths. Bypass-listed by its one-segment shape.",

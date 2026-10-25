@@ -888,6 +888,43 @@ async fn call_hook(
     }
 }
 
+/// Answer a provider's subscription check
+///
+/// Answer a provider's subscription check.
+#[utoipa::path(
+    get,
+    path = "/api/v1/hooks/{name}",
+    tag = "integration",
+    operation_id = "verify_inbound_hook",
+    description = "Meta's webhook subscription check (M14-T2): when the hook's `auth.verify_token` matches `hub.verify_token` and `hub.mode` is `subscribe`, the answer is `hub.challenge` as plain text. Public, like the hook's POST; anything else is 403.",
+    params(
+        ("name" = String, Path, description = "The hook's name"),
+        ("hub.mode" = Option<String>, Query, description = "Always `subscribe`"),
+        ("hub.verify_token" = Option<String>, Query, description = "The token set on the hook as `auth.verify_token`"),
+        ("hub.challenge" = Option<String>, Query, description = "The value to echo back"),
+    ),
+    responses(
+        (status = 200, description = "The challenge", body = String, content_type = "text/plain"),
+        (status = 403, description = "The token does not match", body = ErrorResponse),
+        (status = 404, description = "No active hook of this name", body = ErrorResponse),
+    ),
+)]
+async fn verify_hook(
+    State(state): State<EngineState>,
+    Path(name): Path<String>,
+    Query(query): Query<std::collections::HashMap<String, String>>,
+) -> Result<String, AppError> {
+    let auth: Value = sqlx::query_scalar(
+        "SELECT auth FROM inbound_hook WHERE name = $1 AND is_active AND NOT is_deleted",
+    )
+    .bind(&name)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    inbound::meta_handshake(&auth, &query).ok_or(AppError::Forbidden)
+}
+
 /// M14-T3: writes the event to the inbox with its job, in one transaction;
 /// a known event id is a duplicate and enqueues nothing.
 async fn accept(
@@ -1093,11 +1130,18 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/inbound-hooks/{id}",
             patch(update_hook).delete(delete_hook),
         )
-        .route("/api/v1/hooks/{name}", post(call_hook))
+        .route("/api/v1/hooks/{name}", get(verify_hook).post(call_hook))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_hooks, create_hook, update_hook, delete_hook, call_hook))]
+#[openapi(paths(
+    list_hooks,
+    create_hook,
+    update_hook,
+    delete_hook,
+    call_hook,
+    verify_hook
+))]
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
