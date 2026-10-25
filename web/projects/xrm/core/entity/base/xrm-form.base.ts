@@ -31,6 +31,19 @@ import { fieldValidators } from '../field/field-checks';
 export const SAVED_CONFIRMATION_MS = 1500;
 
 const EMPTY_LOCKS: ReadonlyMap<string, FieldLockState> = new Map();
+const EMPTY_ALLOWED: ReadonlyMap<string, readonly string[]> = new Map();
+
+/** Same fields with the same allowed values in the same order. */
+function sameAllowed(
+  a: ReadonlyMap<string, readonly string[]>, b: ReadonlyMap<string, readonly string[]>,
+): boolean {
+  if (a.size !== b.size) return false;
+  for (const [field, values] of a) {
+    const other = b.get(field);
+    if (!other || other.length !== values.length || other.some((v, i) => v !== values[i])) return false;
+  }
+  return true;
+}
 const NO_RULE_MESSAGES: readonly FieldRuleMessage[] = [];
 
 /** Value equality for a reset decision: `undefined` equals `null`; lists and objects by content. */
@@ -164,7 +177,11 @@ export abstract class EngineFormBase implements OnInit {
   readonly fieldErrors = computed(() => this.ruleOutcome().errors);
 
   /** A6-T2: field to the values its `allowed_values` rules allow now. */
-  readonly allowedValues = computed(() => this.ruleOutcome().allowed);
+  readonly allowedValues = computed(
+    () => this.businessRules().length ? this.ruleOutcome().allowed : EMPTY_ALLOWED,
+    // Unchanged on a keystroke that changes no rule's outcome, so the effect
+    // below (and the change-detection tick it schedules) does not re-run.
+    { equal: sameAllowed });
 
   /** A6-T2: field to the value a rule just cleared from it, for undo. */
   readonly clearedValues = signal<ReadonlyMap<string, unknown>>(new Map());
