@@ -51,7 +51,7 @@
 //! provides it.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Admin, Authorized, SelfService};
 use attome_types::{
     AppError, DEFAULT_PAGE_SIZE, ErrorResponse, PageBase, PageWindow, PaginatedResponse,
 };
@@ -110,6 +110,84 @@ struct AuditFilterParams {
     date_from: Option<DateTime<Utc>>,
     date_to: Option<DateTime<Utc>>,
     organization_ref: Option<Uuid>,
+    /// Q17-T2: a unit auditor's units; only their events are read. Set by
+    /// the handler from the caller, never from the query string.
+    unit_scope: Option<Vec<Uuid>>,
+}
+
+/// Q17-T2: the privilege of an auditor scoped to their units.
+pub const UNIT_AUDITOR: &str = "audit.read_unit";
+
+/// Q17-T2: what one caller may read of the audit trail.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuditScope {
+    /// An administrator: every event.
+    All,
+    /// A unit auditor: the events of these organisations only (none when
+    /// they reach no unit).
+    Units(Vec<Uuid>),
+}
+
+/// Q17-T2: the scope of a caller who may be an administrator or a holder
+/// of [`UNIT_AUDITOR`]; anyone else is refused. Pure.
+pub fn auditor_scope(
+    is_admin: bool,
+    unit_auditor: bool,
+    units: Vec<Uuid>,
+) -> Result<AuditScope, AppError> {
+    if is_admin {
+        Ok(AuditScope::All)
+    } else if unit_auditor {
+        Ok(AuditScope::Units(units))
+    } else {
+        Err(AppError::Forbidden)
+    }
+}
+
+/// Q17-T2: the organisations a unit auditor answers for: their own (home
+/// and memberships) and every one below them in the organisation tree.
+async fn units_of(db: &attome_db::DbPool, user: Uuid) -> Result<Vec<Uuid>, AppError> {
+    sqlx::query_scalar(
+        "WITH RECURSIVE tree AS ( \
+           SELECT o.id FROM organization o \
+            WHERE o.id IN (SELECT m.organization_ref FROM user_account_mm_organization m \
+                            WHERE m.user_ref = $1 AND m.is_deleted = false \
+                           UNION \
+                           SELECT u.organization_ref FROM user_account u \
+                            WHERE u.id = $1 AND u.organization_ref IS NOT NULL) \
+           UNION \
+           SELECT o.id FROM organization o JOIN tree t ON o.organization_ref = t.id) \
+         SELECT id FROM tree",
+    )
+    .bind(user)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Q17-T2: refuses anyone who is neither an administrator nor a unit
+/// auditor, and answers the scope of one who is.
+async fn require_audit_reader(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+) -> Result<AuditScope, AppError> {
+    let unit_auditor = ctx.privileges.contains(UNIT_AUDITOR);
+    let units = if !ctx.is_admin && unit_auditor {
+        units_of(&state.base.db, ctx.user_id).await?
+    } else {
+        Vec::new()
+    };
+    auditor_scope(ctx.is_admin, unit_auditor, units)
+}
+
+impl AuditFilterParams {
+    fn scoped(mut self, scope: AuditScope) -> Self {
+        self.unit_scope = match scope {
+            AuditScope::All => None,
+            AuditScope::Units(units) => Some(units),
+        };
+        self
+    }
 }
 
 /// Binds `p`'s filters onto `qb`'s WHERE clause. Every predicate is an
@@ -124,6 +202,11 @@ fn push_filters<'a>(
 ) {
     if let Some(v) = &p.organization_ref {
         qb.push(" AND h.organization_ref = ").push_bind(*v);
+    }
+    if let Some(units) = &p.unit_scope {
+        qb.push(" AND h.organization_ref = ANY(")
+            .push_bind(units.as_slice())
+            .push(")");
     }
     if let Some(v) = &p.entity_name {
         qb.push(" AND h.entity_name = ").push_bind(v.as_str());
@@ -196,6 +279,7 @@ impl SearchQuery {
             date_from: self.date_from,
             date_to: self.date_to,
             organization_ref: self.organization_ref,
+            unit_scope: None,
         }
     }
 }
@@ -233,9 +317,11 @@ struct AuditSearchRow {
 )]
 async fn search(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<SelfService>,
     Query(q): Query<SearchQuery>,
 ) -> Result<Json<PaginatedResponse<AuditSearchRow>>, AppError> {
+    // Q17-T2: an administrator reads everything, a unit auditor their units.
+    let scope = require_audit_reader(&state, &ctx).await?;
     let window = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
 
     // D-541 rule 1: reading the audit trail is itself a mandatory `Security`
@@ -259,7 +345,7 @@ async fn search(
         .await?;
 
     let pool = state.base.readonly_query_pool(ctx.user_id).await;
-    let filter = q.filter();
+    let filter = q.filter().scoped(scope);
 
     let mut qb = sqlx::QueryBuilder::new(
         "SELECT h.id, h.created_at, h.organization_ref, h.category, h.entity_name, \
@@ -325,6 +411,7 @@ impl ExportQuery {
             date_from: self.from,
             date_to: self.to,
             organization_ref: self.organization_ref,
+            unit_scope: None,
         }
     }
 }
@@ -477,9 +564,11 @@ fn format_csv_row(row: &ExportRow) -> String {
 )]
 async fn export(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<SelfService>,
     Query(q): Query<ExportQuery>,
 ) -> Result<Response, AppError> {
+    // Q17-T2: an administrator exports everything, a unit auditor their units.
+    let scope = require_audit_reader(&state, &ctx).await?;
     let format = q.format.as_deref().unwrap_or("jsonl");
     let (content_type, header_line): (&str, Option<String>) = match format {
         "jsonl" => ("application/x-ndjson", None),
@@ -737,6 +826,36 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn auditor_scope_admin_unit_and_others() {
+        let unit = Uuid::now_v7();
+        assert_eq!(auditor_scope(true, false, vec![]).unwrap(), AuditScope::All);
+        assert_eq!(
+            auditor_scope(false, true, vec![unit]).unwrap(),
+            AuditScope::Units(vec![unit])
+        );
+        assert!(matches!(
+            auditor_scope(false, false, vec![unit]),
+            Err(AppError::Forbidden)
+        ));
+    }
+
+    #[test]
+    fn auditor_scope_filters_by_unit() {
+        let filter = AuditFilterParams::default().scoped(AuditScope::Units(vec![Uuid::nil()]));
+        let mut qb = sqlx::QueryBuilder::new("SELECT 1 FROM audit_header h WHERE true");
+        push_filters(&mut qb, &filter, None);
+        assert!(
+            qb.sql().contains("h.organization_ref = ANY("),
+            "{}",
+            qb.sql()
+        );
+        let all = AuditFilterParams::default().scoped(AuditScope::All);
+        let mut qb = sqlx::QueryBuilder::new("SELECT 1 FROM audit_header h WHERE true");
+        push_filters(&mut qb, &all, None);
+        assert!(!qb.sql().contains("ANY("));
+    }
 
     fn sample_row() -> ExportRow {
         ExportRow {

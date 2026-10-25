@@ -710,6 +710,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Unit auditors (Q17-T2): `GET /api/v1/admin/audit/search` and `/export` also admit holders of
+  `audit.read_unit`, who read only the events of their organisations and those below them in the
+  organisation tree; administrators still read everything, and anyone else gets 403.
 - Feature flag targeting (T6-T1): a flag's policy gains team and unit overrides (after the person's own,
   before privileges), an owner, an expiry date and scheduled changes to its deployment value and rollout
   (the latest whose time has come applies, with no job to run); a flag is on only when every flag it
