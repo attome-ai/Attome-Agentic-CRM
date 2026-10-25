@@ -46,6 +46,10 @@ pub struct LookupOptions {
     pub target_entity_id: Option<uuid::Uuid>,
     /// Field on the target entity to display (default: "name").
     pub display_field: Option<String>,
+    /// A17-T1: this lookup from the entity to itself is its hierarchy; each
+    /// row keeps its tree path, so subtree reads are one prefix scan.
+    #[serde(default)]
+    pub hierarchy: bool,
 }
 
 /// Range enforcement for `Number`/`Currency` fields. Either bound may be

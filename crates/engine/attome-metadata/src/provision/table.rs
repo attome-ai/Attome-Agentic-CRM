@@ -588,6 +588,126 @@ async fn lz4_available(db: &DbPool) -> bool {
     probe.copied().unwrap_or(false)
 }
 
+/// A17-T1: the column a hierarchy lookup's tree path is stored in.
+pub const HIERARCHY_PATH_COLUMN: &str = "hier_path";
+
+/// A17-T1: the deepest tree the path backfill walks.
+const HIERARCHY_BACKFILL_DEPTH: u32 = 100;
+
+/// A17-T1: whether `options` flag a lookup as its entity's hierarchy
+/// (`"hierarchy": true`). Only a lookup from an entity to itself is one.
+pub fn is_hierarchy_lookup(options: Option<&serde_json::Value>) -> bool {
+    options
+        .and_then(|o| o.get("hierarchy"))
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+}
+
+/// A17-T1: the stored tree path of `entity`'s hierarchy lookup `field`.
+/// Each row's `hier_path` is its ancestors' ids and its own, joined by `/`
+/// (`root/…/parent/id`), with a `text_pattern_ops` index so a subtree is one
+/// prefix scan. Two triggers keep it right whichever path writes the row: a
+/// row inserted, or whose parent changes, takes its parent's path plus its
+/// id; a moved row's descendants are rewritten in one `UPDATE` by the old
+/// prefix. Existing rows are filled once, when the triggers are first
+/// created. Idempotent: a later reconcile finds the column and triggers and
+/// does nothing.
+pub(super) async fn ensure_hierarchy_path(
+    db: &DbPool,
+    entity_id: uuid::Uuid,
+    entity: &str,
+    field: &str,
+) -> Result<(), AppError> {
+    if !valid_identifier(entity) || !valid_identifier(field) {
+        return Err(AppError::internal(format!(
+            "invalid identifier for a hierarchy path: entity={entity}, field={field}"
+        )));
+    }
+    let installed: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger t \
+           JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid \
+           JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+          WHERE n.nspname = current_schema() AND c.relname = $1 \
+            AND t.tgname = 'hier_path_move' AND NOT t.tgisinternal)",
+    )
+    .bind(entity)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if installed && column_exists(db, entity, HIERARCHY_PATH_COLUMN).await? {
+        return Ok(());
+    }
+    let table = quote_ident(entity);
+    let col = quote_ident(field);
+    // Function and index names come from the entity id, so they stay unique
+    // and under the identifier limit whatever the entity is called.
+    let tag = entity_id.simple();
+    let set_fn = format!("\"hier_{tag}_set\"");
+    let move_fn = format!("\"hier_{tag}_move\"");
+    let statements = [
+        format!("ALTER TABLE {table} ADD COLUMN IF NOT EXISTS hier_path text"),
+        format!(
+            "CREATE INDEX IF NOT EXISTS \"hier_{tag}_idx\" ON {table} (hier_path text_pattern_ops)"
+        ),
+        format!(
+            "CREATE OR REPLACE FUNCTION {set_fn}() RETURNS trigger LANGUAGE plpgsql AS $fn$ \
+             BEGIN \
+               IF TG_OP = 'INSERT' OR NEW.{col} IS DISTINCT FROM OLD.{col} OR NEW.hier_path IS NULL THEN \
+                 IF NEW.{col} IS NULL THEN \
+                   NEW.hier_path := NEW.id::text; \
+                 ELSE \
+                   NEW.hier_path := COALESCE( \
+                     (SELECT p.hier_path FROM {table} p WHERE p.id = NEW.{col}), \
+                     NEW.{col}::text) || '/' || NEW.id::text; \
+                 END IF; \
+               END IF; \
+               RETURN NEW; \
+             END $fn$"
+        ),
+        format!(
+            "CREATE OR REPLACE FUNCTION {move_fn}() RETURNS trigger LANGUAGE plpgsql AS $fn$ \
+             BEGIN \
+               IF OLD.hier_path IS NOT NULL AND NEW.hier_path IS DISTINCT FROM OLD.hier_path THEN \
+                 UPDATE {table} SET hier_path = NEW.hier_path || substr(hier_path, length(OLD.hier_path) + 1) \
+                  WHERE hier_path LIKE OLD.hier_path || '/%'; \
+               END IF; \
+               RETURN NULL; \
+             END $fn$"
+        ),
+        format!("DROP TRIGGER IF EXISTS hier_path_set ON {table}"),
+        format!(
+            "CREATE TRIGGER hier_path_set BEFORE INSERT OR UPDATE ON {table} \
+             FOR EACH ROW EXECUTE FUNCTION {set_fn}()"
+        ),
+        format!("DROP TRIGGER IF EXISTS hier_path_move ON {table}"),
+        // Only a change of the parent moves a subtree; the rewrite below
+        // touches `hier_path` alone, so it never fires this again.
+        format!(
+            "CREATE TRIGGER hier_path_move AFTER UPDATE OF {col} ON {table} \
+             FOR EACH ROW EXECUTE FUNCTION {move_fn}()"
+        ),
+        format!(
+            "WITH RECURSIVE tree AS ( \
+                 SELECT id, id::text AS path, 0 AS depth FROM {table} WHERE {col} IS NULL \
+                 UNION ALL \
+                 SELECT c.id, tree.path || '/' || c.id::text, tree.depth + 1 \
+                   FROM {table} c JOIN tree ON c.{col} = tree.id \
+                  WHERE tree.depth < {HIERARCHY_BACKFILL_DEPTH} \
+             ) \
+             UPDATE {table} e SET hier_path = tree.path FROM tree \
+              WHERE e.id = tree.id AND e.hier_path IS DISTINCT FROM tree.path"
+        ),
+    ];
+    for sql in &statements {
+        exec_ddl_locked(db, &[], sql).await.map_err(|e| {
+            tracing::error!(error = %e, %entity, %field, "hierarchy path provisioning failed");
+            AppError::internal(e)
+        })?;
+    }
+    tracing::info!(%entity, %field, "provision: hierarchy path installed");
+    Ok(())
+}
+
 /// Adds the physical column backing an attribute, if it doesn't already exist.
 /// Idempotent and self-healing, same rationale as `provision_table`.
 /// `generated` (Y2-T11) is the SQL of a generated formula: the column is

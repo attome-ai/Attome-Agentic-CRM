@@ -205,6 +205,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Stored hierarchy paths (A17-T1): a lookup from an entity to itself saved with `"hierarchy": true`
+  in its options gets a `hier_path` column (the ancestors' ids and its own, joined by `/`) with a
+  prefix index, kept right by database triggers on every write and move and filled once for
+  existing rows. `GET /api/v1/{entity}/{id}/descendants` then reads the subtree by prefix.
+  `hier_path` is reserved as an attribute name.
 - OpenAPI overlay (S2-T16): `GET`/`PUT /api/v1/admin/openapi/overlay` store an OpenAPI Overlay 1.0
   document whose actions set `summary`, `description` or `example` on `/api/v1/` paths and their
   operations; `GET /api/v1/openapi/deployment.json` applies it after filtering for the caller.

@@ -4714,6 +4714,97 @@ async fn create_hierarchy_node(
     (id, row_version)
 }
 
+/// A17-T1: a hierarchy-flagged self lookup keeps each row's tree path; a
+/// move rewrites the moved subtree, and descendants are read by prefix.
+#[test]
+fn hierarchy_path_follows_moves() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+
+        let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "hierpath").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"name","name":"Name","field_type":"text"}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            &format!(
+                r#"{{"logicalname":"parent_ref","name":"Parent","field_type":"lookup","lookup_entity_ref":"{entity_id}","options":{{"hierarchy":true}}}}"#
+            ),
+        )
+        .await;
+        sync_registry(&state).await;
+
+        let (a, _) = create_hierarchy_node(&app, &admin_cookie, &logicalname, "a", None).await;
+        let (b, b_rv) =
+            create_hierarchy_node(&app, &admin_cookie, &logicalname, "b", Some(&a)).await;
+        let (c, _) = create_hierarchy_node(&app, &admin_cookie, &logicalname, "c", Some(&b)).await;
+        let (d, _) = create_hierarchy_node(&app, &admin_cookie, &logicalname, "d", None).await;
+
+        let path_of = |id: String| {
+            let db = db.clone();
+            let logicalname = logicalname.clone();
+            async move {
+                sqlx::query_scalar::<_, Option<String>>(&format!(
+                    "SELECT hier_path FROM \"{logicalname}\" WHERE id = $1"
+                ))
+                .bind(uuid::Uuid::parse_str(&id).unwrap())
+                .fetch_one(&db)
+                .await
+                .unwrap()
+            }
+        };
+        assert_eq!(path_of(c.clone()).await, Some(format!("{a}/{b}/{c}")));
+
+        let names = |id: String| {
+            let app = app.clone();
+            let logicalname = logicalname.clone();
+            let cookie = admin_cookie.clone();
+            async move {
+                let req = Request::builder()
+                    .method("GET")
+                    .uri(format!("/api/v1/{logicalname}/{id}/descendants"))
+                    .header("cookie", &cookie)
+                    .body(Body::empty())
+                    .unwrap();
+                let res = app.oneshot(req).await.expect("descendants");
+                assert_eq!(res.status(), StatusCode::OK);
+                body_json(res).await["items"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|r| r["data"]["name"].as_str().unwrap().to_owned())
+                    .collect::<Vec<_>>()
+            }
+        };
+        assert_eq!(names(a.clone()).await, vec!["b", "c"]);
+
+        // Move b (with c under it) from a to d.
+        let req = Request::builder()
+            .method("PATCH")
+            .uri(format!("/api/v1/{logicalname}/{b}"))
+            .header("cookie", &admin_cookie)
+            .header("content-type", "application/json")
+            .header("if-match", format!("\"{b_rv}\""))
+            .body(Body::from(format!(r#"{{"parent_ref":"{d}"}}"#)))
+            .unwrap();
+        let res = app.clone().oneshot(req).await.expect("move b");
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(path_of(c.clone()).await, Some(format!("{d}/{b}/{c}")));
+        assert_eq!(names(d.clone()).await, vec!["b", "c"]);
+        assert!(names(a.clone()).await.is_empty());
+    })
+}
+
 /// F019: `GET .../ancestors` and `GET .../descendants` walk a self-referencing
 /// `parent_ref` chain (`a` -> `b` -> `c`) via the recursive-CTE endpoints,
 /// nearest-first for ancestors, breadth order for descendants.

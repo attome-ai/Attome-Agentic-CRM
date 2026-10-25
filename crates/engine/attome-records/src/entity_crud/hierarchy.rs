@@ -312,19 +312,64 @@ pub(super) async fn list_descendants(
     let cols = attome_core::select_columns_filtered(&attrs, |attr| {
         ctx.has_field_read_grant(&entity_name, &attr.logicalname)
     });
-    let sql = format!(
-        "WITH RECURSIVE chain AS ( \
-            SELECT id, 0 AS depth FROM {table} \
-             WHERE {field_ident} = $1 AND (is_active IS NULL OR is_active = true) \
-            UNION ALL \
-            SELECT t.id, chain.depth + 1 \
-            FROM {table} t JOIN chain ON t.{field_ident} = chain.id \
-            WHERE chain.depth < $2 AND (t.is_active IS NULL OR t.is_active = true) \
-         ) \
-         SELECT row_to_json(t) FROM chain JOIN (SELECT {cols} FROM {table}) t ON t.id = chain.id \
-         WHERE 1 = 1 \
-         ORDER BY chain.depth"
-    );
+    // A17-T1: a hierarchy lookup keeps each row's tree path, so the subtree
+    // is one prefix scan. Depth counts path segments below the record; a
+    // soft-deleted row hides everything under it, as the walk does. A record
+    // without a path yet falls back to the walk.
+    let flagged = field
+        .options
+        .as_ref()
+        .and_then(|o| o.get("hierarchy"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let root_path: Option<String> = if flagged {
+        sqlx::query_scalar::<_, Option<String>>(&format!(
+            "SELECT hier_path FROM {table} WHERE id = $1"
+        ))
+        .bind(record_id)
+        .fetch_optional(&state.base.db)
+        .await
+        .ok()
+        .flatten()
+        .flatten()
+    } else {
+        None
+    };
+    let sql = if root_path.is_some() {
+        format!(
+            "WITH root AS (SELECT hier_path FROM {table} WHERE id = $1), \
+             chain AS ( \
+                SELECT t.id, \
+                       (length(t.hier_path) - length(replace(t.hier_path, '/', ''))) \
+                     - (length(root.hier_path) - length(replace(root.hier_path, '/', ''))) - 1 AS depth \
+                  FROM {table} t, root \
+                 WHERE t.hier_path LIKE root.hier_path || '/%' \
+                   AND (t.is_active IS NULL OR t.is_active = true) \
+                   AND NOT EXISTS ( \
+                       SELECT 1 FROM {table} x \
+                        WHERE x.is_active = false \
+                          AND x.hier_path LIKE root.hier_path || '/%' \
+                          AND t.hier_path LIKE x.hier_path || '/%') \
+             ) \
+             SELECT row_to_json(t) FROM chain JOIN (SELECT {cols} FROM {table}) t ON t.id = chain.id \
+             WHERE chain.depth <= $2 \
+             ORDER BY chain.depth"
+        )
+    } else {
+        format!(
+            "WITH RECURSIVE chain AS ( \
+                SELECT id, 0 AS depth FROM {table} \
+                 WHERE {field_ident} = $1 AND (is_active IS NULL OR is_active = true) \
+                UNION ALL \
+                SELECT t.id, chain.depth + 1 \
+                FROM {table} t JOIN chain ON t.{field_ident} = chain.id \
+                WHERE chain.depth < $2 AND (t.is_active IS NULL OR t.is_active = true) \
+             ) \
+             SELECT row_to_json(t) FROM chain JOIN (SELECT {cols} FROM {table}) t ON t.id = chain.id \
+             WHERE 1 = 1 \
+             ORDER BY chain.depth"
+        )
+    };
 
     let items = hierarchy_rows(
         &state,

@@ -794,6 +794,11 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
     validate_attribute_state(key, &desired)?;
     // Y2-T11: `Some` for a formula the database computes.
     let generated = validate_formula_field(db, key, &desired, current.as_ref()).await?;
+    // A17-T1: a lookup from the entity to itself flagged as its hierarchy
+    // keeps a stored tree path.
+    let hierarchy = field_type == "lookup"
+        && lookup_entity_ref == Some(entity_id)
+        && super::table::is_hierarchy_lookup(desired.options.as_ref());
 
     let state_differs = current
         .as_ref()
@@ -829,6 +834,15 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
                 generated.as_deref(),
             )
             .await?;
+            if hierarchy {
+                super::table::ensure_hierarchy_path(
+                    db,
+                    entity_id,
+                    &entity_logicalname,
+                    logicalname,
+                )
+                .await?;
+            }
             let outcome = match step {
                 WriteStep::SkippedCustomized => ReconcileOutcome::SkippedCustomized,
                 _ => ReconcileOutcome::Unchanged,
@@ -860,6 +874,15 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
                 rec,
             )
             .await?;
+            if hierarchy {
+                super::table::ensure_hierarchy_path(
+                    db,
+                    entity_id,
+                    &entity_logicalname,
+                    logicalname,
+                )
+                .await?;
+            }
 
             // A brand-new column's contract is installed after the row is
             // committed (the column only exists from `provision_column`
@@ -962,6 +985,11 @@ fn validate_attribute_shape(
         return Err(AppError::Validation(format!(
             "invalid attribute logicalname (lowercase/digits/underscore, max {} chars): {logicalname}",
             super::identifiers::MAX_IDENTIFIER_LEN
+        )));
+    }
+    if logicalname == super::table::HIERARCHY_PATH_COLUMN {
+        return Err(AppError::Validation(format!(
+            "{logicalname} is reserved for the stored hierarchy path"
         )));
     }
     if !valid_field_type(field_type) {
