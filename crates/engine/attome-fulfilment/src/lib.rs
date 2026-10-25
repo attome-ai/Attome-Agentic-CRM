@@ -6,6 +6,8 @@
 
 pub mod model;
 pub mod sourcing;
+/// F6-T3: confirmed orders split into fulfilment orders.
+pub mod split;
 
 pub use model::FulfilmentModel;
 

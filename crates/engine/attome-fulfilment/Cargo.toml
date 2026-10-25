@@ -12,8 +12,12 @@ publish.workspace      = true
 
 [dependencies]
 attome-core.workspace = true
+attome-db.workspace = true
 attome-modules.workspace = true
+attome-types.workspace = true
 axum.workspace = true
+sqlx.workspace = true
+tracing.workspace = true
 utoipa.workspace = true
 uuid.workspace = true
 

@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Confirmed orders split into fulfilment orders (F6-T3): every 30 seconds a change-feed consumer turns
+  each newly confirmed order into one draft fulfilment order per ship-from location and delivery group
+  with a line per order line (`goods`, or `service` without a product), once per order. The location
+  is `fulfilment.default_location_id`, else the only stock location.
 - Revenue allocation by standalone selling price (F11-T4): each new revenue contract's price is split over
   its obligations in proportion to their SSPs (an entered `ssp_entry`, else the median standalone sale,
   else list price less `revrec.ssp_list_discount_percent`, else cost plus `revrec.ssp_cost_margin_percent`),

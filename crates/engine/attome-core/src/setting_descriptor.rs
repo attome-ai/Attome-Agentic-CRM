@@ -247,7 +247,7 @@ pub fn area(key: &str) -> &'static str {
         Some("approval" | "jobs") => "operations",
         Some("data_profile") => "data",
         Some("quality" | "master" | "lineage") => "data",
-        Some("revrec") => "sales",
+        Some("revrec" | "fulfilment") => "sales",
         Some("grc") => "security",
         _ => "other",
     }
@@ -467,6 +467,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "revrec.contracts" => {
             "هل يحصل الطلب المؤكد أو الاشتراك الفعّال على عقد إيراد والتزامات أداء تُنشأ في الخلفية بعد التغيير. معطّل افتراضيًا."
+        }
+        "fulfilment.default_location_id" => {
+            "موقع المخزون الذي تُشحن منه أوامر التنفيذ للطلب المؤكد. إن لم يُحدد يُستخدم موقع المخزون الوحيد في النشر؛ وإن تعددت المواقع دون تحديد لا تُقسم الطلبات."
         }
         "revrec.ssp_list_discount_percent" => {
             "النسبة المئوية المخصومة من سعر القائمة للمنتج لتكون سعر بيعه المستقل، حين لا يكون له سعر مُدخل ولا مبيعات منفردة كافية لاستنتاجه. صفر افتراضيًا."

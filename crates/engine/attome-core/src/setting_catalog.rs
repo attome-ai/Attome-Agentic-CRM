@@ -426,6 +426,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // F6-T3: where a confirmed order ships from until sourcing does it.
+        SettingDescriptor::new(
+            "fulfilment.default_location_id",
+            "The stock location a confirmed order's fulfilment orders ship from (F6-T3). Unset, \
+         the deployment's only stock location is used; with several and none named, orders are \
+         not split.",
+            || json!({"type": ["string", "null"], "format": "uuid"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(null),
+        ),
         // F11-T4: the SSP fallbacks.
         SettingDescriptor::new(
             "revrec.ssp_list_discount_percent",

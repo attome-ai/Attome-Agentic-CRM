@@ -2974,6 +2974,7 @@ const DEDUP_KEY_GRC_POLICY_SWEEP: &str = "grc-policy-sweep";
 /// Q22-T1: detection rules over security events (a registered job type).
 const DEDUP_KEY_SECURITY_DETECTIONS: &str = "security-detections";
 const DEDUP_KEY_CONTENT_SITEMAP: &str = "content-sitemap";
+const DEDUP_KEY_FULFILMENT_SPLIT: &str = "fulfilment-split";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
 /// R11-T1: evidence collectors (a registered job type).
 const DEDUP_KEY_GRC_EVIDENCE: &str = "grc-evidence-collect";
@@ -3246,6 +3247,10 @@ pub const GRC_POLICY_SWEEP: attome_jobs::JobType =
 /// new-device detections, each a security case.
 pub const SECURITY_DETECTIONS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_audit::detections::JOB, 1);
+
+/// F6-T3: confirmed orders split into fulfilment orders.
+pub const FULFILMENT_SPLIT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_fulfilment::split::JOB, 1);
 
 /// E13-T9: the stored sitemaps of sites whose pages changed, rebuilt.
 pub const CONTENT_SITEMAP: attome_jobs::JobType =
@@ -4133,6 +4138,28 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            FULFILMENT_SPLIT,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if state
+                    .modules
+                    .load()
+                    .require(attome_modules::MODULE_FULFILMENT)
+                    .is_err()
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let written = attome_fulfilment::split::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if written > 0 {
+                    tracing::info!(written, "fulfilment orders split from confirmed orders");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CONTENT_SITEMAP,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let counts = attome_content::seo::sitemap::regenerate_all(&state.base.db)
@@ -4681,6 +4708,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_SECURITY_DETECTIONS
         }
         EngineJob::Registered(job) if job.name == CONTENT_SITEMAP.name => DEDUP_KEY_CONTENT_SITEMAP,
+        EngineJob::Registered(job) if job.name == FULFILMENT_SPLIT.name => {
+            DEDUP_KEY_FULFILMENT_SPLIT
+        }
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
         }
@@ -5649,6 +5679,21 @@ pub fn spawn_security_detections_scheduler(db: DbPool, interval: std::time::Dura
             "security detections",
         ),
         Err(error) => tracing::error!(%error, "security detections: not scheduled"),
+    }
+}
+
+/// F6-T3: every 30 seconds, confirmed orders into fulfilment orders.
+pub fn spawn_fulfilment_split_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(FULFILMENT_SPLIT.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_FULFILMENT_SPLIT,
+            "fulfilment split",
+        ),
+        Err(error) => tracing::error!(%error, "fulfilment split: not scheduled"),
     }
 }
 

@@ -1226,8 +1226,12 @@ name = "attome-fulfilment"
 version = "0.1.0"
 dependencies = [
  "attome-core",
+ "attome-db",
  "attome-modules",
+ "attome-types",
  "axum",
+ "sqlx",
+ "tracing",
  "utoipa",
  "uuid",
 ]
