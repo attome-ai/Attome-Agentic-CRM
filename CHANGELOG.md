@@ -710,6 +710,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- SLA measurement (AB1-T1): `attome sla probe` checks a server's readiness from another host and appends
+  each answer to a JSON lines file; `attome sla report` turns a month of probes into an availability
+  report (HTML, English and Arabic), leaving out agreed maintenance windows and time no probe covered,
+  with the incidents and an optional target.
 - Optional Helm chart and lease-based singletons (Y6-T1, migration 0249): `deploy/helm/attome` runs the
   server (probes on the health routes, optional autoscaling), the worker, the audit chainer and a
   pre-install/upgrade migrate job; `attome_jobs::lease` keeps one row per singleton loop in

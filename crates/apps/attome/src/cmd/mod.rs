@@ -14,6 +14,8 @@ pub mod secrets;
 pub mod service;
 pub mod settings;
 pub mod sizing;
+/// AB1-T1: availability probes and the monthly SLA report.
+pub mod sla_report;
 pub mod sovereignty;
 pub mod status;
 pub mod status_page;

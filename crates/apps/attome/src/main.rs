@@ -55,6 +55,12 @@ Usage:
   attome status-page --url <server> --out <dir>
                                 Write a server's public status page as static
                                 HTML and JSON into a directory
+  attome sla probe --url <server> --out <probes.jsonl>
+                                Probe a server's readiness every minute and
+                                append the answers
+  attome sla report --probes <probes.jsonl> --month <YYYY-MM> --out <report.html>
+                                The month's availability, without agreed
+                                maintenance (--maintenance <windows.json>)
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
   attome changeset-replay       Replay changesets against a database
@@ -158,6 +164,10 @@ fn main() -> ExitCode {
         ["settings", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::settings::run(&rest)
+        }
+        ["sla", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::sla_report::run(&rest)
         }
         ["status-page", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
