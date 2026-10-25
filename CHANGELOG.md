@@ -710,6 +710,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- SEO routes (E13-T8): `GET`/`PUT /api/v1/admin/content/pages/{id}/seo` (If-Match; every save is a
+  configuration event, named `content_page.seo_indexing` when the canonical URL or noindex changed),
+  `GET .../seo/findings`, `POST .../seo/audit`, topic clusters under `/api/v1/admin/content/seo/topics`
+  (with `PUT .../{id}/pages`), and `GET`/`PUT /api/v1/admin/content/sites/{site_key}/robots` (advisory
+  lock, before/after in the event). Public and bypass-listed: `GET /api/v1/content/sitemap?site=&lang=`
+  and `GET /api/v1/content/robots?site=`, whose body always closes portal-only and preview paths; the
+  server answers a crawler's `/robots.txt` and `/sitemap.xml` from them for the requested host.
 - OData v4 feed (S7-T1): `GET /api/v1/odata` (service document), `/api/v1/odata/$metadata` (CSDL of the
   entities and attributes the caller may read), `/api/v1/odata/{entity}` (`$select`, `$filter`,
   `$orderby`, `$top`, `$count`, paging through `@odata.nextLink`) and `/api/v1/odata/{entity}/$count`,

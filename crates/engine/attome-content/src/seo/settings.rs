@@ -29,7 +29,7 @@ pub struct PageSeo {
     pub og_image_ref: Option<Uuid>,
 }
 
-fn filled(v: Option<&String>) -> Option<String> {
+pub(crate) fn filled(v: Option<&String>) -> Option<String> {
     v.map(|s| s.trim().to_owned()).filter(|s| !s.is_empty())
 }
 
@@ -188,7 +188,7 @@ pub async fn get_page_seo(db: &DbPool, page_id: Uuid) -> Result<(PageSeo, i64), 
     ))
 }
 
-fn check(body: &PageSeo) -> Result<(), AppError> {
+pub(crate) fn check(body: &PageSeo) -> Result<(), AppError> {
     let long = |v: &Option<String>, max: usize| v.as_ref().is_some_and(|s| s.chars().count() > max);
     if long(&body.title, 200) || long(&body.og_title, 200) {
         return Err(AppError::Validation(
@@ -208,6 +208,35 @@ fn check(body: &PageSeo) -> Result<(), AppError> {
         ));
     }
     Ok(())
+}
+
+/// E13-T8: writes a page's settings in the caller's transaction, after the
+/// caller locked the row and checked its version. Returns the new version.
+pub(crate) async fn write_page_seo(
+    tx: &mut attome_db::Tx<'_>,
+    page_id: Uuid,
+    body: &PageSeo,
+) -> Result<i64, AppError> {
+    sqlx::query_scalar(
+        "UPDATE content_page SET seo_title = $2, seo_description = $3, seo_canonical_url = $4, \
+                seo_noindex = $5, seo_nofollow = $6, og_title = $7, og_description = $8, \
+                og_image_ref = $9, row_version = row_version + 1, updated_at = now() \
+          WHERE id = $1 AND is_deleted = false \
+          RETURNING row_version",
+    )
+    .bind(page_id)
+    .bind(filled(body.title.as_ref()))
+    .bind(filled(body.description.as_ref()))
+    .bind(filled(body.canonical_url.as_ref()))
+    .bind(body.noindex)
+    .bind(body.nofollow)
+    .bind(filled(body.og_title.as_ref()))
+    .bind(filled(body.og_description.as_ref()))
+    .bind(body.og_image_ref)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)
 }
 
 /// Writes a page's settings at `expected_row_version`; a page changed since

@@ -296,6 +296,18 @@ async fn create_page(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
+/// E13-T8: one live page, for the engine functions that need it.
+pub(crate) async fn load_page(db: &attome_db::DbPool, id: Uuid) -> Result<PageDetail, AppError> {
+    let sql =
+        format!("SELECT {PAGE_COLUMNS} FROM content_page WHERE id = $1 AND is_deleted = FALSE");
+    sqlx::query_as::<_, PageDetail>(&sql)
+        .bind(id)
+        .fetch_optional(db)
+        .await
+        .map_err(AppError::internal)?
+        .ok_or(AppError::NotFound)
+}
+
 async fn get_page(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
@@ -1182,6 +1194,8 @@ pub fn routes() -> Router<EngineState> {
         .merge(crate::audience::routes())
         .merge(crate::translations::routes())
         .merge(crate::article::routes())
+        // E13-T8: page search settings, findings, topics and robots.txt.
+        .merge(crate::seo::routes::routes())
 }
 
 #[derive(utoipa::OpenApi)]
@@ -1208,5 +1222,6 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     doc.merge(crate::audience::openapi_fragment());
     doc.merge(crate::translations::openapi_fragment());
     doc.merge(crate::article::openapi_fragment());
+    doc.merge(crate::seo::routes::openapi_fragment());
     doc
 }

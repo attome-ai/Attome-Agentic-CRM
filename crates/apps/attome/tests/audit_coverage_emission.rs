@@ -4970,6 +4970,65 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"related_page_ids": []})),
             )
         }
+        // E13-T8: page search settings, topics and robots.txt.
+        "PUT /api/v1/admin/content/pages/{id}/seo" => {
+            let (id, row_version) = content_page(fx).await;
+            with_if_match(
+                request(
+                    "PUT",
+                    &format!("/api/v1/admin/content/pages/{id}/seo"),
+                    t,
+                    Some(json!({"title": "Search title", "noindex": true})),
+                ),
+                row_version,
+            )
+        }
+        "POST /api/v1/admin/content/seo/topics" => request(
+            "POST",
+            "/api/v1/admin/content/seo/topics",
+            t,
+            Some(json!({"name": uniq("topic"), "language": "en"})),
+        ),
+        "PUT /api/v1/admin/content/seo/topics/{id}" => {
+            let topic = seo_topic(fx).await;
+            with_if_match(
+                request(
+                    "PUT",
+                    &format!("/api/v1/admin/content/seo/topics/{}", id_of(&topic)),
+                    t,
+                    Some(json!({"name": uniq("topic-renamed"), "language": "ar"})),
+                ),
+                topic["row_version"].as_i64().unwrap_or(1),
+            )
+        }
+        "DELETE /api/v1/admin/content/seo/topics/{id}" => {
+            let topic = seo_topic(fx).await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/content/seo/topics/{}", id_of(&topic)),
+                t,
+                None,
+            )
+        }
+        "PUT /api/v1/admin/content/seo/topics/{id}/pages" => {
+            let topic = seo_topic(fx).await;
+            let (page, _) = content_page(fx).await;
+            request(
+                "PUT",
+                &format!("/api/v1/admin/content/seo/topics/{}/pages", id_of(&topic)),
+                t,
+                Some(json!({"page_ids": [page]})),
+            )
+        }
+        "PUT /api/v1/admin/content/sites/{site_key}/robots" => request(
+            "PUT",
+            &format!(
+                "/api/v1/admin/content/sites/{}.example.sa/robots",
+                Uuid::now_v7().simple()
+            ),
+            t,
+            Some(json!({"body": "User-agent: *\nDisallow: /drafts/\n"})),
+        ),
         "PATCH /api/v1/admin/content/pages/{id}/review-by" => {
             let (id, row_version) = content_page(fx).await;
             with_if_match(
@@ -7103,6 +7162,17 @@ async fn content_space(fx: &Fx) -> Uuid {
         )
         .await,
     )
+}
+
+/// E13-T8: a topic cluster, as the create route answers it.
+async fn seo_topic(fx: &Fx) -> Value {
+    admin(
+        fx,
+        "POST",
+        "/api/v1/admin/content/seo/topics",
+        Some(json!({"name": uniq("topic"), "language": "en"})),
+    )
+    .await
 }
 
 /// A content page in its own space; returns `(id, row_version)`.

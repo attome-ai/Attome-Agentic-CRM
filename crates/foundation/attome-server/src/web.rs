@@ -160,10 +160,50 @@ async fn file_response(path: &Path, method: &Method) -> Option<Response> {
     Some(response)
 }
 
+/// E13-T8: where a crawler's `/robots.txt` or `/sitemap.xml` is answered:
+/// the content routes for the host it asked (port dropped, lowercased).
+/// `None` for any other path or a host with characters a site name cannot
+/// have. Pure.
+fn crawler_rewrite(path: &str, host: Option<&str>) -> Option<String> {
+    let route = match path {
+        "/robots.txt" => "/api/v1/content/robots",
+        "/sitemap.xml" => "/api/v1/content/sitemap",
+        _ => return None,
+    };
+    let host = host?.split(':').next()?.trim().to_ascii_lowercase();
+    let ok = !host.is_empty()
+        && host
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.' || c == '-');
+    ok.then(|| format!("{route}?site={host}"))
+}
+
 /// The middleware: the web app for its own paths, the API for the rest.
-pub async fn serve_web(State(root): State<WebRoot>, request: Request, next: Next) -> Response {
+pub async fn serve_web(State(root): State<WebRoot>, mut request: Request, next: Next) -> Response {
     let method = request.method().clone();
     let path = request.uri().path().to_owned();
+    // E13-T8: with no file of that name in the app, a crawler's robots.txt
+    // and sitemap come from the content routes for the requested site.
+    if (method == Method::GET || method == Method::HEAD)
+        && let Some(target) = crawler_rewrite(
+            &path,
+            request
+                .headers()
+                .get(axum::http::header::HOST)
+                .and_then(|h| h.to_str().ok()),
+        )
+    {
+        let static_file = match file_for(&root.0, &path) {
+            Some(file) => tokio::fs::metadata(&file)
+                .await
+                .is_ok_and(|meta| meta.is_file()),
+            None => false,
+        };
+        if !static_file && let Ok(uri) = target.parse() {
+            *request.uri_mut() = uri;
+            return next.run(request).await;
+        }
+    }
     if !(method == Method::GET || method == Method::HEAD) || is_server_path(&path) {
         return next.run(request).await;
     }
@@ -213,6 +253,21 @@ mod tests {
         let (a, b) = (new_nonce(), new_nonce());
         assert_ne!(a, b);
         assert_eq!(a.len(), 24, "16 bytes, base64");
+    }
+
+    #[test]
+    fn crawler_files_go_to_the_content_routes() {
+        assert_eq!(
+            crawler_rewrite("/robots.txt", Some("WWW.Example.sa:443")).as_deref(),
+            Some("/api/v1/content/robots?site=www.example.sa")
+        );
+        assert_eq!(
+            crawler_rewrite("/sitemap.xml", Some("shop.example.com")).as_deref(),
+            Some("/api/v1/content/sitemap?site=shop.example.com")
+        );
+        assert_eq!(crawler_rewrite("/robots.txt", None), None);
+        assert_eq!(crawler_rewrite("/robots.txt", Some("bad host&x=1")), None);
+        assert_eq!(crawler_rewrite("/index.html", Some("example.com")), None);
     }
 
     #[test]

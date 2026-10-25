@@ -103,6 +103,10 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/content/site",
     "/api/v1/content/theme.css",
     "/api/v1/content/rss",
+    // E13-T8: a site's sitemap and robots.txt, served to crawlers at
+    // /sitemap.xml and /robots.txt by the edge: published, public facts only.
+    "/api/v1/content/sitemap",
+    "/api/v1/content/robots",
     // K5-T2: a signed preview link opens one page's draft for anyone who
     // holds it; the handler checks the signature and expiry and answers the
     // same 404 for every miss.

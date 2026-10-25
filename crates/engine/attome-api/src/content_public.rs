@@ -793,6 +793,115 @@ mod delivery_tests {
     }
 }
 
+#[derive(Deserialize, IntoParams)]
+struct SitemapQuery {
+    /// The site's host name.
+    site: String,
+    /// The language, such as `en` or `ar`; the first stored when absent.
+    lang: Option<String>,
+}
+
+/// A site's sitemap (E13-T8).
+///
+/// The sitemap stored for the site and language (built by the sitemap
+/// job), as XML; a site with none answers an empty `urlset`. Published at
+/// `/sitemap.xml` by the edge, which passes its host as `site`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/content/sitemap",
+    tag = "content",
+    params(SitemapQuery),
+    responses(
+        (status = 200, description = "The sitemap", content_type = "application/xml"),
+        (status = 404, description = "Content Management isn't licensed", body = ErrorResponse),
+        (status = 422, description = "Not a host name or a language code", body = ErrorResponse),
+    ),
+)]
+async fn site_sitemap(
+    State(state): State<EngineState>,
+    Query(q): Query<SitemapQuery>,
+) -> Result<Response, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    let site = q.site.trim().to_ascii_lowercase();
+    if !attome_content::seo::site::site_key_ok(&site)
+        || q.lang
+            .as_deref()
+            .is_some_and(|l| !attome_content::seo::site::lang_ok(l))
+    {
+        return Err(AppError::Validation(
+            "site is a host name and lang a language code".into(),
+        ));
+    }
+    let xml =
+        attome_content::seo::site::served_sitemap(&state.base.db, &site, q.lang.as_deref()).await?;
+    Ok((
+        [
+            (
+                axum::http::header::CONTENT_TYPE,
+                HeaderValue::from_static("application/xml; charset=utf-8"),
+            ),
+            (
+                axum::http::header::CACHE_CONTROL,
+                HeaderValue::from_static("public, max-age=3600"),
+            ),
+        ],
+        xml,
+    )
+        .into_response())
+}
+
+#[derive(Deserialize, IntoParams)]
+struct RobotsQuery {
+    /// The site's host name.
+    site: String,
+}
+
+/// A site's robots.txt (E13-T8).
+///
+/// The body an administrator stored for the site (else allow all), with
+/// portal-only and preview paths always disallowed. Published at
+/// `/robots.txt` by the edge, which passes its host as `site`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/content/robots",
+    tag = "content",
+    params(RobotsQuery),
+    responses(
+        (status = 200, description = "The robots.txt", content_type = "text/plain"),
+        (status = 404, description = "Content Management isn't licensed", body = ErrorResponse),
+        (status = 422, description = "Not a host name", body = ErrorResponse),
+    ),
+)]
+async fn site_robots(
+    State(state): State<EngineState>,
+    Query(q): Query<RobotsQuery>,
+) -> Result<Response, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    let site = q.site.trim().to_ascii_lowercase();
+    if !attome_content::seo::site::site_key_ok(&site) {
+        return Err(AppError::Validation("site is a host name".into()));
+    }
+    let stored = attome_content::seo::site::robots(&state.base.db, &site).await?;
+    Ok((
+        [
+            (
+                axum::http::header::CONTENT_TYPE,
+                HeaderValue::from_static("text/plain; charset=utf-8"),
+            ),
+            (
+                axum::http::header::CACHE_CONTROL,
+                HeaderValue::from_static("public, max-age=3600"),
+            ),
+        ],
+        attome_content::seo::site::served_robots(stored.as_ref().map(|(b, _)| b.as_str())),
+    )
+        .into_response())
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/content/view", get(view_page))
@@ -808,6 +917,8 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/content/rss", get(site_rss))
         .route("/api/v1/content/internal", get(deliver_internal_page))
         .route("/api/v1/content/preview", get(preview_page))
+        .route("/api/v1/content/sitemap", get(site_sitemap))
+        .route("/api/v1/content/robots", get(site_robots))
 }
 
 #[derive(utoipa::OpenApi)]
@@ -821,7 +932,9 @@ pub fn routes() -> Router<EngineState> {
     site_theme,
     site_rss,
     deliver_internal_page,
-    preview_page
+    preview_page,
+    site_sitemap,
+    site_robots
 ))]
 struct ApiDocFragment;
 
