@@ -948,7 +948,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/api-usage/summary` — `system.admin` only. Per-route/
+         * API usage summary
+         * @description `GET /api/v1/admin/api-usage/summary` — `system.admin` only. Per-route/
          *     per-identity request counts aggregated over the trailing `days` window,
          *     most-requested first. Counts only, same posture as the source table —
          *     never a request payload, header, or query string.
@@ -992,11 +993,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/approval-policies` — `system.admin` only. */
+        /**
+         * List approval policies
+         * @description `GET /api/v1/admin/approval-policies` — `system.admin` only.
+         */
         get: operations["list_policies"];
         put?: never;
         /**
-         * `POST /api/v1/admin/approval-policies` — `system.admin` only. `plan` is
+         * Create an approval policy
+         * @description `POST /api/v1/admin/approval-policies` — `system.admin` only. `plan` is
          *     validated structurally (`ApprovalPlan::validate`) and by approver-token
          *     shape (`attome_audit::approval::validate_plan_approvers`) before insert.
          *     Rejected with `409` when an active, non-deleted policy already exists
@@ -1020,10 +1025,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/approval-policies/{id}` — `system.admin` only. */
+        /**
+         * One approval policy
+         * @description `GET /api/v1/admin/approval-policies/{id}` — `system.admin` only.
+         */
         get: operations["get_policy"];
         /**
-         * `PUT /api/v1/admin/approval-policies/{id}` — `system.admin` only.
+         * Replace an approval policy
+         * @description `PUT /api/v1/admin/approval-policies/{id}` — `system.admin` only.
          *     `action_type` is immutable after creation (delete and recreate to
          *     retarget a policy) — every field that changes what a policy *governs*
          *     staying fixed once requests may already reference `policy_id` keeps
@@ -1032,7 +1041,8 @@ export interface paths {
         put: operations["update_policy"];
         post?: never;
         /**
-         * `DELETE /api/v1/admin/approval-policies/{id}` — `system.admin` only.
+         * Delete an approval policy
+         * @description `DELETE /api/v1/admin/approval-policies/{id}` — `system.admin` only.
          *     Soft-deletes the policy; already-submitted requests it supplied a plan
          *     for are unaffected (their `plan` was copied onto the request at submit
          *     time, not referenced live).
@@ -1050,8 +1060,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List approval processes
+         * @description List approval processes. Administrators only.
+         */
         get: operations["list_approval_processes"];
         put?: never;
+        /**
+         * Create an approval process
+         * @description Create an approval process. Administrators only. Audited.
+         */
         post: operations["create_approval_process"];
         delete?: never;
         options?: never;
@@ -1066,12 +1084,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One approval process
+         * @description One approval process. Administrators only.
+         */
         get: operations["get_approval_process"];
         put?: never;
         post?: never;
+        /**
+         * Delete an approval process
+         * @description Delete an approval process. Administrators only. Audited.
+         */
         delete: operations["delete_approval_process"];
         options?: never;
         head?: never;
+        /**
+         * Update an approval process
+         * @description Update an approval process. Administrators only. Audited.
+         */
         patch: operations["update_approval_process"];
         trace?: never;
     };
@@ -1083,7 +1113,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/approvals` — `system.admin` only. Lists requests,
+         * List approval requests
+         * @description `GET /api/v1/admin/approvals` — `system.admin` only. Lists requests,
          *     newest-first, optionally filtered to one `action_type` and to one or more
          *     `status` values (default `pending`).
          */
@@ -1106,7 +1137,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/approvals/batch-decide` — decide many requests the
+         * Decide many approval requests
+         * @description `POST /api/v1/admin/approvals/batch-decide` — decide many requests the
          *     same way (roadmap N30-T6). Each is decided on its own through the exact
          *     path a single decision takes ([`do_decide`]): its own row-version check,
          *     separation of duties, transaction, audit events and, for an approval
@@ -1127,7 +1159,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/approvals/metrics` */
+        /**
+         * Approval metrics
+         * @description `GET /api/v1/admin/approvals/metrics`
+         */
         get: operations["approval_metrics"];
         put?: never;
         post?: never;
@@ -1145,7 +1180,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/approvals/{id}` — `system.admin` reads any request;
+         * One approval request
+         * @description `GET /api/v1/admin/approvals/{id}` — `system.admin` reads any request;
          *     the fleet console's rollout credential (`metadata.rollout`, D-792) reads
          *     only a request it submitted itself (the `metadata.changeset_apply`
          *     request its apply opened), so the console can follow it. Another
@@ -1172,7 +1208,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/approvals/{id}/cancel` — `system.admin` only, and
+         * Cancel an approval request
+         * @description `POST /api/v1/admin/approvals/{id}/cancel` — `system.admin` only, and
          *     further restricted to the request's own `requested_by` by
          *     `attome_approval::cancel` itself (`Forbidden` otherwise) — the inverse of
          *     `decide()`'s separation-of-duties check. Lets an admin withdraw a request
@@ -1196,7 +1233,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/approvals/{id}/decide` — `system.admin` only.
+         * Decide an approval request
+         * @description `POST /api/v1/admin/approvals/{id}/decide` — `system.admin` only.
          *     `attome_approval::decide` enforces the separation-of-duties invariant
          *     (`ctx.user_id` cannot be the request's own `requested_by`) and the
          *     `row_version` CAS; see that function's doc comment. On `Approve` closing
@@ -1222,7 +1260,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/approvals/{id}/delegate` — `system.admin` only, D-421
+         * Delegate an approval request
+         * @description `POST /api/v1/admin/approvals/{id}/delegate` — `system.admin` only, D-421
          *     / M10. Lets `ctx.user_id` (who must actually be one of the *named*
          *     approvers on this request's current plan step — `create_request_delegation`
          *     checks that, `Forbidden` otherwise) hand their standing on this request's
@@ -1248,14 +1287,16 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/approvals/{id}/retry-execution` — `system.admin`
+         * Retry an approved action
+         * @description `POST /api/v1/admin/approvals/{id}/retry-execution` — `system.admin`
          *     only. Recovery path for the gap `decide_approval` above has no answer
          *     for: if execution fails AFTER `attome_approval::decide` already committed
          *     `status = 'approved'`, the request could never be re-decided (`decide()`
          *     only ever accepts a `Pending` request) and, before this endpoint existed,
          *     had no way back to `executed` either — a permanently stuck
          *     four-eyes-approved action.
-         * @description **One execution per approval (D-518).** This claims the request
+         *
+         *     **One execution per approval (D-518).** This claims the request
          *     (`approved -> executing`) before running anything, as `decide_approval`
          *     does, so two retries, or a retry racing the deciding call, never both run
          *     the action; the loser gets `409`. By state:
@@ -1296,8 +1337,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List apps
+         * @description List apps. Administrators only.
+         */
         get: operations["list_apps"];
         put?: never;
+        /**
+         * Create an app
+         * @description Create an app. Administrators only. Audited.
+         */
         post: operations["create_app"];
         delete?: never;
         options?: never;
@@ -1312,12 +1361,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One app
+         * @description One app. Administrators only.
+         */
         get: operations["get_app"];
         put?: never;
         post?: never;
+        /**
+         * Delete an app
+         * @description Delete an app. Administrators only. Audited.
+         */
         delete: operations["delete_app"];
         options?: never;
         head?: never;
+        /**
+         * Update an app
+         * @description Update an app. Administrators only. Audited.
+         */
         patch: operations["update_app"];
         trace?: never;
     };
@@ -1438,7 +1499,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A4-T5: the gap report of the numbers one field holds. */
+        /**
+         * Autonumber gaps
+         * @description A4-T5: the gap report of the numbers one field holds.
+         */
         get: operations["gaps"];
         put?: never;
         post?: never;
@@ -1456,7 +1520,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * U6-T1: what the daily local backup does and the newest one it wrote, so
+         * Backup status
+         * @description U6-T1: what the daily local backup does and the newest one it wrote, so
          *     the admin console can warn when backups stay on the same disk or have
          *     stopped.
          */
@@ -1476,7 +1541,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A18-T7: every entity that has its own bin rules. */
+        /**
+         * Recycle bin rules
+         * @description A18-T7: every entity that has its own bin rules.
+         */
         get: operations["list_bin_settings"];
         put?: never;
         post?: never;
@@ -1494,7 +1562,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** A18-T7: sets an entity's bin rules. */
+        /**
+         * Set an entity's bin rules
+         * @description A18-T7: sets an entity's bin rules.
+         */
         put: operations["put_bin_setting"];
         post?: never;
         delete?: never;
@@ -1510,8 +1581,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List business rules
+         * @description List business rules. Administrators only.
+         */
         get: operations["list_rules"];
         put?: never;
+        /**
+         * Create a business rule
+         * @description Create a business rule. Administrators only. Audited.
+         */
         post: operations["create_rule"];
         delete?: never;
         options?: never;
@@ -1527,7 +1606,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A11-T5: why a record looks the way it does: every active rule on its
+         * Explain a record's rules
+         * @description A11-T5: why a record looks the way it does: every active rule on its
          *     entity evaluated against the stored record, as `.../{id}/test` evaluates
          *     one: whether it applies, its condition, the policies that fire, the
          *     values it would set, its errors and locks, and the trace. Writes nothing.
@@ -1550,6 +1630,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Validate a business rule
+         * @description Validate a business rule. Administrators only.
+         */
         post: operations["validate_rule"];
         delete?: never;
         options?: never;
@@ -1564,12 +1648,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One business rule
+         * @description One business rule. Administrators only.
+         */
         get: operations["get_rule"];
         put?: never;
         post?: never;
+        /**
+         * Delete a business rule
+         * @description Delete a business rule. Administrators only. Audited.
+         */
         delete: operations["delete_rule"];
         options?: never;
         head?: never;
+        /**
+         * Update a business rule
+         * @description Update a business rule. Administrators only. Audited.
+         */
         patch: operations["update_rule"];
         trace?: never;
     };
@@ -1580,7 +1676,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description The stored records the published rule refuses, as its last scan found them, newest first (A3-T5). */
+        /**
+         * Business rule clean-up
+         * @description The stored records the published rule refuses, as its last scan found them, newest first (A3-T5).
+         */
         get: operations["cleanup_queue"];
         put?: never;
         post?: never;
@@ -1599,6 +1698,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Publish a business rule
+         * @description Publish a business rule. Administrators only. Audited.
+         */
         post: operations["publish_rule"];
         delete?: never;
         options?: never;
@@ -1615,7 +1718,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Runs the rule over the entity's stored records (at most 10,000) and returns how many it would refuse and the first 50 of them, without saving anything (A3-T5). */
+        /**
+         * Simulate a business rule
+         * @description Runs the rule over the entity's stored records (at most 10,000) and returns how many it would refuse and the first 50 of them, without saving anything (A3-T5).
+         */
         post: operations["simulate_rule"];
         delete?: never;
         options?: never;
@@ -1632,6 +1738,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Test a business rule
+         * @description Test a business rule. Administrators only.
+         */
         post: operations["test_rule"];
         delete?: never;
         options?: never;
@@ -1689,8 +1799,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List calendars
+         * @description List calendars. Administrators only.
+         */
         get: operations["list_calendars"];
         put?: never;
+        /**
+         * Create a calendar
+         * @description Create a calendar. Administrators only. Audited.
+         */
         post: operations["create_calendar"];
         delete?: never;
         options?: never;
@@ -1705,12 +1823,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One calendar
+         * @description One calendar. Administrators only.
+         */
         get: operations["get_calendar"];
         put?: never;
         post?: never;
+        /**
+         * Delete a calendar
+         * @description Delete a calendar. Administrators only. Audited.
+         */
         delete: operations["delete_calendar"];
         options?: never;
         head?: never;
+        /**
+         * Update a calendar
+         * @description Update a calendar. Administrators only. Audited.
+         */
         patch: operations["update_calendar"];
         trace?: never;
     };
@@ -1721,8 +1851,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A calendar's exceptions
+         * @description A calendar's exceptions. Administrators only.
+         */
         get: operations["list_exceptions"];
         put?: never;
+        /**
+         * Add a calendar exception
+         * @description Add a calendar exception. Administrators only. Audited.
+         */
         post: operations["create_exception"];
         delete?: never;
         options?: never;
@@ -1740,6 +1878,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a calendar exception
+         * @description Remove a calendar exception. Administrators only. Audited.
+         */
         delete: operations["delete_exception"];
         options?: never;
         head?: never;
@@ -1753,8 +1895,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A calendar's holidays
+         * @description A calendar's holidays. Administrators only.
+         */
         get: operations["list_holidays"];
         put?: never;
+        /**
+         * Add a holiday
+         * @description Add a holiday. Administrators only. Audited.
+         */
         post: operations["create_holiday"];
         delete?: never;
         options?: never;
@@ -1772,7 +1922,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * AG1-T6: a holiday that falls on the same Hijri date every year (Eid
+         * Add a yearly Hijri holiday
+         * @description AG1-T6: a holiday that falls on the same Hijri date every year (Eid
          *     al-Fitr is 1 Shawwal), entered once: one holiday per Hijri year from
          *     `from_year` to `to_year` (at most 30 years), each on its Gregorian day
          *     in the deployment's Umm al-Qura calendar, all in one transaction. A 30th
@@ -1797,6 +1948,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a holiday
+         * @description Remove a holiday. Administrators only. Audited.
+         */
         delete: operations["delete_holiday"];
         options?: never;
         head?: never;
@@ -1811,7 +1966,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * L7-T7: how every change-feed consumer is keeping up, the platform's own
+         * Change-feed consumers
+         * @description L7-T7: how every change-feed consumer is keeping up, the platform's own
          *     and subscriptions alike.
          */
         get: operations["list_consumers"];
@@ -1833,7 +1989,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Y7-T4: moves a consumer back so it reads the feed again from a sequence
+         * Rewind a change-feed consumer
+         * @description Y7-T4: moves a consumer back so it reads the feed again from a sequence
          *     number or a time, within what the feed still holds. A consumer applies
          *     each event once, so what it already applied is skipped.
          */
@@ -1852,7 +2009,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/changes` — `system.admin` only. Unifies the metadata
+         * List metadata changes
+         * @description `GET /api/v1/admin/changes` — `system.admin` only. Unifies the metadata
          *     change log, the bundle apply ledger, every `_version`/publish-style change
          *     this deployment tracks, security grant changes, AI model-registry
          *     changes, and runtime settings changes into one ordered, filterable feed,
@@ -1876,8 +2034,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List changesets
+         * @description List changesets. Administrators only.
+         */
         get: operations["list_changesets"];
         put?: never;
+        /**
+         * Open a changeset
+         * @description Open a changeset. Administrators only. Audited.
+         */
         post: operations["open_changeset"];
         delete?: never;
         options?: never;
@@ -1892,6 +2058,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One changeset
+         * @description One changeset. Administrators only.
+         */
         get: operations["get_changeset"];
         put?: never;
         post?: never;
@@ -1910,6 +2080,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Abandon a changeset
+         * @description Abandon a changeset. Administrators only. Audited.
+         */
         post: operations["abandon_changeset"];
         delete?: never;
         options?: never;
@@ -1926,6 +2100,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Close a changeset
+         * @description Close a changeset. Administrators only. Audited.
+         */
         post: operations["close_changeset"];
         delete?: never;
         options?: never;
@@ -1940,6 +2118,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Export a changeset
+         * @description Export a changeset. Administrators only.
+         */
         get: operations["export_changeset"];
         put?: never;
         post?: never;
@@ -1989,7 +2171,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A16-T7: version conflicts of the last `days` days by entity and source
+         * Version conflicts
+         * @description A16-T7: version conflicts of the last `days` days by entity and source
          *     (`api`, `bulk`, `import`), most first: where people overwrite each other.
          */
         get: operations["conflicts"];
@@ -2636,8 +2819,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List customer tests
+         * @description List customer tests. Administrators only.
+         */
         get: operations["list_customer_tests"];
         put?: never;
+        /**
+         * Create a customer test
+         * @description Create a customer test. Administrators only. Audited.
+         */
         post: operations["create_customer_test"];
         delete?: never;
         options?: never;
@@ -2652,6 +2843,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Export customer tests
+         * @description Export customer tests. Administrators only.
+         */
         get: operations["export_customer_tests"];
         put?: never;
         post?: never;
@@ -2670,6 +2865,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Import customer tests
+         * @description Import customer tests. Administrators only. Audited.
+         */
         post: operations["import_customer_tests"];
         delete?: never;
         options?: never;
@@ -2686,6 +2885,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Run every customer test
+         * @description Run every customer test. Administrators only. Audited.
+         */
         post: operations["run_all_customer_tests"];
         delete?: never;
         options?: never;
@@ -2700,12 +2903,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One customer test
+         * @description One customer test. Administrators only.
+         */
         get: operations["get_customer_test"];
         put?: never;
         post?: never;
+        /**
+         * Delete a customer test
+         * @description Delete a customer test. Administrators only. Audited.
+         */
         delete: operations["delete_customer_test"];
         options?: never;
         head?: never;
+        /**
+         * Update a customer test
+         * @description Update a customer test. Administrators only. Audited.
+         */
         patch: operations["update_customer_test"];
         trace?: never;
     };
@@ -2718,6 +2933,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Run a customer test
+         * @description Run a customer test. Administrators only. Audited.
+         */
         post: operations["run_customer_test"];
         delete?: never;
         options?: never;
@@ -2732,6 +2951,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A customer test's runs
+         * @description A customer test's runs. Administrators only.
+         */
         get: operations["list_customer_test_runs"];
         put?: never;
         post?: never;
@@ -2812,6 +3035,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Start an orphan scan
+         * @description Start an orphan scan. Administrators only.
+         */
         post: operations["queue_orphan_scan"];
         delete?: never;
         options?: never;
@@ -2826,6 +3053,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A data step run
+         * @description A data step run. Administrators only.
+         */
         get: operations["get_data_step_run"];
         put?: never;
         post?: never;
@@ -2844,6 +3075,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Cancel a data step run
+         * @description Cancel a data step run. Administrators only. Audited.
+         */
         post: operations["cancel_data_step_run"];
         delete?: never;
         options?: never;
@@ -2860,6 +3095,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Pause a data step run
+         * @description Pause a data step run. Administrators only. Audited.
+         */
         post: operations["pause_data_step_run"];
         delete?: never;
         options?: never;
@@ -2876,6 +3115,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Resume a data step run
+         * @description Resume a data step run. Administrators only. Audited.
+         */
         post: operations["resume_data_step_run"];
         delete?: never;
         options?: never;
@@ -2891,7 +3134,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/data/duplicates` — `system.admin` only. The steward
+         * List duplicate pairs
+         * @description `GET /api/v1/admin/data/duplicates` — `system.admin` only. The steward
          *     queue's list view — filter `status=open` for candidates awaiting a
          *     decision (the default a UI should request).
          */
@@ -2912,7 +3156,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/data/duplicates/stats` — A15-T7: duplicate pairs per
+         * Duplicate statistics
+         * @description `GET /api/v1/admin/data/duplicates/stats` — A15-T7: duplicate pairs per
          *     entity by status (open, merged, dismissed), for the data-quality view.
          */
         get: operations["duplicate_stats"];
@@ -2931,7 +3176,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/data/duplicates/{id}` — `system.admin` only. */
+        /**
+         * One duplicate pair
+         * @description `GET /api/v1/admin/data/duplicates/{id}` — `system.admin` only.
+         */
         get: operations["get_candidate"];
         put?: never;
         post?: never;
@@ -2951,7 +3199,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/data/duplicates/{id}/dismiss` — `system.admin` only.
+         * Dismiss a duplicate pair
+         * @description `POST /api/v1/admin/data/duplicates/{id}/dismiss` — `system.admin` only.
          *     Marks the candidate "not actually a duplicate" — the matching job never
          *     re-flags the same pair again (migration `0218`'s unique index covers
          *     every status, not only `open`).
@@ -2971,7 +3220,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/data/duplicates/{id}/explain` — A15-T7: why a pair was
+         * Explain a duplicate pair
+         * @description `GET /api/v1/admin/data/duplicates/{id}/explain` — A15-T7: why a pair was
          *     flagged: per field of its rule, the comparator, the weight, the score the
          *     sweep stored and, for key comparators, both records' keys.
          */
@@ -2994,7 +3244,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/data/duplicates/{id}/merge` — `system.admin` only.
+         * Merge a duplicate pair
+         * @description `POST /api/v1/admin/data/duplicates/{id}/merge` — `system.admin` only.
          *     A steward's manual resolution of a candidate: runs the exact same merge
          *     (`entity_crud::do_merge_core`) the ordinary `/{entity}/{id}/merge`
          *     endpoint runs, attributed to the deciding admin, with a fully-privileged
@@ -3019,8 +3270,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists personal-data label proposals.
-         * @description L6-T4: a profile proposes the `personal` label for an unlabelled text
+         * Personal-data label proposals
+         * @description Lists personal-data label proposals.
+         *
+         *     L6-T4: a profile proposes the `personal` label for an unlabelled text
          *     attribute when more than 5% of its sampled values look like a Saudi
          *     national ID, an Iqama, an IBAN, a phone or an email address. Only the
          *     counts are kept. Nothing is labelled automatically: a builder sets the
@@ -3042,8 +3295,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List data mappings
+         * @description List data mappings. Administrators only.
+         */
         get: operations["list_mappings"];
         put?: never;
+        /**
+         * Create a data mapping
+         * @description Create a data mapping. Administrators only. Audited.
+         */
         post: operations["create_mapping"];
         delete?: never;
         options?: never;
@@ -3058,9 +3319,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One data mapping
+         * @description One data mapping. Administrators only.
+         */
         get: operations["get_mapping"];
+        /**
+         * Replace a data mapping
+         * @description Replace a data mapping. Administrators only. Audited.
+         */
         put: operations["update_mapping"];
         post?: never;
+        /**
+         * Delete a data mapping
+         * @description Delete a data mapping. Administrators only. Audited.
+         */
         delete: operations["delete_mapping"];
         options?: never;
         head?: never;
@@ -3074,10 +3347,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/data/match-rules` — `system.admin` only. */
+        /**
+         * List duplicate match rules
+         * @description `GET /api/v1/admin/data/match-rules` — `system.admin` only.
+         */
         get: operations["list_match_rules"];
         put?: never;
-        /** `POST /api/v1/admin/data/match-rules` — `system.admin` only. */
+        /**
+         * Create a match rule
+         * @description `POST /api/v1/admin/data/match-rules` — `system.admin` only.
+         */
         post: operations["create_match_rule"];
         delete?: never;
         options?: never;
@@ -3095,7 +3374,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/data/match-rules/preview` — A15-T7: how many pairs a
+         * Preview a match rule
+         * @description `POST /api/v1/admin/data/match-rules/preview` — A15-T7: how many pairs a
          *     draft rule would flag over a sample of the entity's live records (5,000
          *     rows), with up to 20 examples. Pairs are found on the fields' keys
          *     (exact, normalized and key comparators; trigram fields count as no
@@ -3117,14 +3397,18 @@ export interface paths {
         };
         get?: never;
         /**
-         * `PUT /api/v1/admin/data/match-rules/{id}` — `system.admin` only.
+         * Replace a match rule
+         * @description `PUT /api/v1/admin/data/match-rules/{id}` — `system.admin` only.
          *     `entity` is immutable after creation (delete and recreate to retarget a
          *     rule) — same posture `approval_policy_admin::update_policy` takes for
          *     `action_type`.
          */
         put: operations["update_match_rule"];
         post?: never;
-        /** `DELETE /api/v1/admin/data/match-rules/{id}` — `system.admin` only. */
+        /**
+         * Delete a match rule
+         * @description `DELETE /api/v1/admin/data/match-rules/{id}` — `system.admin` only.
+         */
         delete: operations["delete_match_rule"];
         options?: never;
         head?: never;
@@ -3141,7 +3425,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/data/match-rules/{id}/scan` — `system.admin` only.
+         * Scan with a match rule
+         * @description `POST /api/v1/admin/data/match-rules/{id}/scan` — `system.admin` only.
          *     A15-T6: scans every live row of the rule's entity in pages of 500 in the
          *     background (keys written, each row scored against its peers, candidates
          *     recorded); a restart resumes from the last page.
@@ -3160,8 +3445,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List data profiles
+         * @description List data profiles. Needs metadata.read.
+         */
         get: operations["list_profiles"];
         put?: never;
+        /**
+         * Start a data profile
+         * @description Start a data profile. Administrators only. Audited.
+         */
         post: operations["enqueue_profile"];
         delete?: never;
         options?: never;
@@ -3176,6 +3469,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One data profile
+         * @description One data profile. Needs metadata.read.
+         */
         get: operations["get_profile"];
         put?: never;
         post?: never;
@@ -3243,7 +3540,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an
+         * Data quality issues
+         * @description `GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an
          *     administrator sees every issue; anyone else the issues of entities they
          *     may read, without the records they may not read, and a total that counts
          *     only those (L2-T10). A UI requests `status=open` for the steward queue
@@ -3272,7 +3570,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * `PATCH /api/v1/admin/data/quality/issues/{id}`: the issue's owner (or an
+         * Update a quality issue
+         * @description `PATCH /api/v1/admin/data/quality/issues/{id}`: the issue's owner (or an
          *     administrator) moves it through its statuses; accepting needs a reason.
          */
         patch: operations["quality_issue_update"];
@@ -3288,7 +3587,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/data/quality/issues/{id}/resolve` — `system.admin`
+         * Resolve a quality issue
+         * @description `POST /api/v1/admin/data/quality/issues/{id}/resolve` — `system.admin`
          *     only. Marks one issue resolved once a steward has fixed (or accepted) the
          *     underlying record — the sweep never reopens a resolved issue on its own
          *     (see migration `0387`'s comment: the upsert's conflict target covers
@@ -3311,11 +3611,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/data/quality/rules` — `system.admin` only. */
+        /**
+         * List quality rules
+         * @description `GET /api/v1/admin/data/quality/rules` — `system.admin` only.
+         */
         get: operations["quality_rules_list"];
         put?: never;
         /**
-         * `POST /api/v1/admin/data/quality/rules` — `system.admin` only. The
+         * Create a quality rule
+         * @description `POST /api/v1/admin/data/quality/rules` — `system.admin` only. The
          *     expression is checked as the shared condition evaluator reads it.
          */
         post: operations["quality_rule_create"];
@@ -3335,12 +3639,16 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** `DELETE /api/v1/admin/data/quality/rules/{id}` — `system.admin` only. */
+        /**
+         * Delete a quality rule
+         * @description `DELETE /api/v1/admin/data/quality/rules/{id}` — `system.admin` only.
+         */
         delete: operations["quality_rule_delete"];
         options?: never;
         head?: never;
         /**
-         * `PATCH /api/v1/admin/data/quality/rules/{id}` — `system.admin` only;
+         * Update a quality rule
+         * @description `PATCH /api/v1/admin/data/quality/rules/{id}` — `system.admin` only;
          *     `row_version` must match.
          */
         patch: operations["quality_rule_update"];
@@ -3354,7 +3662,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/data/quality/scores` — `system.admin` only. The
+         * Data quality scores
+         * @description `GET /api/v1/admin/data/quality/scores` — `system.admin` only. The
          *     *latest* score per (entity, dimension) — one row per dimension the sweep
          *     has ever computed for that entity, not every historical period. A
          *     dedicated trend endpoint (`GET .../scores/history`, below) serves the
@@ -3377,7 +3686,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/data/quality/scores/history` — `system.admin` only.
+         * Data quality score history
+         * @description `GET /api/v1/admin/data/quality/scores/history` — `system.admin` only.
          *     The full period series for one entity+dimension, newest first — what a
          *     trend chart reads.
          */
@@ -3397,7 +3707,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/data/quality/targets` — `system.admin` only. */
+        /**
+         * Quality targets
+         * @description `GET /api/v1/admin/data/quality/targets` — `system.admin` only.
+         */
         get: operations["quality_targets_list"];
         put?: never;
         post?: never;
@@ -3416,14 +3729,16 @@ export interface paths {
         };
         get?: never;
         /**
-         * `PUT /api/v1/admin/data/quality/targets/{entity}` — `system.admin` only.
+         * Set a quality target
+         * @description `PUT /api/v1/admin/data/quality/targets/{entity}` — `system.admin` only.
          *     Sets the entity's weights, threshold, timeliness, record scoring and
          *     issue due days; an absent field keeps its value (or default).
          */
         put: operations["quality_target_put"];
         post?: never;
         /**
-         * `DELETE /api/v1/admin/data/quality/targets/{entity}` — `system.admin`
+         * Remove a quality target
+         * @description `DELETE /api/v1/admin/data/quality/targets/{entity}` — `system.admin`
          *     only; the entity reverts to the defaults.
          */
         delete: operations["quality_target_delete"];
@@ -3439,11 +3754,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/data/survivorship-rules` — `system.admin` only. */
+        /**
+         * List survivorship rules
+         * @description `GET /api/v1/admin/data/survivorship-rules` — `system.admin` only.
+         */
         get: operations["list_survivorship_rules"];
         put?: never;
         /**
-         * `POST /api/v1/admin/data/survivorship-rules` — `system.admin` only.
+         * Create a survivorship rule
+         * @description `POST /api/v1/admin/data/survivorship-rules` — `system.admin` only.
          *     `409` when an active rule for this `(entity, field)` already exists
          *     (migration `0219`'s partial unique index) — update the existing one
          *     instead.
@@ -3466,7 +3785,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * `DELETE /api/v1/admin/data/survivorship-rules/{id}` — `system.admin`
+         * Delete a survivorship rule
+         * @description `DELETE /api/v1/admin/data/survivorship-rules/{id}` — `system.admin`
          *     only. The (entity, field) reverts to the implicit `most_complete`
          *     default.
          */
@@ -3483,7 +3803,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Dead letters, newest first, of one source or one group, or of every source (M5-T2). */
+        /**
+         * List dead letters
+         * @description Dead letters, newest first, of one source or one group, or of every source (M5-T2).
+         */
         get: operations["dead_letter_items"];
         put?: never;
         post?: never;
@@ -3500,7 +3823,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Dead letters from every source grouped by cause (source, step and error kind), largest group first (M5-T2). */
+        /**
+         * Dead letters by group
+         * @description Dead letters from every source grouped by cause (source, step and error kind), largest group first (M5-T2).
+         */
         get: operations["dead_letter_groups"];
         put?: never;
         post?: never;
@@ -3519,7 +3845,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Replays a whole group (M5-T2): the first item at once as a preview; when it goes through, the rest as a batch job at the given rate. */
+        /**
+         * Replay a dead-letter group
+         * @description Replays a whole group (M5-T2): the first item at once as a preview; when it goes through, the rest as a batch job at the given rate.
+         */
         post: operations["dead_letter_group_replay"];
         delete?: never;
         options?: never;
@@ -3536,7 +3865,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Drops one dead letter, with the reason on its audit event (M5-T2). A flow run is cancelled; every other item is deleted. */
+        /**
+         * Discard a dead letter
+         * @description Drops one dead letter, with the reason on its audit event (M5-T2). A flow run is cancelled; every other item is deleted.
+         */
         post: operations["dead_letter_discard"];
         delete?: never;
         options?: never;
@@ -3553,7 +3885,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Runs one dead letter again (M5-T2). */
+        /**
+         * Replay a dead letter
+         * @description Runs one dead letter again (M5-T2).
+         */
         post: operations["dead_letter_replay"];
         delete?: never;
         options?: never;
@@ -3569,7 +3904,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * AB7-T8: the most recent deploys and restarts across every node, newest
+         * Recent deploys
+         * @description AB7-T8: the most recent deploys and restarts across every node, newest
          *     first.
          */
         get: operations["deploys"];
@@ -3592,6 +3928,8 @@ export interface paths {
          * `GET /api/v1/admin/dev-tools/available` — lets the Angular admin UI hide
          *     the scaffold buttons entirely against anything other than a local dev
          *     backend, rather than show buttons that then 403.
+         *     Available developer tools
+         * @description Available developer tools. Administrators only.
          */
         get: operations["dev_tools_available"];
         put?: never;
@@ -3609,7 +3947,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Every registered device, most recently seen first. */
+        /**
+         * List devices
+         * @description Every registered device, most recently seen first.
+         */
         get: operations["list_devices"];
         put?: never;
         post?: never;
@@ -3629,7 +3970,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B18-T12: the device starts its offline data again at its next pull: a
+         * Restart a device's offline data
+         * @description B18-T12: the device starts its offline data again at its next pull: a
          *     fresh manifest, every record re-sent.
          */
         post: operations["force_offline_refresh"];
@@ -3648,7 +3990,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Asks a device to wipe itself and ends its owner's sessions everywhere. */
+        /**
+         * Wipe a device
+         * @description Asks a device to wipe itself and ends its owner's sessions everywhere.
+         */
         post: operations["wipe_device"];
         delete?: never;
         options?: never;
@@ -3810,6 +4155,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List email deliveries
+         * @description List email deliveries. Administrators only.
+         */
         get: operations["list_deliveries"];
         put?: never;
         post?: never;
@@ -3826,6 +4175,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One email delivery
+         * @description One email delivery. Administrators only.
+         */
         get: operations["get_delivery"];
         put?: never;
         post?: never;
@@ -3844,6 +4197,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Resend an email
+         * @description Resend an email. Administrators only. Audited.
+         */
         post: operations["resend_delivery"];
         delete?: never;
         options?: never;
@@ -3858,8 +4215,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List email suppressions
+         * @description List email suppressions. Administrators only.
+         */
         get: operations["list_suppressions"];
         put?: never;
+        /**
+         * Suppress an address
+         * @description Suppress an address. Administrators only. Audited.
+         */
         post: operations["add_suppression"];
         delete?: never;
         options?: never;
@@ -3877,6 +4242,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Lift a suppression
+         * @description Lift a suppression. Administrators only. Audited.
+         */
         delete: operations["remove_suppression"];
         options?: never;
         head?: never;
@@ -3890,8 +4259,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List entities
+         * @description List entities. Administrators only.
+         */
         get: operations["list_entities"];
         put?: never;
+        /**
+         * Create an entity
+         * @description Create an entity. Administrators only. Audited.
+         */
         post: operations["create_entity"];
         delete?: never;
         options?: never;
@@ -3907,7 +4284,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A20-T3: every entity, attribute and choice label with its translation in
+         * Label translation workbench
+         * @description A20-T3: every entity, attribute and choice label with its translation in
          *     `locale` and where it stands (untranslated, stale, draft, reviewed),
          *     optionally only one status.
          */
@@ -3928,13 +4306,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A20-T4: every entity, attribute and choice label as an XLIFF 2.0 file to
+         * Export labels as XLIFF
+         * @description A20-T4: every entity, attribute and choice label as an XLIFF 2.0 file to
          *     translate into `locale`, with the translations already made.
          */
         get: operations["export_xliff"];
         put?: never;
         /**
-         * A20-T4: reads a translated XLIFF 2.0 file and writes its translations as
+         * Import translated XLIFF
+         * @description A20-T4: reads a translated XLIFF 2.0 file and writes its translations as
          *     labels for its `trgLang`. Every unit must name a label that exists and keep
          *     its source's `{placeholders}`; if any unit is refused, nothing is written.
          */
@@ -3952,12 +4332,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One entity
+         * @description One entity. Administrators only.
+         */
         get: operations["get_entity"];
         put?: never;
         post?: never;
+        /**
+         * Delete an entity
+         * @description Delete an entity. Administrators only. Audited.
+         */
         delete: operations["delete_entity"];
         options?: never;
         head?: never;
+        /**
+         * Update an entity
+         * @description Update an entity. Administrators only. Audited.
+         */
         patch: operations["update_entity"];
         trace?: never;
     };
@@ -3970,6 +4362,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Plan a schema change
+         * @description Plan a schema change. Administrators only.
+         */
         post: operations["plan_changes"];
         delete?: never;
         options?: never;
@@ -3984,6 +4380,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * An entity's DDL log
+         * @description An entity's DDL log. Administrators only.
+         */
         get: operations["list_ddl_log"];
         put?: never;
         post?: never;
@@ -4003,7 +4403,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * D-195: gated behind `approval.required_actions` (empty/off by default,
+         * Add a field
+         * @description D-195: gated behind `approval.required_actions` (empty/off by default,
          *     same opt-in shape as every other wired action) — but only for an actual
          *     mutation. `dry_run: true` never writes anything (see `CreateAttributeBody
          *     ::dry_run`'s doc comment) and is answered directly, ungated, regardless
@@ -4033,7 +4434,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Solution 7 Phase 2 (D-788 rules 4 and 9): a **real delete**. The
+         * Delete a field
+         * @description Solution 7 Phase 2 (D-788 rules 4 and 9): a **real delete**. The
          *     field's non-null values are copied to the encrypted 30-day recovery
          *     archive, its references are removed (ours must already be gone — they
          *     block, listed; customer objects are adjusted and reported), the column is
@@ -4047,7 +4449,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * D-195: same gating shape as `create_attribute` above — `dry_run` is
+         * Update a field
+         * @description D-195: same gating shape as `create_attribute` above — `dry_run` is
          *     always answered directly, ungated; a real change goes through
          *     `ACTION_SCHEMA_CHANGE`.
          */
@@ -4064,7 +4467,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Solution 7 Phase 2 (D-788 rule 5): converts the field's type **in
+         * Change a field's type
+         * @description Solution 7 Phase 2 (D-788 rule 5): converts the field's type **in
          *     place**, same name. Values that do not convert become empty (even for a
          *     required field — required is application-level), are copied to the
          *     encrypted 30-day recovery archive, and are reported. At or under the size
@@ -4088,7 +4492,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A5-T3: how many records hold each value of a choice field, including
+         * How choice values are used
+         * @description A5-T3: how many records hold each value of a choice field, including
          *     values no longer offered, so an administrator sees what removing or
          *     merging one would touch. Reads only.
          */
@@ -4111,7 +4516,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Solution 7 Phase 2 (D-788 rule 6): adds a choice value (re-adding a
+         * Add a choice value
+         * @description Solution 7 Phase 2 (D-788 rule 6): adds a choice value (re-adding a
          *     removed value, with any label, is allowed and makes stored values show
          *     again). Recorded as `add_choice_value`.
          */
@@ -4133,7 +4539,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Solution 7 Phase 2 (D-788 rule 6): removes a choice value. Stored values
+         * Remove a choice value
+         * @description Solution 7 Phase 2 (D-788 rule 6): removes a choice value. Stored values
          *     stay in place (shown empty; no data step); the result counts the records
          *     that keep it (`records_with_value`). Recorded as `remove_choice_value`.
          */
@@ -4151,7 +4558,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Reports the durable-job and PostgreSQL-catalog state for an attribute's
+         * A field's index status
+         * @description Reports the durable-job and PostgreSQL-catalog state for an attribute's
          *     supporting index. Admin-only because this exposes operational queue state.
          */
         get: operations["attribute_index_status"];
@@ -4173,7 +4581,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Solution 7 Phase 2 (D-788 rule 3): renames the field **in place** — the
+         * Rename a field
+         * @description Solution 7 Phase 2 (D-788 rule 3): renames the field **in place** — the
          *     column (`ALTER TABLE … RENAME COLUMN`, no data moved), its index and
          *     CHECK names, the attribute row, and every reference through the hook
          *     registry (views, stored queries, forms, labels, rules, state models,
@@ -4201,7 +4610,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Solution 7 Phase 2 (D-788): abandons a **failed** batched run of a field
+         * Abandon a failed field run
+         * @description Solution 7 Phase 2 (D-788): abandons a **failed** batched run of a field
          *     change (a large type change, `retype`; a large delete's archive copy,
          *     `archive`) so the field is no longer `field_busy`. One transaction: the
          *     field and the run are locked; a retype's shadow column, sync trigger and
@@ -4229,7 +4639,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * P-online-schema-change §4(d). Deliberately reads its own dedicated
+         * A field's schema change status
+         * @description P-online-schema-change §4(d). Deliberately reads its own dedicated
          *     ledger row rather than deriving state the way `attribute_index_status`
          *     derives from `pg_stat_progress_create_index`/`pg_index` above: there is
          *     no Postgres system view analogous to that for a generic `ALTER TABLE`/
@@ -4255,6 +4666,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * An entity's table health
+         * @description An entity's table health. Administrators only.
+         */
         get: operations["get_entity_health"];
         put?: never;
         post?: never;
@@ -4271,6 +4686,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Index proposals for an entity
+         * @description Index proposals for an entity. Administrators only.
+         */
         get: operations["index_proposals"];
         put?: never;
         post?: never;
@@ -4287,8 +4706,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * An entity's labels
+         * @description An entity's labels. Administrators only.
+         */
         get: operations["list_labels"];
         put?: never;
+        /**
+         * Add a label
+         * @description Add a label. Administrators only. Audited.
+         */
         post: operations["create_label"];
         delete?: never;
         options?: never;
@@ -4306,9 +4733,17 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Delete a label
+         * @description Delete a label. Administrators only. Audited.
+         */
         delete: operations["delete_label"];
         options?: never;
         head?: never;
+        /**
+         * Update a label
+         * @description Update a label. Administrators only. Audited.
+         */
         patch: operations["update_label"];
         trace?: never;
     };
@@ -4319,6 +4754,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Orphaned lookup values
+         * @description Orphaned lookup values. Administrators only.
+         */
         get: operations["list_orphans"];
         put?: never;
         post?: never;
@@ -4338,7 +4777,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/entities/{entity_id}/scaffold-ui` — writes a
+         * Scaffold an entity's screens
+         * @description `POST /api/v1/admin/entities/{entity_id}/scaffold-ui` — writes a
          *     three-file (`.ts` / `.html` / `.css`) starting-point form or list component
          *     into the caller's chosen directory and, when that directory sits under
          *     `projects/xrm/forms/`, appends its registration to `provide-xrm-forms.ts`.
@@ -4360,6 +4800,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List environment variables
+         * @description List environment variables. Administrators only.
+         */
         get: operations["list_env_variables"];
         put?: never;
         post?: never;
@@ -4377,8 +4821,16 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /**
+         * Set an environment variable
+         * @description Set an environment variable. Administrators only. Audited.
+         */
         put: operations["set_env_variable"];
         post?: never;
+        /**
+         * Clear an environment variable
+         * @description Clear an environment variable. Administrators only. Audited.
+         */
         delete: operations["clear_env_variable"];
         options?: never;
         head?: never;
@@ -4392,6 +4844,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * An environment variable's history
+         * @description An environment variable's history. Administrators only.
+         */
         get: operations["env_variable_history"];
         put?: never;
         post?: never;
@@ -4507,7 +4963,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Every registered flag with its current stored policy — the Module
+         * List feature flags
+         * @description Every registered flag with its current stored policy — the Module
          *     Management "Feature Flags" admin listing.
          */
         get: operations["list_features"];
@@ -4549,7 +5006,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * Sets a flag's stored policy value (deployment default, user, team, unit
+         * Set a feature flag
+         * @description Sets a flag's stored policy value (deployment default, user, team, unit
          *     and role overrides, rollout percentage, owner, expiry and scheduled
          *     changes). Rejects an unknown key (404) and rejects
          *     turning `deployment` on while a `requires` prerequisite is not itself
@@ -4815,7 +5273,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * AG1-T3: one Hijri year's months as this deployment counts them, the
+         * Hijri months of a year
+         * @description AG1-T3: one Hijri year's months as this deployment counts them, the
          *     published Umm al-Qura starts with any moon-sighting corrections.
          *     Administrators only.
          */
@@ -4837,7 +5296,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * AG1-T3: a moon-sighting correction. The month starts on
+         * Correct a Hijri month start
+         * @description AG1-T3: a moon-sighting correction. The month starts on
          *     `gregorian_start` (at most one day from the published table) and the
          *     month before it ends the day before; both stay 29 or 30 days. Every node
          *     uses the corrected calendar within 20 seconds, this one at once.
@@ -4861,13 +5321,15 @@ export interface paths {
         };
         get?: never;
         /**
-         * B20-T3: rewords one built-in interface text in one language.
+         * Reword an interface text
+         * @description B20-T3: rewords one built-in interface text in one language.
          *     Administrators only.
          */
         put: operations["put_ui_text_override"];
         post?: never;
         /**
-         * B20-T3: goes back to the built-in wording of one text in one language.
+         * Restore an interface text
+         * @description B20-T3: goes back to the built-in wording of one text in one language.
          *     Administrators only.
          */
         delete: operations["delete_ui_text_override"];
@@ -4883,9 +5345,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List inbound hooks
+         * @description List inbound hooks. Administrators only.
+         */
         get: operations["list_inbound_hooks"];
         put?: never;
-        /** @description Defines an inbound endpoint at /api/v1/hooks/{name} (M14-T1): its authentication (hmac with a preset or custom header and encoding, or bearer), address allow-list, mTLS, required body fields, and handler (create or, by a key attribute, upsert a record, or start a flow, as run_as; an events handler routes by event type). The secret is sealed and never returned. */
+        /**
+         * Create an inbound hook
+         * @description Defines an inbound endpoint at /api/v1/hooks/{name} (M14-T1): its authentication (hmac with a preset or custom header and encoding, or bearer), address allow-list, mTLS, required body fields, and handler (create or, by a key attribute, upsert a record, or start a flow, as run_as; an events handler routes by event type). The secret is sealed and never returned.
+         */
         post: operations["create_inbound_hook"];
         delete?: never;
         options?: never;
@@ -4903,11 +5372,17 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description Removes an inbound hook (M14-T1); its endpoint answers 404 from then on. */
+        /**
+         * Delete an inbound hook
+         * @description Removes an inbound hook (M14-T1); its endpoint answers 404 from then on.
+         */
         delete: operations["delete_inbound_hook"];
         options?: never;
         head?: never;
-        /** @description Changes an inbound hook (M14-T1); a new secret rotates it. */
+        /**
+         * Update an inbound hook
+         * @description Changes an inbound hook (M14-T1); a new secret rotates it.
+         */
         patch: operations["update_inbound_hook"];
         trace?: never;
     };
@@ -4966,6 +5441,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Dead-lettered jobs
+         * @description Dead-lettered jobs. Administrators only.
+         */
         get: operations["list_dead_letter"];
         put?: never;
         post?: never;
@@ -5007,10 +5486,12 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * BJB-6c — discards one dead letter: the row is deleted while it is still
+         * Discard a dead letter
+         * @description BJB-6c — discards one dead letter: the row is deleted while it is still
          *     `Killed`, so an operator can clear something that will never be replayed
          *     instead of letting the retention sweep delete it untriaged (BJB-F9).
-         * @description `HardDelete` under `Configuration` is the honest audit category: the row is
+         *
+         *     `HardDelete` under `Configuration` is the honest audit category: the row is
          *     gone, not archived, and the event below is the only durable record that it
          *     existed. A row that is not a dead letter is a 409 — the same status the
          *     replay path answers for that condition, so a caller sees one vocabulary.
@@ -5030,6 +5511,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Replay a dead-lettered job
+         * @description Replay a dead-lettered job. Administrators only. Audited.
+         */
         post: operations["replay"];
         delete?: never;
         options?: never;
@@ -5153,7 +5638,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * AA1-T6: per-route p50, p95 and p99 latency on this node since it started,
+         * Route latency
+         * @description AA1-T6: per-route p50, p95 and p99 latency on this node since it started,
          *     from the same request-duration histogram `/metrics` exposes. Administrators
          *     only. Empty, with `enabled: false`, when metrics are off.
          */
@@ -5290,7 +5776,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Modules
+         * @description Modules. Administrators only.
+         */
         get: operations["get_module_configuration"];
+        /**
+         * Turn modules on or off
+         * @description Turn modules on or off. Administrators only. Audited.
+         */
         put: operations["update_module_configuration"];
         post?: never;
         delete?: never;
@@ -5307,8 +5801,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Every limit and its use.
-         * @description The value in force, the default, floor and ceiling, and the last seven
+         * Limits
+         * @description Limits.
+         *     Every limit and its use.
+         *
+         *     The value in force, the default, floor and ceiling, and the last seven
          *     days' hits and peak for every limit in the registry. Change a runtime
          *     limit with `PUT /api/v1/admin/settings/limits.{key}`.
          */
@@ -5329,8 +5826,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The impact of a draft change, for the publish preview.
-         * @description L5-T3: every definition downstream of the change in the lineage graph
+         * Impact of a draft change
+         * @description The impact of a draft change, for the publish preview.
+         *
+         *     L5-T3: every definition downstream of the change in the lineage graph
          *     (direct uses at depth 1, then what uses those), and the ones it would
          *     break: a deleted or retyped attribute read, derived from or written by a
          *     definition no field hook adjusts (dashboards, metrics, model
@@ -5443,13 +5942,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/metadata/break-glass` — `system.admin` only. Whether a
+         * The break-glass window
+         * @description `GET /api/v1/admin/metadata/break-glass` — `system.admin` only. Whether a
          *     window is open and how long it has left.
          */
         get: operations["break_glass_status"];
         put?: never;
         /**
-         * `POST /api/v1/admin/metadata/break-glass` — `system.admin` only. Opens a
+         * Open a break-glass window
+         * @description `POST /api/v1/admin/metadata/break-glass` — `system.admin` only. Opens a
          *     temporary authoring window on the production profile. Approval-gated
          *     (`metadata.break_glass`): when gated this returns `202` with
          *     `approval_pending: true` and opens nothing; the window opens when a
@@ -5457,7 +5958,8 @@ export interface paths {
          */
         post: operations["open_break_glass"];
         /**
-         * `DELETE /api/v1/admin/metadata/break-glass` — `system.admin` only. Closes
+         * Close the break-glass window
+         * @description `DELETE /api/v1/admin/metadata/break-glass` — `system.admin` only. Closes
          *     the window immediately. Not approval-gated: closing is the safe direction.
          */
         delete: operations["close_break_glass"];
@@ -5520,6 +6022,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Adopt changesets
+         * @description Adopt changesets. Administrators only. Audited.
+         */
         post: operations["adopt_changesets"];
         delete?: never;
         options?: never;
@@ -5536,6 +6042,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Apply changesets
+         * @description Apply changesets. Needs the metadata rollout privilege.
+         */
         post: operations["apply_changesets"];
         delete?: never;
         options?: never;
@@ -5550,6 +6060,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Changeset ledger
+         * @description Changeset ledger. Needs the metadata rollout privilege.
+         */
         get: operations["list_ledger"];
         put?: never;
         post?: never;
@@ -5566,6 +6080,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One changeset apply
+         * @description One changeset apply. Needs the metadata rollout privilege.
+         */
         get: operations["get_ledger_row"];
         put?: never;
         post?: never;
@@ -5584,6 +6102,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Plan changesets
+         * @description Plan changesets. Needs the metadata rollout privilege. Audited.
+         */
         post: operations["plan_changesets"];
         delete?: never;
         options?: never;
@@ -5599,7 +6121,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/metadata/drift` — live metadata planned against the
+         * Metadata drift
+         * @description `GET /api/v1/admin/metadata/drift` — live metadata planned against the
          *     newest `succeeded` bundle (with `allow_retire`, so an object added by hand
          *     shows as a retire rather than a blocked line). Read-only; no scheduler —
          *     `fleetctl drift` is the scheduled check, by way of `/version`'s
@@ -5622,7 +6145,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/metadata/export` — the live metadata as canonical
+         * Export the live metadata
+         * @description `GET /api/v1/admin/metadata/export` — the live metadata as canonical
          *     bundle bytes (byte-identical on a second call with no intervening change).
          */
         get: operations["export"];
@@ -5669,7 +6193,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/metadata/manifest` — document/xrm/pending_full_plan/
+         * The metadata manifest
+         * @description `GET /api/v1/admin/metadata/manifest` — document/xrm/pending_full_plan/
          *     plan.md Phase 2: "what bundle configuration is currently applied to this
          *     deployment", answerable from one call instead of hand-walking `…/plans`.
          *     Thin read over the same per-name query
@@ -5700,7 +6225,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/metadata/plans?limit=` — the ledger, newest first.
+         * List metadata plans
+         * @description `GET /api/v1/admin/metadata/plans?limit=` — the ledger, newest first.
          *     `succeeded` rows are the applied-bundle history.
          */
         get: operations["list_plans"];
@@ -5720,7 +6246,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/metadata/plans/{id}` — one ledger row in full: the
+         * One metadata plan
+         * @description `GET /api/v1/admin/metadata/plans/{id}` — one ledger row in full: the
          *     status endpoint for a running apply (status, cursor, applied_count,
          *     error_message) and the stored bundle/plan for an approver.
          */
@@ -5740,6 +6267,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List archived values
+         * @description List archived values. Administrators only.
+         */
         get: operations["list_archive"];
         put?: never;
         post?: never;
@@ -5759,7 +6290,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Restores every unexpired, unrestored value of a field (fills empty
+         * Restore a field's archived values
+         * @description Restores every unexpired, unrestored value of a field (fills empty
          *     targets only), up to [`MAX_RESTORE_PER_REQUEST`] per request.
          */
         post: operations["restore_field"];
@@ -5777,7 +6309,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One archive row with its decrypted value. Reading a value is audited
+         * One archived value
+         * @description One archive row with its decrypted value. Reading a value is audited
          *     (Security, `recovery_archive.read`, the row id — never the value).
          */
         get: operations["get_archive_value"];
@@ -5798,7 +6331,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Restores one archived value (fills an empty target only). */
+        /**
+         * Restore one archived value
+         * @description Restores one archived value (fills an empty target only).
+         */
         post: operations["restore_one"];
         delete?: never;
         options?: never;
@@ -5816,7 +6352,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Accept (keep the customer's value): nothing is written but the decision;
+         * Keep the customer's value
+         * @description Accept (keep the customer's value): nothing is written but the decision;
          *     the baseline already holds ours, so the next release does not raise it
          *     again unless we change the field again.
          */
@@ -5836,7 +6373,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Dismiss: an item the admin has seen (any kind; open or info). */
+        /**
+         * Dismiss a release report item
+         * @description Dismiss: an item the admin has seen (any kind; open or info).
+         */
         post: operations["dismiss_item"];
         delete?: never;
         options?: never;
@@ -5854,7 +6394,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Restore: every unrestored, unexpired archived value of an archive-backed
+         * Restore archived values of an item
+         * @description Restore: every unrestored, unexpired archived value of an archive-backed
          *     item, through the recovery archive's restore (fills empty targets only).
          */
         post: operations["restore_item"];
@@ -5874,7 +6415,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Use mine: our value is written now (record: in the decision's
+         * Use the release's value
+         * @description Use mine: our value is written now (record: in the decision's
          *     transaction; rule: our definition replayed, then the decision).
          */
         post: operations["use_mine_item"];
@@ -5891,6 +6433,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List release reports
+         * @description List release reports. Needs the metadata rollout privilege.
+         */
         get: operations["list_reports"];
         put?: never;
         post?: never;
@@ -5907,6 +6453,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Release report summary
+         * @description Release report summary. Needs the metadata rollout privilege.
+         */
         get: operations["report_summary"];
         put?: never;
         post?: never;
@@ -5923,6 +6473,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One release report
+         * @description One release report. Needs the metadata rollout privilege.
+         */
         get: operations["get_release_report"];
         put?: never;
         post?: never;
@@ -5939,6 +6493,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A release report's items
+         * @description A release report's items. Needs the metadata rollout privilege.
+         */
         get: operations["list_items"];
         put?: never;
         post?: never;
@@ -5978,6 +6536,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Metadata rollout status
+         * @description Metadata rollout status. Needs the metadata rollout privilege.
+         */
         get: operations["rollout_status"];
         put?: never;
         post?: never;
@@ -5997,7 +6559,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/metadata/sync` — re-check `deployment.bundle_ref`
+         * Sync the deployment bundle
+         * @description `POST /api/v1/admin/metadata/sync` — re-check `deployment.bundle_ref`
          *     (P-environment-promotion §5 step 23): fetch, Ed25519-verify, plan against
          *     live metadata, and — unless it is all-noop or has blocked entries — queue
          *     it through the same gated apply path `mode=apply` uses. Idempotent:
@@ -6083,8 +6646,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List migration projects
+         * @description List migration projects. Administrators only.
+         */
         get: operations["list_projects"];
         put?: never;
+        /**
+         * Create a migration project
+         * @description Create a migration project. Administrators only. Audited.
+         */
         post: operations["create_project"];
         delete?: never;
         options?: never;
@@ -6099,9 +6670,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One migration project
+         * @description One migration project. Administrators only.
+         */
         get: operations["get_project"];
+        /**
+         * Replace a migration project
+         * @description Replace a migration project. Administrators only. Audited.
+         */
         put: operations["update_project"];
         post?: never;
+        /**
+         * Delete a migration project
+         * @description Delete a migration project. Administrators only. Audited.
+         */
         delete: operations["delete_project"];
         options?: never;
         head?: never;
@@ -6115,8 +6698,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A migration project's runs
+         * @description A migration project's runs. Administrators only.
+         */
         get: operations["list_runs"];
         put?: never;
+        /**
+         * Start a migration run
+         * @description Start a migration run. Administrators only. Audited.
+         */
         post: operations["create_run"];
         delete?: never;
         options?: never;
@@ -6131,6 +6722,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One migration run
+         * @description One migration run. Administrators only.
+         */
         get: operations["get_run"];
         put?: never;
         post?: never;
@@ -6148,7 +6743,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET .../runs/{run_id}/errors` — a downloadable CSV of every non-passing
+         * A migration run's errors
+         * @description `GET .../runs/{run_id}/errors` — a downloadable CSV of every non-passing
          *     row in the linked staged import's `validation_report` (both the
          *     pre-approval `passed`/`failed`/`rejected` vocabulary and the
          *     post-approval `succeeded`/`failed`/`rejected` one — see this module's
@@ -6175,6 +6771,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Roll back a migration run
+         * @description Roll back a migration run. Administrators only.
+         */
         post: operations["rollback_run"];
         delete?: never;
         options?: never;
@@ -6192,7 +6792,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Applies a blueprint (N12-T3): every new or changed object is saved and
+         * Apply a blueprint
+         * @description Applies a blueprint (N12-T3): every new or changed object is saved and
          *     published in one transaction, so a blueprint lands whole or not at all.
          *     Objects already the same are left alone.
          */
@@ -6213,7 +6814,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * What applying a blueprint would change, without changing anything
+         * Plan a blueprint
+         * @description What applying a blueprint would change, without changing anything
          *     (N12-T3): each object new, changed or the same as what is published.
          */
         post: operations["blueprint_plan"];
@@ -6233,7 +6835,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Rolls a blueprint back (N12-T3): each object returns to the version it
+         * Roll a blueprint back
+         * @description Rolls a blueprint back (N12-T3): each object returns to the version it
          *     had before, published again as a new version; an object the blueprint
          *     created is left as it is, for an administrator to retire.
          */
@@ -6274,7 +6877,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Exports the newest version (the draft, when there is one) of every object
+         * Export metadata objects
+         * @description Exports the newest version (the draft, when there is one) of every object
          *     in the store, one file per object. Adapter kinds (entities, attributes)
          *     live in their own tables and travel in bundles, not here.
          */
@@ -6296,7 +6900,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Fills a published flow template with its arguments and answers the graph, or the arguments' issues (M6-T4). Writes nothing; save the graph as a new flow's draft. */
+        /**
+         * Create a flow from a template
+         * @description Fills a published flow template with its arguments and answers the graph, or the arguments' issues (M6-T4). Writes nothing; save the graph as a new flow's draft.
+         */
         post: operations["model_flow_template_instantiate"];
         delete?: never;
         options?: never;
@@ -6311,7 +6918,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/model/health` */
+        /**
+         * Metadata model health
+         * @description `GET /api/v1/admin/model/health`
+         */
         get: operations["model_health"];
         put?: never;
         post?: never;
@@ -6331,7 +6941,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Imports object files as drafts: an object with the same kind, app and
+         * Import metadata objects
+         * @description Imports object files as drafts: an object with the same kind, app and
          *     name gets a new draft, any other is created. Nothing is published. Every
          *     file is read (and upgraded to its kind's current shape) before anything
          *     is saved, and all drafts save in one transaction, so a bad file saves
@@ -6351,7 +6962,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists every registered kind. */
+        /**
+         * List metadata kinds
+         * @description Lists every registered kind.
+         */
         get: operations["list_kinds"];
         put?: never;
         post?: never;
@@ -6369,7 +6983,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A21-T5: each item of a published menu with its opens over the last
+         * Menu item usage
+         * @description A21-T5: each item of a published menu with its opens over the last
          *     `days` (default 60), the items nobody opened flagged `unused`.
          *     Administrators only.
          */
@@ -6409,7 +7024,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists the objects of one kind. */
+        /**
+         * List a kind's objects
+         * @description Lists the objects of one kind.
+         */
         get: operations["list_objects"];
         put?: never;
         post?: never;
@@ -6426,7 +7044,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Reads an object's newest version (its draft, when it has one). */
+        /**
+         * Read a metadata object
+         * @description Reads an object's newest version (its draft, when it has one).
+         */
         get: operations["get_object"];
         put?: never;
         post?: never;
@@ -6446,7 +7067,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Applies edit commands to an object's draft (creating the object on its
+         * Edit an object's draft
+         * @description Applies edit commands to an object's draft (creating the object on its
          *     first edit) and saves it.
          */
         post: operations["apply_commands"];
@@ -6463,7 +7085,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The RFC 6902 operations from one version to another. */
+        /**
+         * Diff two object versions
+         * @description The RFC 6902 operations from one version to another.
+         */
         get: operations["get_diff"];
         put?: never;
         post?: never;
@@ -6480,7 +7105,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists an object's versions, newest first. */
+        /**
+         * An object's versions
+         * @description Lists an object's versions, newest first.
+         */
         get: operations["get_history"];
         put?: never;
         post?: never;
@@ -6500,7 +7128,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Publishes an object's open draft once it passes the publish checks, and
+         * Publish an object
+         * @description Publishes an object's open draft once it passes the publish checks, and
          *     refreshes the cooked metadata.
          */
         post: operations["publish_model_object"];
@@ -6517,7 +7146,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The references an object makes. */
+        /**
+         * An object's references
+         * @description The references an object makes.
+         */
         get: operations["get_references"];
         put?: never;
         post?: never;
@@ -6536,7 +7168,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Checks a document as it would be saved, without saving it. */
+        /**
+         * Validate an object
+         * @description Checks a document as it would be saved, without saving it.
+         */
         post: operations["validate"];
         delete?: never;
         options?: never;
@@ -6551,7 +7186,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Reads one version of an object. */
+        /**
+         * Read an object version
+         * @description Reads one version of an object.
+         */
         get: operations["get_model_version"];
         put?: never;
         post?: never;
@@ -6568,8 +7206,39 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Web chat metrics
+         * @description Web chat conversations over the last 30 days, the average first response time and the average satisfaction score where one was given. Administrators only.
+         */
         get: operations["web_chat_metrics"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/openapi/overlay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The deployment's OpenAPI overlay
+         * @description The overlay applied to the deployment document. Administrators only.
+         */
+        get: operations["get_overlay"];
+        /**
+         * Replace the OpenAPI overlay
+         * @description Sets the overlay applied to the deployment document: its actions may set
+         *     only summary, description and example on `/api/v1/` paths and their
+         *     operations. Send the current `row_version` (0 for the first). Administrators
+         *     only.
+         */
+        put: operations["put_overlay"];
         post?: never;
         delete?: never;
         options?: never;
@@ -6585,7 +7254,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * U4-T2: every metric this server emits, with its kind, unit and meaning in
+         * Metric catalogue
+         * @description U4-T2: every metric this server emits, with its kind, unit and meaning in
          *     English and Arabic.
          */
         get: operations["metric_catalogue"];
@@ -6604,7 +7274,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** U4-T4: the metric names sampled in the last hour. */
+        /**
+         * Recent metric names
+         * @description U4-T4: the metric names sampled in the last hour.
+         */
         get: operations["metric_names"];
         put?: never;
         post?: never;
@@ -6622,7 +7295,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * U4-T4: a metric's values over time from the built-in metrics store
+         * Query a metric
+         * @description U4-T4: a metric's values over time from the built-in metrics store
          *     (U4-T1), averaged per `step`. Administrators only.
          */
         get: operations["metric_query"];
@@ -6642,7 +7316,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * U4-T4: the nodes that stored metrics in the last day, from their
+         * Nodes
+         * @description U4-T4: the nodes that stored metrics in the last day, from their
          *     once-a-minute heartbeat (`attome_node_up`); a node silent for three
          *     minutes is shown as unhealthy. Administrators only.
          */
@@ -6663,7 +7338,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * U4-T5: the jobs a request queued and the audit events it wrote, found by
+         * Trace a request
+         * @description U4-T5: the jobs a request queued and the audit events it wrote, found by
          *     the request id every response carries (`x-request-id`). Administrators
          *     only.
          */
@@ -6817,6 +7493,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Profiler statistics
+         * @description Profiler statistics. Administrators only.
+         */
         get: operations["stats"];
         put?: never;
         post?: never;
@@ -6851,6 +7531,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Profiler trace
+         * @description Profiler trace. Administrators only.
+         */
         get: operations["trace"];
         put?: never;
         post?: never;
@@ -6867,6 +7551,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List stored queries
+         * @description Every stored query. Administrators only.
+         */
         get: operations["list_queries"];
         put?: never;
         /**
@@ -6938,7 +7626,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Describes the output shape of an unsaved SELECT without fetching rows.
+         * Describe a query's columns
+         * @description Describes the output shape of an unsaved SELECT without fetching rows.
          *     The same readonly identity and publish-time lint used for stored queries
          *     keep this preview from becoming a bypass around query containment.
          */
@@ -6956,9 +7645,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One stored query
+         * @description A stored query's definition. Administrators only.
+         */
         get: operations["get_query"];
         put?: never;
         post?: never;
+        /**
+         * Delete a stored query
+         * @description Retires a stored query. Administrators only; audited.
+         */
         delete: operations["delete_query"];
         options?: never;
         head?: never;
@@ -6978,6 +7675,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Rate-limit bans
+         * @description Rate-limit bans. Administrators only.
+         */
         get: operations["list_rate_limit_bans"];
         put?: never;
         post?: never;
@@ -6997,6 +7698,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Lift a rate-limit ban
+         * @description Lift a rate-limit ban. Administrators only. Audited.
+         */
         delete: operations["lift_rate_limit_ban"];
         options?: never;
         head?: never;
@@ -7126,7 +7831,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/relationships` — `system.admin` only. `?entity=`
+         * List relationships
+         * @description `GET /api/v1/admin/relationships` — `system.admin` only. `?entity=`
          *     narrows to relationships touching one entity on either side.
          */
         get: operations["list_relationships"];
@@ -7164,12 +7870,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/relationships/{id}` — `system.admin` only. */
+        /**
+         * One relationship
+         * @description `GET /api/v1/admin/relationships/{id}` — `system.admin` only.
+         */
         get: operations["get_relationship"];
         put?: never;
         post?: never;
         /**
-         * `DELETE /api/v1/admin/relationships/{id}` — `system.admin` only.
+         * Delete a relationship
+         * @description `DELETE /api/v1/admin/relationships/{id}` — `system.admin` only.
          *     Soft-retires the relationship DEFINITION (`is_deleted = true`); never
          *     drops the physical join table or its data — see
          *     `attome_metadata::provision::retire_relationship`'s doc comment. A retired
@@ -7181,7 +7891,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * `PATCH /api/v1/admin/relationships/{id}` — `system.admin` only.
+         * Update a relationship
+         * @description `PATCH /api/v1/admin/relationships/{id}` — `system.admin` only.
          *     `entity_a`/`entity_b`/`name`/`join_table` are immutable (delete and
          *     recreate under a new name to retarget) — same posture
          *     `update_match_rule` takes for `entity`. See `create_relationship`'s doc
@@ -7458,6 +8169,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Software bill of materials
+         * @description Software bill of materials. Administrators only.
+         */
         get: operations["get_sbom"];
         put?: never;
         post?: never;
@@ -7474,7 +8189,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Every schedule in one place (M12-T3): flow schedule triggers, report deliveries and the platform's own schedulers (read-only), with next and last run, owner and whether paused; and the quiet windows heavy schedules wait out. One page holds them all. */
+        /**
+         * List schedules
+         * @description Every schedule in one place (M12-T3): flow schedule triggers, report deliveries and the platform's own schedulers (read-only), with next and last run, owner and whether paused; and the quiet windows heavy schedules wait out. One page holds them all.
+         */
         get: operations["list_schedules"];
         put?: never;
         post?: never;
@@ -7493,7 +8211,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Pauses a flow or report schedule (M12-T3): its sweep skips it until it is resumed. Pausing a paused schedule changes nothing. */
+        /**
+         * Pause a schedule
+         * @description Pauses a flow or report schedule (M12-T3): its sweep skips it until it is resumed. Pausing a paused schedule changes nothing.
+         */
         post: operations["pause_schedule"];
         delete?: never;
         options?: never;
@@ -7510,7 +8231,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Resumes a paused flow or report schedule (M12-T3); its next due slot starts as usual. */
+        /**
+         * Resume a schedule
+         * @description Resumes a paused flow or report schedule (M12-T3); its next due slot starts as usual.
+         */
         post: operations["resume_schedule"];
         delete?: never;
         options?: never;
@@ -7525,10 +8249,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists SCIM tokens (never their secrets). */
+        /**
+         * List SCIM tokens
+         * @description Lists SCIM tokens (never their secrets).
+         */
         get: operations["scim_list_tokens"];
         put?: never;
-        /** Issues a SCIM token for an identity provider. */
+        /**
+         * Issue a SCIM token
+         * @description Issues a SCIM token for an identity provider.
+         */
         post: operations["scim_issue_token"];
         delete?: never;
         options?: never;
@@ -7546,7 +8276,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Revokes a SCIM token. */
+        /**
+         * Revoke a SCIM token
+         * @description Revokes a SCIM token.
+         */
         delete: operations["scim_revoke_token"];
         options?: never;
         head?: never;
@@ -7576,8 +8309,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List access reviews
+         * @description Every access review campaign and its status. Administrators only.
+         */
         get: operations["list_access_reviews"];
         put?: never;
+        /**
+         * Start an access review
+         * @description Opens an access review campaign over one role's holders, one team's members or one entity's user shares: one item per grant held now, to keep or revoke. Administrators only; audited.
+         */
         post: operations["create_access_review"];
         delete?: never;
         options?: never;
@@ -7592,6 +8333,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One access review
+         * @description One access review campaign: its scope and status. Administrators only.
+         */
         get: operations["get_access_review"];
         put?: never;
         post?: never;
@@ -7608,6 +8353,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * An access review's items
+         * @description The grants under review in a campaign, each with its decision so far. Administrators only.
+         */
         get: operations["list_access_review_items"];
         put?: never;
         post?: never;
@@ -7626,6 +8375,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Decide an access review item
+         * @description Keeps or revokes one grant under review, through the approval engine: nobody decides their own access, and a revoke removes the grant. Administrators only; audited.
+         */
         post: operations["decide_access_review_item"];
         delete?: never;
         options?: never;
@@ -7680,8 +8433,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List default shares
+         * @description Blanket shares that apply to every record of an entity. Administrators only.
+         */
         get: operations["list_entity_default_shares"];
         put?: never;
+        /**
+         * Add a default share
+         * @description Shares every record of an entity with a user, team or role, configured once for the entity. Administrators only; audited.
+         */
         post: operations["create_entity_default_share"];
         delete?: never;
         options?: never;
@@ -7699,6 +8460,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a default share
+         * @description Removes a blanket share of an entity's records. Administrators only; audited.
+         */
         delete: operations["delete_entity_default_share"];
         options?: never;
         head?: never;
@@ -7748,8 +8513,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List field-security profiles
+         * @description Every field-security profile. Administrators only.
+         */
         get: operations["list_field_profiles"];
         put?: never;
+        /**
+         * Create a field-security profile
+         * @description Creates a field-security profile, to assign to roles. Administrators only; audited.
+         */
         post: operations["create_field_profile"];
         delete?: never;
         options?: never;
@@ -7766,6 +8539,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Assign a profile to a role
+         * @description Gives a role the field rights of a field-security profile. Administrators only; audited.
+         */
         post: operations["assign_field_profile"];
         delete?: never;
         options?: never;
@@ -7783,6 +8560,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Unassign a profile from a role
+         * @description Takes a field-security profile's rights away from a role. Administrators only; audited.
+         */
         delete: operations["unassign_field_profile"];
         options?: never;
         head?: never;
@@ -7796,10 +8577,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A profile's field rights
+         * @description The entity fields a field-security profile can read or update. Administrators only.
+         */
         get: operations["list_field_profile_fields"];
         put?: never;
         /**
-         * Upserts one `(entity, field)` row's `can_read`/`can_update` for
+         * Set a profile's field right
+         * @description Upserts one `(entity, field)` row's `can_read`/`can_update` for
          *     `profile_id` — the bulk-set primitive the field-profile admin UI's
          *     per-field checkboxes call one at a time; there's no separate "delete a
          *     field row" endpoint since `can_read = false, can_update = false` is the
@@ -7819,8 +8605,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List privilege grants
+         * @description Privileges granted straight to users, outside their roles. Administrators only.
+         */
         get: operations["list_grants"];
         put?: never;
+        /**
+         * Grant a privilege to a user
+         * @description Grants one privilege to one user directly. Administrators only; audited.
+         */
         post: operations["create_grant"];
         delete?: never;
         options?: never;
@@ -7838,6 +8632,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Revoke a privilege grant
+         * @description Takes a directly granted privilege away from its user at once. Administrators only; audited.
+         */
         delete: operations["delete_grant"];
         options?: never;
         head?: never;
@@ -7854,7 +8652,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Binds `(provider_key, provider_sub)` to `user_ref` via the same
+         * Link a federated identity
+         * @description Binds `(provider_key, provider_sub)` to `user_ref` via the same
          *     `link_identity_to_user` primitive the session-gated self-service linking
          *     callback uses (§4.3(a)/(b) share one write path) — idempotent if this
          *     exact pair is already linked to this exact user, `Conflict` if linked to
@@ -7878,10 +8677,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List invitations
+         * @description Pending, used and expired invitations, newest first. Administrators only.
+         */
         get: operations["list_invitations"];
         put?: never;
         /**
-         * Mints an invitation and, when this deployment has email configured,
+         * Invite a person
+         * @description Mints an invitation and, when this deployment has email configured,
          *     enqueues it (`EngineJob::SendEmail`, never sent on the request path —
          *     guidelines §10) in the same transaction as the token insert — same
          *     commit-together discipline as `register`/`reset_request`, so an enqueue
@@ -7911,7 +8715,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Revokes a pending (unconsumed, unexpired) invitation by stamping `used_at`
+         * Revoke an invitation
+         * @description Revokes a pending (unconsumed, unexpired) invitation by stamping `used_at`
          *     — the same single-use marker `validate_and_consume` checks, so a revoked
          *     invitation fails exactly like an already-used one (no separate "revoked"
          *     state to add to `register`'s undifferentiated-403 reasoning, D-128 §8).
@@ -7929,6 +8734,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * MFA coverage by user
+         * @description Each user's second-factor state against the policy that applies to them. Administrators only.
+         */
         get: operations["mfa_coverage"];
         put?: never;
         post?: never;
@@ -7945,6 +8754,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * MFA coverage summary
+         * @description How many users meet their second-factor policy and how many do not. Administrators only.
+         */
         get: operations["mfa_coverage_summary"];
         put?: never;
         post?: never;
@@ -7961,6 +8774,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List business units
+         * @description The business units (organizations). Administrators only.
+         */
         get: operations["list_organizations"];
         put?: never;
         post?: never;
@@ -7977,8 +8794,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A business unit's members
+         * @description The users who belong to a business unit. Administrators only.
+         */
         get: operations["list_organization_members"];
         put?: never;
+        /**
+         * Add a user to a business unit
+         * @description Makes a user a member of a business unit. Administrators only; audited.
+         */
         post: operations["add_organization_member"];
         delete?: never;
         options?: never;
@@ -7996,6 +8821,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a user from a business unit
+         * @description Ends a user's membership of a business unit. Administrators only; audited.
+         */
         delete: operations["remove_organization_member"];
         options?: never;
         head?: never;
@@ -8009,8 +8838,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List positions
+         * @description The position hierarchy used by position-based record access. Administrators only.
+         */
         get: operations["list_positions"];
         put?: never;
+        /**
+         * Create a position
+         * @description Adds a position to the hierarchy. Administrators only; audited.
+         */
         post: operations["create_position"];
         delete?: never;
         options?: never;
@@ -8028,6 +8865,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Delete a position
+         * @description Deletes a position. Administrators only; audited.
+         */
         delete: operations["delete_position"];
         options?: never;
         head?: never;
@@ -8043,6 +8884,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Put a user in a position
+         * @description Assigns a user to a position in the hierarchy. Administrators only; audited.
+         */
         post: operations["add_position_member"];
         delete?: never;
         options?: never;
@@ -8060,6 +8905,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Take a user out of a position
+         * @description Ends a user's place in a position. Administrators only; audited.
+         */
         delete: operations["remove_position_member"];
         options?: never;
         head?: never;
@@ -8075,7 +8924,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * Reparents an existing position — the mutation `create_position` alone
+         * Move a position
+         * @description Reparents an existing position — the mutation `create_position` alone
          *     can't cover. Guarded against creating a cycle via
          *     `would_create_position_cycle` before writing;
          *     `resolve_subordinate_user_ids`'s own recursive-CTE depth bound is defense
@@ -8096,6 +8946,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List privileges
+         * @description Every privilege key the deployment knows. Administrators only.
+         */
         get: operations["list_privileges"];
         put?: never;
         post?: never;
@@ -8112,10 +8966,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List record shares
+         * @description Explicit shares and denials on individual records. Administrators only.
+         */
         get: operations["list_record_shares"];
         put?: never;
         /**
-         * Creates (or reactivates) a share/deny row on one record. Never touches
+         * Share a record
+         * @description Creates (or reactivates) a share/deny row on one record. Never touches
          *     the implicit creator-share — that row is written only by
          *     `entity_crud::create_record`, with `principal_id` fixed to the caller
          *     who made the record; this endpoint is for every OTHER grant (F137
@@ -8194,6 +9053,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a record share
+         * @description Ends one share or denial on a record. Administrators only; audited.
+         */
         delete: operations["delete_record_share"];
         options?: never;
         head?: never;
@@ -8235,10 +9098,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List role entity access
+         * @description Each role's access level per entity. Administrators only.
+         */
         get: operations["list_entity_access_grants"];
         put?: never;
         /**
-         * Upserts one `(role, entity)` grant row — the mutation a deployment
+         * Set a role's entity access
+         * @description Upserts one `(role, entity)` grant row — the mutation a deployment
          *     actually uses to opt a role into narrowed record-level scoping for a
          *     specific entity, since a role holding the underlying privilege but no row
          *     here defaults to `Global` on every action (D-133's zero-behavior-change
@@ -8265,7 +9133,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Soft-deletes one `(role, entity)` grant row — after this, the role holds
+         * Remove a role's entity access
+         * @description Soft-deletes one `(role, entity)` grant row — after this, the role holds
          *     no entity-access row for this entity at all, so `resolve_entity_access_level`
          *     falls back to its default (`Global`) for every action on this entity,
          *     same as a role that never had a row here in the first place.
@@ -8283,8 +9152,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List role grants
+         * @description The privileges each role holds. Administrators only.
+         */
         get: operations["list_role_grants"];
         put?: never;
+        /**
+         * Grant a privilege to a role
+         * @description Gives a role one privilege, for every holder of the role. Administrators only; audited.
+         */
         post: operations["create_role_grant"];
         delete?: never;
         options?: never;
@@ -8299,8 +9176,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A role grant's conditions
+         * @description The conditions on a role grant. Administrators only.
+         */
         get: operations["list_conditions"];
         put?: never;
+        /**
+         * Add a condition to a role grant
+         * @description Adds a field condition to a role grant. Administrators only; audited.
+         */
         post: operations["create_condition"];
         delete?: never;
         options?: never;
@@ -8318,6 +9203,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a role grant condition
+         * @description Removes one condition from a role grant. Administrators only; audited.
+         */
         delete: operations["delete_condition"];
         options?: never;
         head?: never;
@@ -8334,6 +9223,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Revoke a role grant
+         * @description Takes a privilege away from a role and every holder of it. Administrators only; audited.
+         */
         delete: operations["delete_role_grant"];
         options?: never;
         head?: never;
@@ -8347,8 +9240,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List roles
+         * @description Every role. Administrators only.
+         */
         get: operations["list_roles"];
         put?: never;
+        /**
+         * Create a role
+         * @description Creates an empty role; privileges and entity access are added to it separately. Administrators only; audited.
+         */
         post: operations["create_role"];
         delete?: never;
         options?: never;
@@ -8369,6 +9270,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Update a role
+         * @description Updates a role's details. Administrators only; audited.
+         */
         patch: operations["update_role"];
         trace?: never;
     };
@@ -8396,7 +9301,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A role's field access
+         * @description The field read and update access a role has, for editing many fields at once. Administrators only.
+         */
         get: operations["get_role_bulk_fields"];
+        /**
+         * Set a role's field access
+         * @description Sets a role's read and update access on many fields in one change. Administrators only; audited.
+         */
         put: operations["put_role_bulk_fields"];
         post?: never;
         delete?: never;
@@ -8414,7 +9327,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * Toggles a role's F138 opt-in flag — the mutation a deployment actually
+         * Turn position access on for a role
+         * @description Toggles a role's F138 opt-in flag — the mutation a deployment actually
          *     uses to turn position-hierarchy scoping on for a role after the fact,
          *     mirroring `upsert_entity_access_grant`'s invalidation fan-out exactly
          *     (same every-current-holder pattern via `users_holding_role`, covering
@@ -8436,7 +9350,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Reverse of `user_roles::list_user_roles` — direct assignments only
+         * A role's users
+         * @description Reverse of `user_roles::list_user_roles` — direct assignments only
          *     (`user_account_mm_role`), same team-mediated-roles caveat: a user
          *     holding this role only via team membership does not appear here, mirrored
          *     instead through `teams::list_team_roles`. Backs the Role form's
@@ -8462,7 +9377,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Denylists `jti` for the max access-token TTL from now: any token carrying
+         * Revoke a session
+         * @description Denylists `jti` for the max access-token TTL from now: any token carrying
          *     that `jti` was minted at most that long ago, so it cannot outlive the
          *     denylist entry — see `attome_auth::revocation::revoke`'s doc comment.
          */
@@ -8480,8 +9396,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List teams
+         * @description Every team. Administrators only.
+         */
         get: operations["list_teams"];
         put?: never;
+        /**
+         * Create a team
+         * @description Creates a team, to share records with and to give roles to as a group. Administrators only; audited.
+         */
         post: operations["create_team"];
         delete?: never;
         options?: never;
@@ -8499,6 +9423,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Delete a team
+         * @description Deletes a team. Administrators only; audited.
+         */
         delete: operations["delete_team"];
         options?: never;
         head?: never;
@@ -8512,8 +9440,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A team's members
+         * @description The users in a team. Administrators only.
+         */
         get: operations["list_team_members"];
         put?: never;
+        /**
+         * Add a team member
+         * @description Adds a user to a team, so they hold the team's roles. Administrators only; audited.
+         */
         post: operations["add_team_member"];
         delete?: never;
         options?: never;
@@ -8531,6 +9467,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a team member
+         * @description Takes a user out of a team. Administrators only; audited.
+         */
         delete: operations["remove_team_member"];
         options?: never;
         head?: never;
@@ -8544,10 +9484,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A team's roles
+         * @description The roles a team gives its members. Administrators only.
+         */
         get: operations["list_team_roles"];
         put?: never;
         /**
-         * Assigns `role_id` to every member of `team_id` — the D-133 "everyone on
+         * Give a team a role
+         * @description Assigns `role_id` to every member of `team_id` — the D-133 "everyone on
          *     Finance team gets Finance Role" association. Distinct from
          *     `role_grants::create_role_grant` (role → privilege); this is role → team.
          *     Takes a `{role_id}` object body (not a bare JSON UUID) — same shape every
@@ -8573,6 +9518,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Take a role from a team
+         * @description Removes a role from a team. Administrators only; audited.
+         */
         delete: operations["remove_team_role"];
         options?: never;
         head?: never;
@@ -8587,7 +9536,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * P-admin-list-pagination: previously a flat `LIMIT 500` with no `total` and
+         * List users
+         * @description P-admin-list-pagination: previously a flat `LIMIT 500` with no `total` and
          *     no way to see past row 500 — a deployment with more users than that had
          *     rows silently invisible to admins, with no signal that truncation had
          *     happened. Same `PaginatedResponse<T>`/`page`+`page_size` envelope every
@@ -8610,6 +9560,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Look up users
+         * @description Finds users whose email starts with the text typed, at most 20, for pickers. Administrators only.
+         */
         get: operations["lookup_users"];
         put?: never;
         post?: never;
@@ -8629,7 +9583,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `Authorized<Admin>` rather than the delegate's own `require_admin()` doing
+         * Disable a user
+         * @description `Authorized<Admin>` rather than the delegate's own `require_admin()` doing
          *     all the work: `set_user_active` still performs that check (it is also
          *     reachable from other callers), but the gate now also holds at this route's
          *     own boundary, where it is visible to a reviewer reading the handler alone.
@@ -8648,6 +9603,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A user's effective access
+         * @description What a user can do on each entity once their roles, teams and grants are combined. Administrators only.
+         */
         get: operations["effective_access_preview"];
         put?: never;
         post?: never;
@@ -8666,6 +9625,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Enable a user
+         * @description Lets a disabled user sign in again. Administrators only; audited.
+         */
         post: operations["enable_user"];
         delete?: never;
         options?: never;
@@ -8708,7 +9671,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists roles directly assigned to `user_id` via `user_account_mm_role`
+         * A user's roles
+         * @description Lists roles directly assigned to `user_id` via `user_account_mm_role`
          *     only — team-mediated roles (`role_mm_team` via
          *     `user_account_mm_team`, unioned in by `resolve_entity_access_level`/
          *     `resolve_privileges`) are a separate path, visible instead through
@@ -8747,7 +9711,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Revokes a direct role assignment (soft-delete). Team-mediated access to
+         * Take a role from a user
+         * @description Revokes a direct role assignment (soft-delete). Team-mediated access to
          *     the same role, if any, is untouched — see `teams::remove_team_role` for
          *     that path.
          */
@@ -8790,7 +9755,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists every runtime-eligible setting with its deployment-perspective
+         * List settings
+         * @description Lists every runtime-eligible setting with its deployment-perspective
          *     effective value (deployment override if one exists, else the code
          *     default) — an administrator's overview, not any one user's resolved
          *     view. `boot_time_only` descriptors never appear here (M02 §6).
@@ -8813,7 +9779,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * Sets a value at an explicit scope — the admin-only path, able to write
+         * Set a setting
+         * @description Sets a value at an explicit scope — the admin-only path, able to write
          *     deployment defaults or seed an organization's/user's override on their
          *     behalf. Rejects `boot_time_only` keys (M02 §6's required behavior) and
          *     any key `SettingRegistry` doesn't recognize.
@@ -8865,6 +9832,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Service level objectives
+         * @description Service level objectives. Administrators only.
+         */
         get: operations["get_slo_overview"];
         put?: never;
         post?: never;
@@ -8881,6 +9852,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List SLO reports
+         * @description List SLO reports. Administrators only.
+         */
         get: operations["list_slo_reports"];
         put?: never;
         post?: never;
@@ -8897,6 +9872,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One SLO report
+         * @description One SLO report. Administrators only.
+         */
         get: operations["get_slo_report"];
         put?: never;
         post?: never;
@@ -8914,8 +9893,16 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /**
+         * Set an SLO target
+         * @description Set an SLO target. Administrators only. Audited.
+         */
         put: operations["set_slo_target"];
         post?: never;
+        /**
+         * Remove an SLO target
+         * @description Remove an SLO target. Administrators only. Audited.
+         */
         delete: operations["clear_slo_target"];
         options?: never;
         head?: never;
@@ -8993,6 +9980,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Table health
+         * @description Table health. Administrators only.
+         */
         get: operations["get_table_health"];
         put?: never;
         post?: never;
@@ -9009,10 +10000,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** B4-T2: tag groups. */
+        /**
+         * List tag groups
+         * @description B4-T2: tag groups.
+         */
         get: operations["list_tag_groups"];
         put?: never;
-        /** B4-T2: creates a tag group with its create policy. Administrators only. */
+        /**
+         * Create a tag group
+         * @description B4-T2: creates a tag group with its create policy. Administrators only.
+         */
         post: operations["create_tag_group"];
         delete?: never;
         options?: never;
@@ -9030,7 +10027,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B4-T3: merges a shared tag into another; its links move over and its
+         * Merge a tag
+         * @description B4-T3: merges a shared tag into another; its links move over and its
          *     name keeps finding the other tag. Administrators only.
          */
         post: operations["merge_tag_route"];
@@ -9049,7 +10047,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** B4-T3: undoes a tag merge. Administrators only. */
+        /**
+         * Undo a tag merge
+         * @description B4-T3: undoes a tag merge. Administrators only.
+         */
         post: operations["unmerge_tag_route"];
         delete?: never;
         options?: never;
@@ -9080,10 +10081,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** B13-T4: every theme version, by scope, newest first. */
+        /**
+         * List theme versions
+         * @description B13-T4: every theme version, by scope, newest first.
+         */
         get: operations["list_themes"];
         put?: never;
-        /** B13-T4: saves a new draft version of a scope's theme. */
+        /**
+         * Save a draft theme
+         * @description B13-T4: saves a new draft version of a scope's theme.
+         */
         post: operations["create_theme"];
         delete?: never;
         options?: never;
@@ -9100,7 +10107,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** B13-T4: checks colours without saving anything. */
+        /**
+         * Check theme colours
+         * @description B13-T4: checks colours without saving anything.
+         */
         post: operations["preview_theme"];
         delete?: never;
         options?: never;
@@ -9117,7 +10127,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** B13-T3: publishes an earlier version of a scope's theme again. */
+        /**
+         * Roll a theme back
+         * @description B13-T3: publishes an earlier version of a scope's theme again.
+         */
         post: operations["rollback_theme"];
         delete?: never;
         options?: never;
@@ -9132,14 +10145,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** B13-T4: one theme version. */
+        /**
+         * One theme version
+         * @description B13-T4: one theme version.
+         */
         get: operations["get_theme"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** B13-T4: replaces a draft's tokens. `If-Match: "<row_version>"` is required. */
+        /**
+         * Update a draft theme
+         * @description B13-T4: replaces a draft's tokens. `If-Match: "<row_version>"` is required.
+         */
         patch: operations["update_theme"];
         trace?: never;
     };
@@ -9150,11 +10169,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** B13-T4: a theme version's assets. */
+        /**
+         * A theme's assets
+         * @description B13-T4: a theme version's assets.
+         */
         get: operations["list_theme_assets"];
         put?: never;
         /**
-         * B13-T4: uploads one asset of a draft theme as the raw request body, with
+         * Upload a theme asset
+         * @description B13-T4: uploads one asset of a draft theme as the raw request body, with
          *     its `Content-Type`. At most 2 MB; PNG, SVG, ICO, WOFF2 or PDF as the kind
          *     allows. An SVG with a script, event handler, external reference or
          *     foreign object is refused. Replaces the draft's asset of that kind.
@@ -9173,7 +10196,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** B13-T3: what a version changes against its scope's published one. */
+        /**
+         * Diff a theme version
+         * @description B13-T3: what a version changes against its scope's published one.
+         */
         get: operations["diff_theme"];
         put?: never;
         post?: never;
@@ -9193,7 +10219,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B13-T3: publishes a version once its colours pass the contrast check; the
+         * Publish a theme
+         * @description B13-T3: publishes a version once its colours pass the contrast check; the
          *     scope's previous version is retired. `If-Match: "<row_version>"` is
          *     required. A failing theme is refused naming each pair and its ratio.
          */
@@ -9231,6 +10258,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Usage
+         * @description Usage. Administrators only.
+         */
         get: operations["usage"];
         put?: never;
         post?: never;
@@ -9247,7 +10278,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Rejections per rule, attribute and channel over the window, and each entity's validity score from the last nightly sweep (A3-T8). */
+        /**
+         * Validation statistics
+         * @description Rejections per rule, attribute and channel over the window, and each entity's validity score from the last nightly sweep (A3-T8).
+         */
         get: operations["validation_stats"];
         put?: never;
         post?: never;
@@ -9264,8 +10298,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List views
+         * @description List views. Administrators only.
+         */
         get: operations["list_views"];
         put?: never;
+        /**
+         * Create a view
+         * @description Create a view. Administrators only. Audited.
+         */
         post: operations["create_view"];
         delete?: never;
         options?: never;
@@ -9280,12 +10322,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One view
+         * @description One view. Administrators only.
+         */
         get: operations["get_view"];
         put?: never;
         post?: never;
+        /**
+         * Delete a view
+         * @description Delete a view. Administrators only. Audited.
+         */
         delete: operations["delete_view"];
         options?: never;
         head?: never;
+        /**
+         * Update a view
+         * @description Update a view. Administrators only. Audited.
+         */
         patch: operations["update_view"];
         trace?: never;
     };
@@ -9297,7 +10351,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A13-T6: who would notice a change to this view: the dashboards that show
+         * Who a view change affects
+         * @description A13-T6: who would notice a change to this view: the dashboards that show
          *     it, the navigation that links to it, and whether it is every user's
          *     default or a built-in one. Reads only.
          */
@@ -10220,7 +11275,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description The requester takes a pending approval-process request back (M9-T1); the record's lock ends with it. */
+        /**
+         * Recall an approval request
+         * @description The requester takes a pending approval-process request back (M9-T1); the record's lock ends with it.
+         */
         post: operations["recall_approval_process_request"];
         delete?: never;
         options?: never;
@@ -10237,7 +11295,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Submits a record to an approval process (M9-T1): the caller must be able to update the record, the record must meet the process's entry condition, and it may have no other pending request of this process. A locking process holds the record until the request is decided or recalled. */
+        /**
+         * Submit a record for approval
+         * @description Submits a record to an approval process (M9-T1): the caller must be able to update the record, the record must meet the process's entry condition, and it may have no other pending request of this process. A locking process holds the record until the request is decided or recalled.
+         */
         post: operations["submit_to_approval_process"];
         delete?: never;
         options?: never;
@@ -10254,7 +11315,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Reads the request an emailed approval link is for (M9-T3), without using the link: what is asked, by whom, why, the changes, and whether it may be decided on the link's page (`decide_here`) or needs the signed-in request page. Public: the token is the credential. */
+        /**
+         * Open an emailed approval link
+         * @description Reads the request an emailed approval link is for (M9-T3), without using the link: what is asked, by whom, why, the changes, and whether it may be decided on the link's page (`decide_here`) or needs the signed-in request page. Public: the token is the credential.
+         */
         post: operations["read_approval_email_link"];
         delete?: never;
         options?: never;
@@ -10271,7 +11335,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Approves or rejects a low-risk request from its emailed link (M9-T3), as the link's approver, by the same path as `POST /api/v1/approvals/{id}/decide`. The link works once; a decision that fails releases it. A high-risk request (its action type not in `approval.email_decide_actions`) is refused: open the request page and sign in. Public: the token is the credential. */
+        /**
+         * Decide through an emailed link
+         * @description Approves or rejects a low-risk request from its emailed link (M9-T3), as the link's approver, by the same path as `POST /api/v1/approvals/{id}/decide`. The link works once; a decision that fails releases it. A high-risk request (its action type not in `approval.email_decide_actions`) is refused: open the request page and sign in. Public: the token is the credential.
+         */
         post: operations["decide_by_approval_email_link"];
         delete?: never;
         options?: never;
@@ -10288,7 +11355,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * `PUT /api/v1/approvals/out-of-office` (Z10-T7) — the signed-in user hands
+         * Set my out-of-office delegate
+         * @description `PUT /api/v1/approvals/out-of-office` (Z10-T7) — the signed-in user hands
          *     their approval standing to another user while they are away. Acts only on
          *     the caller's own id; an overlapping earlier out-of-office delegation is
          *     replaced. `attome_audit::approval::upsert_absence_delegation` checks the
@@ -10298,7 +11366,8 @@ export interface paths {
         put: operations["put_out_of_office"];
         post?: never;
         /**
-         * `DELETE /api/v1/approvals/out-of-office` (Z10-T7) — ends the signed-in
+         * End my out-of-office
+         * @description `DELETE /api/v1/approvals/out-of-office` (Z10-T7) — ends the signed-in
          *     user's current and future out-of-office delegations.
          */
         delete: operations["delete_out_of_office"];
@@ -10314,7 +11383,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description A record's approval history (M9-T4), newest first, for whoever may read the record. */
+        /**
+         * Approvals regarding a record
+         * @description A record's approval history (M9-T4), newest first, for whoever may read the record.
+         */
         get: operations["list_approvals_regarding_record"];
         put?: never;
         post?: never;
@@ -10331,7 +11403,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description The approval request page (M9-T4): what is asked, by whom, why, the attribute changes it carries, every decision so far, and whether the caller may decide now. Visible to an administrator, the requester, anyone who decided it, an eligible approver, and anyone who may read the record it is about. */
+        /**
+         * One of my approval requests
+         * @description The approval request page (M9-T4): what is asked, by whom, why, the attribute changes it carries, every decision so far, and whether the caller may decide now. Visible to an administrator, the requester, anyone who decided it, an eligible approver, and anyone who may read the record it is about.
+         */
         get: operations["get_approval_request_detail"];
         put?: never;
         post?: never;
@@ -10351,7 +11426,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/approvals/{id}/decide` — any authenticated caller (Dashboard
+         * Decide my approval request
+         * @description `POST /api/v1/approvals/{id}/decide` — any authenticated caller (Dashboard
          *     10/10 Phase 6 prerequisite). Refuses a flat (non-plan) request with 403
          *     before ever reaching `decide_step_with` — a flat request has no eligible-
          *     approver concept other than `system.admin`, so it stays reachable only
@@ -10374,6 +11450,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * My apps
+         * @description My apps. Any signed-in user.
+         */
         get: operations["list_available_apps"];
         put?: never;
         post?: never;
@@ -10390,6 +11470,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * AsyncAPI document of the change feed
+         * @description AsyncAPI document of the change feed. Any signed-in user.
+         */
         get: operations["asyncapi_document"];
         put?: never;
         post?: never;
@@ -10828,6 +11912,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * My audit activity
+         * @description My audit activity. Any signed-in user.
+         */
         get: operations["audit_my_activity"];
         put?: never;
         post?: never;
@@ -10844,8 +11932,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List my API keys
+         * @description The caller's own API keys: name, prefix, scopes, last use and expiry. The secret is never returned after creation.
+         */
         get: operations["list_api_keys"];
         put?: never;
+        /**
+         * Create an API key
+         * @description Creates an API key for the caller and returns its secret once. The key acts as the caller, limited to the scopes it is given; the creation is audited.
+         */
         post: operations["create_api_key"];
         delete?: never;
         options?: never;
@@ -10863,6 +11959,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Revoke an API key
+         * @description Revokes one of the caller's own API keys at once; requests made with it are refused from then on. The revocation is audited.
+         */
         delete: operations["revoke_api_key"];
         options?: never;
         head?: never;
@@ -10901,6 +12001,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Sign in with Google
+         * @description Exchanges a Google ID token for a session, creating or linking the account as the registration and linking settings allow. Public and rate-limited like the password sign-in.
+         */
         post: operations["google_login"];
         delete?: never;
         options?: never;
@@ -10916,7 +12020,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * P-frontend-baseline step 5 (D-071/D-073) — public directory endpoint so the
+         * Google sign-in settings
+         * @description P-frontend-baseline step 5 (D-071/D-073) — public directory endpoint so the
          *     login page can fetch the Google client id at runtime instead of it being
          *     duplicated as a hardcoded literal in `environment.ts`. Falls under the
          *     `/api/v1/auth/google` bypass entry already in force for `google_login`
@@ -10940,7 +12045,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * P-federation-linking-policy §4.3(a) callback — bypass-listed
+         * OIDC identity-link callback
+         * @description P-federation-linking-policy §4.3(a) callback — bypass-listed
          *     (`attome_server::middleware::bypass`'s `/api/v1/auth/identity-link-callback/`
          *     subtree prefix). This route deliberately does NOT require
          *     `Extension<SessionClaims>`, even though it only ever does anything useful
@@ -10971,7 +12077,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * P-federation-linking-policy §4.3(a) extended to Google — analog of
+         * Link a Google identity
+         * @description P-federation-linking-policy §4.3(a) extended to Google — analog of
          *     `identity_link_oidc_start`, but Google's
          *     credential flow is a single synchronous POST from the Google Identity
          *     Services SDK (no authorization-code redirect), so there's no separate
@@ -10996,6 +12103,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Start linking an OIDC identity
+         * @description Redirects the signed-in caller to the OIDC provider to link that identity to their own account, as the linking policy allows. The provider returns to the identity-link callback.
+         */
         get: operations["identity_link_oidc_start"];
         put?: never;
         post?: never;
@@ -11013,7 +12124,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * P-federation-linking-policy §4.3(a) UI support — self-scoped read of the
+         * My linked identities
+         * @description P-federation-linking-policy §4.3(a) UI support — self-scoped read of the
          *     caller's own linked federated identities, backing the `/settings/security`
          *     page's "already linked" state so it doesn't have to blindly offer every
          *     configured OIDC provider as unlinked. `claims.sub` is always the
@@ -11040,7 +12152,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * P2.8 step 7 (D-069): a correct password no longer always mints a session —
+         * Sign in with email and password
+         * @description P2.8 step 7 (D-069): a correct password no longer always mints a session —
          *     see `accounts::LoginOutcome`. The `MfaRequired`/`MfaEnrollmentRequired`
          *     branches respond 200 with a `pending_token` instead of `Set-Cookie`; the
          *     client must complete the flow via `/mfa/verify`, `/mfa/recovery`, or
@@ -11063,7 +12176,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Invalidates the presented session server-side (Plan 1.6a): denylists the
+         * Sign out
+         * @description Invalidates the presented session server-side (Plan 1.6a): denylists the
          *     access token's `jti` for its remaining lifetime and revokes the refresh
          *     token row, then clears both cookies. Malformed/absent/already-expired
          *     tokens are not an error — logout always succeeds.
@@ -11084,6 +12198,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Confirm MFA enrolment
+         * @description Confirms the caller's pending TOTP secret with a current code and returns the recovery codes once. The change is audited.
+         */
         post: operations["confirm"];
         delete?: never;
         options?: never;
@@ -11101,7 +12219,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Disables the caller's MFA. The TOTP or recovery code in the request is this
+         * Turn off MFA
+         * @description Disables the caller's MFA. The TOTP or recovery code in the request is this
          *     request's step-up (D-510 rule 8): it is verified once, satisfies freshness
          *     for this request only, and writes no elevation. Only a cookie session with
          *     a live refresh family may call it (rule 7).
@@ -11123,7 +12242,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Starts (or restarts) enrollment. Gated on `auth.mfa_policy != "off"` —
+         * Start MFA enrolment
+         * @description Starts (or restarts) enrollment. Gated on `auth.mfa_policy != "off"` —
          *     a deployment kill switch means no one can enroll, not just that login
          *     stops requiring it (mirrors `reset_request`'s `email.enabled` gate).
          */
@@ -11144,7 +12264,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Confirms forced enrollment and, on success, issues a real session
+         * Confirm required MFA enrolment
+         * @description Confirms forced enrollment and, on success, issues a real session
          *     immediately (the `mfa_policy = "required"` first-login path completes in
          *     one round trip: enroll, confirm, done) — plus the one-time-viewable
          *     recovery-code batch in the response body alongside the cookies.
@@ -11166,7 +12287,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Starts forced enrollment (`mfa_policy = "required"`, account not yet
+         * Start required MFA enrolment
+         * @description Starts forced enrollment (`mfa_policy = "required"`, account not yet
          *     enrolled) using the `MfaEnrollmentRequired` pending token in place of a
          *     session. Bypass-listed for the same reason as `mfa_verify`.
          */
@@ -11187,7 +12309,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Regenerates the caller's recovery codes. The TOTP code in the request is
+         * Regenerate recovery codes
+         * @description Regenerates the caller's recovery codes. The TOTP code in the request is
          *     this request's step-up (D-510 rule 8): it is verified once, satisfies
          *     freshness for this request only, and writes no elevation. Only TOTP is
          *     accepted here (I11). Only a cookie session with a live refresh family may
@@ -11208,7 +12331,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Whether the caller's own account has a confirmed TOTP enrollment — the
+         * My MFA status
+         * @description Whether the caller's own account has a confirmed TOTP enrollment — the
          *     self-service UI's only way to know whether to render "Enable" or "Disable"
          *     (the enroll/confirm/disable/regenerate endpoints are mutation-only).
          */
@@ -11231,7 +12355,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Completes an `MfaRequired` login with a TOTP code. Bypass-listed — the
+         * Finish sign-in with a TOTP code
+         * @description Completes an `MfaRequired` login with a TOTP code. Bypass-listed — the
          *     caller has no session cookie yet (that's the whole point); identity comes
          *     from `pending_token`, a short-lived, purpose-scoped token distinct from
          *     `SessionClaims` (`attome_auth::mfa`), not from `AuthnLayer`.
@@ -11253,7 +12378,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Same as `mfa_verify` but via a single-use recovery code instead of a live
+         * Finish sign-in with a recovery code
+         * @description Same as `mfa_verify` but via a single-use recovery code instead of a live
          *     TOTP code.
          */
         post: operations["mfa_recovery"];
@@ -11271,7 +12397,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * P2.8 step 5 — public directory of configured OIDC providers so the Angular
+         * List sign-in providers
+         * @description P2.8 step 5 — public directory of configured OIDC providers so the Angular
          *     login page can render provider buttons without duplicating provider keys/
          *     labels in frontend config (killing the hardcoded-client-id pattern that
          *     `google_login` still has). Falls under the `/api/v1/auth/oidc/` bypass
@@ -11327,7 +12454,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * P2.8 (D-065) — starts the generic OIDC authorization-code + PKCE flow for
+         * Start an OIDC sign-in
+         * @description P2.8 (D-065) — starts the generic OIDC authorization-code + PKCE flow for
          *     a config-driven provider (`config.oidc.providers.{provider}`). Redirects
          *     the browser straight to the IdP; `AppError::NotFound` for an unconfigured
          *     provider key (never 401/403 — an unconfigured provider isn't a protected
@@ -11381,7 +12509,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * P-registration-gating (D-128): `auth.registration_mode` gates this before
+         * Register a local account
+         * @description P-registration-gating (D-128): `auth.registration_mode` gates this before
          *     any DB work — `"disabled"` (the default) rejects outright, `"invite"`
          *     requires a valid `invitation_token` matching `body.email`
          *     (`accounts::register` validates and consumes it), `"public"` is today's
@@ -11404,7 +12533,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * P-registration-gating (D-128) — lets the Angular login page hide the
+         * Self-registration settings
+         * @description P-registration-gating (D-128) — lets the Angular login page hide the
          *     sign-up form/link when `auth.registration_mode` isn't `"public"`, instead
          *     of showing it and letting every submission fail with a 403. Falls under
          *     the existing `/api/v1/auth/register` bypass-list entry (prefix match — no
@@ -11430,7 +12560,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Confirms a presented reset token. `reset::confirm` applies the whole reset
+         * Reset a password with a reset token
+         * @description Confirms a presented reset token. `reset::confirm` applies the whole reset
          *     in one transaction (D-509): it consumes the token, sets the new password,
          *     expires the account's other reset links, revokes every refresh token the
          *     account holds and bumps `auth_epoch`, so live access tokens stop working
@@ -11453,7 +12584,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Always responds 200 regardless of whether `body.email` matched an account
+         * Request a password reset
+         * @description Always responds 200 regardless of whether `body.email` matched an account
          *     (anti-enumeration, guidelines/P-account-lifecycle) — only a match actually
          *     enqueues an email. Bypass-listed, IP-rate-limited (this route classifies
          *     as the `password_reset` category, `attome_server::middleware::rate_limit::
@@ -11475,7 +12607,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The Angular client's sole source of "am I logged in" truth
+         * The current session
+         * @description The Angular client's sole source of "am I logged in" truth
          *     (P-session-refresh-hardening, D-129) — bootstraps from this call at app
          *     init instead of trusting a localStorage marker. Protected (NOT
          *     bypass-listed): rides `AuthnLayer` like any other route, so a 401 here IS
@@ -11499,7 +12632,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The OIDC provider's redirect back from a federated step-up. Bypass-listed
+         * OIDC step-up callback
+         * @description The OIDC provider's redirect back from a federated step-up. Bypass-listed
          *     (`/api/v1/auth/step-up-callback/`): no session cookie survives the
          *     cross-site redirect, so the user, family and operation come only from the
          *     single-use server-side state, and only in the browser that started the flow.
@@ -11523,7 +12657,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Reads whether the caller's own session could perform `operation` now, by
+         * Whether a step-up is needed
+         * @description Reads whether the caller's own session could perform `operation` now, by
          *     running the operation's guard without acting on it (D-510 rule 9;
          *     attome-auth hardening 2.1d). It starts no challenge and writes nothing. The
          *     settings page calls it before a browser navigation such as identity
@@ -11532,7 +12667,8 @@ export interface paths {
         get: operations["step_up_status"];
         put?: never;
         /**
-         * Starts a single-use step-up challenge for `operation` on the caller's own
+         * Start a step-up challenge
+         * @description Starts a single-use step-up challenge for `operation` on the caller's own
          *     session. An account with no local factor gets `reauth_required` naming what
          *     it needs, such as `totp_enrollment_required`.
          */
@@ -11607,7 +12743,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Verifies a step-up challenge and elevates the caller's session. Every
+         * Verify a step-up challenge
+         * @description Verifies a step-up challenge and elevates the caller's session. Every
          *     failure, including a wrong credential, an expired or reused challenge, or
          *     one for another session or operation, is `reauth_required`.
          */
@@ -11628,7 +12765,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Confirms a presented email-verification token, flipping
+         * Confirm an email address
+         * @description Confirms a presented email-verification token, flipping
          *     `user_account.email_verified`. Bypass-listed — the user isn't
          *     necessarily logged in when clicking the emailed link.
          */
@@ -12212,7 +13350,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * A18-T7: undoes one delete operation: every record its ledger rows still
+         * Undo a delete operation
+         * @description A18-T7: undoes one delete operation: every record its ledger rows still
          *     hold in the bin (at most 500), restored as [`restore_selection`] would.
          */
         post: operations["restore_operation"];
@@ -12232,7 +13371,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * A18-T7: restores up to 500 deleted records, each checked as a single
+         * Restore deleted records
+         * @description A18-T7: restores up to 500 deleted records, each checked as a single
          *     restore would be; the ones that could not come back are listed.
          */
         post: operations["restore_selection"];
@@ -12319,7 +13459,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B13-T4: a published logo, favicon or font for this host, without a
+         * A published brand asset
+         * @description B13-T4: a published logo, favicon or font for this host, without a
          *     session (the sign-in page shows them). Served inert: `nosniff` and a
          *     `sandbox` content security policy, so an SVG opened directly runs
          *     nothing.
@@ -12341,7 +13482,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B13-T5: the brand for the signed-in caller: the deployment's, then the
+         * My brand
+         * @description B13-T5: the brand for the signed-in caller: the deployment's, then the
          *     app's (`app`), the caller's business unit's, the domain's.
          */
         get: operations["my_branding"];
@@ -12361,7 +13503,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B13-T5: the published brand for this host, for the sign-in page and the
+         * Public brand
+         * @description B13-T5: the published brand for this host, for the sign-in page and the
          *     app shell: CSS variables, fonts and whether to hide the vendor's name.
          *     No session and no user data. Answers `304` to an `If-None-Match` naming
          *     the current published versions.
@@ -12385,7 +13528,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Z12-T10: business-time arithmetic on a calendar, for any signed-in
+         * Business-time arithmetic
+         * @description Z12-T10: business-time arithmetic on a calendar, for any signed-in
          *     caller: the same answers SLA clocks use, with the calendar version and
          *     content hash they were computed against.
          */
@@ -12403,6 +13547,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Entity catalogue
+         * @description Entity catalogue. Administrators only.
+         */
         get: operations["catalog_list_entities"];
         put?: never;
         post?: never;
@@ -12419,6 +13567,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * One entity in the catalogue
+         * @description One entity in the catalogue. Administrators only.
+         */
         get: operations["catalog_get_entity"];
         put?: never;
         post?: never;
@@ -12435,7 +13587,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists change-stream subscriptions. */
+        /**
+         * List change-stream subscriptions
+         * @description Lists change-stream subscriptions.
+         */
         get: operations["change_stream_list_subscriptions"];
         put?: never;
         /**
@@ -12460,11 +13615,17 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Ends a subscription. */
+        /**
+         * End a subscription
+         * @description Ends a subscription.
+         */
         delete: operations["change_stream_delete_subscription"];
         options?: never;
         head?: never;
-        /** Changes a subscription. Send its `row_version`. */
+        /**
+         * Update a subscription
+         * @description Changes a subscription. Send its `row_version`.
+         */
         patch: operations["change_stream_update_subscription"];
         trace?: never;
     };
@@ -12498,8 +13659,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Reads a subscription's events after a cursor.
-         * @description Only the subscription's identity reads it. `410 resync_needed` when the
+         * Read subscription events
+         * @description Reads a subscription's events after a cursor.
+         *
+         *     Only the subscription's identity reads it. `410 resync_needed` when the
          *     cursor is older than the change feed keeps, or the subscription ended.
          */
         get: operations["change_stream_read_events"];
@@ -12519,8 +13682,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Streams a subscription's events as server-sent events.
-         * @description Each `change` event's `id` is the cursor after it; reconnect with it.
+         * Stream subscription events
+         * @description Streams a subscription's events as server-sent events.
+         *
+         *     Each `change` event's `id` is the cursor after it; reconnect with it.
          *     A `resync_needed` event ends the stream when the cursor is too old or the
          *     subscription ended. A connection lasts up to fifteen minutes.
          */
@@ -12952,6 +14117,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Run several record operations
+         * @description Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. One result per operation.
+         */
         post: operations["composite"];
         delete?: never;
         options?: never;
@@ -13182,7 +14351,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * G11-T2: a signed-in person's helpful/not-helpful on an article suggested
+         * Rate a suggested article
+         * @description G11-T2: a signed-in person's helpful/not-helpful on an article suggested
          *     to them, counted with the article page's votes. A cited item that is not a
          *     published article is 404, as a missing one.
          */
@@ -13332,6 +14502,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * View a published page
+         * @description View a published page.
+         */
         get: operations["view_page"];
         put?: never;
         post?: never;
@@ -13350,6 +14524,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Rate a page
+         * @description Rate a page.
+         */
         post: operations["vote_on_page"];
         delete?: never;
         options?: never;
@@ -13447,8 +14625,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The current version's artefacts of a kind.
-         * @description Each artefact's key, content hash and URL. The list changes with every
+         * Cooked metadata of a kind
+         * @description Cooked metadata of a kind. Any signed-in user.
+         *     The current version's artefacts of a kind.
+         *
+         *     Each artefact's key, content hash and URL. The list changes with every
          *     publish; the artefacts behind it never change.
          */
         get: operations["list_cooked_artefacts"];
@@ -13468,8 +14649,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One cooked artefact by its content hash.
-         * @description The bytes never change under this URL, so the response may be kept for
+         * One cooked artefact
+         * @description One cooked artefact. Any signed-in user.
+         *     One cooked artefact by its content hash.
+         *
+         *     The bytes never change under this URL, so the response may be kept for
          *     a year without asking again.
          */
         get: operations["get_cooked_artefact"];
@@ -13491,7 +14675,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/data/duplicates/check` — A15-T7: what saving these values
+         * Check values for duplicates
+         * @description `POST /api/v1/data/duplicates/check` — A15-T7: what saving these values
          *     would meet under the entity's duplicate rules (the check a create or
          *     update runs), without saving anything. The caller needs read access to
          *     the entity.
@@ -13510,6 +14695,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Likely duplicates of a record
+         * @description Likely duplicates of a record. Any signed-in user.
+         */
         get: operations["candidates_for_record"];
         put?: never;
         post?: never;
@@ -13594,7 +14783,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Registers this device for the signed-in person, or refreshes it. */
+        /**
+         * Register this device
+         * @description Registers this device for the signed-in person, or refreshes it.
+         */
         post: operations["register_device"];
         delete?: never;
         options?: never;
@@ -13609,7 +14801,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Whether this device must wipe itself. Only its owner may ask. */
+        /**
+         * Whether this device must wipe
+         * @description Whether this device must wipe itself. Only its owner may ask.
+         */
         get: operations["my_device_status"];
         put?: never;
         post?: never;
@@ -13628,7 +14823,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** The app reports that it cleared its local data after a wipe request. */
+        /**
+         * Report a wipe done
+         * @description The app reports that it cleared its local data after a wipe request.
+         */
         post: operations["my_device_wiped"];
         delete?: never;
         options?: never;
@@ -13934,7 +15132,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Every registered flag, evaluated for the calling user — what `/api/v1/features`
+         * My feature flags
+         * @description Every registered flag, evaluated for the calling user — what `/api/v1/features`
          *     gives Angular's `FeatureService` so the UI and the API agree on what's on.
          */
         get: operations["get_effective_features"];
@@ -13954,7 +15153,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * C3-T1: the caller's feed — posts and changes to the records they follow,
+         * My feed
+         * @description C3-T1: the caller's feed — posts and changes to the records they follow,
          *     newest first, each only if they may read it.
          */
         get: operations["get_feed"];
@@ -14002,6 +15202,47 @@ export interface paths {
          *     released once no other hold is open.
          */
         post: operations["fulfilment_hold_clear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fulfilment/orders/{id}/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pack a fulfilment order
+         * @description F6-T8: records the packages as one shipment (with a line per goods line
+         *     still to ship) and marks the order `packed`.
+         */
+        post: operations["fulfilment_order_pack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fulfilment/orders/{id}/pick-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A fulfilment order's pick list
+         * @description F6-T8: the goods still to ship, one group per product.
+         */
+        get: operations["fulfilment_pick_list"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -14085,7 +15326,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B2-T4: finds the changes to one field of an entity whose old and new
+         * Search change history
+         * @description B2-T4: finds the changes to one field of an entity whose old and new
          *     values meet the conditions, in a period, newest first, among the live
          *     records the caller can read. Sensitive and encrypted values are never
          *     searched.
@@ -14108,7 +15350,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description A provider's call to a builder-defined endpoint (M14-T1). Public: the hook's own checks are the credential (address allow-list and mTLS, then signature or bearer secret with a timestamp window, then the body's required fields, then a once-only event id). Accepted calls create a record or start a flow as the hook's service user. */
+        /**
+         * Receive an inbound hook
+         * @description A provider's call to a builder-defined endpoint (M14-T1). Public: the hook's own checks are the credential (address allow-list and mTLS, then signature or bearer secret with a timestamp window, then the body's required fields, then a once-only event id). Accepted calls create a record or start a flow as the hook's service user.
+         */
         post: operations["call_inbound_hook"];
         delete?: never;
         options?: never;
@@ -14220,7 +15465,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B20-T3: the built-in interface text this deployment rewords, in `locale`,
+         * Interface text overrides
+         * @description B20-T3: the built-in interface text this deployment rewords, in `locale`,
          *     for the app to lay over its own catalogue.
          */
         get: operations["ui_text_overrides"];
@@ -14278,7 +15524,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Z7-T4: a chunked batch job's progress, for the person who started it or
+         * A batch job's progress
+         * @description Z7-T4: a chunked batch job's progress, for the person who started it or
          *     an administrator.
          */
         get: operations["batch_progress"];
@@ -14300,7 +15547,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Z7-T4: asks a running batch job to stop after its current chunk. What
+         * Cancel a batch job
+         * @description Z7-T4: asks a running batch job to stop after its current chunk. What
          *     it already did stays done; a finished or cancelled job answers 409.
          */
         post: operations["cancel_batch"];
@@ -14542,8 +15790,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The limits that apply to the caller.
-         * @description Each rate class with the requests left in the current minute, the bulk
+         * My limits
+         * @description My limits. Any signed-in user.
+         *     The limits that apply to the caller.
+         *
+         *     Each rate class with the requests left in the current minute, the bulk
          *     size and the query time limits.
          */
         get: operations["my_limits"];
@@ -14562,7 +15813,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists what needs tidying in the lineage graph. */
+        /**
+         * Lineage clean-up list
+         * @description Lists what needs tidying in the lineage graph.
+         */
         get: operations["lineage_cleanup"];
         put?: never;
         post?: never;
@@ -14579,7 +15833,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Compares the lineage graph at two versions. */
+        /**
+         * Compare lineage versions
+         * @description Compares the lineage graph at two versions.
+         */
         get: operations["lineage_compare"];
         put?: never;
         post?: never;
@@ -14596,7 +15853,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Exports the lineage graph as OpenLineage events (metadata only). */
+        /**
+         * Export lineage as OpenLineage
+         * @description Exports the lineage graph as OpenLineage events (metadata only).
+         */
         get: operations["lineage_export_openlineage"];
         put?: never;
         post?: never;
@@ -14615,7 +15875,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Records a hand-documented lineage link. */
+        /**
+         * Add a lineage link
+         * @description Records a hand-documented lineage link.
+         */
         post: operations["lineage_manual_link_add"];
         delete?: never;
         options?: never;
@@ -14633,7 +15896,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Removes a hand-documented lineage link. */
+        /**
+         * Remove a lineage link
+         * @description Removes a hand-documented lineage link.
+         */
         delete: operations["lineage_manual_link_remove"];
         options?: never;
         head?: never;
@@ -14647,7 +15913,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Walks the lineage graph from a node. */
+        /**
+         * Walk the lineage graph
+         * @description Walks the lineage graph from a node.
+         */
         get: operations["lineage_walk"];
         put?: never;
         post?: never;
@@ -14664,7 +15933,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Opens the live channel. */
+        /**
+         * Live updates
+         * @description Opens the live channel.
+         */
         get: operations["live"];
         put?: never;
         post?: never;
@@ -15159,8 +16431,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists held contributions waiting for a steward.
-         * @description An administrator sees every master entity's; a steward sees only the
+         * Held contributions
+         * @description Held contributions. Any signed-in user.
+         *     Lists held contributions waiting for a steward.
+         *
+         *     An administrator sees every master entity's; a steward sees only the
          *     entities of the data domains they own or steward.
          */
         get: operations["master_held_list"];
@@ -15182,8 +16457,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Detaches a contribution from its golden record.
-         * @description The golden record is rebuilt without it; the contribution keeps the
+         * Detach a contribution
+         * @description Detach a contribution. Any signed-in user. Audited.
+         *     Detaches a contribution from its golden record.
+         *
+         *     The golden record is rebuilt without it; the contribution keeps the
          *     golden record's id for its history.
          */
         post: operations["master_contribution_detach"];
@@ -15203,8 +16481,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Rejects a held contribution.
-         * @description It is detached and keeps the steward's reason; it never reaches its
+         * Reject a held contribution
+         * @description Reject a held contribution. Any signed-in user. Audited.
+         *     Rejects a held contribution.
+         *
+         *     It is detached and keeps the steward's reason; it never reaches its
          *     golden record.
          */
         post: operations["master_contribution_reject"];
@@ -15224,8 +16505,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Releases a held contribution.
-         * @description The payload (the corrected one when sent, else the stored one) is
+         * Release a held contribution
+         * @description Release a held contribution. Audited.
+         *     Releases a held contribution.
+         *
+         *     The payload (the corrected one when sent, else the stored one) is
          *     validated again; a valid one is attached to its golden record and a
          *     rebuild queued. Of two stewards releasing it at once, one wins.
          */
@@ -15244,8 +16528,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Finds the golden record of a source system's id.
-         * @description One lookup on the contribution's unique key. A golden record the caller
+         * Cross-references of an entity
+         * @description Cross-references of an entity. Any signed-in user.
+         *     Finds the golden record of a source system's id.
+         *
+         *     One lookup on the contribution's unique key. A golden record the caller
          *     cannot read is not found.
          */
         get: operations["master_xref_lookup"];
@@ -15265,8 +16552,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Returns a golden record's values at a moment.
-         * @description Each attribute changed since takes the value it had before its first
+         * A golden record as of a time
+         * @description A golden record as of a time.
+         *     Returns a golden record's values at a moment.
+         *
+         *     Each attribute changed since takes the value it had before its first
          *     change after the moment, from the field history; the rest keep their
          *     current value. Attributes the caller cannot read never appear.
          */
@@ -15289,8 +16579,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Sets a golden record's certification.
-         * @description A golden record is `draft` until a steward certifies it; `retired` takes
+         * Certify a golden record
+         * @description Certify a golden record. Any signed-in user. Audited.
+         *     Sets a golden record's certification.
+         *
+         *     A golden record is `draft` until a steward certifies it; `retired` takes
          *     it out of use.
          */
         post: operations["master_certify"];
@@ -15310,8 +16603,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Pins an attribute of a golden record.
-         * @description The survivorship rebuild leaves a pinned attribute alone. With `value`,
+         * Pin a golden-record value
+         * @description Pin a golden-record value. Audited.
+         *     Pins an attribute of a golden record.
+         *
+         *     The survivorship rebuild leaves a pinned attribute alone. With `value`,
          *     the value is first written through the generic update path (validation,
          *     audit, row version); without it the current value is kept.
          */
@@ -15333,8 +16629,11 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Unpins an attribute of a golden record.
-         * @description The survivorship rules choose its value again: a rebuild of the golden
+         * Unpin a golden-record value
+         * @description Unpin a golden-record value. Any signed-in user. Audited.
+         *     Unpins an attribute of a golden record.
+         *
+         *     The survivorship rules choose its value again: a rebuild of the golden
          *     record is queued.
          */
         delete: operations["master_unpin"];
@@ -15351,8 +16650,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Says where each attribute's golden value came from.
-         * @description The source system, its id and when it sent the value, the rule that chose
+         * A golden record's provenance
+         * @description A golden record's provenance.
+         *     Says where each attribute's golden value came from.
+         *
+         *     The source system, its id and when it sent the value, the rule that chose
          *     it, and whether a steward pinned it. Attributes the caller cannot read are
          *     left out. The whole list on one page.
          */
@@ -15373,8 +16675,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists every source system id of a golden record.
-         * @description By system, then id, up to 500: the whole capped list on one page.
+         * A golden record's cross-references
+         * @description A golden record's cross-references. Any signed-in user.
+         *     Lists every source system id of a golden record.
+         *
+         *     By system, then id, up to 500: the whole capped list on one page.
          */
         get: operations["master_xref_list"];
         put?: never;
@@ -15434,7 +16739,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B9-T2: the caller's own lists, then their teams' shared lists, with the
+         * My favourite lists
+         * @description B9-T2: the caller's own lists, then their teams' shared lists, with the
          *     items the caller may see.
          */
         get: operations["list_favourites"];
@@ -15455,7 +16761,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** B9-T2: creates one of the caller's own lists. */
+        /**
+         * Create a favourites list
+         * @description B9-T2: creates one of the caller's own lists.
+         */
         post: operations["create_my_list"];
         delete?: never;
         options?: never;
@@ -15472,12 +16781,16 @@ export interface paths {
         };
         get?: never;
         /**
-         * B9-T2: renames one of the caller's own lists and replaces its items, in
+         * Update a favourites list
+         * @description B9-T2: renames one of the caller's own lists and replaces its items, in
          *     order (drag to reorder, pin and unpin are all a save of the whole list).
          */
         put: operations["replace_my_list"];
         post?: never;
-        /** B9-T2: deletes one of the caller's own lists. */
+        /**
+         * Delete a favourites list
+         * @description B9-T2: deletes one of the caller's own lists.
+         */
         delete: operations["delete_my_list"];
         options?: never;
         head?: never;
@@ -15492,7 +16805,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The caller's mailbox connections: at most one per provider, so the whole
+         * My mailbox connections
+         * @description The caller's mailbox connections: at most one per provider, so the whole
          *     list is one page.
          */
         get: operations["list_connections"];
@@ -15514,7 +16828,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Disconnects: revokes at the provider where it can, then forgets the tokens. */
+        /**
+         * Disconnect my mailbox
+         * @description Disconnects: revokes at the provider where it can, then forgets the tokens.
+         */
         delete: operations["disconnect"];
         options?: never;
         head?: never;
@@ -15529,7 +16846,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Where the provider sends the person back; keeps the tokens and returns
+         * Mailbox connection callback
+         * @description Where the provider sends the person back; keeps the tokens and returns
          *     them to their settings page.
          */
         get: operations["callback"];
@@ -15550,7 +16868,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Starts connecting: answers the provider's sign-in URL. */
+        /**
+         * Connect my mailbox
+         * @description Starts connecting: answers the provider's sign-in URL.
+         */
         post: operations["start_mail_connection"];
         delete?: never;
         options?: never;
@@ -15567,7 +16888,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** J7-T1: creates an online meeting with its join link. */
+        /**
+         * Create an online meeting
+         * @description J7-T1: creates an online meeting with its join link.
+         */
         post: operations["post_meeting"];
         delete?: never;
         options?: never;
@@ -15582,7 +16906,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** J7-T1: who attended and the recordings, after the meeting. */
+        /**
+         * A meeting's attendance report
+         * @description J7-T1: who attended and the recordings, after the meeting.
+         */
         get: operations["get_meeting_report"];
         put?: never;
         post?: never;
@@ -15600,12 +16927,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The caller's own notification preferences (U5). Always the session's own
+         * My notification preferences
+         * @description The caller's own notification preferences (U5). Always the session's own
          *     user; there is no way to name another user.
          */
         get: operations["get_my_preferences"];
         /**
-         * Sets the caller's own preferences (U5, B-R5). Mute-only, never for a
+         * Set my notification preferences
+         * @description Sets the caller's own preferences (U5, B-R5). Mute-only, never for a
          *     mandatory template; audited as a configuration change (D-542).
          */
         put: operations["put_my_preferences"];
@@ -15624,14 +16953,21 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B9-T2: the records the caller opened lately and may still see, newest
+         * My recent records
+         * @description B9-T2: the records the caller opened lately and may still see, newest
          *     first; a deleted one carries `deleted: true`.
          */
         get: operations["list_recent"];
         put?: never;
-        /** B9-T1: reports records the caller opened, up to 50 at a time. */
+        /**
+         * Report records I opened
+         * @description B9-T1: reports records the caller opened, up to 50 at a time.
+         */
         post: operations["report_recent"];
-        /** B9-T2: empties the caller's recent list. */
+        /**
+         * Clear my recent records
+         * @description B9-T2: empties the caller's recent list.
+         */
         delete: operations["delete_recent"];
         options?: never;
         head?: never;
@@ -15778,6 +17114,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/model/entities/{entity}/default-form": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An entity's default form
+         * @description The render plan of the form an entity has when no form is published for
+         *     it (A12-T1): one main form whose one section holds the entity's live
+         *     attributes, oldest first, up to the form limit. Nothing is stored; a
+         *     published form replaces it. Administrators only, like the entity schema.
+         */
+        get: operations["default_form_plan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/model/forms/{id}/plan": {
         parameters: {
             query?: never;
@@ -15786,7 +17145,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The render plan of a published form: its sections and, for each field,
+         * A form's render plan
+         * @description The render plan of a published form: its sections and, for each field,
          *     the attribute's logical name, label, type and whether it is required.
          *     The form comes from the cooked registry in memory; the attribute details
          *     from one bounded query (a form holds at most 400 fields).
@@ -15807,7 +17167,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A published menu, filtered to what the caller may see (A21-T2). */
+        /**
+         * A published menu
+         * @description A published menu, filtered to what the caller may see (A21-T2).
+         */
         get: operations["menu"];
         put?: never;
         post?: never;
@@ -15826,7 +17189,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** A21-T5: counts one open of a menu item for today. */
+        /**
+         * Count a menu item open
+         * @description A21-T5: counts one open of a menu item for today.
+         */
         post: operations["menu_item_opened"];
         delete?: never;
         options?: never;
@@ -15842,8 +17208,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The likely replies for a record (G6-T3).
-         * @description Ranks the reply templates the caller may use by what was used on similar
+         * Suggested replies
+         * @description The likely replies for a record (G6-T3).
+         *
+         *     Ranks the reply templates the caller may use by what was used on similar
          *     earlier records of the same entity, by how much of the template's wording
          *     the record shares, and by how often it is used, best first (at most 5).
          *     Each comes rendered for the record and channel, with the reasons it was
@@ -15910,7 +17278,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Every open item this caller has, across every registered provider.
+         * My open work counts
+         * @description Every open item this caller has, across every registered provider.
          *     Cheap: each provider's `count` is documented to skip item bodies.
          */
         get: operations["counts"];
@@ -15930,7 +17299,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A page of this caller's open items from one named provider
+         * My open work items
+         * @description A page of this caller's open items from one named provider
          *     (`MyWorkProvider::name()`, e.g. `"approvals"`).
          */
         get: operations["list_provider"];
@@ -15950,7 +17320,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The actions this caller may take on one specific item right now,
+         * Actions on a work item
+         * @description The actions this caller may take on one specific item right now,
          *     re-resolved fresh (never `list`'s earlier snapshot — the trait's own
          *     concurrency posture).
          */
@@ -16202,6 +17573,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Send a web chat message
+         * @description A visitor's message in a web chat, answered by the bot or handed to a person. Public: the chat session token in the body identifies the conversation.
+         */
         post: operations["send_message"];
         delete?: never;
         options?: never;
@@ -16216,6 +17591,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Poll a web chat
+         * @description The messages of a web chat after a given time, for the widget's short polling. Public: the session token identifies the conversation.
+         */
         get: operations["poll_webchat_messages"];
         put?: never;
         post?: never;
@@ -16277,6 +17656,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * OpenAPI document of this deployment's entities
+         * @description OpenAPI document of this deployment's entities. Any signed-in user.
+         */
         get: operations["deployment_openapi"];
         put?: never;
         post?: never;
@@ -18097,7 +19480,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** B16-T5: the records a scanned code points at. */
+        /**
+         * Find records by a scanned code
+         * @description B16-T5: the records a scanned code points at.
+         */
         get: operations["scan_find"];
         put?: never;
         post?: never;
@@ -18186,15 +19572,21 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists a scenario's rule-change and flow-change simulations.
-         * @description Newest first, each with how many records or runs it affects, so runs of
+         * A scenario's simulations
+         * @description A scenario's simulations. Administrators only.
+         *     Lists a scenario's rule-change and flow-change simulations.
+         *
+         *     Newest first, each with how many records or runs it affects, so runs of
          *     the same rule or flow can be compared.
          */
         get: operations["scenario_simulation_list"];
         put?: never;
         /**
-         * Runs a rule-change or flow-change simulation for a scenario.
-         * @description `rule_change` previews a business rule over the stored records (the
+         * Run a scenario simulation
+         * @description Run a scenario simulation. Audited.
+         *     Runs a rule-change or flow-change simulation for a scenario.
+         *
+         *     `rule_change` previews a business rule over the stored records (the
          *     records it would refuse); `flow_change` replays a flow version over the
          *     flow's latest finished runs (the runs that would go differently). The
          *     result is stored against the scenario; nothing else is written.
@@ -18213,6 +19605,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * An entity's form schema
+         * @description An entity's form schema. Administrators only.
+         */
         get: operations["get_schema"];
         put?: never;
         post?: never;
@@ -18516,6 +19912,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Service portal offerings
+         * @description Service portal offerings.
+         */
         get: operations["list_offerings"];
         put?: never;
         post?: never;
@@ -18561,6 +19961,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Service portal status
+         * @description Service portal status.
+         */
         get: operations["lookup_status"];
         put?: never;
         post?: never;
@@ -18962,7 +20366,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Every runtime-eligible setting that allows the `user` scope, resolved for
+         * My settings
+         * @description Every runtime-eligible setting that allows the `user` scope, resolved for
          *     the calling user (their own override, else their organization's, else
          *     the deployment default, else the code default) — self-service, same
          *     posture as the sidebar's own `SelfService`-gated GET.
@@ -18985,7 +20390,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * Sets the calling user's own override for one setting. Only settings whose
+         * Set my own setting
+         * @description Sets the calling user's own override for one setting. Only settings whose
          *     descriptor `allows_scope(User)` can be set here — everything else is a
          *     422, the same message shape `write_setting` already produces for an
          *     admin request naming a disallowed scope.
@@ -19021,8 +20427,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List sidebar items
+         * @description List sidebar items. Needs the sidebar management privilege.
+         */
         get: operations["list_sidebar_admin"];
         put?: never;
+        /**
+         * Create a sidebar item
+         * @description Create a sidebar item. Needs the sidebar management privilege. Audited.
+         */
         post: operations["create_sidebar_item"];
         delete?: never;
         options?: never;
@@ -19037,6 +20451,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Privileges for sidebar items
+         * @description Privileges for sidebar items. Needs the sidebar management privilege.
+         */
         get: operations["list_sidebar_privileges"];
         put?: never;
         post?: never;
@@ -19056,9 +20474,17 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Delete a sidebar item
+         * @description Delete a sidebar item. Needs the sidebar management privilege. Audited.
+         */
         delete: operations["deactivate_sidebar_item"];
         options?: never;
         head?: never;
+        /**
+         * Update a sidebar item
+         * @description Update a sidebar item. Needs the sidebar management privilege. Audited.
+         */
         patch: operations["update_sidebar_item"];
         trace?: never;
     };
@@ -19070,7 +20496,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The caller's own navigation menu. Authenticated-only by design: the route
+         * My navigation menu
+         * @description The caller's own navigation menu. Authenticated-only by design: the route
          *     is not gated, each *row* is filtered below by whether the caller holds the
          *     privileges that sidebar item requires (`$1 = ctx.is_admin`, `$2 =
          *     privilege_keys`), so a caller with no privileges simply gets a short menu
@@ -19094,7 +20521,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/signoff/{decision_id}/verify` — `system.admin` only, same
+         * Verify a sign-off
+         * @description `GET /api/v1/signoff/{decision_id}/verify` — `system.admin` only, same
          *     gate as the rest of the approval admin surface this sits beside.
          */
         get: operations["verify_decision"];
@@ -19186,7 +20614,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description The newest published stage process of an entity (M7-T2), for the form's stage bar: its stages in order, each with its required attributes, checklist and next stages. */
+        /**
+         * Stage processes of an entity
+         * @description The newest published stage process of an entity (M7-T2), for the form's stage bar: its stages in order, each with its required attributes, checklist and next stages.
+         */
         get: operations["get_entity_stage_process"];
         put?: never;
         post?: never;
@@ -19203,7 +20634,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Time-in-stage measures of a stage process (M7-T3), from its recorded moves: per stage, records entered, left and in it now, mean and p90 seconds spent before leaving, and drop-off (percent of records that entered and never moved to the next stage in order). */
+        /**
+         * Stage process metrics
+         * @description Time-in-stage measures of a stage process (M7-T3), from its recorded moves: per stage, records entered, left and in it now, mean and p90 seconds spent before leaving, and drop-off (percent of records that entered and never moved to the next stage in order).
+         */
         get: operations["get_stage_process_metrics"];
         put?: never;
         post?: never;
@@ -19370,7 +20804,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * AB5-T2: what is down or slow right now, for any signed-in person: the
+         * System status
+         * @description AB5-T2: what is down or slow right now, for any signed-in person: the
          *     features affected, as message keys, and whether changes are refused. No
          *     dependency names or errors are shown.
          */
@@ -19390,7 +20825,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** B4-T2: tags starting with what was typed, most used first. */
+        /**
+         * Suggest tags
+         * @description B4-T2: tags starting with what was typed, most used first.
+         */
         get: operations["suggest_tags"];
         put?: never;
         post?: never;
@@ -19407,7 +20845,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** B4-T4: every record carrying a tag that the caller may read. */
+        /**
+         * Records with a tag
+         * @description B4-T4: every record carrying a tag that the caller may read.
+         */
         get: operations["list_tagged_records"];
         put?: never;
         post?: never;
@@ -19426,7 +20867,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** B9-T2: creates a list shared with a team the caller belongs to. */
+        /**
+         * Create a team favourites list
+         * @description B9-T2: creates a list shared with a team the caller belongs to.
+         */
         post: operations["create_team_list"];
         delete?: never;
         options?: never;
@@ -19442,10 +20886,16 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** B9-T2: renames a team list and replaces its items, in order. */
+        /**
+         * Update a team favourites list
+         * @description B9-T2: renames a team list and replaces its items, in order.
+         */
         put: operations["replace_team_list"];
         post?: never;
-        /** B9-T2: deletes a team list. */
+        /**
+         * Delete a team favourites list
+         * @description B9-T2: deletes a team list.
+         */
         delete: operations["delete_team_list"];
         options?: never;
         head?: never;
@@ -19462,7 +20912,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * AA12-T1: records a browser's LCP or INP in the metrics registry, so the
+         * Record web vitals
+         * @description AA12-T1: records a browser's LCP or INP in the metrics registry, so the
          *     built-in metrics store keeps its sum and count per minute
          *     (`attome_web_vital_ms`).
          */
@@ -19658,13 +21109,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Views the current caller can actually see for one entity list — system
+         * My views of an entity
+         * @description Views the current caller can actually see for one entity list — system
          *     views gated by the linked query's `required_privilege` (unchanged),
          *     personal views the caller owns (bypasses that gate entirely, D-429), and
          *     shared views (re-enters the same privilege gate a system view uses — see
          *     `view.scope`'s migration comment for why "shared" is the inverse
          *     of the personal bypass rather than a distinct grant mechanism).
-         * @description Authenticated-only by design, like `sidebar::get_sidebar`: the route is not
+         *
+         *     Authenticated-only by design, like `sidebar::get_sidebar`: the route is not
          *     gated, each row is filtered below against the caller's own privileges
          *     (`required_privilege`) or ownership, so an unprivileged caller gets an
          *     empty list rather than a 403. The sibling CRUD handlers on `view`
@@ -19673,6 +21126,10 @@ export interface paths {
          */
         get: operations["list_available_views"];
         put?: never;
+        /**
+         * Create a personal view
+         * @description Create a personal view. Any signed-in user.
+         */
         post: operations["create_personal_view"];
         delete?: never;
         options?: never;
@@ -19690,9 +21147,17 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Delete a personal view
+         * @description Delete a personal view. Any signed-in user.
+         */
         delete: operations["delete_personal_view"];
         options?: never;
         head?: never;
+        /**
+         * Update a personal view
+         * @description Update a personal view. Any signed-in user.
+         */
         patch: operations["update_personal_view"];
         trace?: never;
     };
@@ -19705,6 +21170,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Share a personal view
+         * @description Share a personal view. Any signed-in user. Audited.
+         */
         post: operations["share_personal_view"];
         delete?: never;
         options?: never;
@@ -19862,8 +21331,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List crawl targets
+         * @description List crawl targets. Administrators only.
+         */
         get: operations["list_targets"];
         put?: never;
+        /**
+         * Add a crawl target
+         * @description Add a crawl target. Administrators only. Audited.
+         */
         post: operations["create_target"];
         delete?: never;
         options?: never;
@@ -19881,6 +21358,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Delete a crawl target
+         * @description Delete a crawl target. Administrators only. Audited.
+         */
         delete: operations["delete_target"];
         options?: never;
         head?: never;
@@ -19896,6 +21377,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Import crawled pages
+         * @description Import crawled pages. Administrators only. Audited.
+         */
         post: operations["import_pages"];
         delete?: never;
         options?: never;
@@ -19910,6 +21395,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A target's pages
+         * @description A target's pages. Administrators only.
+         */
         get: operations["list_webcrawl_target_pages"];
         put?: never;
         post?: never;
@@ -19932,6 +21421,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Select a target's pages
+         * @description Select a target's pages. Administrators only. Audited.
+         */
         patch: operations["update_selection"];
         trace?: never;
     };
@@ -19944,6 +21437,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Recrawl a target
+         * @description Recrawl a target. Administrators only. Audited.
+         */
         post: operations["recrawl_target"];
         delete?: never;
         options?: never;
@@ -20616,8 +22113,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List records
+         * @description A keyset-paged list of an entity's records the caller may read, with `select`, `filter[field][op]` and `sort`, through the entity's default view with record scope and field masking applied.
+         */
         get: operations["list_records"];
         put?: never;
+        /**
+         * Create a record
+         * @description Creates a record after the entity's validation, rules and duplicate checks; the caller needs the entity's create privilege. Audited.
+         */
         post: operations["create_record"];
         delete?: never;
         options?: never;
@@ -20634,6 +22139,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Start a bulk operation
+         * @description Queues many creates, updates or deletes of one entity as a durable job and returns it. Each item runs through the same checks as a single write; a retried job resumes at the first item not yet committed.
+         */
         post: operations["enqueue"];
         delete?: never;
         options?: never;
@@ -20650,7 +22159,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** B5-T1: changes the same attributes on many records. */
+        /**
+         * Edit many records
+         * @description B5-T1: changes the same attributes on many records.
+         */
         post: operations["bulk_edit"];
         delete?: never;
         options?: never;
@@ -20668,7 +22180,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B5-T2: what a bulk edit would change, without changing anything: the
+         * Preview a bulk edit
+         * @description B5-T2: what a bulk edit would change, without changing anything: the
          *     counts and the first 20 records before and after.
          */
         post: operations["bulk_edit_preview"];
@@ -20688,7 +22201,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B5-T3: puts a bulk edit back. The undo list goes in as a bulk update
+         * Undo a bulk edit
+         * @description B5-T3: puts a bulk edit back. The undo list goes in as a bulk update
          *     carrying each record's post-edit row version, so a record changed since
          *     the edit is reported as a conflict and left as it is; every record still
          *     goes through the normal update path with the caller's own access.
@@ -20709,6 +22223,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Start a bulk transform
+         * @description Start a bulk transform. Needs update access to the entity's records.
+         */
         post: operations["enqueue_bulk_transform"];
         delete?: never;
         options?: never;
@@ -20725,6 +22243,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Dry-run a bulk transform
+         * @description Dry-run a bulk transform. Needs update access to the entity's records.
+         */
         post: operations["dry_run"];
         delete?: never;
         options?: never;
@@ -20739,6 +22261,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A bulk transform's progress
+         * @description A bulk transform's progress. Needs update access to the entity's records.
+         */
         get: operations["get_transform_status"];
         put?: never;
         post?: never;
@@ -20755,6 +22281,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A bulk operation's progress
+         * @description The status and item counts of a bulk operation the caller started.
+         */
         get: operations["get_status"];
         put?: never;
         post?: never;
@@ -20774,7 +22304,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B7-T2: copies up to 50 records, each as a single clone with the same
+         * Clone several records
+         * @description B7-T2: copies up to 50 records, each as a single clone with the same
          *     `overrides` would; the ones that could not be copied are listed.
          */
         post: operations["bulk_clone_route"];
@@ -20794,7 +22325,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * A18-T4: what deleting these records would cascade to, be blocked by or
+         * Preview a delete
+         * @description A18-T4: what deleting these records would cascade to, be blocked by or
          *     leave pointing at them, and whether a reason is required; nothing is
          *     changed.
          */
@@ -20813,7 +22345,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A18-T7: the entity's deleted records the caller may see, newest
+         * Deleted records
+         * @description A18-T7: the entity's deleted records the caller may see, newest
          *     deletion first. Restore one with `POST /api/v1/{entity}/{id}/restore`.
          */
         get: operations["list_deleted"];
@@ -20834,6 +22367,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Start a data export
+         * @description Start a data export. Needs read access to the entity's records.
+         */
         post: operations["enqueue_export"];
         delete?: never;
         options?: never;
@@ -20848,6 +22385,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A data export's status
+         * @description A data export's status. Needs read access to the entity's records.
+         */
         get: operations["export_status"];
         put?: never;
         post?: never;
@@ -20864,12 +22405,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a record by business key
+         * @description Reads the one record whose unique business key matches `keyspec` (`attr=value` pairs joined by `,`), exactly as reading it by id.
+         */
         get: operations["get_record_by_key"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Update a record by business key
+         * @description Updates the one record whose unique business key matches `keyspec`, exactly as updating it by id (If-Match row version included).
+         */
         patch: operations["update_record_by_key"];
         trace?: never;
     };
@@ -20883,7 +22432,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/{entity}/merges/{merge_id}/undo` — undoes a merge as one
+         * Undo a merge
+         * @description `POST /api/v1/{entity}/merges/{merge_id}/undo` — undoes a merge as one
          *     unit (see [`undo_merge`]). Needs `{entity}.update` and `{entity}.delete`
          *     (it rewrites the survivor and brings the merged records back) and access
          *     to the survivor; `If-Match` may carry the survivor's row version.
@@ -20902,7 +22452,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A28-T2: the defaults a new record of the entity starts with, by field. */
+        /**
+         * Defaults for a new record
+         * @description A28-T2: the defaults a new record of the entity starts with, by field.
+         */
         get: operations["new_record_defaults"];
         put?: never;
         post?: never;
@@ -20942,6 +22495,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Stage an import
+         * @description Stores rows to import into an entity for review; nothing is written to the entity until the import is approved.
+         */
         post: operations["staged_import"];
         delete?: never;
         options?: never;
@@ -20959,7 +22516,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * D-100: approving a staged import is enqueued, not run on the request
+         * Approve a staged import
+         * @description D-100: approving a staged import is enqueued, not run on the request
          *     thread. The original synchronous handler ran one full transaction per
          *     record inline in the HTTP response path with no size bound beyond the
          *     original submission's `MAX_BULK_RECORDS` cap — a large approved import
@@ -20986,7 +22544,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B4-T4: adds a tag to, or takes one off, up to 500 selected records. Each
+         * Tag many records
+         * @description B4-T4: adds a tag to, or takes one off, up to 500 selected records. Each
          *     record is checked as a single change would be; the ones that could not
          *     change are listed with a reason.
          */
@@ -21042,7 +22601,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/{entity}/validate` (A3-T3): checks a record without saving it. */
+        /**
+         * Check a record without saving
+         * @description `POST /api/v1/{entity}/validate` (A3-T3): checks a record without saving it.
+         */
         post: operations["validate_record"];
         delete?: never;
         options?: never;
@@ -21057,12 +22619,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a record
+         * @description One record the caller may read, with the fields they may see and its row version.
+         */
         get: operations["get_record"];
         put?: never;
         post?: never;
+        /**
+         * Delete a record
+         * @description Moves a record to the recycle bin (a soft delete), following the entity's delete policy; it can be restored. Audited.
+         */
         delete: operations["delete_record"];
         options?: never;
         head?: never;
+        /**
+         * Update a record
+         * @description Changes the fields sent, after validation and rules. Needs `If-Match` with the record's row version; a stale version is 409. Audited.
+         */
         patch: operations["update_record"];
         trace?: never;
     };
@@ -21096,7 +22670,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * P-api-contract Phase 4(b): returns `attome_types::PaginatedResponse<T>`
+         * A record's ancestors
+         * @description P-api-contract Phase 4(b): returns `attome_types::PaginatedResponse<T>`
          *     instead of a bare `{"items": [...]}` — a genuine breaking response-shape
          *     change for any existing client (see DECISIONS.md and the CHANGELOG
          *     **Breaking** entry this session added). This endpoint has no `page`/
@@ -21150,7 +22725,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B7-T3: a record's child records by relationship (entity and lookup
+         * A record's child records
+         * @description B7-T3: a record's child records by relationship (entity and lookup
          *     field), counted, in entities the caller can read: what a clone can take
          *     with it through `children`.
          */
@@ -21173,7 +22749,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B7-T2: copies a record: the new record starts with the source's values
+         * Clone a record
+         * @description B7-T2: copies a record: the new record starts with the source's values
          *     (less system, numbered, file, formula and engine-owned fields), with
          *     `overrides` applied, through the ordinary create. `preview` creates
          *     nothing.
@@ -21195,7 +22772,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B7-T2: removes what a clone made, while none of it has changed: each
+         * Undo a clone
+         * @description B7-T2: removes what a clone made, while none of it has changed: each
          *     record in the clone's `undo` list must still be live at its version. The
          *     records go to the recycle bin as one delete operation.
          */
@@ -21215,6 +22793,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Send a message on a record
+         * @description Send a message on a record. Needs update access to the entity's records. Audited.
+         */
         post: operations["compose"];
         delete?: never;
         options?: never;
@@ -21231,6 +22813,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Reply to a message on a record
+         * @description Reply to a message on a record. Needs update access to the entity's records. Audited.
+         */
         post: operations["reply"];
         delete?: never;
         options?: never;
@@ -21246,7 +22832,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * See `list_ancestors`'s doc comment (P-api-contract Phase 4(b)) — same
+         * A record's descendants
+         * @description See `list_ancestors`'s doc comment (P-api-contract Phase 4(b)) — same
          *     "page 1 of 1, everything returned" reasoning applies here.
          */
         get: operations["list_descendants"];
@@ -21429,7 +23016,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Permanently removes a record. This is intentionally separate from the
+         * Delete a record for good
+         * @description Permanently removes a record. This is intentionally separate from the
          *     conventional DELETE route, whose public contract is a reversible
          *     deactivation. A physical delete is refused while *any* record still points
          *     at the target (including an inactive record), so it can never manufacture
@@ -21448,6 +23036,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A record's change history
+         * @description The audited changes to a record that the caller may read.
+         */
         get: operations["get_record_history"];
         put?: never;
         post?: never;
@@ -21467,7 +23059,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B2-T2: puts back the values one change (`audit_id`) or one change set
+         * Restore earlier values
+         * @description B2-T2: puts back the values one change (`audit_id`) or one change set
          *     (`group_id`, an import, run or agent session) replaced on this record,
          *     through the ordinary update: `If-Match` is required and validation, rules
          *     and audit run as for any edit.
@@ -21488,6 +23081,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Mention people on a record
+         * @description Mention people on a record. Needs read access to the entity's records. Audited.
+         */
         post: operations["notify_record_mentions"];
         delete?: never;
         options?: never;
@@ -21505,7 +23102,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * F028 â€” merges `duplicate_id`'s record into the canonical record at `id`:
+         * Merge a duplicate into a record
+         * @description F028 â€” merges `duplicate_id`'s record into the canonical record at `id`:
          *     unions data (the canonical record's own value always wins on conflict; a
          *     null/absent canonical field is filled from the duplicate's value),
          *     redirects every other entity's lookup field that pointed at the
@@ -21535,7 +23133,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/{entity}/{id}/merge/preview` — what merging `duplicate_id`
+         * Preview a merge
+         * @description `POST /api/v1/{entity}/{id}/merge/preview` — what merging `duplicate_id`
          *     into the record at `id` would do (see [`merge_preview`]); writes nothing.
          */
         post: operations["merge_preview_route"];
@@ -21553,7 +23152,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A17-T4: what moving a record under `parent` would do, without moving
+         * Preview a move
+         * @description A17-T4: what moving a record under `parent` would do, without moving
          *     anything: how many records go with it (the record and its descendants),
          *     and whether the move would be refused for a cycle or the depth cap.
          */
@@ -21574,7 +23174,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/{entity}/{id}/related/{relationship}` — every live record on
+         * A record's related records
+         * @description `GET /api/v1/{entity}/{id}/related/{relationship}` — every live record on
          *     the relationship's other side currently linked (through a live join row)
          *     to the anchor record, paginated. Both endpoints' `is_active` and the
          *     join row's own `is_active` are filtered — this is what makes
@@ -21608,7 +23209,8 @@ export interface paths {
          */
         post: operations["link_related"];
         /**
-         * `DELETE /api/v1/{entity}/{id}/related/{relationship}?id=...` — unlinks
+         * Unlink related records
+         * @description `DELETE /api/v1/{entity}/{id}/related/{relationship}?id=...` — unlinks
          *     `?id=` from the anchor record (soft-deletes the join row: `is_active =
          *     false`). A query parameter, not a JSON body: `DELETE` requests
          *     conventionally carry no body, and `@attome/base`'s `ApiService.delete`
@@ -21637,6 +23239,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Restore a deleted record
+         * @description Brings a soft-deleted record back from the recycle bin, with the same checks as a write. Audited.
+         */
         post: operations["restore_record"];
         delete?: never;
         options?: never;
@@ -21651,10 +23257,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description The record's shares, newest first (Q14-T1). Needs `{entity}.share` and read access to the record. */
+        /**
+         * A record's shares
+         * @description The record's shares, newest first (Q14-T1). Needs `{entity}.share` and read access to the record.
+         */
         get: operations["list_record_shares_for_record"];
         put?: never;
-        /** @description Shares the record with a user or a team (Q14-T1). Needs `{entity}.share`; a `view` share needs read access to the record and an `action` share update access, so nobody gives more than they hold. */
+        /**
+         * Share a record
+         * @description Shares the record with a user or a team (Q14-T1). Needs `{entity}.share`; a `view` share needs read access to the record and an `action` share update access, so nobody gives more than they hold.
+         */
         post: operations["share_record"];
         delete?: never;
         options?: never;
@@ -21672,7 +23284,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description Removes a share from the record (Q14-T1). Needs `{entity}.share` and the access the share gives; a deny row and the creator's own share are left to administrators. */
+        /**
+         * Remove a record share
+         * @description Removes a share from the record (Q14-T1). Needs `{entity}.share` and the access the share gives; a deny row and the creator's own share are left to administrators.
+         */
         delete: operations["unshare_record"];
         options?: never;
         head?: never;
@@ -21686,11 +23301,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** B4-T1: the tags on a record the caller may see. */
+        /**
+         * A record's tags
+         * @description B4-T1: the tags on a record the caller may see.
+         */
         get: operations["list_record_tags"];
         put?: never;
         /**
-         * B4-T1: puts a tag on a record (an existing one, or one found or created
+         * Tag a record
+         * @description B4-T1: puts a tag on a record (an existing one, or one found or created
          *     by name).
          */
         post: operations["add_record_tag"];
@@ -21710,7 +23329,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** B4-T1: takes a tag off a record. */
+        /**
+         * Untag a record
+         * @description B4-T1: takes a tag off a record.
+         */
         delete: operations["remove_record_tag"];
         options?: never;
         head?: never;
@@ -21724,6 +23346,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * A record's timeline
+         * @description One record's activity feed: changes, communications, notes, tasks and the rest, for a caller who may read the record.
+         */
         get: operations["get_record_timeline"];
         put?: never;
         post?: never;
@@ -21741,7 +23367,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B1-T4: the record's timeline, filtered by kind, as a CSV file: the same
+         * Export a record's timeline
+         * @description B1-T4: the record's timeline, filtered by kind, as a CSV file: the same
          *     entries, under the same permissions, as the timeline itself, newest
          *     first, up to 2000.
          */
@@ -21838,6 +23465,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Liveness
+         * @description Answers 200 while the process is serving; it reads no dependency. Public, for load balancers and orchestrators.
+         */
         get: operations["health_check"];
         put?: never;
         post?: never;
@@ -21854,6 +23485,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Dependency health
+         * @description Each dependency's state as this node sees it. Administrators only; readiness for the load balancer is /health/ready.
+         */
         get: operations["dependencies"];
         put?: never;
         post?: never;
@@ -21871,11 +23506,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Readiness probe — returns 503 unless DB, Redis, the metadata registry
+         * Readiness probe
+         * @description Readiness probe — returns 503 unless DB, Redis, the metadata registry
          *     pre-warm (`registry_ready`, Plan 1.2), and the applied schema version
          *     (P-migration-governance) are all confirmed. Load balancer / Kubernetes
          *     gates traffic on the status code, not the body.
-         * @description M01 Core C-23: dropped the 422 this operation used to declare — the
+         *
+         *     M01 Core C-23: dropped the 422 this operation used to declare — the
          *     handler takes no request body/query/path parameters, so validation
          *     failure was never a reachable outcome here. The genuine non-200 outcome
          *     (503, `not_ready`/`draining`) is this same custom `serde_json::Value`
@@ -21898,7 +23535,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * U9-T1 — the startup probe: 200 once this node has finished booting
+         * Startup probe
+         * @description U9-T1 — the startup probe: 200 once this node has finished booting
          *     (migrations, seeds, pre-warm), 503 before. An orchestrator holds liveness
          *     and readiness checks until it passes, so a slow first boot is not killed
          *     as a hung one. Never reads a dependency: readiness does that.
@@ -21919,10 +23557,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists groups (SCIM). */
+        /**
+         * SCIM: list groups
+         * @description Lists groups (SCIM).
+         */
         get: operations["scim_list_groups"];
         put?: never;
-        /** Creates a group (SCIM): a team. */
+        /**
+         * SCIM: create a group
+         * @description Creates a group (SCIM): a team.
+         */
         post: operations["scim_create_group"];
         delete?: never;
         options?: never;
@@ -21937,15 +23581,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Reads a group (SCIM). */
+        /**
+         * SCIM: read a group
+         * @description Reads a group (SCIM).
+         */
         get: operations["scim_get_group"];
         put?: never;
         post?: never;
-        /** Deletes a group (SCIM): the team is removed and its members leave it. */
+        /**
+         * SCIM: delete a group
+         * @description Deletes a group (SCIM): the team is removed and its members leave it.
+         */
         delete: operations["scim_delete_group"];
         options?: never;
         head?: never;
-        /** Patches a group (SCIM): its name and members. */
+        /**
+         * SCIM: patch a group
+         * @description Patches a group (SCIM): its name and members.
+         */
         patch: operations["scim_patch_group"];
         trace?: never;
     };
@@ -21956,10 +23609,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists users (SCIM). */
+        /**
+         * SCIM: list users
+         * @description Lists users (SCIM).
+         */
         get: operations["scim_list_users"];
         put?: never;
-        /** Creates a user (SCIM). */
+        /**
+         * SCIM: create a user
+         * @description Creates a user (SCIM).
+         */
         post: operations["scim_create_user"];
         delete?: never;
         options?: never;
@@ -21974,16 +23633,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Reads a user (SCIM). */
+        /**
+         * SCIM: read a user
+         * @description Reads a user (SCIM).
+         */
         get: operations["scim_get_user"];
-        /** Replaces a user (SCIM). */
+        /**
+         * SCIM: replace a user
+         * @description Replaces a user (SCIM).
+         */
         put: operations["scim_replace_user"];
         post?: never;
-        /** Deactivates a user (SCIM DELETE): the account stays, inactive. */
+        /**
+         * SCIM: deactivate a user
+         * @description Deactivates a user (SCIM DELETE): the account stays, inactive.
+         */
         delete: operations["scim_delete_user"];
         options?: never;
         head?: never;
-        /** Patches a user (SCIM): `active` false deactivates the account. */
+        /**
+         * SCIM: patch a user
+         * @description Patches a user (SCIM): `active` false deactivates the account.
+         */
         patch: operations["scim_patch_user"];
         trace?: never;
     };
@@ -35542,6 +37213,16 @@ export interface components {
             rule_ref?: string | null;
             source_module: string;
         };
+        /** @description The deployment's OpenAPI overlay. */
+        OverlayView: {
+            /** @description The overlay document, or `null` when none is set. */
+            overlay: Record<string, never>;
+            /**
+             * Format: int64
+             * @description Send back to replace it; 0 when none is set.
+             */
+            row_version: number;
+        };
         OwnerItem: {
             entity: string;
             /** Format: uuid */
@@ -35550,12 +37231,38 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description The packages an order went into. */
+        PackBody: {
+            /** @description `own_fleet`, `aramex`, `smsa`, `dhl` or `other`; chosen later when absent. */
+            carrier?: string | null;
+            packages: components["schemas"]["PackageBody"][];
+        };
         /** @description A public signing key. */
         PackKey: {
             key_id: string;
             public_key: string;
             /** Format: date-time */
             retired_at?: string | null;
+        };
+        /** @description One package. */
+        PackageBody: {
+            /** Format: double */
+            height_cm?: number | null;
+            /** Format: double */
+            length_cm?: number | null;
+            /** Format: double */
+            weight_kg: number;
+            /** Format: double */
+            width_cm?: number | null;
+        };
+        /** @description What packing wrote. */
+        Packed: {
+            /** Format: uuid */
+            fulfilment_order_id: string;
+            package_ids: string[];
+            /** Format: uuid */
+            shipment_id: string;
+            status: string;
         };
         PageDataResponse: {
             definition_source: components["schemas"]["DefinitionSource"];
@@ -42779,6 +44486,22 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
+        /** @description One group of a pick list: a product and how many to pick. */
+        PickGroup: {
+            lines: string[];
+            /** Format: uuid */
+            product_id?: string | null;
+            /** Format: double */
+            quantity: number;
+        };
+        /** @description A fulfilment order's pick list. */
+        PickList: {
+            /** Format: uuid */
+            fulfilment_order_id: string;
+            groups: components["schemas"]["PickGroup"][];
+            /** Format: uuid */
+            location_id?: string | null;
+        };
         /**
          * @description D-521 — one widget's pinned query version in the live snapshot. A pinned
          *     dashboard keeps running `pinned_version_id` until it is republished;
@@ -44212,6 +45935,19 @@ export interface components {
         /** @description `PUT /api/v1/me/notification-preferences`. Rows not named are unchanged. */
         PutNotificationPreferences: {
             items: components["schemas"]["NotificationPreferenceWrite"][];
+        };
+        /** @description A new overlay. */
+        PutOverlay: {
+            /**
+             * @description An OpenAPI Overlay 1.0 document whose actions set summary,
+             *     description or example on this deployment's paths.
+             */
+            overlay: Record<string, never>;
+            /**
+             * Format: int64
+             * @description The overlay's current `row_version`; 0 when none is set yet.
+             */
+            row_version: number;
         };
         PutSelfSettingRequest: {
             value: unknown;
@@ -54378,6 +56114,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval policy */
                 id: string;
             };
             cookie?: never;
@@ -54436,6 +56173,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval policy */
                 id: string;
             };
             cookie?: never;
@@ -54507,6 +56245,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval policy */
                 id: string;
             };
             cookie?: never;
@@ -54654,6 +56393,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval process */
                 id: string;
             };
             cookie?: never;
@@ -54703,6 +56443,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval process */
                 id: string;
             };
             cookie?: never;
@@ -54750,6 +56491,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval process */
                 id: string;
             };
             cookie?: never;
@@ -54974,6 +56716,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval request */
                 id: string;
             };
             cookie?: never;
@@ -55032,6 +56775,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval request */
                 id: string;
             };
             cookie?: never;
@@ -55085,6 +56829,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval request */
                 id: string;
             };
             cookie?: never;
@@ -55147,6 +56892,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval request */
                 id: string;
             };
             cookie?: never;
@@ -55208,6 +56954,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The approval request */
                 id: string;
             };
             cookie?: never;
@@ -55375,6 +57122,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The app */
                 id: string;
             };
             cookie?: never;
@@ -55424,6 +57172,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The app */
                 id: string;
             };
             cookie?: never;
@@ -55471,6 +57220,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The app */
                 id: string;
             };
             cookie?: never;
@@ -56003,6 +57753,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -56287,6 +58038,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The business rule */
                 id: string;
             };
             cookie?: never;
@@ -56339,6 +58091,7 @@ export interface operations {
                 "If-Match"?: string | null;
             };
             path: {
+                /** @description The business rule */
                 id: string;
             };
             cookie?: never;
@@ -56398,6 +58151,7 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
+                /** @description The business rule */
                 id: string;
             };
             cookie?: never;
@@ -56480,6 +58234,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The business rule */
                 id: string;
             };
             cookie?: never;
@@ -56520,6 +58275,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The business rule */
                 id: string;
             };
             cookie?: never;
@@ -56587,6 +58343,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The business rule */
                 id: string;
             };
             cookie?: never;
@@ -56645,6 +58402,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The business rule */
                 id: string;
             };
             cookie?: never;
@@ -56918,6 +58676,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
             };
             cookie?: never;
@@ -56967,6 +58726,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
             };
             cookie?: never;
@@ -57023,6 +58783,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
             };
             cookie?: never;
@@ -57076,6 +58837,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
             };
             cookie?: never;
@@ -57116,6 +58878,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
             };
             cookie?: never;
@@ -57187,7 +58950,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
+                /** @description The exception */
                 exception_id: string;
             };
             cookie?: never;
@@ -57235,6 +59000,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
             };
             cookie?: never;
@@ -57275,6 +59041,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
             };
             cookie?: never;
@@ -57337,6 +59104,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
             };
             cookie?: never;
@@ -57408,7 +59176,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The calendar */
                 id: string;
+                /** @description The holiday */
                 holiday_id: string;
             };
             cookie?: never;
@@ -57622,6 +59392,7 @@ export interface operations {
                 status?: string;
                 /** @description `platform`, `product`, `project` or `customer`. */
                 layer?: string;
+                /** @description Only this scope (`platform`, or the product, project or customer name). */
                 scope?: string;
                 /** @description The author's user id. */
                 author?: string;
@@ -60970,6 +62741,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The customer test */
                 id: string;
             };
             cookie?: never;
@@ -61022,6 +62794,7 @@ export interface operations {
                 "If-Match"?: string | null;
             };
             path: {
+                /** @description The customer test */
                 id: string;
             };
             cookie?: never;
@@ -61081,6 +62854,7 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
+                /** @description The customer test */
                 id: string;
             };
             cookie?: never;
@@ -61152,6 +62926,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The customer test */
                 id: string;
             };
             cookie?: never;
@@ -61210,6 +62985,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The customer test */
                 id: string;
             };
             cookie?: never;
@@ -61475,6 +63251,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The data step run */
                 id: string;
             };
             cookie?: never;
@@ -61524,13 +63301,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The data step run */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Stopped: an orphan scan is abandoned, a field run is failed for its abandon route */
+            /** @description Stopped: an orphan scan is abandoned, a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -61566,7 +63344,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `run_finished`: the run already ended */
+            /** @description `run_finished`: the run already ended, or a retype already swapped */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -61582,6 +63360,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The data step run */
                 id: string;
             };
             cookie?: never;
@@ -61640,6 +63419,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The data step run */
                 id: string;
             };
             cookie?: never;
@@ -61796,6 +63576,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The duplicate */
                 id: string;
             };
             cookie?: never;
@@ -61845,6 +63626,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The duplicate */
                 id: string;
             };
             cookie?: never;
@@ -61907,6 +63689,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The duplicate */
                 id: string;
             };
             cookie?: never;
@@ -61956,6 +63739,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The duplicate */
                 id: string;
             };
             cookie?: never;
@@ -62184,6 +63968,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The mapping */
                 id: string;
             };
             cookie?: never;
@@ -62233,6 +64018,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The mapping */
                 id: string;
             };
             cookie?: never;
@@ -62304,6 +64090,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The mapping */
                 id: string;
             };
             cookie?: never;
@@ -62496,6 +64283,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The match rule */
                 id: string;
             };
             cookie?: never;
@@ -62567,6 +64355,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The match rule */
                 id: string;
             };
             cookie?: never;
@@ -62614,6 +64403,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The match rule */
                 id: string;
             };
             cookie?: never;
@@ -62766,6 +64556,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The profile */
                 id: string;
             };
             cookie?: never;
@@ -62995,6 +64786,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The issue */
                 id: string;
             };
             cookie?: never;
@@ -63055,6 +64847,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The issue */
                 id: string;
             };
             cookie?: never;
@@ -63205,6 +64998,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The rule */
                 id: string;
             };
             cookie?: never;
@@ -63252,6 +65046,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The rule */
                 id: string;
             };
             cookie?: never;
@@ -63477,6 +65272,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -63530,6 +65326,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -63680,6 +65477,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The survivorship rule */
                 id: string;
             };
             cookie?: never;
@@ -63736,6 +65534,7 @@ export interface operations {
                 group: string | null;
                 /** @description One-based: page 1 is the first page. */
                 page: number | null;
+                /** @description Rows per page. */
                 page_size: number | null;
             };
             cookie?: never;
@@ -63903,7 +65702,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dead-letter source */
                 source: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -63964,7 +65765,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dead-letter source */
                 source: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -64157,6 +65960,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The device */
                 id: string;
             };
             cookie?: never;
@@ -64204,6 +66008,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The device */
                 id: string;
             };
             cookie?: never;
@@ -64747,6 +66552,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The delivery */
                 id: string;
             };
             cookie?: never;
@@ -64796,6 +66602,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The delivery */
                 id: string;
             };
             cookie?: never;
@@ -64961,6 +66768,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The suppression */
                 id: string;
             };
             cookie?: never;
@@ -65270,6 +67078,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -65319,6 +67128,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
                 hard: boolean;
             };
@@ -65383,6 +67193,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -65445,6 +67256,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -65518,6 +67330,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -65567,6 +67380,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -65620,7 +67434,9 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
             };
             cookie?: never;
@@ -65686,7 +67502,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
             };
             cookie?: never;
@@ -65734,7 +67552,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
             };
             cookie?: never;
@@ -65804,7 +67624,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
             };
             cookie?: never;
@@ -65863,7 +67685,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
             };
             cookie?: never;
@@ -65939,8 +67763,11 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
+                /** @description The choice value */
                 value: string;
             };
             cookie?: never;
@@ -66006,7 +67833,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
             };
             cookie?: never;
@@ -66056,7 +67885,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
             };
             cookie?: never;
@@ -66126,8 +67957,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
+                /** @description The run */
                 run_id: string;
             };
             cookie?: never;
@@ -66186,7 +68020,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The field */
                 field_id: string;
             };
             cookie?: never;
@@ -66286,6 +68122,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -66335,6 +68172,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -66384,6 +68222,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -66446,7 +68285,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The label */
                 label_id: string;
             };
             cookie?: never;
@@ -66494,7 +68335,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
+                /** @description The label */
                 label_id: string;
             };
             cookie?: never;
@@ -66568,6 +68411,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -66626,6 +68470,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity */
                 entity_id: string;
             };
             cookie?: never;
@@ -66717,6 +68562,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The name */
                 name: string;
             };
             cookie?: never;
@@ -66786,6 +68632,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The name */
                 name: string;
             };
             cookie?: never;
@@ -66833,6 +68680,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The name */
                 name: string;
             };
             cookie?: never;
@@ -68866,6 +70714,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The inbound hook */
                 id: string;
             };
             cookie?: never;
@@ -68913,6 +70762,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The inbound hook */
                 id: string;
             };
             cookie?: never;
@@ -69237,6 +71087,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The job */
                 id: string;
             };
             cookie?: never;
@@ -69284,6 +71135,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The job */
                 id: string;
             };
             cookie?: never;
@@ -70857,6 +72709,7 @@ export interface operations {
             query?: {
                 /** @description `platform`, `product`, `project` or `customer`. */
                 layer?: string;
+                /** @description Only this scope (`platform`, or the product, project or customer name). */
                 scope?: string;
                 /**
                  * @description `planned`, `queued`, `claimed`, `applying`, `succeeded`, `failed` or
@@ -71274,6 +73127,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The plan */
                 id: string;
             };
             cookie?: never;
@@ -71440,6 +73294,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The archive row */
                 archive_id: string;
             };
             cookie?: never;
@@ -71498,6 +73353,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The archive row */
                 archive_id: string;
             };
             cookie?: never;
@@ -71559,6 +73415,7 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
+                /** @description The item */
                 item_id: string;
             };
             cookie?: never;
@@ -71629,6 +73486,7 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
+                /** @description The item */
                 item_id: string;
             };
             cookie?: never;
@@ -71696,6 +73554,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The item */
                 item_id: string;
             };
             cookie?: never;
@@ -71757,6 +73616,7 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
+                /** @description The item */
                 item_id: string;
             };
             cookie?: never;
@@ -71928,6 +73788,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The release report */
                 report_id: string;
             };
             cookie?: never;
@@ -71994,6 +73855,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The release report */
                 report_id: string;
             };
             cookie?: never;
@@ -72457,6 +74319,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The migration project */
                 id: string;
             };
             cookie?: never;
@@ -72506,6 +74369,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The migration project */
                 id: string;
             };
             cookie?: never;
@@ -72568,6 +74432,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The migration project */
                 id: string;
             };
             cookie?: never;
@@ -72626,6 +74491,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The migration project */
                 project_id: string;
             };
             cookie?: never;
@@ -72666,6 +74532,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The migration project */
                 project_id: string;
             };
             cookie?: never;
@@ -72728,7 +74595,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The migration project */
                 project_id: string;
+                /** @description The run */
                 run_id: string;
             };
             cookie?: never;
@@ -72778,7 +74647,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The migration project */
                 project_id: string;
+                /** @description The run */
                 run_id: string;
             };
             cookie?: never;
@@ -72828,7 +74699,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The migration project */
                 project_id: string;
+                /** @description The run */
                 run_id: string;
             };
             cookie?: never;
@@ -73164,6 +75037,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The flow template */
                 id: string;
             };
             cookie?: never;
@@ -73356,6 +75230,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The navigation */
                 id: string;
             };
             cookie?: never;
@@ -74069,6 +75944,104 @@ export interface operations {
             };
         };
     };
+    get_overlay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The overlay, or null with row_version 0 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverlayView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_overlay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutOverlay"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverlayView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The overlay does not fit; every problem is named */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     metric_catalogue: {
         parameters: {
             query?: never;
@@ -74249,6 +76222,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The request */
                 request_id: string;
             };
             cookie?: never;
@@ -74992,6 +76966,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The table or view */
                 relation: string;
             };
             cookie?: never;
@@ -75092,6 +77067,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The stored query */
                 id: string;
             };
             cookie?: never;
@@ -75141,6 +77117,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The stored query */
                 id: string;
             };
             cookie?: never;
@@ -75197,6 +77174,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The stored query */
                 id: string;
             };
             cookie?: never;
@@ -75770,6 +77748,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The relationship */
                 id: string;
             };
             cookie?: never;
@@ -75819,6 +77798,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The relationship */
                 id: string;
             };
             cookie?: never;
@@ -75866,6 +77846,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The relationship */
                 id: string;
             };
             cookie?: never;
@@ -76977,6 +78958,7 @@ export interface operations {
             path: {
                 /** @description `flow` or `report` */
                 kind: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -77028,6 +79010,7 @@ export interface operations {
             path: {
                 /** @description `flow` or `report` */
                 kind: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -77166,6 +79149,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SCIM token */
                 id: string;
             };
             cookie?: never;
@@ -77362,6 +79346,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The access review */
                 id: string;
             };
             cookie?: never;
@@ -77422,6 +79407,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The access review */
                 id: string;
             };
             cookie?: never;
@@ -77462,7 +79448,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The access review */
                 id: string;
+                /** @description The review item */
                 item_id: string;
             };
             cookie?: never;
@@ -77770,6 +79758,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The default share */
                 id: string;
             };
             cookie?: never;
@@ -77992,6 +79981,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The field-security profile */
                 id: string;
             };
             cookie?: never;
@@ -78052,7 +80042,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The field-security profile */
                 id: string;
+                /** @description The role */
                 role_id: string;
             };
             cookie?: never;
@@ -78120,6 +80112,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The field-security profile */
                 id: string;
             };
             cookie?: never;
@@ -78169,6 +80162,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The field-security profile */
                 id: string;
             };
             cookie?: never;
@@ -78340,6 +80334,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The privilege grant */
                 id: string;
             };
             cookie?: never;
@@ -78547,6 +80542,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The invitation */
                 id: string;
             };
             cookie?: never;
@@ -78744,6 +80740,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The business unit */
                 id: string;
             };
             cookie?: never;
@@ -78793,6 +80790,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The business unit */
                 id: string;
             };
             cookie?: never;
@@ -78846,7 +80844,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The business unit */
                 id: string;
+                /** @description The user */
                 user_id: string;
             };
             cookie?: never;
@@ -79003,6 +81003,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The position */
                 id: string;
             };
             cookie?: never;
@@ -79050,6 +81051,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The position */
                 id: string;
             };
             cookie?: never;
@@ -79103,7 +81105,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The position */
                 id: string;
+                /** @description The user */
                 user_id: string;
             };
             cookie?: never;
@@ -79151,6 +81155,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The position */
                 id: string;
             };
             cookie?: never;
@@ -79484,6 +81489,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The record share */
                 id: string;
             };
             cookie?: never;
@@ -79698,6 +81704,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The role entity access row */
                 id: string;
             };
             cookie?: never;
@@ -79872,6 +81879,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The role grant */
                 grant_id: string;
             };
             cookie?: never;
@@ -79921,6 +81929,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The role grant */
                 grant_id: string;
             };
             cookie?: never;
@@ -79992,7 +82001,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The role grant */
                 grant_id: string;
+                /** @description The condition */
                 condition_id: string;
             };
             cookie?: never;
@@ -80049,6 +82060,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The role grant */
                 id: string;
             };
             cookie?: never;
@@ -80223,6 +82235,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The role */
                 id: string;
             };
             cookie?: never;
@@ -80348,6 +82361,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The role */
                 id: string;
             };
             cookie?: never;
@@ -80397,6 +82411,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The role */
                 id: string;
             };
             cookie?: never;
@@ -80468,6 +82483,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The role */
                 id: string;
             };
             cookie?: never;
@@ -80539,6 +82555,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The role */
                 id: string;
             };
             cookie?: never;
@@ -80746,6 +82763,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The team */
                 id: string;
             };
             cookie?: never;
@@ -80804,6 +82822,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The team */
                 id: string;
             };
             cookie?: never;
@@ -80853,6 +82872,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The team */
                 id: string;
             };
             cookie?: never;
@@ -80906,7 +82926,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The team */
                 id: string;
+                /** @description The user */
                 user_id: string;
             };
             cookie?: never;
@@ -80965,6 +82987,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The team */
                 id: string;
             };
             cookie?: never;
@@ -81014,6 +83037,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The team */
                 id: string;
             };
             cookie?: never;
@@ -81067,7 +83091,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The team */
                 id: string;
+                /** @description The role */
                 role_id: string;
             };
             cookie?: never;
@@ -81222,6 +83248,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The user */
                 id: string;
             };
             cookie?: never;
@@ -81269,6 +83296,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The user */
                 id: string;
             };
             cookie?: never;
@@ -81318,6 +83346,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The user */
                 id: string;
             };
             cookie?: never;
@@ -81442,6 +83471,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The user */
                 id: string;
             };
             cookie?: never;
@@ -81491,6 +83521,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The user */
                 id: string;
             };
             cookie?: never;
@@ -81544,7 +83575,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The user */
                 id: string;
+                /** @description The role */
                 role_id: string;
             };
             cookie?: never;
@@ -81973,6 +84006,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SLO class */
                 class_id: string;
             };
             cookie?: never;
@@ -82044,6 +84078,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SLO class */
                 class_id: string;
             };
             cookie?: never;
@@ -82720,6 +84755,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The tag */
                 tag_id: string;
             };
             cookie?: never;
@@ -82791,6 +84827,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The tag */
                 tag_id: string;
             };
             cookie?: never;
@@ -83120,6 +85157,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The theme */
                 id: string;
             };
             cookie?: never;
@@ -83169,6 +85207,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The theme */
                 id: string;
             };
             cookie?: never;
@@ -83240,6 +85279,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The theme */
                 id: string;
             };
             cookie?: never;
@@ -83280,6 +85320,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The theme */
                 id: string;
                 /**
                  * @description `logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or
@@ -83366,6 +85407,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The theme */
                 id: string;
             };
             cookie?: never;
@@ -83415,6 +85457,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The theme */
                 id: string;
             };
             cookie?: never;
@@ -83728,6 +85771,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The view */
                 id: string;
             };
             cookie?: never;
@@ -83777,6 +85821,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The view */
                 id: string;
             };
             cookie?: never;
@@ -83824,6 +85869,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The view */
                 id: string;
             };
             cookie?: never;
@@ -83877,6 +85923,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The view */
                 id: string;
             };
             cookie?: never;
@@ -87263,6 +89310,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The request */
                 request_id: string;
             };
             cookie?: never;
@@ -87325,6 +89373,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval process */
                 id: string;
             };
             cookie?: never;
@@ -87580,7 +89629,9 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 record_id: string;
             };
             cookie?: never;
@@ -87621,6 +89672,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval request */
                 id: string;
             };
             cookie?: never;
@@ -87661,6 +89713,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The approval request */
                 id: string;
             };
             cookie?: never;
@@ -89305,6 +91358,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The API key */
                 id: string;
             };
             cookie?: never;
@@ -89450,9 +91504,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The OIDC provider's key */
                 provider: string;
+                /** @description The authorization code to exchange. `None` on an `error` redirect. */
                 code: string | null;
+                /** @description The `state` the provider echoes back: the flow's single-use id. */
                 state: string | null;
+                /** @description The provider's error code (`access_denied`, `consent_required`, ...). */
                 error: string | null;
             };
             cookie?: never;
@@ -89531,6 +91589,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The OIDC provider's key */
                 provider: string;
             };
             cookie?: never;
@@ -90117,6 +92176,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The OIDC provider's key */
                 provider: string;
                 /** @description The authorization code to exchange. `None` on an `error` redirect. */
                 code: string | null;
@@ -90165,6 +92225,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The OIDC provider's key */
                 provider: string;
             };
             cookie?: never;
@@ -90401,8 +92462,11 @@ export interface operations {
             path: {
                 /** @description The OIDC provider key the step-up was started at. */
                 provider: string;
+                /** @description The authorization code to exchange. `None` on an `error` redirect. */
                 code: string | null;
+                /** @description The `state` the provider echoes back: the flow's single-use id. */
                 state: string | null;
+                /** @description The provider's error code (`access_denied`, `consent_required`, ...). */
                 error: string | null;
             };
             cookie?: never;
@@ -90606,6 +92670,7 @@ export interface operations {
                 operation: string;
                 /** @description The configured OIDC provider key to re-authenticate at. */
                 provider: string;
+                /** @description The step-up challenge to continue at the provider. */
                 challenge_id: string;
             };
             cookie?: never;
@@ -92718,6 +94783,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The delete operation */
                 operation_id: string;
             };
             cookie?: never;
@@ -93270,6 +95336,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 logicalname: string;
             };
             cookie?: never;
@@ -93415,10 +95482,12 @@ export interface operations {
     change_stream_delete_subscription: {
         parameters: {
             query: {
+                /** @description The subscription's current `row_version`. */
                 row_version: number;
             };
             header?: never;
             path: {
+                /** @description The subscription */
                 id: string;
             };
             cookie?: never;
@@ -93475,6 +95544,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The subscription */
                 id: string;
             };
             cookie?: never;
@@ -93605,6 +95675,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The subscription */
                 subscription: string;
             };
             cookie?: never;
@@ -93675,6 +95746,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The subscription */
                 subscription: string;
             };
             cookie?: never;
@@ -96784,6 +98856,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description This device */
                 id: string;
             };
             cookie?: never;
@@ -96824,6 +98897,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description This device */
                 id: string;
             };
             cookie?: never;
@@ -97942,6 +100016,128 @@ export interface operations {
             };
         };
     };
+    fulfilment_order_pack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The fulfilment order */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackBody"];
+            };
+        };
+        responses: {
+            /** @description Packed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Packed"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks fulfilment_order.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such fulfilment order */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The order is not released or being picked */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No packages, too many, or a size that is not positive */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fulfilment_pick_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The fulfilment order */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What to pick */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PickList"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks fulfilment_order.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such fulfilment order */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     fulfilment_order_release: {
         parameters: {
             query?: never;
@@ -98177,9 +100373,11 @@ export interface operations {
                 field: string;
                 /** @description A condition on the value before the change. */
                 old_op?: components["schemas"]["HistoryCompare"];
+                /** @description The value `old_op` compares the old value with. */
                 old_value?: string;
                 /** @description A condition on the value after the change. */
                 new_op?: components["schemas"]["HistoryCompare"];
+                /** @description The value `new_op` compares the new value with. */
                 new_value?: string;
                 /** @description Changes on or after this moment (UTC). */
                 from?: string;
@@ -98248,6 +100446,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The name */
                 name: string;
             };
             cookie?: never;
@@ -98808,6 +101007,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The job */
                 id: string;
             };
             cookie?: never;
@@ -98848,6 +101048,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The job */
                 id: string;
             };
             cookie?: never;
@@ -99641,7 +101842,9 @@ export interface operations {
     lineage_compare: {
         parameters: {
             query: {
+                /** @description The older graph version. */
                 from: number;
+                /** @description The newer graph version. */
                 to: number;
             };
             header?: never;
@@ -103089,6 +105292,56 @@ export interface operations {
             };
         };
     };
+    default_form_plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entity's default render plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormPlan"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     form_plan: {
         parameters: {
             query?: never;
@@ -103186,6 +105439,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The navigation */
                 id: string;
             };
             cookie?: never;
@@ -103405,6 +105659,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The provider's key */
                 provider: string;
                 cursor: string | null;
                 limit: number | null;
@@ -103447,7 +105702,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The provider's key */
                 provider: string;
+                /** @description The record */
                 record_id: string;
             };
             cookie?: never;
@@ -104107,6 +106364,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The chat session's token, from the session's first message. */
                 token: string;
                 /**
                  * @description Only messages strictly after this instant. Omit to fetch the whole
@@ -104154,6 +106412,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The chat session's token, from the session's first message. */
                 token: string;
                 /**
                  * @description Only messages strictly after this instant. Omit to fetch the whole
@@ -110857,6 +113116,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 logicalname: string;
                 /**
                  * @description A BCP-47 tag, e.g. `"ar-AE"`. Omit to resolve straight to the
@@ -113144,6 +115404,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The sidebar item */
                 id: string;
             };
             cookie?: never;
@@ -113197,6 +115458,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The sidebar item */
                 id: string;
             };
             cookie?: never;
@@ -113602,6 +115864,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The stage process */
                 id: string;
             };
             cookie?: never;
@@ -114099,6 +116362,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The tag */
                 tag_id: string;
             };
             cookie?: never;
@@ -114877,6 +117141,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The view */
                 id: string;
             };
             cookie?: never;
@@ -114915,6 +117180,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The view */
                 id: string;
             };
             cookie?: never;
@@ -114977,6 +117243,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The view */
                 id: string;
             };
             cookie?: never;
@@ -115439,6 +117706,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The target */
                 id: string;
             };
             cookie?: never;
@@ -115486,6 +117754,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The target */
                 id: string;
             };
             cookie?: never;
@@ -115548,6 +117817,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The target */
                 id: string;
             };
             cookie?: never;
@@ -115588,6 +117858,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The target */
                 id: string;
             };
             cookie?: never;
@@ -115639,6 +117910,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The target */
                 id: string;
             };
             cookie?: never;
@@ -118083,6 +120355,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118148,6 +120421,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118197,6 +120471,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118250,6 +120525,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118312,6 +120588,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118365,6 +120642,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118427,6 +120705,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118480,6 +120759,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118533,7 +120813,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The bulk transform */
                 id: string;
             };
             cookie?: never;
@@ -118583,7 +120865,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The bulk operation */
                 id: string;
                 include_items: boolean | null;
                 /** @description One-based: page 1 is the first page. */
@@ -118638,6 +120922,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118691,6 +120976,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118755,6 +121041,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118804,6 +121091,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -118857,7 +121145,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The export */
                 id: string;
             };
             cookie?: never;
@@ -118919,6 +121209,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
                 /** @description attr=value pairs joined by `,`, naming a unique key */
                 keyspec: string;
@@ -118986,6 +121277,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
                 /** @description attr=value pairs joined by `,`, naming a unique key */
                 keyspec: string;
@@ -119056,7 +121348,9 @@ export interface operations {
                 "If-Match"?: string | null;
             };
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The merge */
                 merge_id: string;
             };
             cookie?: never;
@@ -119115,6 +121409,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -119216,6 +121511,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -119269,7 +121565,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The staged import */
                 id: string;
             };
             cookie?: never;
@@ -119319,6 +121617,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -119385,6 +121684,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -119434,6 +121734,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
             };
             cookie?: never;
@@ -119495,7 +121796,9 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -119551,7 +121854,9 @@ export interface operations {
                 "Attome-Operation-Id"?: string | null;
             };
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -119608,7 +121913,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -119738,7 +122045,9 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -119864,7 +122173,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -119905,7 +122216,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -119977,7 +122290,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -120049,7 +122364,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -120112,8 +122429,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The message */
                 comm_id: string;
             };
             cookie?: never;
@@ -120182,7 +122502,9 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -120987,7 +123309,9 @@ export interface operations {
                 "If-Match"?: string | null;
             };
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121055,7 +123379,9 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121114,7 +123440,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121186,7 +123514,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121243,7 +123573,9 @@ export interface operations {
                 "If-Match"?: string | null;
             };
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121302,7 +123634,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121364,7 +123698,9 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121425,8 +123761,11 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The relationship's name */
                 relationship: string;
             };
             cookie?: never;
@@ -121485,8 +123824,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The relationship's name */
                 relationship: string;
             };
             cookie?: never;
@@ -121547,9 +123889,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
                 /** @description The other side's record id to unlink. */
                 id: string;
+                /** @description The relationship's name */
                 relationship: string;
             };
             cookie?: never;
@@ -121609,7 +123953,9 @@ export interface operations {
                 "If-Match"?: string | null;
             };
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121668,7 +124014,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121718,7 +124066,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121781,8 +124131,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The record share */
                 share_id: string;
             };
             cookie?: never;
@@ -121830,7 +124183,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121880,7 +124235,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -121943,8 +124300,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The tag */
                 tag_id: string;
             };
             cookie?: never;
@@ -122008,7 +124368,9 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -122070,7 +124432,9 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
             };
             cookie?: never;
@@ -122498,8 +124862,11 @@ export interface operations {
     scim_list_groups: {
         parameters: {
             query?: {
+                /** @description A SCIM filter, such as `userName eq "sara@example.com"`. */
                 filter?: string;
+                /** @description The 1-based index of the first result. */
                 startIndex?: number;
+                /** @description How many results to return. */
                 count?: number;
             };
             header?: never;
@@ -122570,6 +124937,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SCIM resource id */
                 id: string;
             };
             cookie?: never;
@@ -122606,6 +124974,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SCIM resource id */
                 id: string;
             };
             cookie?: never;
@@ -122640,6 +125009,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SCIM resource id */
                 id: string;
             };
             cookie?: never;
@@ -122684,8 +125054,11 @@ export interface operations {
     scim_list_users: {
         parameters: {
             query?: {
+                /** @description A SCIM filter, such as `userName eq "sara@example.com"`. */
                 filter?: string;
+                /** @description The 1-based index of the first result. */
                 startIndex?: number;
+                /** @description How many results to return. */
                 count?: number;
             };
             header?: never;
@@ -122770,6 +125143,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SCIM resource id */
                 id: string;
             };
             cookie?: never;
@@ -122806,6 +125180,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SCIM resource id */
                 id: string;
             };
             cookie?: never;
@@ -122861,6 +125236,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SCIM resource id */
                 id: string;
             };
             cookie?: never;
@@ -122895,6 +125271,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The SCIM resource id */
                 id: string;
             };
             cookie?: never;
