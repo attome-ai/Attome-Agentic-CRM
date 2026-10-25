@@ -710,6 +710,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Wathq commercial registration client (AJ4-T1): looks a CR number up (ten digits, Arabic-Indic digits
+  accepted) and reads the legal names, status, legal form, city, dates, ISIC activities and contact details;
+  `account_patch` maps them onto the CRM `account` fields, and a branch's main CR becomes a
+  `proposed_parent_ref` proposal, never a parent link. Checked against recorded answers; no Wathq
+  subscription is wired yet.
 - SPL National Address client (AJ5-T1): looks an address up by its short address (`RRRD2929`) or as
   typed, reads SPL's answer into standardised parts and coordinates, and maps them onto the library's
   `address` entity, which gains `region`, `latitude` and `longitude` (library-core changeset 0002).

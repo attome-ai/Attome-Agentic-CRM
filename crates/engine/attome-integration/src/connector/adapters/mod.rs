@@ -25,4 +25,6 @@ pub mod user_mail_sync;
 pub mod video;
 /// J6-T1: Twilio Voice and an Asterisk PBX.
 pub mod voice;
+/// AJ4-T1: Wathq commercial registration lookups mapped to accounts.
+pub mod wathq;
 pub mod webchat;
