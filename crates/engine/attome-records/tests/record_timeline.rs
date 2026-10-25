@@ -144,7 +144,7 @@ async fn seed_platform(db: &DbPool) {
                 &[
                     ("subject", "text"),
                     ("channel", "text"),
-                    ("sent_at", "date"),
+                    ("sent_at", "date_time"),
                 ],
             )
             .await;

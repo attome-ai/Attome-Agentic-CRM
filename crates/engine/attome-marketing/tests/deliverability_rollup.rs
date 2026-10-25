@@ -56,7 +56,7 @@ async fn test_db() -> Option<PgPool> {
     provision(
         &db,
         "communication_event",
-        &[("event_type", "text"), ("occurred_at", "date")],
+        &[("event_type", "text"), ("occurred_at", "date_time")],
     )
     .await;
     // The platform's column is a lookup (uuid) to the communication.
