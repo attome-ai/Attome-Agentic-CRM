@@ -710,6 +710,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Rolling upgrade (U8-T1): `attome upgrade --plan <nodes.json>` measures the fleet's error rate and
+  mean latency from each node's `/metrics`, then upgrades the nodes one at a time (the first is the
+  canary), watching each for `watch_secs` (300 by default); a node whose error rate rises more than
+  `max_error_rate_increase` or whose latency passes `max_latency_ratio` times the baseline is rolled
+  back and the upgrade stops. The upgrade and rollback commands per node are the plan's own.
 - Redis reconnect counter (AB2-T5): every cache and coordination pool client counts its reconnects as
   `redis_reconnects_total{pool}`. Following a Sentinel failover was already built and is covered by the
   container test in `attome-cache/tests/sentinel.rs`; during the switch, commands time out and the

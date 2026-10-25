@@ -55,6 +55,9 @@ Usage:
   attome status-page --url <server> --out <dir>
                                 Write a server's public status page as static
                                 HTML and JSON into a directory
+  attome upgrade --plan <nodes.json>
+                                Upgrade nodes one at a time, watching each
+                                and rolling back the first that gets worse
   attome sla probe --url <server> --out <probes.jsonl>
                                 Probe a server's readiness every minute and
                                 append the answers
@@ -164,6 +167,10 @@ fn main() -> ExitCode {
         ["settings", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::settings::run(&rest)
+        }
+        ["upgrade", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::upgrade::run(&rest)
         }
         ["sla", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
