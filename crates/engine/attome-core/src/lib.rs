@@ -58,14 +58,6 @@ pub async fn try_xact_lock(
 /// AK3-T1: the agent an engine write is made for, read by the audit and
 /// change-feed writers.
 pub mod agent_scope;
-/// B5-T3: writes whose change events start no automation.
-pub mod quiet_scope;
-/// L7-T2: the channel and flow run an engine write came from, read by the
-/// change-feed writers.
-pub mod provenance_scope;
-pub mod quiet_window;
-/// L5-T2: lineage edges captured at publish.
-pub mod lineage;
 /// C11 B5 (P-5) — the runtime AI switch's read side: `config AND runtime`,
 /// failing closed, consulted by every AI surface.
 pub mod ai_runtime_switch;
@@ -97,6 +89,8 @@ pub mod consent_rules;
 /// for it — one of the edges that makes ARCH-1 a dependency cycle.
 pub mod credential_columns;
 pub mod crud;
+/// T6-T2: customer flags, read by rules and flows as `flag('name')`.
+pub mod customer_flags;
 pub mod data_definition;
 pub mod data_domain;
 /// L6-T8: reading stored data profiles.
@@ -106,8 +100,6 @@ pub mod dead_letter;
 pub mod defaults_scope;
 /// A30-T2: environment variables in rules and flows, as `env.<name>`.
 pub mod env_vars;
-/// T6-T2: customer flags, read by rules and flows as `flag('name')`.
-pub mod customer_flags;
 /// T6-T3: A/B variants of a feature flag and their recorded outcomes.
 pub mod experiment;
 /// M95/D-430 — the closed `FeatureFlag` catalogue. Split from
@@ -130,6 +122,8 @@ pub mod hijri_store;
 pub mod jobs;
 pub mod label_store;
 pub mod legal_hold;
+/// L5-T2: lineage edges captured at publish.
+pub mod lineage;
 /// Dashboard 10/10 Phase 6 — the `MyWorkProvider` trait every
 /// actionable-work-owning engine implements, and the types the aggregation
 /// route composes across them.
@@ -146,6 +140,12 @@ pub mod my_work;
 pub mod partition_maintenance;
 /// R1-T1: restriction of processing, shared by every processing path.
 pub mod processing_restriction;
+/// L7-T2: the channel and flow run an engine write came from, read by the
+/// change-feed writers.
+pub mod provenance_scope;
+/// B5-T3: writes whose change events start no automation.
+pub mod quiet_scope;
+pub mod quiet_window;
 pub mod reconcile;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day encrypted recovery archive.
 pub mod recovery_archive;
@@ -227,9 +227,8 @@ pub use label_store::{
 pub use legal_hold::{LegalHoldInfo, record_is_held};
 pub use meta_registry::{
     AttrInfo, DataClassification, EntityMeta, EntityMetaRegistry, OnTargetDelete, SchemaEntity,
-    Sensitivity,
-    SchemaField, apply_change_log, build_registry, fetch_entity_snapshot, fetch_entity_snapshots,
-    fetch_schema_facts, load_snapshot, save_snapshot, verify_ids_exist,
+    SchemaField, Sensitivity, apply_change_log, build_registry, fetch_entity_snapshot,
+    fetch_entity_snapshots, fetch_schema_facts, load_snapshot, save_snapshot, verify_ids_exist,
 };
 pub use metadata_reference::{
     BackfillProgress, MetadataReferenceInput, MetadataReferenceRow, advance_backfill_progress,

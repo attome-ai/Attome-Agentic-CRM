@@ -199,7 +199,17 @@ async fn ensure_communication_entity(db: &DbPool) {
     .await
     .expect("ensure communication.direction");
     ensure_attribute(
-        db, id, "sent_at", "Sent At", "date_time", false, false, true, true, None, None,
+        db,
+        id,
+        "sent_at",
+        "Sent At",
+        "date_time",
+        false,
+        false,
+        true,
+        true,
+        None,
+        None,
     )
     .await
     .expect("ensure communication.sent_at");

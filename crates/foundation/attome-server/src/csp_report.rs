@@ -21,7 +21,6 @@ use axum::{
 };
 use serde_json::Value;
 
-
 /// Reports read from one request; the rest are dropped.
 const MAX_REPORTS: usize = 20;
 
@@ -186,7 +185,10 @@ mod tests {
 
     #[test]
     fn csp_report_route_is_the_reported_path() {
-        assert_eq!(crate::middleware::security_headers::CSP_REPORT_PATH, "/api/v1/security/csp-report");
+        assert_eq!(
+            crate::middleware::security_headers::CSP_REPORT_PATH,
+            "/api/v1/security/csp-report"
+        );
     }
 
     #[test]

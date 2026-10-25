@@ -9,9 +9,9 @@ mod access;
 pub(crate) mod aliases;
 /// A27-T3 — changing a record's type, with a preview.
 mod change_type;
+pub mod clone;
 /// K7-T1: declared records refuse the generic write path.
 pub mod declared;
-pub mod clone;
 mod expand;
 pub mod favourites;
 /// C3-T1: the caller's feed.

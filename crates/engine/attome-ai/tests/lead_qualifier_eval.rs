@@ -38,8 +38,7 @@ fn bundle() -> Value {
 }
 
 fn fixture() -> Value {
-    serde_json::from_str(include_str!("fixtures/lead_qualifier.json"))
-        .expect("the fixture parses")
+    serde_json::from_str(include_str!("fixtures/lead_qualifier.json")).expect("the fixture parses")
 }
 
 fn rows<'a>(bundle: &'a Value, entity: &str) -> Vec<&'a Value> {
@@ -142,7 +141,10 @@ fn agent_lead_qualifier_eval_cases_match_the_policy() {
                 }
             }
             Some("needs_approval") => {
-                for t in case["expect_tool_any_of"].as_array().expect("expected tools") {
+                for t in case["expect_tool_any_of"]
+                    .as_array()
+                    .expect("expected tools")
+                {
                     let t = t.as_str().expect("a tool");
                     assert!(
                         allowed.iter().any(|a| a == t),

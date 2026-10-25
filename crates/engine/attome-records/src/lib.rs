@@ -33,13 +33,10 @@
 pub mod access_plan;
 /// M9-T1: the write lock of a pending approval process.
 pub mod approval_lock;
-pub mod stage_move;
 pub mod bulk;
 /// B5-T1: `POST /api/v1/{entity}/bulk-edit`, per-attribute operations over
 /// many records, applied by the bulk engine.
 pub mod bulk_edit;
-/// L2-T5: the data-quality fix transforms bulk edit's `fix` applies.
-pub mod quality_fix;
 mod bulk_graph;
 pub mod business_rules;
 /// AA7-T4: `POST /api/v1/query/changes`, what changed since a cursor.
@@ -60,14 +57,17 @@ pub mod import_choice_match;
 pub mod mutation_ring;
 /// C1-T1: note replies moved from the note's JSON to their own records.
 pub mod note_replies;
-pub mod query_admin;
 /// S7-T1: the read-only OData v4 feed.
 pub mod odata;
+/// L2-T5: the data-quality fix transforms bulk edit's `fix` applies.
+pub mod quality_fix;
+pub mod query_admin;
 pub mod query_exec;
 pub mod query_spec;
 pub mod rejection_log;
 pub mod rule_engine;
 pub mod rw_pin;
+pub mod stage_move;
 
 /// Advisory-lock namespace for the `"xrm-files/…"` prefix — `entity_
 /// mutation`'s file-version lock and `attome-server`'s `files.rs`'s per-

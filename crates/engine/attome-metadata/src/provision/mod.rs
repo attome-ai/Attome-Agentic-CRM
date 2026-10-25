@@ -35,24 +35,24 @@ pub mod field_change;
 mod fixture_gate;
 mod grants;
 mod identifiers;
+/// AA3-T1: indexes for the attributes views and definitions filter and sort on.
+pub mod index_advisor;
 /// Y2-T4 — the orphan scan: lookup values that point at no record.
 pub mod lookup_fk;
+/// L1-T2: a master entity's contribution and provenance side tables.
+pub mod master;
 /// Y12-T6 — backfill batch sizes that follow the load.
 pub mod pacing;
 mod reconcile;
 /// A27-T1 — the `record_type` attribute an entity gets with its first type.
 pub mod record_type;
-pub mod stage_process;
-/// L1-T2: a master entity's contribution and provenance side tables.
-pub mod master;
-/// AA3-T1: indexes for the attributes views and definitions filter and sort on.
-pub mod index_advisor;
 /// M01 Core P3 gap (D-455) — physical join-table provisioning for the
 /// generic many-to-many relationship metadata object.
 mod relationship;
 mod schema_change;
 /// A1-T1: write an attribute's or entity's sensitivity label.
 pub mod sensitivity;
+pub mod stage_process;
 mod table;
 
 #[cfg(test)]

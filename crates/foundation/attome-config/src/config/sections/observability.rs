@@ -156,7 +156,7 @@ pub struct EmailSection {
 }
 
 /// Z8-T5: `email.feedback`.
-#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
+#[derive(Clone, Debug, Default, Deserialize, schemars::JsonSchema)]
 pub struct EmailFeedback {
     /// SendGrid's signed event webhook verification key (the base64
     /// SubjectPublicKeyInfo SendGrid shows); unset refuses SendGrid events.
@@ -170,7 +170,7 @@ pub struct EmailFeedback {
 
 /// Z8-T3: `email.rate_limits`. Each stream's own limits; a stream with
 /// none set sends as fast as the provider takes it.
-#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
+#[derive(Clone, Debug, Default, Deserialize, schemars::JsonSchema)]
 pub struct EmailRateLimits {
     /// Limits on transactional mail.
     #[serde(default)]
@@ -181,7 +181,7 @@ pub struct EmailRateLimits {
 }
 
 /// Z8-T3: one stream's limits, in messages per minute.
-#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
+#[derive(Clone, Debug, Default, Deserialize, schemars::JsonSchema)]
 pub struct EmailStreamRates {
     /// By provider name (`"smtp"`, `"ses"`, `"sendgrid"`):
     /// `{"ses": 600}`. A provider not named has no limit.

@@ -112,7 +112,9 @@ pub struct Proposal {
 
 /// The archive's time from its name (`attome-YYYYMMDD-HHMM.dump`). Pure.
 pub fn archive_time(name: &str) -> Option<DateTime<Utc>> {
-    let stamp = name.strip_prefix(ARCHIVE_PREFIX)?.strip_suffix(ARCHIVE_SUFFIX)?;
+    let stamp = name
+        .strip_prefix(ARCHIVE_PREFIX)?
+        .strip_suffix(ARCHIVE_SUFFIX)?;
     NaiveDateTime::parse_from_str(stamp, "%Y%m%d-%H%M")
         .ok()
         .map(|t| t.and_utc())
@@ -347,7 +349,8 @@ pub fn digest(report: &OpsReport, proposed: &[Proposal]) -> (String, String) {
     } else {
         format!(
             "Weekly operations digest: {} thing{} to do",
-            proposed.len(), if proposed.len() == 1 { "" } else { "s" }
+            proposed.len(),
+            if proposed.len() == 1 { "" } else { "s" }
         )
     };
     let mut body = String::new();
@@ -356,19 +359,26 @@ pub fn digest(report: &OpsReport, proposed: &[Proposal]) -> (String, String) {
     } else {
         body.push_str("Proposed actions:\n");
         for p in proposed {
-            let mark = if p.severity == "high" { "[urgent] " } else { "" };
+            let mark = if p.severity == "high" {
+                "[urgent] "
+            } else {
+                ""
+            };
             body.push_str(&format!("- {mark}{}\n", p.text));
         }
     }
     body.push_str(&format!(
         "\nVersion {}; {} node(s) seen in the last day.\n",
-        report.version, report.nodes.len()
+        report.version,
+        report.nodes.len()
     ));
     let b = &report.backups;
     match b.newest_at {
         Some(at) => body.push_str(&format!(
             "Backups: {} archive(s), {}, newest {}.\n",
-            b.archives, megabytes(b.bytes), at.format("%Y-%m-%d %H:%M UTC")
+            b.archives,
+            megabytes(b.bytes),
+            at.format("%Y-%m-%d %H:%M UTC")
         )),
         None => body.push_str("Backups: none found.\n"),
     }
@@ -402,7 +412,8 @@ fn done_key(now: DateTime<Utc>) -> String {
     let week = now.iso_week();
     format!(
         "attome-ai:ops_digest:done:{}-W{:02}",
-        week.year(), week.week()
+        week.year(),
+        week.week()
     )
 }
 

@@ -296,7 +296,11 @@ async fn record_usage(state: &EngineState, meter: &Meter, usage: &Usage) {
     .bind(&usage.model_id)
     .bind(i32::try_from(usage.prompt_tokens).unwrap_or(i32::MAX))
     .bind(i32::try_from(usage.completion_tokens).unwrap_or(i32::MAX))
-    .bind(usage.cached_prompt_tokens.and_then(|t| i32::try_from(t).ok()))
+    .bind(
+        usage
+            .cached_prompt_tokens
+            .and_then(|t| i32::try_from(t).ok()),
+    )
     .bind(usage.reported)
     .bind(cost)
     .bind(latency)

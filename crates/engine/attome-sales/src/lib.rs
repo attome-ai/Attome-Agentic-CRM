@@ -36,9 +36,9 @@ pub mod pricing;
 pub mod quote;
 /// D9-T3: quote acceptance by guest link.
 pub mod quote_accept;
-pub mod quote_sync;
 /// F2-T1: quote submission under the discount policy.
 pub mod quote_submit;
+pub mod quote_sync;
 pub mod schedules;
 pub mod scoring;
 pub mod scoring_run;

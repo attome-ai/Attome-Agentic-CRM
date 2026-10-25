@@ -3,8 +3,6 @@ pub mod admin;
 pub mod api_keys;
 /// Q1-T7: who may sign in with a password.
 pub mod auth_policy;
-/// T2-T2: the caller's own role names.
-pub mod my_roles;
 pub mod cache;
 /// U12-T1 — company walls in the record filter.
 pub mod company_walls;
@@ -19,6 +17,8 @@ pub mod grants;
 pub mod mfa;
 pub mod mfa_policy;
 pub mod model;
+/// T2-T2: the caller's own role names.
+pub mod my_roles;
 pub mod reconcile;
 pub mod resolver;
 pub mod revalidation;

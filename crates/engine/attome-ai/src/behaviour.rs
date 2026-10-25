@@ -498,10 +498,7 @@ pub async fn trip(state: &EngineState, d: &Departure) -> Result<bool, AppError> 
     let db = &state.base.db;
     let actor = attome_approval::POLICY_ACTOR_ID;
     let reason = format!("automatic: {}", kind_name(d.kind));
-    let note = format!(
-        "{reason}: observed {}, expected {}",
-        d.observed, d.expected
-    );
+    let note = format!("{reason}: observed {}, expected {}", d.observed, d.expected);
     let mut tx = attome_db::tx::begin(db).await?;
     let suspended: Option<(Option<String>, Option<Uuid>)> = sqlx::query_as(
         "UPDATE ai_agent SET status = 'suspended', modified_at = NOW(), \
