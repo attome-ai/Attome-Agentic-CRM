@@ -949,6 +949,14 @@ async fn publish_version(
     let schema_hash = crate::graph::validate(&graph)
         .map_err(|e| AppError::Validation(format!("graph validation failed: {e}")))?;
     crate::graph::validate_module_steps(&state, &graph)?;
+    // A30-T2: every `env.<name>` a condition reads must be readable here.
+    attome_core::env_vars::check_publish(
+        &state.base.db,
+        graph.nodes.iter().filter_map(|n| {
+            crate::condition::expression_of(&n.config).and_then(serde_json::Value::as_str)
+        }),
+    )
+    .await?;
 
     // TODO-047 / M32 Phase 1 (D-450): publish-time escalation validation.
     // `escalation::validate` existed as a pure, fully-tested module before

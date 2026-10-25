@@ -710,6 +710,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Environment variables in flows (A30-T2): a flow condition's expression reads `env.<name>`: the value
+  this deployment set, else the definition's default (`attome_core::env_vars`). Secrets are never
+  readable by rules. Publishing a flow that reads a variable that is not defined, is a secret, or is
+  required with no value fails with the names.
 - Actionable approval pushes (J12-T2): each approver who gets an approval email also gets a push with the
   same single-use link token. For a low-risk request (`approval.email_decide_actions`) the push has
   Approve and Reject buttons that the service worker sends to `POST /api/v1/approvals/email-link/decide`

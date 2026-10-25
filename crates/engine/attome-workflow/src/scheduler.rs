@@ -1494,7 +1494,10 @@ async fn execute_node(
     fired: &mut HashSet<String>,
     round: i32,
 ) -> Result<NodeOutcome, AppError> {
-    if node_type.is_cacheable() {
+    // A30-T2: a condition that reads `env.<name>` depends on this
+    // deployment's values, which a cached run's output does not record.
+    let reads_env = node_type == NodeType::Condition && crate::condition::reads_env(&node.config);
+    if node_type.is_cacheable() && !reads_env {
         let hash = output_hash(node, input);
         if let Some(cached) =
             cache_lookup(&state.base.db, instance.definition_version_id, &hash).await?
@@ -1522,7 +1525,12 @@ async fn execute_node(
         }),
         NodeType::Condition => {
             let value = input.get("value").cloned().unwrap_or(Value::Null);
-            let taken = eval_condition(&node.config, &value);
+            let taken = if reads_env {
+                let env = attome_core::env_vars::context_for(&state.base.db).await?;
+                eval_condition(&node.config, &attome_core::env_vars::with_env(&value, env))
+            } else {
+                eval_condition(&node.config, &value)
+            };
             Ok(NodeOutcome::Branch {
                 taken_port: if taken { "true" } else { "false" },
                 output: value,

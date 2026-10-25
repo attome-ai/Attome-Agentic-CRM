@@ -27,6 +27,13 @@ pub(crate) fn expression_of(config: &Value) -> Option<&Value> {
     config.get("expression")
 }
 
+/// A30-T2: whether a condition's V2 expression reads `env.<name>`.
+pub(crate) fn reads_env(config: &Value) -> bool {
+    expression_of(config)
+        .and_then(Value::as_str)
+        .is_some_and(|src| !attome_core::env_vars::references(src).is_empty())
+}
+
 /// Parses `src` as V2 rule text, for graph validation.
 pub fn check_expression(src: &str) -> Result<(), String> {
     if src.trim().is_empty() {

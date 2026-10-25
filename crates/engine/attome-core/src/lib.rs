@@ -104,6 +104,8 @@ pub mod data_profile;
 /// M5-T1: one shape for dead letters from every source.
 pub mod dead_letter;
 pub mod defaults_scope;
+/// A30-T2: environment variables in rules and flows, as `env.<name>`.
+pub mod env_vars;
 /// T6-T3: A/B variants of a feature flag and their recorded outcomes.
 pub mod experiment;
 /// M95/D-430 — the closed `FeatureFlag` catalogue. Split from
