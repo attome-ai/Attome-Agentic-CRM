@@ -1142,6 +1142,16 @@ impl AppConfig {
                 ),
             });
         }
+        // AB2-T4: the read pin after a failover is bounded.
+        if self.database.failover_pin_secs > 300 {
+            return Err(ConfigError::Invalid {
+                field: "database.failover_pin_secs".into(),
+                reason: format!(
+                    "must be between 0 and 300, got {}",
+                    self.database.failover_pin_secs
+                ),
+            });
+        }
         let classes = &self.database.statement_classes;
         for (class, timeouts) in [
             ("fast", classes.fast),

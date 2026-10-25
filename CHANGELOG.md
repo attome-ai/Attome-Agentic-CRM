@@ -710,6 +710,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Failover read pin (AB2-T4): the replica watermark loop also reads the primary's timeline; when it
+  changes (a new leader), every routed read goes to the primary for `database.failover_pin_secs`
+  (default 30, at most 300, 0 off) through a shared Redis pin, read in the same round trip as the
+  user's own pin and failing closed to the primary. Gauge `db_failover_pin_active`.
 - SLA measurement (AB1-T1): `attome sla probe` checks a server's readiness from another host and appends
   each answer to a JSON lines file; `attome sla report` turns a month of probes into an availability
   report (HTML, English and Arabic), leaving out agreed maintenance windows and time no probe covered,

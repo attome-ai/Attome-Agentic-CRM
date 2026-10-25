@@ -66,9 +66,51 @@ pub fn spawn_watermark_refresh(state: AppState, interval: Duration) {
             // reader safe, and this deadline is what keeps the loop itself
             // ticking.
             let _ = tokio::time::timeout(interval, refresh_once(&state, interval)).await;
+            // AB2-T4: a new timeline on the primary is a leader change.
+            let _ = tokio::time::timeout(interval, watch_leader(&state)).await;
             tokio::time::sleep(interval).await;
         }
     });
+}
+
+/// AB2-T4: the primary's last seen timeline (0: not read yet). Process
+/// state that only decides when to set the shared pin; a restart re-reads it.
+static LAST_TIMELINE: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
+/// AB2-T4: whether a timeline read after `previous` is a leader change: a
+/// different value after one was known. Pure.
+pub fn leader_changed(previous: i64, current: i64) -> bool {
+    previous != 0 && current != previous
+}
+
+/// AB2-T4: reads the primary's timeline and, when it changed, sets the
+/// global read pin for `database.failover_pin_secs`. A role that may not
+/// call `pg_control_checkpoint()` simply never sees a change.
+async fn watch_leader(state: &AppState) {
+    let secs = state.config.database.failover_pin_secs;
+    if secs == 0 || !state.config.database.has_read_replica() {
+        return;
+    }
+    let timeline: Result<i64, sqlx::Error> =
+        sqlx::query_scalar("SELECT timeline_id::bigint FROM pg_control_checkpoint()")
+            .fetch_one(&state.db)
+            .await;
+    let Ok(current) = timeline else {
+        return;
+    };
+    let previous = LAST_TIMELINE.swap(current, std::sync::atomic::Ordering::Relaxed);
+    if leader_changed(previous, current) {
+        tracing::warn!(
+            event = "db.leader_changed",
+            previous,
+            current,
+            pin_secs = secs,
+            "database leader changed; reads go to the primary while replicas catch up"
+        );
+        if let Err(error) = attome_cache::sticky_primary::set_global_pin(&state.redis, secs).await {
+            tracing::warn!(%error, "failover read pin not set");
+        }
+    }
 }
 
 #[derive(sqlx::FromRow)]

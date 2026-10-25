@@ -1194,6 +1194,13 @@
           "description": "P1.12 — disables sqlx's client-side prepared-statement cache. Found\nnecessary while actually load-testing the pgbouncer recipe (P1.8d\nstep 5, 2026-07-21, D-106): a transaction-mode pgbouncer without\nprotocol-level prepared-statement support (added in pgbouncer 1.21)\ncan hand a client's logical connection a different real backend\nbetween transactions, so a statement sqlx cached as prepared on one\nbackend does not exist on the next — surfacing as `prepared\nstatement \"sqlx_s_N\" already exists` or \"does not exist\" under real\nconcurrent load. D-171: `pgbouncer/Dockerfile` (this platform's\nreference recipe) moved off the Debian bookworm apt package (1.18)\nonto a maintained >=1.21 image, so this flag is no longer needed for\nthat recipe by default — it remains a general escape hatch for any\ndeployment fronted by a pre-1.21 pooler. Set this `true` whenever\n`database.host`/`port` point at such a pooler; `false` (the default —\nno behavior change for a direct-to-Postgres deployment) keeps the\ncache on.",
           "type": "boolean"
         },
+        "failover_pin_secs": {
+          "default": 30,
+          "description": "AB2-T4: after the database's leader changes (a failover), every read goes\nto the primary for this many seconds, so a person never reads an older\nreplica than the write they just made while replicas catch up to the new\nleader. 0 turns it off; at most 300.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
         "host": {
           "type": "string"
         },

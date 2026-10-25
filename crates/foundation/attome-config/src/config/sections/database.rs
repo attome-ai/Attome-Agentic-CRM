@@ -330,6 +330,12 @@ pub struct DatabaseSection {
     /// alone.
     #[serde(default)]
     pub replica_max_lag_secs: Option<u64>,
+    /// AB2-T4: after the database's leader changes (a failover), every read goes
+    /// to the primary for this many seconds, so a person never reads an older
+    /// replica than the write they just made while replicas catch up to the new
+    /// leader. 0 turns it off; at most 300.
+    #[serde(default = "default_failover_pin_secs")]
+    pub failover_pin_secs: u64,
     /// P-db-privilege-separation follow-up (§1's "move migrations to a
     /// one-shot deployment job"). `true` (the default — today's behavior,
     /// unchanged) keeps `main.rs`'s inline `ensure_schema`, `run_migrations`,
@@ -378,6 +384,7 @@ impl std::fmt::Debug for DatabaseSection {
             .field("ssl_root_cert", &self.ssl_root_cert)
             .field("disable_statement_cache", &self.disable_statement_cache)
             .field("replica_max_lag_secs", &self.replica_max_lag_secs)
+            .field("failover_pin_secs", &self.failover_pin_secs)
             .field("migrate_on_boot", &self.migrate_on_boot)
             .finish()
     }
@@ -462,6 +469,10 @@ fn default_ssl_mode() -> String {
 
 fn default_sticky_primary_ttl_secs() -> u64 {
     5
+}
+
+fn default_failover_pin_secs() -> u64 {
+    30
 }
 
 #[derive(Clone, Deserialize, schemars::JsonSchema)]

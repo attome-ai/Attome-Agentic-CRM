@@ -353,7 +353,15 @@ impl AppState {
         if !self.config.database.has_read_replica() {
             return &self.db;
         }
-        match attome_cache::sticky_primary::check_pin(&self.redis, user_id).await {
+        // AB2-T4: the failover pin and the user's own pin in one read.
+        let (failover_pinned, pin) =
+            attome_cache::sticky_primary::routing_check(&self.redis, user_id).await;
+        ::metrics::gauge!("db_failover_pin_active").set(if failover_pinned { 1.0 } else { 0.0 });
+        if failover_pinned && !matches!(pin, PinCheck::RedisError) {
+            crate::metrics::record_read_routing_decision("failover_pin_primary");
+            return &self.db;
+        }
+        match pin {
             PinCheck::RedisError => {
                 crate::metrics::record_read_routing_decision("redis_error_primary");
                 &self.db
@@ -440,7 +448,15 @@ impl AppState {
     /// check, which is the same scoping limit that plan already names as
     /// acceptable.
     pub async fn readonly_query_pool(&self, user_id: Uuid) -> &DbPool {
-        match attome_cache::sticky_primary::check_pin(&self.redis, user_id).await {
+        // AB2-T4: the failover pin sends queries to the primary's read-only
+        // pool too, in the same round trip as the user's pin.
+        let (failover_pinned, pin) =
+            attome_cache::sticky_primary::routing_check(&self.redis, user_id).await;
+        if failover_pinned && !matches!(pin, PinCheck::RedisError) {
+            crate::metrics::record_read_routing_decision("query_failover_pin_primary");
+            return self.readonly_primary_or_fallback();
+        }
+        match pin {
             PinCheck::RedisError => {
                 crate::metrics::record_read_routing_decision("query_redis_error_primary");
                 self.readonly_primary_or_fallback()

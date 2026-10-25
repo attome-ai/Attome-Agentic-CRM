@@ -31,6 +31,94 @@ use crate::store::Store;
 /// a post-commit best-effort write open indefinitely.
 use crate::timeouts::REQUEST_PATH;
 
+/// AB2-T4: the deployment-wide pin set after a database leader change; while
+/// it exists every routed read goes to the primary.
+pub const GLOBAL_PIN_KEY: &str = "attome-cache:sticky:global-pin";
+
+/// AB2-T4: whether a read must go to the primary because of the global pin:
+/// set, or unknown (a store error fails closed to the primary). Pure.
+pub fn global_pin_routes_primary(read: Result<Option<String>, ()>) -> bool {
+    !matches!(read, Ok(None))
+}
+
+/// AB2-T4: sets the global pin for `ttl_secs` (a leader change was seen).
+pub async fn set_global_pin(store: &Store, ttl_secs: u64) -> Result<(), AppError> {
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            memory.transaction(|ks| {
+                ks.set(
+                    GLOBAL_PIN_KEY,
+                    "1",
+                    Some(std::time::Duration::from_secs(ttl_secs)),
+                );
+            });
+            return Ok(());
+        }
+    };
+    let attempt = tokio::time::timeout(
+        REQUEST_PATH,
+        redis.set::<(), _, _>(
+            GLOBAL_PIN_KEY,
+            "1",
+            Some(Expiration::EX(ttl_secs as i64)),
+            None,
+            false,
+        ),
+    )
+    .await;
+    ops::record_op(Primitive::RwPin, &attempt);
+    attempt
+        .map_err(|_| AppError::internal("redis global pin write timed out"))?
+        .map_err(|e| AppError::internal(format!("redis global pin write failed: {e}")))
+}
+
+/// AB2-T4: the global pin and `user_id`'s own pin, read in one round trip:
+/// `(global pin routes to the primary, the user's pin)`. A store error
+/// fails closed on both.
+pub async fn routing_check(store: &Store, user_id: Uuid) -> (bool, PinCheck) {
+    let classify = |value: Option<String>| match value {
+        None => PinCheck::None,
+        Some(v) => match v.strip_prefix("lsn:") {
+            Some(lsn) => PinCheck::Pinned(lsn.to_string()),
+            None => PinCheck::Legacy,
+        },
+    };
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            return match memory
+                .transaction(|ks| (ks.get_str(GLOBAL_PIN_KEY), ks.get_str(&pin_key(user_id))))
+            {
+                (Ok(global), Ok(user)) => (global_pin_routes_primary(Ok(global)), classify(user)),
+                _ => (true, PinCheck::RedisError),
+            };
+        }
+    };
+    let attempt = tokio::time::timeout(
+        REQUEST_PATH,
+        redis.mget::<Vec<Option<String>>, _>(vec![GLOBAL_PIN_KEY.to_owned(), pin_key(user_id)]),
+    )
+    .await;
+    ops::record_op(Primitive::RwPin, &attempt);
+    match attempt {
+        Ok(Ok(mut values)) if values.len() == 2 => {
+            let user = values.pop().flatten();
+            let global = values.pop().flatten();
+            (global_pin_routes_primary(Ok(global)), classify(user))
+        }
+        Ok(Ok(_)) => (true, PinCheck::RedisError),
+        Ok(Err(e)) => {
+            tracing::warn!("rw-pin read failed, failing closed to primary: {e}");
+            (true, PinCheck::RedisError)
+        }
+        Err(_) => {
+            tracing::warn!("rw-pin read timed out, failing closed to primary");
+            (true, PinCheck::RedisError)
+        }
+    }
+}
+
 /// The pin's Redis key. Public so a caller's test can seed a value no
 /// current writer produces (the legacy bare `1`) without restating the shape.
 pub fn pin_key(user_id: Uuid) -> String {
@@ -245,5 +333,28 @@ mod lsn_tests {
         assert_ne!(PinCheck::Pinned("16/B374D848".into()), PinCheck::Legacy);
         assert_ne!(PinCheck::Legacy, PinCheck::None);
         assert_ne!(PinCheck::RedisError, PinCheck::None);
+    }
+}
+
+#[cfg(test)]
+mod global_pin_tests {
+    use super::*;
+
+    #[test]
+    fn global_pin_routes_to_primary() {
+        assert!(global_pin_routes_primary(Ok(Some("1".into()))));
+    }
+
+    #[test]
+    fn redis_error_routes_to_primary() {
+        assert!(global_pin_routes_primary(Err(())));
+    }
+
+    #[test]
+    fn no_pin_uses_lsn_rule() {
+        assert!(!global_pin_routes_primary(Ok(None)));
+        // With no global pin the user's own pin decides (the LSN rule).
+        assert!(lsn_ge("16/B374D848", "16/B374D000"));
+        assert!(!lsn_ge("16/B374D000", "16/B374D848"));
     }
 }
