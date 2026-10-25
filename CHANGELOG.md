@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Fulfilment agent tools (F6-T16): `fulfilment.status.read` (an order's fulfilment orders, lines and
+  open holds), `fulfilment.hold.explain` (what each open hold means and who clears it) and
+  `fulfilment.sourcing.propose` (the fewest-shipments plan from enabled locations and the stock seam).
+  All three only read; no agent tool releases, cancels, clears a hold or changes a carrier.
 - AsyncAPI document (Y7-T7): `GET /api/v1/asyncapi.json` describes the change feed for the entities
   the caller may read, one channel per entity (created, updated, deleted, restored) and one per
   published business event, with payloads typed from the attributes.

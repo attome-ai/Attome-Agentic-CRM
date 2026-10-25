@@ -91,6 +91,8 @@ pub mod draft_page;
 pub mod seo_draft;
 pub mod workflow;
 pub mod workforce;
+/// F6-T16: read-only fulfilment tools.
+pub mod fulfilment;
 
 use crate::descriptor::ActionDescriptor;
 
@@ -161,6 +163,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(sales_team::descriptors());
     all.extend(scan::descriptors());
     all.extend(workforce::descriptors());
+    all.extend(fulfilment::descriptors());
     all.extend(crate::meeting::brief::descriptors());
     all.extend(crate::meeting::notes::descriptors());
     all.extend(meeting::descriptors());
@@ -243,6 +246,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(sales_team::executors());
     all.extend(scan::executors());
     all.extend(workforce::executors());
+    all.extend(fulfilment::executors());
     all.extend(crate::meeting::brief::executors());
     all.extend(crate::meeting::notes::executors());
     all.extend(meeting::executors());

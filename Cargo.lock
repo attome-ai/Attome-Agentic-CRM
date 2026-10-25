@@ -431,6 +431,7 @@ dependencies = [
  "attome-core",
  "attome-db",
  "attome-field",
+ "attome-fulfilment",
  "attome-inference",
  "attome-jobs",
  "attome-marketing",
