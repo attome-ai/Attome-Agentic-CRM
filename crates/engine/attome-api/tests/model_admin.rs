@@ -932,7 +932,7 @@ fn a_business_event_is_raised_into_the_change_feed() {
             .expect("count events")
         };
 
-        let mut tx = db.begin().await.expect("begin");
+        let mut tx = attome_db::tx::begin(&db).await.expect("begin");
         let refused = attome_api::business_event::raise_event(
             &mut tx,
             &name,
@@ -947,7 +947,7 @@ fn a_business_event_is_raised_into_the_change_feed() {
         tx.rollback().await.expect("rollback");
         assert_eq!(count().await, 0);
 
-        let mut tx = db.begin().await.expect("begin");
+        let mut tx = attome_db::tx::begin(&db).await.expect("begin");
         attome_api::business_event::raise_event(
             &mut tx,
             &name,

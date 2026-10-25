@@ -205,6 +205,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Revenue recognition patterns (F11-T5): point in time on delivery, ratable over service dates,
+  milestone shares on completion, usage in its rated period, and percent complete as a catch-up
+  (reversing when the cost estimate rises), each as amounts per fiscal period.
 - Fulfilment exceptions (F6-T14): every 15 minutes a released, picking or packed order past its
   promised date opens a `late` exception, and an order left in one open status longer than
   `fulfilment.stuck_hours` (48) opens a `stuck` one, never two open of a kind per order, each with a
