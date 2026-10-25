@@ -300,6 +300,7 @@ struct VersionUsageQuery {
     days: Option<i64>,
     /// One-based — the first page is `page=1` (D-347).
     page: Option<i64>,
+    /// Rows per page, up to the platform maximum.
     page_size: Option<i64>,
 }
 
