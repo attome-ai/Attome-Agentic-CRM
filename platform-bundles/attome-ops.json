@@ -1,0 +1,108 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "ops"
+    ]
+  },
+  "privileges": [
+    {
+      "key": "ops.read",
+      "name": "Read Operations Status",
+      "description": "See cluster, drill, incident and upgrade status."
+    },
+    {
+      "key": "ops.cluster.switchover",
+      "name": "Switch Database Leader",
+      "description": "Move the database leader to another node (a planned switchover)."
+    },
+    {
+      "key": "ops.drill.run",
+      "name": "Run Recovery Drills",
+      "description": "Start a backup-restore or failover drill."
+    },
+    {
+      "key": "ops.drill.manage",
+      "name": "Manage Recovery Drills",
+      "description": "Schedule recovery drills and change their settings."
+    },
+    {
+      "key": "ops.auditor.read",
+      "name": "Read Drill Evidence",
+      "description": "Read signed recovery-drill reports and their evidence, for an auditor."
+    },
+    {
+      "key": "ops.dr.declare",
+      "name": "Declare a Disaster",
+      "description": "Declare a disaster and start the recovery runbook."
+    },
+    {
+      "key": "ops.incident.publish",
+      "name": "Publish Incidents",
+      "description": "Publish and update incident notices on the status page."
+    },
+    {
+      "key": "ops.upgrade.run",
+      "name": "Run Upgrades",
+      "description": "Start and roll back platform upgrades."
+    },
+    {
+      "key": "ops.chaos.run",
+      "name": "Run Fault Injection",
+      "description": "Run controlled fault-injection experiments."
+    }
+  ],
+  "entities": [],
+  "roles": [
+    {
+      "name": "Operations",
+      "description": "Runs the deployment's reliability work: cluster switchover, recovery drills, disaster declaration, incident notices, upgrades and fault injection.",
+      "access_level": 1,
+      "privileges": [
+        {
+          "privilege": "ops.read"
+        },
+        {
+          "privilege": "ops.cluster.switchover"
+        },
+        {
+          "privilege": "ops.drill.run"
+        },
+        {
+          "privilege": "ops.drill.manage"
+        },
+        {
+          "privilege": "ops.dr.declare"
+        },
+        {
+          "privilege": "ops.incident.publish"
+        },
+        {
+          "privilege": "ops.upgrade.run"
+        },
+        {
+          "privilege": "ops.chaos.run"
+        }
+      ],
+      "entity_access": [],
+      "field_security_profiles": []
+    },
+    {
+      "name": "Auditor",
+      "description": "Reads operations status and the signed evidence of recovery drills; changes nothing.",
+      "access_level": 1,
+      "privileges": [
+        {
+          "privilege": "ops.read"
+        },
+        {
+          "privilege": "ops.auditor.read"
+        }
+      ],
+      "entity_access": [],
+      "field_security_profiles": []
+    }
+  ]
+}

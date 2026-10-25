@@ -420,6 +420,11 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0072-attome-security-company-walls.json"
         ),
     },
+    PlatformChangeset {
+        file: "0073-attome-ops.json",
+        name: "attome-ops",
+        json: include_str!("../../../../../changesets/platform/0073-attome-ops.json"),
+    },
 ];
 
 #[cfg(test)]

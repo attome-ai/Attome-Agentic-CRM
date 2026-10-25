@@ -1536,6 +1536,9 @@ impl AppConfig {
         if let Err((field, reason)) = self.backup.check() {
             return Err(ConfigError::Invalid { field, reason });
         }
+        if let Err((field, reason)) = self.ops.check() {
+            return Err(ConfigError::Invalid { field, reason });
+        }
         if !self.fleet.credential_encryption_key.is_empty() {
             Self::check_secret_ring(
                 "fleet.credential_encryption_key",

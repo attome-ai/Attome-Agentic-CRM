@@ -1095,6 +1095,13 @@ export const xrmShellRoutes: Routes = [
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/security').then(m => m.RoleFormComponent),
           },
+          // AB4-T1 — the reliability engine's pages (`/xrm/ops/**`), one lazy
+          // chunk; the server answers only with the `ops` module on.
+          {
+            path: 'ops',
+            canActivate: [authGuard],
+            loadChildren: () => import('@attome/xrm/ops').then(m => m.OPS_ROUTES),
+          },
           // D-792 — the developer's fleet console (`/xrm/fleet/{deployments,
           // release-reports,publish,rollouts}`), present only in a build whose
           // `ATTOME_FLEET_CONSOLE` define is true (see its declaration above).

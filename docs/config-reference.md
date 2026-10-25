@@ -459,6 +459,16 @@ Required.
 |---|---|---|---|---|
 | `oidc.providers` | map |  |  | Keyed by an operator-chosen provider key (e.g. "entra", "okta", "keycloak", "google") — becomes the `{provider}` path segment in `/api/v1/auth/oidc/{provider}/login\|callback` and the `provider_key` stored in `xrm_core_user_identity`. Empty (the default) means no OIDC provider is configured — those routes 404 for any key looked up here. |
 
+## `ops`
+
+AB4-T1 — the reliability engine's settings (Patroni, recovery drills). Empty by default. See `OpsSection`'s doc comment.
+
+| Key | Type | Default | Secret | Description |
+|---|---|---|---|---|
+| `ops.drill_public_keys` | array of string | `[]` |  | Public keys (base64) a drill report's signature is checked against. |
+| `ops.drill_signing_key_path` | string, optional | `null` |  | The private key that signs recovery-drill reports. |
+| `ops.patroni_api_urls` | array of string | `[]` |  | The Patroni REST API of each database node (`http://db1:8008`), for cluster status and switchover. Empty: no Patroni cluster. |
+
 ## `portal`
 
 D-588 — external-audience web portals: the OIDC providers they may offer and the signup CAPTCHA. See `PortalSection`'s doc comment.

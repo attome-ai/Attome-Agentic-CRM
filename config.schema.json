@@ -2390,6 +2390,35 @@
       },
       "type": "object"
     },
+    "OpsSection": {
+      "properties": {
+        "drill_public_keys": {
+          "default": [],
+          "description": "Public keys (base64) a drill report's signature is checked against.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "drill_signing_key_path": {
+          "default": null,
+          "description": "The private key that signs recovery-drill reports.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "patroni_api_urls": {
+          "default": [],
+          "description": "The Patroni REST API of each database node (`http://db1:8008`), for\ncluster status and switchover. Empty: no Patroni cluster.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "PortalSection": {
       "properties": {
         "captcha": {
@@ -3483,6 +3512,10 @@
     },
     "oidc": {
       "$ref": "#/$defs/OidcSection"
+    },
+    "ops": {
+      "$ref": "#/$defs/OpsSection",
+      "description": "AB4-T1 — the reliability engine's settings (Patroni, recovery drills).\nEmpty by default. See `OpsSection`'s doc comment."
     },
     "portal": {
       "$ref": "#/$defs/PortalSection",

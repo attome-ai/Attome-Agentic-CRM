@@ -54,6 +54,7 @@ pub use sections::observability::{
     EmailProviders, EmailRateLimits, EmailSection, EmailStreamRates, GoogleAiSection,
     ObservabilitySection, SendGridSettings, SesSettings,
 };
+pub use sections::ops::OpsSection;
 pub use sections::portal::{CaptchaConfig, CaptchaProvider, PortalSection};
 pub use sections::shed::{ShedPermits, ShedSection};
 pub use sections::storage::{
@@ -237,6 +238,10 @@ pub struct AppConfig {
     /// refused on the production profile. See `FleetSection`'s doc comment.
     #[serde(default)]
     pub fleet: FleetSection,
+    /// AB4-T1 — the reliability engine's settings (Patroni, recovery drills).
+    /// Empty by default. See `OpsSection`'s doc comment.
+    #[serde(default)]
+    pub ops: OpsSection,
 
     /// U6-T1 — the daily local database backup. On by default.
     #[serde(default)]

@@ -1,0 +1,307 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:fa45b8a4364695cead8a6dd7a446cfee36a388b3e826fc2d10d35da7670fa163",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ops.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "2faebd30-1156-7967-95a5-d4683a9c1190",
+  "layer": "platform",
+  "name": "attome-ops",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Read signed recovery-drill reports and their evidence, for an auditor.",
+          "key": "ops.auditor.read",
+          "name": "Read Drill Evidence"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "ops.auditor.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Run controlled fault-injection experiments.",
+          "key": "ops.chaos.run",
+          "name": "Run Fault Injection"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "ops.chaos.run"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Move the database leader to another node (a planned switchover).",
+          "key": "ops.cluster.switchover",
+          "name": "Switch Database Leader"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "ops.cluster.switchover"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Declare a disaster and start the recovery runbook.",
+          "key": "ops.dr.declare",
+          "name": "Declare a Disaster"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "ops.dr.declare"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Schedule recovery drills and change their settings.",
+          "key": "ops.drill.manage",
+          "name": "Manage Recovery Drills"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "ops.drill.manage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Start a backup-restore or failover drill.",
+          "key": "ops.drill.run",
+          "name": "Run Recovery Drills"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "ops.drill.run"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Publish and update incident notices on the status page.",
+          "key": "ops.incident.publish",
+          "name": "Publish Incidents"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "ops.incident.publish"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "See cluster, drill, incident and upgrade status.",
+          "key": "ops.read",
+          "name": "Read Operations Status"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "ops.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Start and roll back platform upgrades.",
+          "key": "ops.upgrade.run",
+          "name": "Run Upgrades"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "ops.upgrade.run"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 1,
+          "description": "Reads operations status and the signed evidence of recovery drills; changes nothing.",
+          "name": "Auditor"
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "role": "Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "ops.auditor.read",
+        "role": "Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "ops.read",
+        "role": "Auditor"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 1,
+          "description": "Runs the deployment's reliability work: cluster switchover, recovery drills, disaster declaration, incident notices, upgrades and fault injection.",
+          "name": "Operations"
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "role": "Operations"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "ops.chaos.run",
+        "role": "Operations"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "ops.cluster.switchover",
+        "role": "Operations"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "ops.dr.declare",
+        "role": "Operations"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "ops.drill.manage",
+        "role": "Operations"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "ops.drill.run",
+        "role": "Operations"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "ops.incident.publish",
+        "role": "Operations"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "ops.read",
+        "role": "Operations"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "ops.upgrade.run",
+        "role": "Operations"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "ops"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 73,
+  "title": "Platform definitions: attome-ops"
+}

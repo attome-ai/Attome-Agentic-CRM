@@ -20,6 +20,7 @@ pub(crate) mod inference;
 pub(crate) mod integration;
 pub(crate) mod metadata;
 pub(crate) mod observability;
+pub(crate) mod ops;
 pub(crate) mod platform;
 pub(crate) mod portal;
 pub(crate) mod shed;

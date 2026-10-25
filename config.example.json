@@ -342,6 +342,9 @@
     "changesets_dir": "changesets",
     "request_timeout_secs": 10
   },
+  "ops": {
+    "_comment": "AB4-T1 — the reliability engine (attome-ops). Leave it empty on a single server. patroni_api_urls: each database node's Patroni REST API for cluster status and switchover; drill_signing_key_path / drill_public_keys: the key that signs recovery-drill reports and the keys they are checked against."
+  },
   "backup": {
     "_comment": "Roadmap U6 (docs/backup.md): on Solo (cache.backend = memory) a daily pg_dump at `hour` (UTC) into `dir` (null: a backups folder next to this file), the newest `keep` kept, the file store's files copied beside it (`files`), and a restore drill on the first of each month. pg_dump: its path when not on the PATH.",
     "enabled": true,

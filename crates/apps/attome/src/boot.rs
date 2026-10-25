@@ -1204,6 +1204,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-security-admin-areas",
         // U12-T1: the company wall flag and the privilege that lifts it.
         "attome-security-company-walls",
+        // AB4-T1: the operations privileges and the Operations and Auditor roles.
+        "attome-ops",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }
@@ -1734,6 +1736,8 @@ pub fn register_engines(
         // C9-T1: gated on the `chat` module.
         .register(attome_chat::ChatModel)
         .register(attome_ledger::LedgerModel)
+        // AB4-T1: gated on the `ops` module; every reliability feature mounts here.
+        .register(attome_ops::OpsModel)
         // Route-mounting/license-gating only (D-383) — attome-compliance's own
         // seeds (`consent_seed`, `legal_matter_seed`) also run from inside
         // `.build()`, same shape as attome-project/attome-service/attome-grc/

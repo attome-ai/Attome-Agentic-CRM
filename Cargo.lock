@@ -356,6 +356,7 @@ dependencies = [
  "attome-modules",
  "attome-notification",
  "attome-offline",
+ "attome-ops",
  "attome-outbound",
  "attome-partner",
  "attome-portal",
@@ -1610,6 +1611,18 @@ dependencies = [
  "sqlx",
  "utoipa",
  "uuid",
+]
+
+[[package]]
+name = "attome-ops"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "attome-types",
+ "axum",
+ "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]
