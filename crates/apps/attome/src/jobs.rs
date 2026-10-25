@@ -2992,6 +2992,8 @@ const DEDUP_KEY_OPS_DRILL_SKIP_CHECK: &str = "ops-drill-skip-check";
 const DEDUP_KEY_OPS_DRILL_FRESHNESS: &str = "ops-drill-freshness";
 /// AB3-T2: the one-minute live recovery point (a registered job type).
 const DEDUP_KEY_OPS_LIVE_RPO: &str = "ops-live-rpo";
+/// L4-T2: the catalog asset index rebuild (a registered job type).
+const DEDUP_KEY_CATALOG_ASSET_REBUILD: &str = "catalog-asset-rebuild";
 /// Z8-T4: the daily sending-domain check (a registered job type).
 const DEDUP_KEY_EMAIL_DOMAIN_CHECK: &str = "email-domain-check";
 /// Z12-T8: the daily calendar feed fetch (a registered job type).
@@ -3311,6 +3313,10 @@ pub const OPS_DRILL_FRESHNESS: attome_jobs::JobType =
 /// AB3-T2: the live recovery point, every minute.
 pub const OPS_LIVE_RPO: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ops::live_rpo::JOB, 1);
+
+/// L4-T2: the catalog asset index, every 15 minutes (first at boot).
+pub const CATALOG_ASSET_REBUILD: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::catalog_index::JOB, 1);
 
 /// Z8-T4: every configured sending domain's DNS records, daily.
 pub const EMAIL_DOMAIN_CHECK: attome_jobs::JobType =
@@ -4435,6 +4441,22 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CATALOG_ASSET_REBUILD,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let counts = attome_api::catalog_index::rebuild_assets(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::debug!(
+                    upserted = counts.upserted,
+                    removed = counts.removed,
+                    "catalog asset index rebuilt"
+                );
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             EMAIL_DOMAIN_CHECK,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let broken = attome_api::email_domains::check_all(&state)
@@ -5030,6 +5052,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_OPS_DRILL_FRESHNESS
         }
         EngineJob::Registered(job) if job.name == OPS_LIVE_RPO.name => DEDUP_KEY_OPS_LIVE_RPO,
+        EngineJob::Registered(job) if job.name == CATALOG_ASSET_REBUILD.name => {
+            DEDUP_KEY_CATALOG_ASSET_REBUILD
+        }
         EngineJob::Registered(job) if job.name == EMAIL_DOMAIN_CHECK.name => {
             DEDUP_KEY_EMAIL_DOMAIN_CHECK
         }
@@ -6173,6 +6198,21 @@ pub fn spawn_ops_drill_skip_scheduler(db: DbPool, interval: std::time::Duration)
             "ops drill skip check",
         ),
         Err(error) => tracing::error!(%error, "ops drill skip check: not scheduled"),
+    }
+}
+
+/// L4-T2: every 15 minutes, the catalog asset index.
+pub fn spawn_catalog_asset_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CATALOG_ASSET_REBUILD.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CATALOG_ASSET_REBUILD,
+            "catalog asset index",
+        ),
+        Err(error) => tracing::error!(%error, "catalog asset index: not scheduled"),
     }
 }
 

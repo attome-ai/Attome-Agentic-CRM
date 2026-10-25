@@ -122,6 +122,8 @@ const BASELINE: &[&str] = &[
     "calendar_feed",
     "capability_probe",
     "catalog_admin",
+    // L4-T2: the catalog asset index reads every engine's metadata.
+    "catalog_index",
     // L7-T3: change-stream subscriptions read by S2S identities.
     "change_stream",
     "changes_admin",

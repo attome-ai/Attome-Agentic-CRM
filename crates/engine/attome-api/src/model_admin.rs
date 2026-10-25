@@ -856,6 +856,11 @@ async fn publish(
     .await?;
     attome_db::tx::commit(tx).await?;
     refresh_cooked(&state).await?;
+    // L4-T2: the catalog index follows the published metadata; a failure is
+    // logged and the next scheduled rebuild catches up.
+    if let Err(error) = crate::catalog_index::rebuild_assets(&state).await {
+        tracing::warn!(%error, "catalog asset index not rebuilt after publish");
+    }
     Ok(Json(ModelPublishResponse {
         id,
         version_no: published.version_no,

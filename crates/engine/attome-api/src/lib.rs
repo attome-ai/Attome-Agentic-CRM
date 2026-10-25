@@ -54,6 +54,8 @@ mod capability_probe;
 /// `crates/server/src/jobs.rs` calls; the route handlers stay
 /// module-private, same shape as `duplicates_admin`/`duplicates_match`.
 pub mod catalog_admin;
+/// L4-T2: the data catalog's asset index, filled from the metadata.
+pub mod catalog_index;
 /// M89 Change Intelligence, item 1 (see the module master plan) —
 /// `/api/v1/admin/changes`. No other module needs to reach into this one,
 /// same shape as `api_usage_admin`.
