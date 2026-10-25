@@ -500,6 +500,10 @@ pub fn validate_approver_token(token: &str) -> Result<(), AppError> {
 /// attome-server's policy admin handler before insert/update, alongside
 /// `ApprovalPlan::validate()`'s own structural checks.
 pub fn validate_plan_approvers(plan: &ApprovalPlan) -> Result<(), AppError> {
+    // Z10-T9: a signed step needs a provider to check the signature.
+    if signature_verifier().is_none() && plan.steps.iter().any(|s| s.extras.requires_signature) {
+        return Err(AppError::Validation(NO_SIGNATURE_PROVIDER.into()));
+    }
     for step in &plan.steps {
         for token in &step.approvers {
             validate_approver_token(token)?;
@@ -645,6 +649,32 @@ pub async fn decide_request_step_with(
     comment: Option<&str>,
     hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
 ) -> Result<ApprovalRequest, AppError> {
+    decide_request_step_with_evidence(
+        state,
+        request,
+        decider_id,
+        decision,
+        expected_row_version,
+        comment,
+        &attome_approval::GrantEvidence::default(),
+        hook,
+    )
+    .await
+}
+
+/// [`decide_request_step_with`] storing `grant`'s attachments and evidence
+/// on the grant row (Z10-T9).
+#[allow(clippy::too_many_arguments)]
+pub async fn decide_request_step_with_evidence(
+    state: &EngineState,
+    request: &ApprovalRequest,
+    decider_id: Uuid,
+    decision: Decision,
+    expected_row_version: i64,
+    comment: Option<&str>,
+    grant: &attome_approval::GrantEvidence,
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+) -> Result<ApprovalRequest, AppError> {
     let plan = request.plan.as_ref().ok_or_else(|| {
         AppError::internal("decide_request_step called on a request with no plan")
     })?;
@@ -655,7 +685,7 @@ pub async fn decide_request_step_with(
     let (population, principals, allowed, delegate_of) =
         resolve_step_approvers(state, step, request).await?;
     let on_behalf_of = decider_on_behalf_of(decider_id, &principals, &delegate_of);
-    attome_approval::decide_step_with(
+    attome_approval::decide_step_with_evidence(
         &state.base.db,
         request.id,
         decider_id,
@@ -665,10 +695,42 @@ pub async fn decide_request_step_with(
         decision,
         expected_row_version,
         comment,
+        grant,
         hook,
     )
     .await
 }
+
+/// Z10-T9: verifies a decider's national-ID signature on a decision. No
+/// provider ships yet; one is installed with [`install_signature_verifier`].
+pub trait SignatureVerifier: Send + Sync {
+    /// Checks `signature_ref` for `decider` deciding `request_id`; the
+    /// signature evidence to store on the grant.
+    fn verify<'a>(
+        &'a self,
+        request_id: Uuid,
+        decider: Uuid,
+        signature_ref: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value, AppError>> + Send + 'a>>;
+}
+
+static SIGNATURE_VERIFIER: std::sync::OnceLock<std::sync::Arc<dyn SignatureVerifier>> =
+    std::sync::OnceLock::new();
+
+/// Installs the process's signature provider, once at boot; `false` when one
+/// was already installed (the first stays).
+pub fn install_signature_verifier(verifier: std::sync::Arc<dyn SignatureVerifier>) -> bool {
+    SIGNATURE_VERIFIER.set(verifier).is_ok()
+}
+
+/// The installed signature provider, if any.
+pub fn signature_verifier() -> Option<&'static std::sync::Arc<dyn SignatureVerifier>> {
+    SIGNATURE_VERIFIER.get()
+}
+
+/// The message a plan asking for signatures gets while no provider is
+/// installed.
+pub const NO_SIGNATURE_PROVIDER: &str = "no national-ID signature provider is installed";
 
 /// Backs `POST /api/v1/admin/approvals/{id}/delegate` — lets `from_user`
 /// (who must actually be a *named* approver on `request`'s current step, not

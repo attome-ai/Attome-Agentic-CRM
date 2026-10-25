@@ -63,6 +63,8 @@ pub enum Operation {
     ApiKeyCreate,
     /// Q5-T8: an administrator resetting someone's second factor.
     AdminMfaReset,
+    /// Z10-T9: deciding an approval step that asks for a step-up.
+    ApprovalDecision,
 }
 
 /// Where an operation's freshness comes from.
@@ -76,12 +78,13 @@ pub enum Freshness {
 }
 
 impl Operation {
-    pub const ALL: [Operation; 5] = [
+    pub const ALL: [Operation; 6] = [
         Operation::MfaDisable,
         Operation::RecoveryCodesRegenerate,
         Operation::IdentityLink,
         Operation::ApiKeyCreate,
         Operation::AdminMfaReset,
+        Operation::ApprovalDecision,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -91,6 +94,7 @@ impl Operation {
             Operation::IdentityLink => "identity_link",
             Operation::ApiKeyCreate => "api_key_create",
             Operation::AdminMfaReset => "admin_mfa_reset",
+            Operation::ApprovalDecision => "approval_decision",
         }
     }
 
@@ -102,7 +106,8 @@ impl Operation {
             Operation::MfaDisable
             | Operation::RecoveryCodesRegenerate
             | Operation::IdentityLink
-            | Operation::AdminMfaReset => 5 * 60,
+            | Operation::AdminMfaReset
+            | Operation::ApprovalDecision => 5 * 60,
         }
     }
 
@@ -111,9 +116,10 @@ impl Operation {
             Operation::MfaDisable | Operation::RecoveryCodesRegenerate => {
                 Freshness::InRequestFactor
             }
-            Operation::IdentityLink | Operation::ApiKeyCreate | Operation::AdminMfaReset => {
-                Freshness::Elevation
-            }
+            Operation::IdentityLink
+            | Operation::ApiKeyCreate
+            | Operation::AdminMfaReset
+            | Operation::ApprovalDecision => Freshness::Elevation,
         }
     }
 

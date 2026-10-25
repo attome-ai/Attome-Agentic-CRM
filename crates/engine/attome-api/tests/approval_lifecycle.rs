@@ -1188,3 +1188,193 @@ async fn out_of_office_replaces_overlap() {
     assert_eq!(body_json(resp).await["ended"], 1);
     assert_eq!(live_out_of_office(&db, me).await, 0);
 }
+
+// ── Decision evidence (Z10-T9) ──────────────────────────────────────────
+
+fn decide_request_with(admin_cookie: &str, request_id: Uuid, body: Value) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(format!("/api/v1/admin/approvals/{request_id}/decide"))
+        .header("cookie", admin_cookie)
+        .header("content-type", "application/json")
+        .header("origin", "http://localhost:4200")
+        .header("sec-fetch-site", "same-origin")
+        .body(Body::from(body.to_string()))
+        .unwrap()
+}
+
+/// Makes `request_id` a one-step plan request whose step asks for `flag`.
+async fn give_plan_step(db: &attome_db::DbPool, request_id: Uuid, approver: Uuid, flag: &str) {
+    let mut step = serde_json::json!({ "mode": "any", "approvers": [format!("user:{approver}")] });
+    step[flag] = Value::Bool(true);
+    let plan = serde_json::json!({ "steps": [step] });
+    sqlx::query("UPDATE approval_request SET plan = $2, step = 0 WHERE id = $1")
+        .bind(request_id)
+        .bind(plan)
+        .execute(db)
+        .await
+        .expect("give the request a plan");
+}
+
+async fn grant_count(db: &attome_db::DbPool, request_id: Uuid) -> i64 {
+    sqlx::query_scalar("SELECT COUNT(*) FROM approval_grant WHERE request_id = $1")
+        .bind(request_id)
+        .fetch_one(db)
+        .await
+        .expect("count grants")
+}
+
+#[tokio::test]
+async fn decide_with_attachment_stores_ids() {
+    let system = skip_if_no_db!(test_system(72).await);
+    let (_, requester_cookie) = seed_user(&system, true).await;
+    let (_, approver_cookie) = seed_user(&system, true).await;
+    let (target_user_id, _) = seed_user(&system, false).await;
+    let role_id = seed_role(&system.state().base.db).await;
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+    let request_id =
+        submit_role_grant_request(&app, &requester_cookie, target_user_id, role_id).await;
+
+    let too_many: Vec<Value> = (0..11)
+        .map(|_| serde_json::json!({ "entity": "user_account", "id": target_user_id }))
+        .collect();
+    let resp = app
+        .clone()
+        .oneshot(decide_request_with(
+            &approver_cookie,
+            request_id,
+            serde_json::json!({ "decision": "reject", "row_version": 0, "attachments": too_many }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+    let resp = app
+        .clone()
+        .oneshot(decide_request_with(
+            &approver_cookie,
+            request_id,
+            serde_json::json!({
+                "decision": "reject",
+                "row_version": 0,
+                "attachments": [{ "entity": "user_account", "id": target_user_id }]
+            }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK, "{:?}", body_json(resp).await);
+    let attachments: Value =
+        sqlx::query_scalar("SELECT attachments FROM approval_grant WHERE request_id = $1")
+            .bind(request_id)
+            .fetch_one(&db)
+            .await
+            .expect("the grant");
+    assert_eq!(
+        attachments,
+        serde_json::json!([{ "entity": "user_account", "id": target_user_id }])
+    );
+}
+
+#[tokio::test]
+async fn step_up_step_rejects_stale_session() {
+    let system = skip_if_no_db!(test_system(72).await);
+    let (_, requester_cookie) = seed_user(&system, true).await;
+    let (approver_id, approver_cookie) = seed_user(&system, true).await;
+    let (target_user_id, _) = seed_user(&system, false).await;
+    let role_id = seed_role(&system.state().base.db).await;
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+    let request_id =
+        submit_role_grant_request(&app, &requester_cookie, target_user_id, role_id).await;
+    give_plan_step(&db, request_id, approver_id, "requires_step_up").await;
+
+    // The test session names no refresh family, so it has no recent step-up:
+    // the guard refuses it (403 without a family, 401 `reauth_required` for
+    // a family that is not elevated) before anything is written.
+    let resp = app
+        .clone()
+        .oneshot(decide_request(&approver_cookie, request_id, "approve", 0))
+        .await
+        .unwrap();
+    assert!(
+        matches!(
+            resp.status(),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+        ),
+        "{}",
+        resp.status()
+    );
+    assert_eq!(grant_count(&db, request_id).await, 0, "nothing is written");
+}
+
+#[tokio::test]
+async fn decision_writes_one_security_event() {
+    let system = skip_if_no_db!(test_system(72).await);
+    let (_, requester_cookie) = seed_user(&system, true).await;
+    let (_, approver_cookie) = seed_user(&system, true).await;
+    let (target_user_id, _) = seed_user(&system, false).await;
+    let role_id = seed_role(&system.state().base.db).await;
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+    let request_id =
+        submit_role_grant_request(&app, &requester_cookie, target_user_id, role_id).await;
+
+    let resp = app
+        .clone()
+        .oneshot(decide_request(&approver_cookie, request_id, "reject", 0))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let comments: Vec<String> = sqlx::query_scalar(
+        "SELECT payload->>'event_comment' FROM audit_ingest \
+         WHERE payload->>'entity_name' = 'approval_request' \
+           AND payload->>'record_id' = $1 \
+           AND payload->>'operation' IN ('Approved', 'Rejected')",
+    )
+    .bind(request_id.to_string())
+    .fetch_all(&db)
+    .await
+    .expect("the decision's events");
+    assert_eq!(comments.len(), 1, "exactly one event per decision");
+    assert!(
+        comments[0].contains("\"attachments_count\":0"),
+        "the event carries the decision's details: {}",
+        comments[0]
+    );
+}
+
+#[tokio::test]
+async fn signature_step_rejected_without_provider() {
+    let system = skip_if_no_db!(test_system(72).await);
+    let (_, requester_cookie) = seed_user(&system, true).await;
+    let (approver_id, approver_cookie) = seed_user(&system, true).await;
+    let (target_user_id, _) = seed_user(&system, false).await;
+    let role_id = seed_role(&system.state().base.db).await;
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+
+    // Saving a plan that asks for a signature is refused.
+    let plan: attome_approval::ApprovalPlan = serde_json::from_value(serde_json::json!({
+        "steps": [{ "mode": "any", "approvers": [format!("user:{approver_id}")], "requires_signature": true }]
+    }))
+    .expect("a plan");
+    let refused = attome_audit::approval::validate_plan_approvers(&plan)
+        .expect_err("no provider is installed");
+    assert!(
+        matches!(&refused, attome_types::AppError::Validation(m) if m.contains("signature")),
+        "{refused:?}"
+    );
+
+    // A request that already carries such a step cannot be decided either.
+    let request_id =
+        submit_role_grant_request(&app, &requester_cookie, target_user_id, role_id).await;
+    give_plan_step(&db, request_id, approver_id, "requires_signature").await;
+    let resp = app
+        .clone()
+        .oneshot(decide_request(&approver_cookie, request_id, "approve", 0))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(grant_count(&db, request_id).await, 0);
+}

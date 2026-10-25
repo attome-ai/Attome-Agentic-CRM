@@ -1205,6 +1205,24 @@ pub async fn list_pending(
     .await
 }
 
+/// Z10-T9: what a decision carries besides its comment, stored on its
+/// grant row: the records attached as evidence (a JSON array, checked by the
+/// caller) and the evidence of how the decider confirmed (`step_up_at`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct GrantEvidence {
+    pub attachments: serde_json::Value,
+    pub evidence: Option<serde_json::Value>,
+}
+
+impl Default for GrantEvidence {
+    fn default() -> Self {
+        Self {
+            attachments: serde_json::Value::Array(Vec::new()),
+            evidence: None,
+        }
+    }
+}
+
 /// Records one approver's decision. Inside a single transaction guarded by
 /// `pg_try_advisory_xact_lock` (guidelines §2 Layer 2, namespace
 /// `"attome-approval/decide:{request_id}"`) plus `SELECT ... FOR UPDATE` and a
@@ -1254,6 +1272,32 @@ pub async fn decide_with(
     decision: Decision,
     expected_row_version: i64,
     comment: Option<&str>,
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+) -> Result<ApprovalRequest, AppError> {
+    decide_with_evidence(
+        pool,
+        request_id,
+        approver_id,
+        decision,
+        expected_row_version,
+        comment,
+        &GrantEvidence::default(),
+        hook,
+    )
+    .await
+}
+
+/// [`decide_with`] storing `grant`'s attachments and evidence on the grant
+/// row (Z10-T9).
+#[allow(clippy::too_many_arguments)]
+pub async fn decide_with_evidence(
+    pool: &PgPool,
+    request_id: Uuid,
+    approver_id: Uuid,
+    decision: Decision,
+    expected_row_version: i64,
+    comment: Option<&str>,
+    grant: &GrantEvidence,
     hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
 ) -> Result<ApprovalRequest, AppError> {
     let comment = normalize_decision_comment(comment)?;
@@ -1341,14 +1385,16 @@ pub async fn decide_with(
 
     sqlx::query(
         "INSERT INTO approval_grant \
-             (id, request_id, approver_id, decision, decided_at, comment) \
-         VALUES ($1, $2, $3, $4, NOW(), $5)",
+             (id, request_id, approver_id, decision, decided_at, comment, attachments, evidence) \
+         VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7)",
     )
     .bind(Uuid::now_v7())
     .bind(request_id)
     .bind(approver_id)
     .bind(decision.as_str())
     .bind(comment.as_deref())
+    .bind(&grant.attachments)
+    .bind(&grant.evidence)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -1480,6 +1526,38 @@ pub async fn decide_step_with(
     comment: Option<&str>,
     hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
 ) -> Result<ApprovalRequest, AppError> {
+    decide_step_with_evidence(
+        pool,
+        request_id,
+        decider_id,
+        on_behalf_of,
+        allowed_decider_ids,
+        step_population,
+        decision,
+        expected_row_version,
+        comment,
+        &GrantEvidence::default(),
+        hook,
+    )
+    .await
+}
+
+/// [`decide_step_with`] storing `grant`'s attachments and evidence on the
+/// grant row (Z10-T9).
+#[allow(clippy::too_many_arguments)]
+pub async fn decide_step_with_evidence(
+    pool: &PgPool,
+    request_id: Uuid,
+    decider_id: Uuid,
+    on_behalf_of: Option<Uuid>,
+    allowed_decider_ids: &[Uuid],
+    step_population: usize,
+    decision: Decision,
+    expected_row_version: i64,
+    comment: Option<&str>,
+    grant: &GrantEvidence,
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+) -> Result<ApprovalRequest, AppError> {
     decide_in_stage(
         pool,
         request_id,
@@ -1492,6 +1570,7 @@ pub async fn decide_step_with(
         decision,
         expected_row_version,
         comment,
+        grant,
         hook,
     )
     .await
@@ -1533,6 +1612,7 @@ pub async fn decide_stage_step_with(
         decision,
         expected_row_version,
         comment,
+        &GrantEvidence::default(),
         hook,
     )
     .await
@@ -1564,6 +1644,7 @@ async fn decide_in_stage(
     decision: Decision,
     expected_row_version: i64,
     comment: Option<&str>,
+    grant: &GrantEvidence,
     hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
 ) -> Result<ApprovalRequest, AppError> {
     let comment = normalize_decision_comment(comment)?;
@@ -1713,8 +1794,8 @@ async fn decide_in_stage(
     sqlx::query(
         "INSERT INTO approval_grant \
              (id, request_id, approver_id, decision, decided_at, step, decided_by, on_behalf_of, \
-              comment) \
-         VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8)",
+              comment, attachments, evidence) \
+         VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9, $10)",
     )
     .bind(Uuid::now_v7())
     .bind(request_id)
@@ -1724,6 +1805,8 @@ async fn decide_in_stage(
     .bind(decider_id)
     .bind(on_behalf_of)
     .bind(comment.as_deref())
+    .bind(&grant.attachments)
+    .bind(&grant.evidence)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;

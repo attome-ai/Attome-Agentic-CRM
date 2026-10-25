@@ -1426,6 +1426,10 @@ struct DecisionAudit<'s> {
     /// carried into the event's comment so the audit trail shows it next to
     /// the decision it explains.
     comment: Option<&'s str>,
+    /// Z10-T9: how many records the decision attached.
+    attachments_count: usize,
+    /// Z10-T9: the step-up or signature evidence stored on the grant.
+    evidence: Option<&'s Value>,
 }
 
 impl attome_db::BeforeCommit<ApprovalRequest> for DecisionAudit<'_> {
@@ -1474,15 +1478,26 @@ impl attome_db::BeforeCommit<ApprovalRequest> for DecisionAudit<'_> {
                     Some(request.id),
                 )
                 .named(request.action_type.clone())
-                .comment(match self.comment {
-                    Some(comment) => format!(
-                        "four-eyes approval request {} step {} decided: {} (overall status: {}); comment: {comment}",
-                        request.id, request.step, self.decision_word, request.status
-                    ),
-                    None => format!(
-                        "four-eyes approval request {} step {} decided: {} (overall status: {})",
-                        request.id, request.step, self.decision_word, request.status
-                    ),
+                .comment({
+                    let summary = match self.comment {
+                        Some(comment) => format!(
+                            "four-eyes approval request {} step {} decided: {} (overall status: {}); comment: {comment}",
+                            request.id, request.step, self.decision_word, request.status
+                        ),
+                        None => format!(
+                            "four-eyes approval request {} step {} decided: {} (overall status: {})",
+                            request.id, request.step, self.decision_word, request.status
+                        ),
+                    };
+                    // Z10-T9: the decision's details, machine-readable.
+                    let details = serde_json::json!({
+                        "request_id": request.id,
+                        "step": request.step,
+                        "decision": self.decision_word,
+                        "attachments_count": self.attachments_count,
+                        "evidence": self.evidence,
+                    });
+                    format!("{summary}; details: {details}")
                 }),
             )
             .await?;
@@ -1746,7 +1761,28 @@ struct DecideBody {
     #[serde(default)]
     #[schema(max_length = 2000)]
     comment: Option<String>,
+    /// Z10-T9: records attached as evidence, at most 10; the decider must be
+    /// able to read each one. Stored on the decision's grant row.
+    #[serde(default)]
+    #[schema(max_items = 10)]
+    attachments: Vec<DecisionAttachment>,
+    /// Z10-T9: the decider's signature reference, for a step that asks for a
+    /// signature; checked by the installed signature provider.
+    #[serde(default)]
+    signature_ref: Option<String>,
 }
+
+/// Z10-T9: a record attached to a decision.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+struct DecisionAttachment {
+    /// The record's entity (its logical name).
+    entity: String,
+    /// The record.
+    id: Uuid,
+}
+
+/// The most records one decision may attach.
+const MAX_DECISION_ATTACHMENTS: usize = 10;
 
 #[derive(Serialize, ToSchema)]
 struct DecideResponse {
@@ -1781,21 +1817,29 @@ struct DecideResponse {
     responses(
         (status = 200, description = "Success", body = DecideResponse),
         (status = 409, description = "Stale row_version, or the request is already decided, expired, or being decided", body = ErrorResponse),
-        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
-        (status = 422, description = "Request failed validation", body = ErrorResponse),
+        (status = 401, description = "Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes", body = attome_types::UnauthorizedResponse),
+        (status = 403, description = "Caller lacks the required privilege, or an API-key caller on a step that asks for a step-up", body = ErrorResponse),
+        (status = 422, description = "Request failed validation, more than 10 attachments, or an attachment the caller cannot read", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 async fn decide_approval(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
+    attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Path(id): Path<Uuid>,
     Json(body): Json<DecideBody>,
 ) -> Result<Json<DecideResponse>, AppError> {
-    do_decide(&state, ctx.user_id, id, body, RequirePlan::EitherKind)
-        .await
-        .map(Json)
+    do_decide(
+        &state,
+        ctx.user_id,
+        caller,
+        id,
+        body,
+        RequirePlan::EitherKind,
+    )
+    .await
+    .map(Json)
 }
 
 /// The most requests one batch decides.
@@ -1870,6 +1914,7 @@ struct BatchDecideResponse {
 async fn batch_decide(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
+    attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Json(body): Json<BatchDecideBody>,
 ) -> Result<Json<BatchDecideResponse>, AppError> {
     if !matches!(body.decision.as_str(), "approve" | "reject") {
@@ -1888,11 +1933,14 @@ async fn batch_decide(
         let decided = do_decide(
             &state,
             ctx.user_id,
+            caller,
             item.id,
             DecideBody {
                 decision: body.decision.clone(),
                 row_version: item.row_version,
                 comment: body.comment.clone(),
+                attachments: Vec::new(),
+                signature_ref: None,
             },
             RequirePlan::EitherKind,
         )
@@ -1947,19 +1995,94 @@ pub(crate) async fn decide_as(
     row_version: i64,
     comment: Option<String>,
 ) -> Result<String, AppError> {
+    // An emailed link is not a session, so a step that asks for a step-up
+    // refuses it: that decision is made signed in.
     do_decide(
         state,
         decider_id,
+        attome_auth::step_up::Caller::NonSession,
         id,
         DecideBody {
             decision: decision.to_owned(),
             row_version,
             comment,
+            attachments: Vec::new(),
+            signature_ref: None,
         },
         RequirePlan::PlanOnly,
     )
     .await
     .map(|r| r.status)
+}
+
+/// Z10-T9: the evidence a decision on `request` stores. Every attachment
+/// must be a record the decider can read; a step that asks for a step-up
+/// needs a fresh one on this session (`reauth_required` otherwise, before
+/// anything is written); a step that asks for a signature needs the
+/// installed provider to accept `signature_ref`.
+async fn decision_evidence(
+    state: &EngineState,
+    decider_id: Uuid,
+    caller: attome_auth::step_up::Caller,
+    request: &ApprovalRequest,
+    body: &DecideBody,
+) -> Result<attome_approval::GrantEvidence, AppError> {
+    if !body.attachments.is_empty() {
+        let ctx = state.base.security.resolve(decider_id).await?;
+        for attachment in &body.attachments {
+            let (entity_id, entity_name, ..) =
+                attome_records::entity_crud::resolve_entity(state, &attachment.entity)
+                    .await
+                    .map_err(|_| {
+                        AppError::Validation(format!(
+                            "attachment entity {:?} does not exist",
+                            attachment.entity
+                        ))
+                    })?;
+            attome_records::entity_crud::require_record_access(
+                state,
+                &ctx,
+                entity_id,
+                &entity_name,
+                attachment.id,
+                attome_security::RecordAction::Read,
+            )
+            .await?;
+        }
+    }
+    let step = request.plan.as_ref().and_then(|plan| {
+        usize::try_from(request.step)
+            .ok()
+            .and_then(|i| plan.steps.get(i))
+    });
+    let mut evidence = serde_json::Map::new();
+    if step.is_some_and(|s| s.extras.requires_step_up) {
+        attome_auth::step_up::require_recent_auth(
+            &state.base.db,
+            caller,
+            decider_id,
+            attome_auth::step_up::Operation::ApprovalDecision,
+            state.base.config.refresh_absolute_lifetime_secs(),
+        )
+        .await?;
+        evidence.insert("step_up_at".into(), serde_json::json!(Utc::now()));
+    }
+    if step.is_some_and(|s| s.extras.requires_signature) {
+        let verifier = attome_audit::approval::signature_verifier().ok_or_else(|| {
+            AppError::Validation(attome_audit::approval::NO_SIGNATURE_PROVIDER.into())
+        })?;
+        let signature_ref = body.signature_ref.as_deref().ok_or_else(|| {
+            AppError::Validation("this step asks for a signature: signature_ref is required".into())
+        })?;
+        let signature = verifier
+            .verify(request.id, decider_id, signature_ref)
+            .await?;
+        evidence.insert("signature".into(), signature);
+    }
+    Ok(attome_approval::GrantEvidence {
+        attachments: serde_json::to_value(&body.attachments).map_err(AppError::internal)?,
+        evidence: (!evidence.is_empty()).then_some(Value::Object(evidence)),
+    })
 }
 
 /// Shared body of [`decide_approval`] (admin, any request) and
@@ -1972,6 +2095,7 @@ pub(crate) async fn decide_as(
 async fn do_decide(
     state: &EngineState,
     decider_id: Uuid,
+    caller: attome_auth::step_up::Caller,
     id: Uuid,
     body: DecideBody,
     require: RequirePlan,
@@ -1999,10 +2123,17 @@ async fn do_decide(
     // applies again inside its own transaction.
     let comment = attome_approval::normalize_decision_comment(body.comment.as_deref())?;
 
+    if body.attachments.len() > MAX_DECISION_ATTACHMENTS {
+        return Err(AppError::Validation(format!(
+            "a decision attaches at most {MAX_DECISION_ATTACHMENTS} records"
+        )));
+    }
+
     let existing = attome_approval::get(&state.base.db, id).await?;
     if require == RequirePlan::PlanOnly && existing.plan.is_none() {
         return Err(AppError::Forbidden);
     }
+    let grant = decision_evidence(state, decider_id, caller, &existing, &body).await?;
     // Every successful decision (D-421: including an Approve that only
     // advances a step) writes its Approved/Rejected event and M58 decision
     // digest inside the decision's own transaction (audit plan 3.6).
@@ -2012,6 +2143,8 @@ async fn do_decide(
         decision,
         decision_word: body.decision.as_str(),
         comment: comment.as_deref(),
+        attachments_count: body.attachments.len(),
+        evidence: grant.evidence.as_ref(),
     };
     // C10-A: a conversation tool call gated on this request resolves in the
     // decision's own transaction (`approval.resolved`, and a rejection's
@@ -2021,24 +2154,26 @@ async fn do_decide(
         &attome_ai::conversation_event::ApprovalConversationHook,
     );
     let request = if existing.plan.is_some() {
-        attome_audit::approval::decide_request_step_with(
+        attome_audit::approval::decide_request_step_with_evidence(
             state,
             &existing,
             decider_id,
             decision,
             body.row_version,
             comment.as_deref(),
+            &grant,
             &hook,
         )
         .await?
     } else {
-        attome_approval::decide_with(
+        attome_approval::decide_with_evidence(
             &state.base.db,
             id,
             decider_id,
             decision,
             body.row_version,
             comment.as_deref(),
+            &grant,
             &hook,
         )
         .await?
@@ -2116,19 +2251,20 @@ async fn do_decide(
     responses(
         (status = 200, description = "Success", body = DecideResponse),
         (status = 409, description = "Stale row_version, or the request is already decided, expired, or being decided", body = ErrorResponse),
-        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 401, description = "Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes", body = attome_types::UnauthorizedResponse),
         (status = 403, description = "The request is flat (not plan-bearing), or the caller is not an eligible approver for its current step", body = ErrorResponse),
-        (status = 422, description = "Request failed validation", body = ErrorResponse),
+        (status = 422, description = "Request failed validation, more than 10 attachments, or an attachment the caller cannot read", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 async fn decide_approval_eligible(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped>,
+    attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Path(id): Path<Uuid>,
     Json(body): Json<DecideBody>,
 ) -> Result<Json<DecideResponse>, AppError> {
-    do_decide(&state, ctx.user_id, id, body, RequirePlan::PlanOnly)
+    do_decide(&state, ctx.user_id, caller, id, body, RequirePlan::PlanOnly)
         .await
         .map(Json)
 }
