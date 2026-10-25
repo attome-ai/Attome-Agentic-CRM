@@ -296,7 +296,7 @@ async fn create_feed(
     tag = "admin",
     operation_id = "delete_calendar_feed",
     params(("id" = Uuid, Path, description = "The feed")),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "Removed"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -323,7 +323,7 @@ async fn delete_feed(
         &mut tx,
         &attome_audit::audit_service(&state),
         configuration_event(
-            AuditOperation::Delete,
+            AuditOperation::HardDelete,
             ctx.user_id,
             id,
             "calendar.feed_remove",

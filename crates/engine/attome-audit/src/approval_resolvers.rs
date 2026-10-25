@@ -72,6 +72,14 @@ pub trait ApproverResolver: Send + Sync {
 #[derive(Default, Clone)]
 pub struct ResolverRegistry(Vec<Arc<dyn ApproverResolver>>);
 
+impl std::fmt::Debug for ResolverRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResolverRegistry")
+            .field("resolvers", &self.0.len())
+            .finish()
+    }
+}
+
 impl ResolverRegistry {
     /// The built-in resolvers.
     pub fn builtin() -> Self {
