@@ -487,6 +487,9 @@ async fn fixture() -> Option<Fx> {
         .register(attome_metric::MetricModel)
         // E6-T11: the DMARC upload is a Configuration mapping.
         .register(attome_marketing::MarketingModel)
+        // AB4-T1 onwards: the ops engine's upgrade, disaster, drill and
+        // switchover routes.
+        .register(attome_ops::OpsModel)
         .build()
         .await
         .expect("build EngineSystem");
@@ -3958,6 +3961,7 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             Some(json!({"scenario": "site_loss", "summary": "the primary site is down"})),
         ),
         "POST /api/v1/ops/disasters/{id}/actions" => {
+            operations_role(fx).await;
             let id = ops_disaster(fx).await;
             request(
                 "POST",
@@ -3997,12 +4001,15 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
         }
         // AB2-T8: the fixture names a Patroni node; nothing calls it here.
-        "POST /api/v1/ops/cluster/switchover" => request(
-            "POST",
-            "/api/v1/ops/cluster/switchover",
-            t,
-            Some(json!({"candidate": "db2", "reason": "planned kernel patching"})),
-        ),
+        "POST /api/v1/ops/cluster/switchover" => {
+            operations_role(fx).await;
+            request(
+                "POST",
+                "/api/v1/ops/cluster/switchover",
+                t,
+                Some(json!({"candidate": "db2", "reason": "planned kernel patching"})),
+            )
+        }
         // AB4-T6: evidence signed by the key the fixture config trusts.
         "POST /api/v1/ops/drills/evidence" => {
             let key = attome_ops::evidence::SigningKey::from_bytes(&DRILL_KEY_SEED);
@@ -7850,6 +7857,37 @@ async fn rule(fx: &Fx) -> Uuid {
 }
 
 /// AB3-T7: a declared disaster (`row_version` 1).
+/// AB3-T7 / AB2-T8: the Operations role a disaster action or a switchover
+/// waits on, with one member who is not the requesting admin.
+async fn operations_role(fx: &Fx) {
+    let existing: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM role WHERE name = 'Operations' AND is_deleted = false LIMIT 1",
+    )
+    .fetch_optional(&fx.base.db)
+    .await
+    .expect("look up the Operations role");
+    if existing.is_some() {
+        return;
+    }
+    let role = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO role (id, name, description, owner_layer) \
+         VALUES ($1, 'Operations', 'ops approvers', 'project')",
+    )
+    .bind(role)
+    .execute(&fx.base.db)
+    .await
+    .expect("insert the Operations role");
+    let (member, _) = seed_user(&fx.base, "operations").await;
+    sqlx::query("INSERT INTO user_account_mm_role (id, user_ref, role_ref) VALUES ($1, $2, $3)")
+        .bind(Uuid::now_v7())
+        .bind(member)
+        .bind(role)
+        .execute(&fx.base.db)
+        .await
+        .expect("make a second person an Operations member");
+}
+
 async fn ops_disaster(fx: &Fx) -> Uuid {
     sqlx::query_scalar(
         "INSERT INTO ops_disaster (id, declared_by, declared_at, scenario, summary)          VALUES (uuidv7(), $1, now(), 'site_loss', 'drill') RETURNING id",
