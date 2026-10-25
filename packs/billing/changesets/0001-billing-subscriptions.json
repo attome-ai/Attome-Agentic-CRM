@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:92edcaaeef77f48ee133f22b35c4f93cba25d69d7104c91a7930bb91c6e0bb78",
+  "checksum": "sha256:cee4f9ca53cfcb4cef60c4758f647623db44ad823a5fc6d6c44d729e3195a82f",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Subscriptions (F3-T1): a subscription per account with its term, billing timing, frequency and alignment, renewal and trial, its lines and charge models, the dated segments a change writes (append-only) and the charges a billing run plans.",
   "format": "attome-changeset/v1",
@@ -225,7 +225,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -251,7 +251,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -433,7 +433,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Trial Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -494,7 +494,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Cancel Effective",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -520,7 +520,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Paused From",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -546,7 +546,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Resume On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -757,7 +757,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -783,7 +783,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -854,7 +854,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid From",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -880,7 +880,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid To",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1121,7 +1121,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Period Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1147,7 +1147,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Period End",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,

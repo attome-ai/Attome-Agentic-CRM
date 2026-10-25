@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:18bf71affcd5718cfedab98497042edb23c1961380991c2e841d1a345c906189",
+  "checksum": "sha256:efe3bfadf0eca9598df29afc68bb7ed221ff864c4ca8cce09e327f26d23c5300",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Enterprise architecture (X11-T1) on today's four entities: application portfolio fields (the ITSM application CI it describes, vendor, hosting, annual cost, business and technical fit, TIME decision with rationale and savings), technology standards, owner assessments, interfaces and data flows between applications, architecture reviews from intake to decision, and target-state roadmap items tied to projects. Roles, report queries, and sidebar routes fixed to the generic entity list.",
   "format": "attome-changeset/v1",
@@ -205,7 +205,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Submitted",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -627,7 +627,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Decided",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1200,7 +1200,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Retirement Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1261,7 +1261,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End of Life",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

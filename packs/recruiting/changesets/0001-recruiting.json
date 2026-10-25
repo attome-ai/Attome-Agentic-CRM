@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:b22cbd642dfb864787af39715daf345fd646383a7c25f72e19d65b325d40b6c5",
+  "checksum": "sha256:6a27fb4148080beac240884883250ad31fd2e44c6f9c41dd1fae8593d1dfd3e6",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Recruiting (W7-T1): requisitions, job postings, candidates, applications moving through stages, interviews with scorecards, and offers.",
   "format": "attome-changeset/v1",
@@ -199,7 +199,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Target Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -408,7 +408,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Published",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -434,7 +434,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Closes",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -703,7 +703,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Consent Until",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -863,7 +863,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Applied",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -969,7 +969,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Scheduled",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1309,7 +1309,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

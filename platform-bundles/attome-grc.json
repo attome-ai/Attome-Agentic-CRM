@@ -90,7 +90,7 @@
         { "logicalname": "assessment_item_id", "display_name": "Assessment Item", "field_type": "lookup", "is_filterable": true, "lookup_entity": "grc_assessment_item" },
         { "logicalname": "severity", "display_name": "Severity", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["low", "medium", "high", "critical"], "multi": false } },
         { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
-        { "logicalname": "due_date", "display_name": "Due Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "due_date", "display_name": "Due Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "remediation", "display_name": "Remediation", "field_type": "text" },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["open", "in_progress", "remediated", "accepted_risk", "closed"], "multi": false } }
       ]
@@ -103,7 +103,7 @@
         { "logicalname": "reference_kind", "display_name": "Reference Kind", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["file", "record", "audit_query"], "multi": false } },
         { "logicalname": "reference_value", "display_name": "Reference Value", "field_type": "text", "is_required": true, "is_filterable": true },
         { "logicalname": "assessment_item_id", "display_name": "Assessment Item", "field_type": "lookup", "is_filterable": true, "lookup_entity": "grc_assessment_item" },
-        { "logicalname": "collected_at", "display_name": "Collected At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "collected_at", "display_name": "Collected At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "collector_id", "display_name": "Collector", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
         { "logicalname": "notes", "display_name": "Notes", "field_type": "text" }
       ]
@@ -122,7 +122,7 @@
         { "logicalname": "residual_score", "display_name": "Residual Score", "field_type": "number", "is_sortable": true, "is_filterable": true },
         { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
         { "logicalname": "treatment", "display_name": "Treatment", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["accept", "mitigate", "transfer", "avoid"], "multi": false } },
-        { "logicalname": "review_date", "display_name": "Review Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "review_date", "display_name": "Review Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "regarding_entity_name", "display_name": "Regarding Entity", "field_type": "text", "is_filterable": true },
         { "logicalname": "regarding_record_id", "display_name": "Regarding Record Id", "field_type": "text", "is_filterable": true },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["identified", "assessed", "treated", "closed"], "multi": false } }
@@ -149,8 +149,8 @@
         { "logicalname": "document_ref", "display_name": "Document Ref", "field_type": "text", "is_filterable": true },
         { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
         { "logicalname": "applies_to", "display_name": "Applies To", "field_type": "text" },
-        { "logicalname": "effective_date", "display_name": "Effective Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "expiry_date", "display_name": "Expiry Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "effective_date", "display_name": "Effective Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "expiry_date", "display_name": "Expiry Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "version", "display_name": "Version", "field_type": "text", "is_sortable": true, "is_filterable": true },
         { "logicalname": "exceptions", "display_name": "Exceptions", "field_type": "text" },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["draft", "active", "expired", "retired"], "multi": false } }
@@ -164,7 +164,7 @@
         { "logicalname": "policy_id", "display_name": "Policy", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "grc_policy" },
         { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
         { "logicalname": "policy_version", "display_name": "Policy Version", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
-        { "logicalname": "acked_at", "display_name": "Acknowledged At", "field_type": "date", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "acked_at", "display_name": "Acknowledged At", "field_type": "date_time", "is_sortable": true, "is_filterable": true }
       ]
     }
   ],

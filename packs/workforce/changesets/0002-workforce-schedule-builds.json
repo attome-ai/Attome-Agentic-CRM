@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:44b39eac4a2a2f42e915206f7d4ab9abbb116db7de425cf31c1790ca841b2d1c",
+  "checksum": "sha256:e28e96b7ee4f20f1ab0ed07b3035cb1ac5f6a445dd9d498bb45940d3ccb14027",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "Schedule builds (G17-T6): who belongs to a planning group, the stored volume forecast per interval, a group's average handling time, and on a schedule the build run that made it and its coverage before and after.",
   "format": "attome-changeset/v1",
@@ -156,7 +156,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Interval Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,

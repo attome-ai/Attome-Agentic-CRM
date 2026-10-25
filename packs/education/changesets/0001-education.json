@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:40dfd45d2f0a772c18d5ff5400b3dfcef1cef40297d0ff06fb01723bf0249ae1",
+  "checksum": "sha256:9aca1bcdb4a1eb29153fe0686b9aa1d87ba043712377040c6ec5ca9aba66bfb2",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Education (X8-T1) for schools, universities and training institutes; grades, timetables and attendance stay in the SIS: students and guardians with sibling families, programmes and intakes on an academic calendar, applications through stages to a decision and an offer, seats and waiting lists, fees with instalments, scholarships and sponsors, and student success alerts. Children's data is personal and guardian consent is recorded. Roles, report queries and a sidebar.",
   "format": "attome-changeset/v1",
@@ -376,7 +376,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -454,7 +454,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Applications Close",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -603,7 +603,7 @@
         "definition": {
           "data_classification": "personal",
           "display_name": "Birth Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1713,7 +1713,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Raised",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

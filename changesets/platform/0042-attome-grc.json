@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:0f0eb608c5bbe13043c52c0473a985c2b738f3570ed87a2f1d11d8a026b1b1fc",
+  "checksum": "sha256:f5930d0e3cbe2fb20fbc78eb76538d16b67a59d1577798468d611b179268f610",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-grc.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -510,7 +510,7 @@
       "args": {
         "definition": {
           "display_name": "Collected At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "collected_at"
@@ -589,7 +589,7 @@
       "args": {
         "definition": {
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "due_date"
@@ -730,7 +730,7 @@
       "args": {
         "definition": {
           "display_name": "Effective Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "effective_date"
@@ -764,7 +764,7 @@
       "args": {
         "definition": {
           "display_name": "Expiry Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "expiry_date"
@@ -846,7 +846,7 @@
       "args": {
         "definition": {
           "display_name": "Acknowledged At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "acked_at"
@@ -1151,7 +1151,7 @@
       "args": {
         "definition": {
           "display_name": "Review Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "review_date"

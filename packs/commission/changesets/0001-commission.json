@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:21a6af79c58a52a75cfc9dcf35ca7a9583a625b231e3b5f087c15e22a6eb3bd5",
+  "checksum": "sha256:cd0d6d6cfd9bb5668bb358edbe99c142f910e1466f9374defff143fc692ebbf9",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Sales commissions (F10-T2): plans and their versions and components, participants, periods, credits, calculation runs with statement lines and payouts, adjustments, disputes and draws. Amounts and rates are masked fields.",
   "format": "attome-changeset/v1",
@@ -241,7 +241,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Published",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -701,7 +701,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -727,7 +727,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -857,7 +857,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -883,7 +883,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1128,7 +1128,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Credited On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1311,7 +1311,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Started",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1337,7 +1337,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Finished",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

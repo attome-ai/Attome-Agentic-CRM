@@ -19,7 +19,7 @@
         { "logicalname": "credential_ref", "display_name": "Credential Reference", "field_type": "text" },
         { "logicalname": "rate_limit", "display_name": "Rate Limit (requests/min)", "field_type": "number" },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["active", "disabled", "error"], "multi": false } },
-        { "logicalname": "health_last_ok_at", "display_name": "Last Healthy At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "health_last_ok_at", "display_name": "Last Healthy At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "health_last_error", "display_name": "Last Health Error", "field_type": "text" },
         { "logicalname": "service_principal_ref", "display_name": "Service Principal", "field_type": "text", "is_required": true, "is_filterable": true },
         { "logicalname": "config", "display_name": "Adapter Config", "field_type": "text" },

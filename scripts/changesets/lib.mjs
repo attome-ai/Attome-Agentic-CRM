@@ -27,14 +27,15 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 export const FIELD_TYPES = ['text', 'number', 'date', 'bool', 'choice', 'lookup', 'file', 'icon', 'color', 'currency', 'formula', 'rich_text', 'image', 'date_time'];
 // Types a change_field_type may target: the column is converted in place by a
 // declarative conversion, so the target must be a scalar a cast can produce.
-export const CONVERTIBLE_TARGET_TYPES = ['text', 'number', 'currency', 'date', 'bool', 'choice', 'rich_text'];
+export const CONVERTIBLE_TARGET_TYPES = ['text', 'number', 'currency', 'date', 'date_time', 'bool', 'choice', 'rich_text'];
 // The defined conversions, from type -> the types it converts to (design §6.3).
 // Anything else is refused by the validator and by the planner.
 export const CONVERSIONS = {
-  text: ['number', 'currency', 'date', 'bool', 'choice', 'rich_text'],
+  text: ['number', 'currency', 'date', 'date_time', 'bool', 'choice', 'rich_text'],
   number: ['text', 'currency'],
   currency: ['text', 'number'],
-  date: ['text'],
+  date: ['text', 'date_time'],
+  date_time: ['text', 'date'],
   bool: ['text'],
   choice: ['text'],
 };

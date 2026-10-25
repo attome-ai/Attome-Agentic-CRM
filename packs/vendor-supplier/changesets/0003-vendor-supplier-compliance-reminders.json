@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:4f81fc57b9ebd7836bb3c97442aeb91aeabc649c2cbd8feda1f97a5f41ec1328",
+  "checksum": "sha256:59de1c98b7c38b30a8841627861f717184d961c08c0c8fe527d51d4054ffd350",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "Compliance document expiry reminders (W2-T1): the expiry date a document was last reminded for, so the M10 reminder 30 days before expiry goes once per date.",
   "format": "attome-changeset/v1",
@@ -14,7 +14,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Reminded For Expiry",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

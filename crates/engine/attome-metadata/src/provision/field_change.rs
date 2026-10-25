@@ -864,10 +864,11 @@ pub fn conversion_defined(from: &str, to: &str) -> bool {
         (from, to),
         (
             "text",
-            "number" | "currency" | "date" | "bool" | "choice" | "rich_text"
+            "number" | "currency" | "date" | "date_time" | "bool" | "choice" | "rich_text"
         ) | ("number", "text" | "currency")
             | ("currency", "text" | "number")
-            | ("date", "text")
+            | ("date", "text" | "date_time")
+            | ("date_time", "text" | "date")
             | ("bool", "text")
             | ("choice", "text")
     )
@@ -918,10 +919,13 @@ impl Conversion {
                 "conversion_not_defined: no conversion from {from} to {to}"
             )));
         }
-        let text_date = matches!((from, to), ("text", "date") | ("date", "text"));
+        let text_date = matches!(
+            (from, to),
+            ("text", "date" | "date_time") | ("date" | "date_time", "text")
+        );
         if self.format.is_some() && !text_date {
             return Err(AppError::Validation(
-                "conversion.format applies only to text<->date".into(),
+                "conversion.format applies only to text<->date and text<->date_time".into(),
             ));
         }
         date_pattern(self.format.as_deref())?;
@@ -976,7 +980,13 @@ impl Conversion {
     /// defined conversion *to text* keeps every value; the metadata-only
     /// pairs change none.
     pub fn can_null(&self) -> bool {
-        self.changes_values() && self.to_type != "text"
+        self.changes_values()
+            && self.to_type != "text"
+            // Y2-T1: a day and a moment always convert into each other.
+            && !matches!(
+                (self.from_type.as_str(), self.to_type.as_str()),
+                ("date", "date_time") | ("date_time", "date")
+            )
     }
 
     /// Whether the physical column type changes.
@@ -1019,7 +1029,8 @@ impl Conversion {
         let (from, to) = (self.from_type.as_str(), self.to_type.as_str());
         Ok(match (from, to) {
             ("text", "number" | "currency") => format!("try_numeric({col})"),
-            ("text", "date") => {
+            // Y2-T1: a `date` column takes the day of the parsed moment.
+            ("text", "date" | "date_time") => {
                 let fmt = self.format.as_deref().unwrap_or("iso8601");
                 // A closed list, checked by `check`; quoted by the server all
                 // the same.
@@ -1048,7 +1059,7 @@ impl Conversion {
             ("text", "rich_text") | ("choice", "text") => col.to_owned(),
             ("number" | "currency", "text") | ("bool", "text") => format!("({col})::text"),
             ("number", "currency") | ("currency", "number") => col.to_owned(),
-            ("date", "text") => match date_pattern(self.format.as_deref())? {
+            ("date_time", "text") => match date_pattern(self.format.as_deref())? {
                 None => {
                     format!("to_char(({col}) AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')")
                 }
@@ -1057,6 +1068,15 @@ impl Conversion {
                     literal(conn, pattern).await?
                 ),
             },
+            // Y2-T1: a `date` column is a day, with no zone to convert.
+            ("date", "text") => match date_pattern(self.format.as_deref())? {
+                None => format!("to_char({col}, 'YYYY-MM-DD')"),
+                Some(pattern) => format!("to_char({col}, {})", literal(conn, pattern).await?),
+            },
+            // A2-T1: a moment becomes its UTC day (the preview shows the
+            // values that carry a time part); a day becomes its UTC midnight.
+            ("date_time", "date") => format!("((({col}) AT TIME ZONE 'UTC')::date)"),
+            ("date", "date_time") => format!("((({col})::timestamp) AT TIME ZONE 'UTC')"),
             _ => {
                 return Err(AppError::Validation(format!(
                     "conversion_not_defined: no conversion from {from} to {to}"
@@ -2139,6 +2159,8 @@ mod tests {
         for (from, to) in [
             ("number", "text"),
             ("date", "text"),
+            ("date_time", "date"),
+            ("date", "date_time"),
             ("bool", "text"),
             ("number", "currency"),
             ("text", "rich_text"),
@@ -2187,11 +2209,20 @@ mod tests {
         for (from, tos) in [
             (
                 "text",
-                &["number", "currency", "date", "bool", "choice", "rich_text"][..],
+                &[
+                    "number",
+                    "currency",
+                    "date",
+                    "date_time",
+                    "bool",
+                    "choice",
+                    "rich_text",
+                ][..],
             ),
             ("number", &["text", "currency"][..]),
             ("currency", &["text", "number"][..]),
-            ("date", &["text"][..]),
+            ("date", &["text", "date_time"][..]),
+            ("date_time", &["text", "date"][..]),
             ("bool", &["text"][..]),
             ("choice", &["text"][..]),
         ] {

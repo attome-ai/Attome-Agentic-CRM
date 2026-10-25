@@ -1,6 +1,6 @@
 {
   "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
-  "checksum": "sha256:6a676f7efbe6a5800fc29dd8090a3163befc1d0f338f97ed042f846ec0d5be06",
+  "checksum": "sha256:692b6159b9d68e790996b4320043a912f2d5be115ff9c3682639379163d93ba5",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The finance pack's metadata, converted from its v1 vertical bundle.",
   "format": "attome-changeset/v1",
@@ -551,7 +551,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Period End",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -577,7 +577,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Period Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -707,7 +707,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expense Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -820,7 +820,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -898,7 +898,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Issued Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1043,7 +1043,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Paid Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

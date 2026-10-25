@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:0b901eb7fdcb82df9501935fa968fb21e197156d513f15653fef795cbd8bbe08",
+  "checksum": "sha256:1e34b78ec4bf9649b52f23cc9c6bcc1723027d137ccc3957285084634391473c",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Email deliverability (E6-T3): the deployment deliverability policy (bounce and complaint warning levels, sunsetting unengaged contacts, DMARC, blocklist and postmaster checks, seed tests) and an email status with engagement dates on contacts and leads.",
   "format": "attome-changeset/v1",
@@ -379,7 +379,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Last Marketing Engagement",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -405,7 +405,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Marketing Sunset",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -431,7 +431,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Re-engagement Sent",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -517,7 +517,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Last Marketing Engagement",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -543,7 +543,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Marketing Sunset",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -569,7 +569,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Re-engagement Sent",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

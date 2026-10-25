@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:ae92892f400125a16b293132277ccdba8e7b04380b17ad5e4a242488ebf28293",
+  "checksum": "sha256:191ad9fc4fbee710b2c3f99747d170d979928e182fb768a3d2d8db106732450f",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-s2s.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -291,7 +291,7 @@
       "args": {
         "definition": {
           "display_name": "Last Used At",
-          "field_type": "date",
+          "field_type": "date_time",
           "logicalname": "last_used_at"
         }
       },

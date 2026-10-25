@@ -2528,6 +2528,7 @@
                 "number",
                 "currency",
                 "date",
+                "date_time",
                 "bool",
                 "choice",
                 "rich_text"
@@ -2547,6 +2548,7 @@
                     "number",
                     "currency",
                     "date",
+                    "date_time",
                     "bool",
                     "choice"
                   ],
@@ -2910,6 +2912,7 @@
                 "number",
                 "currency",
                 "date",
+                "date_time",
                 "bool",
                 "choice"
               ],
@@ -2921,6 +2924,7 @@
                 "number",
                 "currency",
                 "date",
+                "date_time",
                 "bool",
                 "choice",
                 "rich_text"

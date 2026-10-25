@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:1aa1c04a6196f79e4e7186e2f3e3df01c3a85bcd92d78cf7bc4a59ede7ccf308",
+  "checksum": "sha256:4585e4fcbf2aa3094bbf13929cf00d7824780208cf04e5a3085fa20d7eac8e6a",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Catalogue and pricing (D8-T1): Arabic product names, product families as a tree, units of measure in groups with conversion factors, price list validity, list price and cost in money per unit, price breaks, account prices, related products, revenue recognition and return policy on products.",
   "format": "attome-changeset/v1",
@@ -553,7 +553,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid From",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -579,7 +579,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid To",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -934,7 +934,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid From",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -960,7 +960,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid To",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

@@ -169,7 +169,7 @@
         {
           "data_classification": "general",
           "display_name": "Period",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": true,
@@ -474,7 +474,7 @@
       "attribute": {
         "data_classification": "general",
         "display_name": "Certified At",
-        "field_type": "date",
+        "field_type": "date_time",
         "is_customized": false,
         "is_filterable": false,
         "is_required": false,
@@ -492,7 +492,7 @@
       "attribute": {
         "data_classification": "general",
         "display_name": "Review Due",
-        "field_type": "date",
+        "field_type": "date_time",
         "is_customized": false,
         "is_filterable": false,
         "is_required": false,
@@ -546,7 +546,7 @@
       "attribute": {
         "data_classification": "general",
         "display_name": "Alerts Snoozed Until",
-        "field_type": "date",
+        "field_type": "date_time",
         "is_customized": false,
         "is_filterable": false,
         "is_required": false,

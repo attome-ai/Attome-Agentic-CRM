@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:40c3e9904ddc816c78e8e1dfbefd168486e9b1a814c6822f09b3244d93c1e51f",
+  "checksum": "sha256:f4313899fe4627bf67634afefa47f5e986de5baf0aaab1f574406b940e2cef3c",
   "closed_at": "2026-10-19T00:00:00Z",
   "description": "Online quote acceptance (D9-T3): who accepted or rejected a quote through its guest link, when and with what note, and a rule that locks a decided quote.",
   "format": "attome-changeset/v1",
@@ -40,7 +40,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Decided At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": true,
           "is_required": false,

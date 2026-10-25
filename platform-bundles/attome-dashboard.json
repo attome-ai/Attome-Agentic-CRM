@@ -42,7 +42,7 @@
         { "logicalname": "label", "display_name": "Label", "field_type": "text", "is_sortable": true, "is_filterable": true },
         { "logicalname": "snapshot_json", "display_name": "Snapshot", "field_type": "text", "is_required": true },
         { "logicalname": "published_by", "display_name": "Published By", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
-        { "logicalname": "published_at", "display_name": "Published At", "field_type": "date", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "published_at", "display_name": "Published At", "field_type": "date_time", "is_sortable": true, "is_filterable": true }
       ]
     },
     {
@@ -122,7 +122,7 @@
         { "logicalname": "responsive_overrides", "display_name": "Responsive Overrides", "field_type": "text" },
         { "logicalname": "is_visible", "display_name": "Visible", "field_type": "bool", "is_sortable": true, "is_filterable": true },
         { "logicalname": "is_locked", "display_name": "Locked", "field_type": "bool", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "last_refresh_at", "display_name": "Last Refresh At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_refresh_at", "display_name": "Last Refresh At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "last_error", "display_name": "Last Error", "field_type": "text" },
         { "logicalname": "group_id", "display_name": "Group", "field_type": "text", "is_filterable": true },
         { "logicalname": "query_id", "display_name": "Stored Query", "field_type": "text", "is_filterable": true },
@@ -184,7 +184,7 @@
         { "logicalname": "action_invocation_ref", "display_name": "Action Invocation", "field_type": "text", "is_filterable": true },
         { "logicalname": "regarding_entity", "display_name": "Regarding Entity", "field_type": "text", "is_sortable": true, "is_filterable": true },
         { "logicalname": "regarding_id", "display_name": "Regarding Record", "field_type": "text", "is_filterable": true },
-        { "logicalname": "measure_at", "display_name": "Measure At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "measure_at", "display_name": "Measure At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "expected_metric_ref", "display_name": "Expected Metric", "field_type": "lookup", "is_filterable": true, "lookup_entity": "dashboard_metric_definition" },
         { "logicalname": "expected_delta", "display_name": "Expected Delta", "field_type": "number" },
         { "logicalname": "actual_delta", "display_name": "Actual Delta", "field_type": "number" },

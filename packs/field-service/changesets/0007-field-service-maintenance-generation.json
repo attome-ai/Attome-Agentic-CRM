@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:3f6aa1b7d4ca5e45b8dd179b4fa025a7e3ea9ece7e58de7c793edd008d3d3d74",
+  "checksum": "sha256:b4a5c2df6fa292b593dc3f76af15777cb7d5687917297124c37127153715e5c9",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "Maintenance generation (I5-T2): a plan's lead time, the due date and meter reading it last generated for, and on the work order the plan and due date it was made for, so each due date makes one work order.",
   "format": "attome-changeset/v1",
@@ -40,7 +40,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Last Generated For",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -118,7 +118,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Maintenance Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

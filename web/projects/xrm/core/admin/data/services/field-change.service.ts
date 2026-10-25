@@ -27,7 +27,7 @@ import type { RestoreCounts } from './release-report.service';
  */
 
 /** Target types of an in-place type change (`change_field_type`). */
-export const CONVERTIBLE_FIELD_TYPES = ['text', 'number', 'currency', 'date', 'bool', 'choice', 'rich_text'] as const;
+export const CONVERTIBLE_FIELD_TYPES = ['text', 'number', 'currency', 'date', 'date_time', 'bool', 'choice', 'rich_text'] as const;
 export type ConvertibleFieldType = typeof CONVERTIBLE_FIELD_TYPES[number];
 
 /**
@@ -37,10 +37,11 @@ export type ConvertibleFieldType = typeof CONVERTIBLE_FIELD_TYPES[number];
  * with `conversion_not_defined`.
  */
 export const FIELD_CONVERSIONS: Readonly<Record<string, readonly ConvertibleFieldType[]>> = {
-  text:     ['number', 'currency', 'date', 'bool', 'choice', 'rich_text'],
+  text:     ['number', 'currency', 'date', 'date_time', 'bool', 'choice', 'rich_text'],
   number:   ['text', 'currency'],
   currency: ['text', 'number'],
-  date:     ['text'],
+  date:     ['text', 'date_time'],
+  date_time: ['text', 'date'],
   bool:     ['text'],
   choice:   ['text'],
 };

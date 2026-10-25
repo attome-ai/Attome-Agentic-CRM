@@ -16,9 +16,9 @@
         { "logicalname": "domain", "display_name": "Domain", "field_type": "text", "is_required": true },
         { "logicalname": "tier", "display_name": "Tier", "field_type": "text", "is_required": true },
         { "logicalname": "max_users", "display_name": "Max Users", "field_type": "number", "is_required": true },
-        { "logicalname": "expiry", "display_name": "Expiry", "field_type": "date", "is_required": true },
+        { "logicalname": "expiry", "display_name": "Expiry", "field_type": "date_time", "is_required": true },
         { "logicalname": "modules", "display_name": "Modules", "field_type": "text" },
-        { "logicalname": "issued_at", "display_name": "Issued At", "field_type": "date", "is_required": true },
+        { "logicalname": "issued_at", "display_name": "Issued At", "field_type": "date_time", "is_required": true },
         { "logicalname": "signature", "display_name": "Signature", "field_type": "text", "is_required": true, "is_sensitive": true },
         { "logicalname": "signing_key_id", "display_name": "Signing Key ID", "field_type": "text" }
       ]

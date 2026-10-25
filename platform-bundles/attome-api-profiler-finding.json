@@ -20,7 +20,7 @@
         { "logicalname": "avg_ms", "display_name": "Avg (ms)", "field_type": "number", "is_sortable": true, "is_filterable": true },
         { "logicalname": "p95_ms", "display_name": "P95 (ms)", "field_type": "number", "is_sortable": true, "is_filterable": true },
         { "logicalname": "max_ms", "display_name": "Max (ms)", "field_type": "number", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "last_seen_at", "display_name": "Last Seen At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_seen_at", "display_name": "Last Seen At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["open", "acknowledged", "resolved"], "multi": false } },
         { "logicalname": "note", "display_name": "Note", "field_type": "text" }
       ]

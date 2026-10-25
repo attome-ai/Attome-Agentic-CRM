@@ -220,7 +220,16 @@ pub fn validate(
                 validate_number_bounds(n, &opts)?;
             }
         }
-        FieldType::Date | FieldType::DateTime => {
+        // A2-T1: a day is only `YYYY-MM-DD`, so it never shifts across zones.
+        FieldType::Date => {
+            let s = value
+                .as_str()
+                .ok_or_else(|| type_err("date (YYYY-MM-DD)", value))?;
+            chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|_| {
+                AppError::Validation(format!("date value must be YYYY-MM-DD, got: {s}"))
+            })?;
+        }
+        FieldType::DateTime => {
             let s = value
                 .as_str()
                 .ok_or_else(|| type_err("date (ISO 8601 string)", value))?;
@@ -1419,8 +1428,19 @@ mod tests {
 
     #[test]
     fn date_accepts_rfc3339_and_plain_date_rejects_garbage() {
-        assert!(validate(&FieldType::Date, &json!("2026-07-06T12:00:00Z"), None).is_ok());
+        // A2-T1: a day takes no time part; a moment takes either.
+        assert!(validate(&FieldType::Date, &json!("2026-07-06T12:00:00Z"), None).is_err());
         assert!(validate(&FieldType::Date, &json!("2026-07-06"), None).is_ok());
+        assert!(validate(&FieldType::DateTime, &json!("2026-07-06T12:00:00Z"), None).is_ok());
+        assert!(
+            validate(
+                &FieldType::DateTime,
+                &json!("2026-07-06T12:00:00+03:00"),
+                None
+            )
+            .is_ok()
+        );
+        assert!(validate(&FieldType::DateTime, &json!("2026-07-06"), None).is_ok());
         assert!(validate(&FieldType::Date, &json!("not-a-date"), None).is_err());
         assert!(validate(&FieldType::Date, &json!(20260706), None).is_err());
     }

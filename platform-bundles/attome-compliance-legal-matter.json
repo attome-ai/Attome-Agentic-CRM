@@ -16,9 +16,9 @@
         { "logicalname": "collected_record_count", "display_name": "Collected Record Count", "field_type": "number", "is_filterable": true },
         { "logicalname": "package_ref", "display_name": "Package Reference", "field_type": "text" },
         { "logicalname": "package_checksum", "display_name": "Package Checksum", "field_type": "text" },
-        { "logicalname": "opened_at", "display_name": "Opened At", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "collected_at", "display_name": "Collected At", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "released_at", "display_name": "Released At", "field_type": "date", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "opened_at", "display_name": "Opened At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "collected_at", "display_name": "Collected At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "released_at", "display_name": "Released At", "field_type": "date_time", "is_sortable": true, "is_filterable": true }
       ]
     }
   ],

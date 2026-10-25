@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:b5fc082c7d224398a974e1651e0d51582c6c36659f30756e24a12379d27cf6da",
+  "checksum": "sha256:89539259b1b1c3508b357ef6d6105f3879afd38a08047145476402c1fa8b99c0",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-project.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -341,7 +341,7 @@
       "args": {
         "definition": {
           "display_name": "Actual End Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "actual_end_date"
@@ -359,7 +359,7 @@
       "args": {
         "definition": {
           "display_name": "Actual Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "actual_start_date"
@@ -611,7 +611,7 @@
       "args": {
         "definition": {
           "display_name": "Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "start_date"
@@ -673,7 +673,7 @@
       "args": {
         "definition": {
           "display_name": "Target End Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "target_end_date"
@@ -691,7 +691,7 @@
       "args": {
         "definition": {
           "display_name": "Captured At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "captured_at"
@@ -772,7 +772,7 @@
       "args": {
         "definition": {
           "display_name": "Planned Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_sortable": true,
           "logicalname": "planned_due"
         }
@@ -806,7 +806,7 @@
       "args": {
         "definition": {
           "display_name": "Planned Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_sortable": true,
           "logicalname": "planned_start"
         }
@@ -891,7 +891,7 @@
       "args": {
         "definition": {
           "display_name": "Requested Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "requested_date"
@@ -971,7 +971,7 @@
       "args": {
         "definition": {
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "due_date"
@@ -1051,7 +1051,7 @@
       "args": {
         "definition": {
           "display_name": "Identified Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "identified_date"
@@ -1265,7 +1265,7 @@
       "args": {
         "definition": {
           "display_name": "Occurred At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,
@@ -1407,7 +1407,7 @@
       "args": {
         "definition": {
           "display_name": "Effective Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,
@@ -1577,7 +1577,7 @@
       "args": {
         "definition": {
           "display_name": "Entry Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,
@@ -1649,7 +1649,7 @@
       "args": {
         "definition": {
           "display_name": "Approved At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_sortable": true,
           "logicalname": "approved_at"
         }
@@ -1694,7 +1694,7 @@
       "args": {
         "definition": {
           "display_name": "Week Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,
@@ -1729,7 +1729,7 @@
       "args": {
         "definition": {
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "due_date"
@@ -1827,7 +1827,7 @@
       "args": {
         "definition": {
           "display_name": "Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "start_date"
@@ -1937,7 +1937,7 @@
       "args": {
         "definition": {
           "display_name": "End Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "end_date"
@@ -2008,7 +2008,7 @@
       "args": {
         "definition": {
           "display_name": "Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:adc1bb0a2a85ee6f840fe738ed143c0e52e87f96bca7b2a66feae33340023c1d",
+  "checksum": "sha256:188866d2a99bf9182cc41e6fc5836696f3987453117d0b58e7c15dab5275812d",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-provider.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -212,7 +212,7 @@
       "args": {
         "definition": {
           "display_name": "Last Health Check",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "last_health_check"

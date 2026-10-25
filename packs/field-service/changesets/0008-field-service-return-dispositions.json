@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:989dede1025aee2b76343622f802e9d98a54be9b06c0ed3f5fdbebc6d4096184",
+  "checksum": "sha256:9a5d1d6bed99b278b53b9c37a9287908e88fe4464333cafe6a1ce8fa7848df34",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "Return dispositions (I11-T2): where restocked returns go, the invoice line a refund credits, and on each line what its disposition made and when, so each line acts once.",
   "format": "attome-changeset/v1",
@@ -92,7 +92,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Disposed On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

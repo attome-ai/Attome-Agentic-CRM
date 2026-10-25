@@ -1,6 +1,6 @@
 {
   "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
-  "checksum": "sha256:386cfd22ea6702a56ca92ec4d38cd4c7395990c1ef006840c9093904c03d0750",
+  "checksum": "sha256:437004a260d68c724df7eb2f796d199c6f646f4b70c04f49d55de4eed4cd1e5d",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The enterprise-architecture pack's metadata, converted from its v1 vertical bundle.",
   "format": "attome-changeset/v1",
@@ -673,7 +673,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End of Support",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

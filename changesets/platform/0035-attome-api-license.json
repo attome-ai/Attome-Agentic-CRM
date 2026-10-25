@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:d62e4abf00b01eddbbe6b755d506005f289849f393b053b3d40d5c73748a7ae1",
+  "checksum": "sha256:7ea8729b2ad5be623b3fd480187c0f81e619eaeca480d6896367fc119dafa9a2",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-license.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -64,7 +64,7 @@
       "args": {
         "definition": {
           "display_name": "Expiry",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_required": true,
           "logicalname": "expiry"
         }
@@ -81,7 +81,7 @@
       "args": {
         "definition": {
           "display_name": "Issued At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_required": true,
           "logicalname": "issued_at"
         }

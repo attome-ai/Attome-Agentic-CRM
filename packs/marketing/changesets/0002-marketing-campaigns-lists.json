@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:42625dac58b8919073ce16ce5f1fe07d74dfee49ae2f5544d9cb4a395d13f226",
+  "checksum": "sha256:1b25aa7785a730018345735d7e69b82b01cceb86b79934885ab9f899c4c00254",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Campaigns (E1-T1) with a parent campaign, type, status, dates and goals, and their members (a contact or a lead); marketing lists (E7-T1), static or a saved-query segment refreshed on a schedule or live, and list combinations (include, intersect, exclude).",
   "format": "attome-changeset/v1",
@@ -130,7 +130,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -156,7 +156,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -419,7 +419,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Responded",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -809,7 +809,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Last Refreshed",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -835,7 +835,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Last Used",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

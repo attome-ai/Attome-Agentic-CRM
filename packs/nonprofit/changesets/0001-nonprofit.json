@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:7736066e39ea982e75a5445f55be93e367edb06c6cd75d6eb0ce684cf579a8bd",
+  "checksum": "sha256:5551374504bc5f91de39bae5b1ba5995913f0809e41f22e17b91a02c4b44deff",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Nonprofit (X7-T1) for MENA charities: donors and households with giving totals and anonymous giving; funds by type (unrestricted, restricted, zakat, sadaqah, waqf, appeal); gifts and pledges against funds with yearly-numbered receipts; appeals; waqf assets and income distributions; beneficiary aid cases with eligibility and approval levels, kept apart from fundraisers by role; programmes. Roles, report queries and a sidebar.",
   "format": "attome-changeset/v1",
@@ -85,7 +85,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Last Gift",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -445,7 +445,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -471,7 +471,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -654,7 +654,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -940,7 +940,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Received",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -2020,7 +2020,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Donor Since",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

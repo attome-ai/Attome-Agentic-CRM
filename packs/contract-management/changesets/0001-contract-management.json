@@ -1,6 +1,6 @@
 {
   "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
-  "checksum": "sha256:cf6cd3d8a422923e2e9250a076ea9bf0067415d2bf368c9aa024923d0e9f35cc",
+  "checksum": "sha256:b128ccc538a18b71bfbb634465e1d3b073762ebfb077df9995e02cd620e2342d",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The contract-management pack's metadata, converted from its v1 vertical bundle.",
   "format": "attome-changeset/v1",
@@ -116,7 +116,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Effective Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -369,7 +369,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -395,7 +395,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Renewal Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -421,7 +421,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -509,7 +509,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Completed On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -535,7 +535,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,

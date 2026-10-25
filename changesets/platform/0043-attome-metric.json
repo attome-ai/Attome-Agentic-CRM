@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:506d9ed0a3dadd88ebf8b8c7a560eb21c9277c45faf34f50bba5d444a126cba7",
+  "checksum": "sha256:fee483bc00ca555d8e1af6b120e50fd9f159177600f9da5df418ee229fee36c2",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-metric.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -263,7 +263,7 @@
       "args": {
         "definition": {
           "display_name": "Period Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,

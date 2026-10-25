@@ -22,7 +22,7 @@
         { "logicalname": "user_email", "display_name": "User Email", "field_type": "text", "is_sensitive": true },
         { "logicalname": "user_job_ref", "display_name": "User Job", "field_type": "lookup" },
         { "logicalname": "user_job_name", "display_name": "User Job Name", "field_type": "text" },
-        { "logicalname": "changed_on", "display_name": "Changed On", "field_type": "date" },
+        { "logicalname": "changed_on", "display_name": "Changed On", "field_type": "date_time" },
         { "logicalname": "source", "display_name": "Source", "field_type": "number" },
         { "logicalname": "ip_address", "display_name": "IP Address", "field_type": "text" },
         { "logicalname": "browser", "display_name": "Browser", "field_type": "text" },

@@ -23,8 +23,8 @@
       "is_append_only": false,
       "attributes": [
         { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
-        { "logicalname": "leave_start", "display_name": "Leave Start", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
-        { "logicalname": "leave_end", "display_name": "Leave End", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "leave_start", "display_name": "Leave Start", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "leave_end", "display_name": "Leave End", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "reason", "display_name": "Reason", "field_type": "text" }
       ]
     }

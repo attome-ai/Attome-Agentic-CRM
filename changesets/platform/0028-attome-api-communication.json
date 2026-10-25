@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:9c1c91483aac0a2fe50fb41b81a0cf826449aac222b6faef57e0994901f76d95",
+  "checksum": "sha256:1b661870c1cf4ecf98c15a65b7fa7c4d82dc7cf67030ad47b6ff23d550e51681",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-communication.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -190,7 +190,7 @@
       "args": {
         "definition": {
           "display_name": "Sent At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "sent_at"

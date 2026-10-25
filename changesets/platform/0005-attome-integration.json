@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:ce49b718152e9f2c54e789626ceca55139ada480d13faa3137bbcb9e9197360d",
+  "checksum": "sha256:4bf1c4e6ce86c5d645deae888f80f60687b0588012017385d5f6cb5b08c00c96",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-integration.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -195,7 +195,7 @@
       "args": {
         "definition": {
           "display_name": "Last Healthy At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "health_last_ok_at"

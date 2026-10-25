@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:f75451168254ccc2365b91a399adae018582bd9d8816e1b49c462e141edddc4b",
+  "checksum": "sha256:a1d0dacbecc729e2b9bbaad8a9b9be996348f961fc0c525ce45ab1c99b3d05e8",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Internal audit (R13-T1): audit engagements, workpapers with their evidence files, findings with rating and owner, and follow-ups until each finding is closed.",
   "format": "attome-changeset/v1",
@@ -172,7 +172,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Planned Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -198,7 +198,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Planned End",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -806,7 +806,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -964,7 +964,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Checked",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

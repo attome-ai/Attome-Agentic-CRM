@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:649af192b5c72df8ca93837284c140c08e94d70711884d1dbf6b6b06477d55a8",
+  "checksum": "sha256:98d10deacfe640bd2f88074d89b714e01dd0ec5489ea414d4966433e3618b194",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Forecasts (D11-T1): periods, categories, a cell per hierarchy node, period and category, append-only adjustments and weekly snapshots. Territories (D13-T1): members with roles, territory types, assignment rules over accounts and the account-territory links they keep. Playbooks (D26-T1): playbooks with steps and the programmes that run them.",
   "format": "attome-changeset/v1",
@@ -59,7 +59,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -85,7 +85,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -616,7 +616,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Adjusted",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -687,7 +687,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Week Of",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -941,7 +941,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -967,7 +967,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1675,7 +1675,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1701,7 +1701,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

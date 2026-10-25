@@ -16,8 +16,8 @@
         { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true },
         { "logicalname": "public_key", "display_name": "Public Key", "field_type": "text", "is_required": true },
         { "logicalname": "secret_hash", "display_name": "Secret Hash", "field_type": "text", "is_required": true, "is_sensitive": true },
-        { "logicalname": "created_at", "display_name": "Created At", "field_type": "date" },
-        { "logicalname": "last_used_at", "display_name": "Last Used At", "field_type": "date" },
+        { "logicalname": "created_at", "display_name": "Created At", "field_type": "date_time" },
+        { "logicalname": "last_used_at", "display_name": "Last Used At", "field_type": "date_time" },
         { "logicalname": "is_active", "display_name": "Is Active", "field_type": "bool" }
       ]
     }

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:63d0115e1ae9fd3b5deb084aeb7dfbcd65d586e46bd791dc18a1309b0824d04b",
+  "checksum": "sha256:a16ccdf708eb62696d99102bac4ebe087436ca3513fb5fdc45fea082710acc5d",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-note.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -183,7 +183,7 @@
       "args": {
         "definition": {
           "display_name": "Resolved At",
-          "field_type": "date",
+          "field_type": "date_time",
           "logicalname": "resolved_at"
         }
       },

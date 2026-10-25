@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:930824191e01cb0d5daf76f6f60e04f743242e769e1d07aeb75cda74e6db7f22",
+  "checksum": "sha256:1d9fcf838f4cecc06a89aca72584b310f9e3fd35e845f39b5659438ddd898d85",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Account plans (D27-T1): a plan per account and period with its revenue target and relationship health, goals, a whitespace grid of products by department, and actions.",
   "format": "attome-changeset/v1",
@@ -85,7 +85,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Period Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -111,7 +111,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Period End",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -352,7 +352,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -694,7 +694,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

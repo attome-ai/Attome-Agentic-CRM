@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:af2e7427686405622a6bac5987b033a7f177c9495890a6a2587000e3e6ae9e19",
+  "checksum": "sha256:d83004f1e82c1e36ce6dec6a807f756f819b98b06b0a72bf590f6fdc991f2175",
   "closed_at": "2026-10-20T00:00:00Z",
   "description": "Renewals and trials (F3-T9): the end date a renewal or renewal opportunity was handled for, and the day a trial reminder went out, so the nightly sweep handles each once.",
   "format": "attome-changeset/v1",
@@ -14,7 +14,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Renewal Handled For",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -53,7 +53,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Trial Reminded On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

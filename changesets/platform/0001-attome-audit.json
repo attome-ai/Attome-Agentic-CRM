@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:c0d8244e272a0d607e9a36d03f1476f6c0d41c67f19c4a2270d40ddcdffab7e0",
+  "checksum": "sha256:75b3f4db08de4cb2472ddcec441544a480092d344fd2864cadece083d543ff63",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-audit.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -515,7 +515,7 @@
       "args": {
         "definition": {
           "display_name": "Changed On",
-          "field_type": "date",
+          "field_type": "date_time",
           "logicalname": "changed_on"
         }
       },

@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:89f05fcd0eb473e8ce40411900b62719c835dc63c1e7e5882c8633e39e0e2bb1",
+  "checksum": "sha256:e51ffc3dd7da45925ce33a1e528544fe135ac384e7c547025118d445956a6ee4",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "General ledger (W5-T1): the chart of accounts, accounting periods that open and close, journals, append-only journal entries and their debit and credit lines, and posting rules that map a source document kind to the accounts it debits and credits. The Accountant and Ledger Viewer roles ship with it; the ledger engine is gated on the `ledger` module.",
   "format": "attome-changeset/v1",
@@ -319,7 +319,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -345,7 +345,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -507,7 +507,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:46d8ae5e1db309b9434adf63264048a44ea2bf892552f7c0577d7f4540cf275e",
+  "checksum": "sha256:11e61645af9c2f2dbc961a9748c41db5cb103c84a2ee8afda93fe2500706d3e1",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-meeting.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -130,7 +130,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Generated",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,

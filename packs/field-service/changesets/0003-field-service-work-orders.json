@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:02288a66be31f0234408fa757593dd22120afc7925bcb452f449eeeeae1ba0aa",
+  "checksum": "sha256:2733fcc6a8a9e92314283b12398d076cfed6d0c830021fb13f07b782002171d6",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Work orders (I1-T1): types, incident types, the work order linked to the asset, the ticket and the entitlement, its tasks, part and service lines, and time and travel entries, with statuses, a customer signature and the invoice hand-off. Maintenance (I5-T1): plans triggered every N days, at a meter threshold or on a date, with task templates. Warranties (I10-T1): warranty terms per product, the warranty source on entitlements and warranty claims with supplier recovery.",
   "format": "attome-changeset/v1",
@@ -495,7 +495,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Scheduled Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -521,7 +521,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Scheduled End",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -573,7 +573,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Completed",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1312,7 +1312,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Started",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1338,7 +1338,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ended",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1624,7 +1624,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Next Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

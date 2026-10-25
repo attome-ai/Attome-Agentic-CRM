@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:db4a742f3a002fe0b6df6d8c2a0210548c93d8c033abab71769788bd8caf1109",
+  "checksum": "sha256:bbe54f293a09217e83cad6211114a531be508bafaeb8b191f69a09081f20b21e",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-compliance-legal-matter.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -30,7 +30,7 @@
       "args": {
         "definition": {
           "display_name": "Collected At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "collected_at"
@@ -84,7 +84,7 @@
       "args": {
         "definition": {
           "display_name": "Opened At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "opened_at"
@@ -153,7 +153,7 @@
       "args": {
         "definition": {
           "display_name": "Released At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "released_at"

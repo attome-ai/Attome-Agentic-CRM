@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:4f28e902300bc1ac2a9a0ec6947f792419faec0accda486c3f62822db0bb3b20",
+  "checksum": "sha256:75e507cc652f294dfe6e53d48653927c6b0f01deccffb39178a6c1666fd1ba26",
   "closed_at": "2026-10-20T00:00:00Z",
   "description": "E22-T1: webinars on Zoom or Teams: the event's platform, webinar id and organizer, when its attendance was last read, and each registration's id and join link at the platform.",
   "format": "attome-changeset/v1",
@@ -98,7 +98,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Attendance Synced",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

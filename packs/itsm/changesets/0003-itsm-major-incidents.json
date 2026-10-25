@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:9115ab32eb30ecf69677ee04792654dc1bc3fa6e4017b91b3da202059ea4c851",
+  "checksum": "sha256:bf969451bc32acec4aa8f4a381e0a9a2d277798502704fb4bd42ab43dadde986",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "Major incidents (H1-T2): on-call schedules stored as layers with members in rotation order and overrides (read by the H7-T1 resolver), and on the ticket when it was declared, the schedule paged, the bridge and its status page incident.",
   "format": "attome-changeset/v1",
@@ -220,7 +220,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "First Handover",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -324,7 +324,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Until",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -480,7 +480,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -506,7 +506,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -532,7 +532,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Declared Major",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

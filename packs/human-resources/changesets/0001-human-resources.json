@@ -1,6 +1,6 @@
 {
   "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
-  "checksum": "sha256:56a12a6a51d5adc977de090709ce146936a6786a90e40472d59243013e5a9e70",
+  "checksum": "sha256:da45715a382d0861837fb27f0169b41e483b84e5a0626d695a57c64041032f25",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The human-resources pack's metadata, converted from its v1 vertical bundle.",
   "format": "attome-changeset/v1",
@@ -105,7 +105,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -217,7 +217,7 @@
         "definition": {
           "data_classification": "personal",
           "display_name": "Date of Birth",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -328,7 +328,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Hire Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -432,7 +432,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -518,7 +518,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -605,7 +605,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

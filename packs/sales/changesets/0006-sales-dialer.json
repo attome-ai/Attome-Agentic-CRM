@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:6a956b63520b82605349ed29ea16912a4b83bd0db457b0847f2e6129c314082c",
+  "checksum": "sha256:0a7e06b6c9841341b42548cb94b77f1115427b7abc0f417c5cf0623cb73b57ab",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Call lists and the power dialer (D21-T2): lists filled from a view, due call tasks or by hand; members with claim, attempts and snooze; append-only call attempts; outcome rules; calling hours per country; caller ids per country.",
   "format": "attome-changeset/v1",
@@ -517,7 +517,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Claimed At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -569,7 +569,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Last Attempt",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -595,7 +595,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Next Attempt After",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

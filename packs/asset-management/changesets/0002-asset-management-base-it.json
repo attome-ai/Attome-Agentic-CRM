@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:2e17cb63476c9b6355a6500c4597e5ba2bcb52eaea035775f0406bc24a4841f3",
+  "checksum": "sha256:7f7eb8d6b5c3f1901a7a17277017a92c66abad8397d1149db09783437927523a",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Asset base (I8-T1): asset types in a hierarchy, a custodian of any kind (entity name and record id), serial, make, model, QR label value and append-only meter readings; existing attribute names kept. Customer assets (I9-T1): account, contact, site address and install date. IT assets (H6-T1): the software catalogue with normalised names and end-of-support dates, installs per asset and licences with seats and metrics.",
   "format": "attome-changeset/v1",
@@ -296,7 +296,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Read At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -471,7 +471,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End of Support",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -497,7 +497,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End of Life",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -652,7 +652,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Installed",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -929,7 +929,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid From",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -955,7 +955,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid To",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1293,7 +1293,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Installed",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

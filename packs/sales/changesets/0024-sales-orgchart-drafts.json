@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:422ff0d3a671e2e1fb685e7077d0854d4c4fc61957203a32bec3b9e53607dd98",
+  "checksum": "sha256:bc21bc121732c179b59dd58903036188676cb1d8c067f6caa65f0170397a2337",
   "closed_at": "2026-10-20T00:00:00Z",
   "description": "D23-T10: org chart drafts, proposed reports-to links and departments a person accepts (which sets the manager) or rejects; nothing changes a contact until then.",
   "format": "attome-changeset/v1",
@@ -281,7 +281,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Decided At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

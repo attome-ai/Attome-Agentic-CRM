@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:db1b159c1966d2725bdabeda8d2d5e503022a22ab00793768c6669bb992f1568",
+  "checksum": "sha256:f22c2b9bf766a5e4e8b937a54fd74c2293965d18664651734d8aed9ec62e458f",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-collections-review.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -47,7 +47,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Reviewed At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,

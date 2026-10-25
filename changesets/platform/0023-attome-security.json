@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:04c6f79edd2ec25e09f2f036964183125ed30f633d711c49e90b68208d66d8f9",
+  "checksum": "sha256:bafb7490d6912126bd2d6ebbd4b25591c29b6c29ca8610533f1601526f02bd58",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-security.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -398,7 +398,7 @@
       "args": {
         "definition": {
           "display_name": "Last Login",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "last_login"

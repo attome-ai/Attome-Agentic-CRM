@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:b1fa9a0ad573cae752c4a010cc9d6b71e31b243eee05c5d9608c51713f386c84",
+  "checksum": "sha256:eff30c5bed86aae76569493e85f4e00102a1ab8016d26877ba8c3b935da584d9",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-dashboard.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -625,7 +625,7 @@
       "args": {
         "definition": {
           "display_name": "Measure At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "measure_at"
@@ -1879,7 +1879,7 @@
       "args": {
         "definition": {
           "display_name": "Published At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "published_at"
@@ -2178,7 +2178,7 @@
       "args": {
         "definition": {
           "display_name": "Last Refresh At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "last_refresh_at"

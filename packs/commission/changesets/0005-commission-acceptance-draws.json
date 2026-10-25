@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:41ddf72d4d2b79e12c1ee9633acc355fa12df7241ed658f94ecf361df6f371c1",
+  "checksum": "sha256:549f2c151867359d95a1fb16474d6a18adbdb0bae8bba75148847e87ef4df6a8",
   "closed_at": "2026-10-20T00:00:00Z",
   "description": "F10-T10: plan acceptance through K4 signatures (the plan document and who asked), payouts held until the plan is accepted, spiff windows on components, and what each payout earned and changed on its draw. New amounts are in the Commission Amounts field profile.",
   "format": "attome-changeset/v1",
@@ -49,7 +49,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -75,7 +75,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

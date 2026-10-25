@@ -1,6 +1,6 @@
 {
   "author": "packs (A1-T12)",
-  "checksum": "sha256:5454eaecc99923f5f8b701c88e948afe714a40e8bd62b7f8672e144b5fa5a78e",
+  "checksum": "sha256:ffd1175ffb65310e7816d9153a69deb9edf034cdd37c4cad98be3ca7a60b28b4",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The MENA base library: party, person (four-part Arabic name, national id, iqama, Emirates ID), organisation (CR and VAT), address (Saudi national address parts), work item and agreement. Activity, product and payment come with the crm, sales and finance packs, which already define them.",
   "format": "attome-changeset/v1",
@@ -480,7 +480,7 @@
         "definition": {
           "data_classification": "personal",
           "display_name": "Date of Birth",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1139,7 +1139,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1296,7 +1296,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Start Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1322,7 +1322,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:61e85584b2d1cae8b06e5844f688563ca2adaa9c94ddae818cab39433d46f05f",
+  "checksum": "sha256:0980190de5f7e2eb000e42e437698bf0b99b861f1e70dd823c5a5743a178a9e2",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "HR extension (W6-T1): the user an employee signs in as, positions, leave types and balances, and HR documents with a label (a medical note is a Health document, special-category data).",
   "format": "attome-changeset/v1",
@@ -671,7 +671,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid Until",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

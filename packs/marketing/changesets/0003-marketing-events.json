@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:a69f42d342d5f4dec41e6ca94d860a14ecfe6a9d941b3ac188425798b035001d",
+  "checksum": "sha256:e291b730d7caa026e4e585d3d8fb56505066cba84d7bbb402a6baf2770accd74",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Events (E21-T1): an event with its sessions, the registrations people make (status, QR code value, check-in time) and the attendance recorded per session.",
   "format": "attome-changeset/v1",
@@ -118,7 +118,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -144,7 +144,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -433,7 +433,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -459,7 +459,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -774,7 +774,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Registered",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -800,7 +800,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Checked In",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -931,7 +931,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Checked In",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:44f7135c02e79cf76cd70b4d63add50fa154a5279612571f46a450b9f6a41068",
+  "checksum": "sha256:d007ba81cff6d2ffd61ac4dcd5a1376a53c61b3a1d07560a001b52b1087ac542",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Government services (X5-T1): licence and permit types and licences with review, inspection, issue, suspension, revocation and expiry stages; checklist review with decision reasons; fees; inspections; violations with objection and appeal; official correspondence numbered per Hijri or Gregorian year; committees and numbered decisions; benefit and grant cases. Roles for front desk, reviewer, inspector, approver, department head and auditor, report queries and a sidebar. Citizen requests and complaints use the service ticket.",
   "format": "attome-changeset/v1",
@@ -570,7 +570,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Issued",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -596,7 +596,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expires",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": true,
           "is_required": false,
@@ -975,7 +975,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1001,7 +1001,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Paid",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1176,7 +1176,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Scheduled",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1202,7 +1202,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Performed",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1463,7 +1463,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Issued",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1628,7 +1628,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Submitted",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1740,7 +1740,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Decided",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2066,7 +2066,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Received",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2092,7 +2092,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Sent",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2144,7 +2144,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Signed",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2426,7 +2426,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Meeting Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

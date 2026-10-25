@@ -27,7 +27,7 @@
         { "logicalname": "data_source_ref", "display_name": "Data Source", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "knowledge_data_source" },
         { "logicalname": "attachments", "display_name": "Attachments", "field_type": "file", "options": { "multi": true } },
         { "logicalname": "lifecycle", "display_name": "Lifecycle", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["draft", "published", "expired"], "multi": false } },
-        { "logicalname": "review_by", "display_name": "Review By", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "review_by", "display_name": "Review By", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "source_entity", "display_name": "Source Entity", "field_type": "text", "is_filterable": true },
         { "logicalname": "source_record_id", "display_name": "Source Record", "field_type": "text" },
         { "logicalname": "category", "display_name": "Category", "field_type": "text", "is_sortable": true, "is_filterable": true },

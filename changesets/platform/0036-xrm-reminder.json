@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:fbd38868cea51f71778e22bf8fd2811f3261950ef265dd46560903865597bc8b",
+  "checksum": "sha256:94ab39172d2d56096f36d4a3a0835a43b97fae1ad6af6cfe798e4f4f7de448da",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/xrm-reminder.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -85,7 +85,7 @@
       "args": {
         "definition": {
           "display_name": "Remind At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,

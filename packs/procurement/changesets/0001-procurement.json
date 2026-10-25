@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:d3f1e8a5475dd4e73fe620520a47ddd0b0bfa9b24f879ec50dceb5c0c711b2c0",
+  "checksum": "sha256:c05cbeca4af51686322f33a36ef9d7d7544c06f458ea0762af3292280f82ede7",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Procurement (W3-T1): purchase requisitions with lines, purchase orders to a vendor with lines, goods receipts against an order, and vendor bills, each numbered within its series, with their lifecycles, roles and an open-orders report. Needs the vendor-supplier pack.",
   "format": "attome-changeset/v1",
@@ -163,7 +163,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Needed By",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -718,7 +718,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Order Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -744,7 +744,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expected Delivery",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1325,7 +1325,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Received On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1708,7 +1708,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Bill Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1734,7 +1734,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

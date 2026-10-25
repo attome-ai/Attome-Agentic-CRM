@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:f7375336bc49a78ea8f31f64e750d55f4313be5fea4c12810e1f021f38d72676",
+  "checksum": "sha256:bf22287a09d09735f6c679da418cb57e3efe1526e71e471732feb984df0314dc",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "ITSM on the service ticket. Configuration items (H5-T1): one CI entity with a class (server, application, database, network device, service), relationship types with direction and the typed relationships between CIs. Incidents (H1-T1): urgency, major-incident manager, affected CI and restore time on the ticket (which already carries type, impact, priority and the major flag), and the post-incident review with its actions. Problems (H2-T1): problems, the incidents linked to them and known errors with their workaround and knowledge article. Changes (H3-T1): change requests with type, risk, planned window, implementation, back-out and test plans, affected CIs and pre-approved standard change templates. Releases (H4-T1): releases grouping changes and tasks with a go/no-go decision.",
   "format": "attome-changeset/v1",
@@ -824,7 +824,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Held On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -980,7 +980,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1892,7 +1892,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Planned Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1918,7 +1918,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Planned End",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2281,7 +2281,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Planned Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2392,7 +2392,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Decided",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2621,7 +2621,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2766,7 +2766,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Service Restored",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

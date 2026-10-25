@@ -19,7 +19,7 @@
         { "logicalname": "subject", "display_name": "Subject", "field_type": "text", "is_sortable": true, "is_filterable": true },
         { "logicalname": "body", "display_name": "Body", "field_type": "text" },
         { "logicalname": "status", "display_name": "Status", "field_type": "text" },
-        { "logicalname": "sent_at", "display_name": "Sent At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "sent_at", "display_name": "Sent At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "author_id", "display_name": "Author", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
         { "logicalname": "to_addresses", "display_name": "To", "field_type": "text" },
         { "logicalname": "recipient_user_ids", "display_name": "Recipients", "field_type": "text" },

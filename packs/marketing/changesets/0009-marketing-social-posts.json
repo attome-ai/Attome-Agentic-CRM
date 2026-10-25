@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:c60e182832e7656d0ab32a5a8dba9aa273f9f33b16fa082ff9cc2017197ed012",
+  "checksum": "sha256:b3c9fc5a51c0191bb50d3b5c7f5508dfdeba8e845c99b45d051bec53dff5f41b",
   "closed_at": "2026-10-20T00:00:00Z",
   "description": "E17-T1: social posts written once and published on schedule through a social channel (J8), approved first when the deployment asks for it, with their likes, comments and shares read back daily.",
   "format": "attome-changeset/v1",
@@ -137,7 +137,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Scheduled For",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": true,
           "is_required": false,
@@ -250,7 +250,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Published",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -380,7 +380,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Metrics Read",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

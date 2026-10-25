@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:76a69470a8c13d004dba9c1730d60dc23821a60fe0e83876a1f980daaccf06f5",
+  "checksum": "sha256:d72f42ae74dde4ae27527e0aa1ddcce1df39905ca3e4191fb9a6544797dde7cb",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "D19-T1: the nightly deal risk score (0 to 100), its reasons and when it was evaluated, on each open opportunity, with the at-risk deals query.",
   "format": "attome-changeset/v1",
@@ -66,7 +66,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Risk Evaluated",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

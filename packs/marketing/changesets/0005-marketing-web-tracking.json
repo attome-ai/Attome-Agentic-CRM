@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:b3581bcbcec95c73c5a8ba1667f36ce2c61400cb986bf0f315a87d9f6642e1b9",
+  "checksum": "sha256:49cae5c84cb276396eba6d815e8d61c441041b2f59606d00ccca62f6bcf434dd",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "E14-T3: the sites the tracker runs on (domains, excluded paths, key pages, office networks to ignore, retention and company recognition), the visit summary a known contact, lead or account gets after a session, and the pages whose visits alert sales. Office networks and company recognition are sensitive behind the Web Tracking Admin field profile.",
   "format": "attome-changeset/v1",
@@ -442,7 +442,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Started",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

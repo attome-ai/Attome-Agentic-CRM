@@ -15,7 +15,7 @@
         { "logicalname": "user_ref", "display_name": "Remind", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
         { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true, "is_filterable": true, "max_length": 128 },
         { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true, "is_filterable": true, "max_length": 64 },
-        { "logicalname": "remind_at", "display_name": "Remind At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "remind_at", "display_name": "Remind At", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "note", "display_name": "Note", "field_type": "text", "max_length": 1000 },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["pending", "sent", "dismissed"], "multi": false } },
         { "logicalname": "status_reason", "display_name": "Status Reason", "field_type": "text", "max_length": 64 }

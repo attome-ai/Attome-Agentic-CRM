@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:975bdecdd76ef39253f10cff0b6b17bf576cb5a084a0cfdc1d75319b4aadd3f3",
+  "checksum": "sha256:e26e5663882b57af33cfab47d197610b0f33c90a4a504d3b74c405eb233fcee7",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Privacy (R5-T1): a record of processing activities, data protection impact assessments and personal data breaches with the time they were found and the deadline to notify the regulator (72 hours under PDPL and GDPR).",
   "format": "attome-changeset/v1",
@@ -656,7 +656,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Review Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -727,7 +727,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Discovered",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -753,7 +753,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Notify By",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -890,7 +890,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Regulator Notified",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -916,7 +916,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "People Notified",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

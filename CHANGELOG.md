@@ -3050,6 +3050,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- Every `date` field the platform and the packs ship is now `date_time` (Y2-T2), so their columns stay
+  `TIMESTAMPTZ` and nothing that writes a moment into them changes; `date` (a `DATE` day, only
+  `YYYY-MM-DD`) is for fields builders add. A field can change between `date` and `date_time` (a moment
+  becomes its UTC day, a day its UTC midnight) and from `date_time` to and from `text`.
 - An email body written as HTML (D16-T2) is cleaned and sent as the HTML part with its text as the
   plain part, instead of being escaped into the text; with tracking on, its http(s) links go through the
   click route and the open pixel is placed before `</body>` (`mailto:` and in-page links are kept).

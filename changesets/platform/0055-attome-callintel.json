@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:a8f0cfb379c07981ababc651f3bb3f88f8f88824cd7d7228aec04a7b9851a4ae",
+  "checksum": "sha256:dfcebe14fa26f1b469746970e9148ca238f2ab10444289194e7549b5e5bcad62",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-callintel.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -237,7 +237,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Analysed At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,
@@ -610,7 +610,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Day",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": true,
           "is_required": true,
@@ -1172,7 +1172,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Confirmed At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,

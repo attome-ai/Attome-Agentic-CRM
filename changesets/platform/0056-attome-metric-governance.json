@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:42ec572b7126bab41923d22886d62429c73a27f760ddbd02bfcab64992ec758b",
+  "checksum": "sha256:ade6eda2b0f61f6236a392d70f17fb195afab9161d1eded3c5212433bd796641",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-metric-governance.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -183,7 +183,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Period",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": true,
@@ -452,7 +452,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Alerts Snoozed Until",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,
@@ -563,7 +563,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Certified At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,
@@ -771,7 +771,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Review Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,

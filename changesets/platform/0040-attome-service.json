@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:065ceea7b143f5cdc6eec420fc8a34b17547b4444befd14d377452bd77dd3c2d",
+  "checksum": "sha256:367a12da0219056acc65c96c8eef23b230fca08d2e5186a94255f951a7140cde",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-service.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -586,7 +586,7 @@
       "args": {
         "definition": {
           "display_name": "End At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_sortable": true,
           "logicalname": "end_at"
         }
@@ -629,7 +629,7 @@
       "args": {
         "definition": {
           "display_name": "Resulting Due At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "result_due_at"
@@ -647,7 +647,7 @@
       "args": {
         "definition": {
           "display_name": "Start At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,
@@ -776,7 +776,7 @@
       "args": {
         "definition": {
           "display_name": "State Changed At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,
@@ -811,7 +811,7 @@
       "args": {
         "definition": {
           "display_name": "Next Due At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "next_due_at"
@@ -1103,7 +1103,7 @@
       "args": {
         "definition": {
           "display_name": "Claimed At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "claimed_at"
@@ -1170,7 +1170,7 @@
       "args": {
         "definition": {
           "display_name": "Detected At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "detected_at"
@@ -1188,7 +1188,7 @@
       "args": {
         "definition": {
           "display_name": "Escalated At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "escalated_at"
@@ -1269,7 +1269,7 @@
       "args": {
         "definition": {
           "display_name": "Mitigated At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "mitigated_at"
@@ -1333,7 +1333,7 @@
       "args": {
         "definition": {
           "display_name": "Resolution Due At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "resolution_due_at"
@@ -1351,7 +1351,7 @@
       "args": {
         "definition": {
           "display_name": "Resolved At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "resolved_at"
@@ -2219,7 +2219,7 @@
       "args": {
         "definition": {
           "display_name": "Published At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_sortable": true,
           "logicalname": "published_at"

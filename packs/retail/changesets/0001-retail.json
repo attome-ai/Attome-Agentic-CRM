@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:7914f11f56ada1677c43874caba8959eea3c4de7c74dd335707497d9f784ac1e",
+  "checksum": "sha256:8ede41264e31c4d8a0aa4389bec536928b89e2be0112269fcf4b99d5d6ad401c",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Retail and consumer goods (X9-T1); POS, checkout, inventory and merchandising stay in the customer's systems: outlets with chains and routes, visit plans and store visits with audits and photos, in-store orders handed to the ERP, van sales with collection, trade promotions on a Ramadan and Eid calendar with claims and approval, retailer agreements and product recalls. Roles, report queries and a sidebar.",
   "format": "attome-changeset/v1",
@@ -629,7 +629,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -655,7 +655,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Checked In",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -681,7 +681,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Checked Out",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1606,7 +1606,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1632,7 +1632,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2053,7 +2053,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2079,7 +2079,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2306,7 +2306,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Started",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

@@ -1,6 +1,6 @@
 {
   "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
-  "checksum": "sha256:d0bcc944230f6a5ae6bf60230ef1af0ca6b4b1805c668628221ef2f2e6c3a446",
+  "checksum": "sha256:e5e53f9c7dd6a5921411298b3f7a3b6e29f13be0e1ea28dc0e586565108a6da8",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The asset-management pack's metadata, converted from its v1 vertical bundle.",
   "format": "attome-changeset/v1",
@@ -261,7 +261,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Disposed On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -374,7 +374,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Purchased On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -426,7 +426,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Warranty Expires On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

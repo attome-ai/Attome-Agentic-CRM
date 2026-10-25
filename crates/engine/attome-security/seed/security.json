@@ -55,7 +55,7 @@
         { "logicalname": "phone", "display_name": "Phone", "field_type": "text" },
         { "logicalname": "auth_type", "display_name": "Authentication Type", "field_type": "number" },
         { "logicalname": "is_active", "display_name": "Is Active", "field_type": "bool", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "last_login", "display_name": "Last Login", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_login", "display_name": "Last Login", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "organization_ref", "display_name": "Organization", "field_type": "lookup", "lookup_entity": "organization" },
         { "logicalname": "language", "display_name": "Language", "field_type": "number" },
         { "logicalname": "max_page_size", "display_name": "Max Page Size", "field_type": "number" },

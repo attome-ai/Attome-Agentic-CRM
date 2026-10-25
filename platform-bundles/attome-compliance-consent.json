@@ -25,8 +25,8 @@
         { "logicalname": "regarding_id", "display_name": "Regarding Id", "field_type": "text", "is_sortable": true, "is_filterable": true },
         { "logicalname": "subject_reference", "display_name": "Subject Reference", "field_type": "text", "is_required": true, "is_sensitive": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["granted", "withdrawn", "expired"], "multi": false } },
-        { "logicalname": "granted_at", "display_name": "Granted At", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "withdrawn_at", "display_name": "Withdrawn At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "granted_at", "display_name": "Granted At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "withdrawn_at", "display_name": "Withdrawn At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "source", "display_name": "Source", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["form", "api", "import"], "multi": false } },
         { "logicalname": "evidence", "display_name": "Evidence", "field_type": "text", "is_sensitive": true }
       ]

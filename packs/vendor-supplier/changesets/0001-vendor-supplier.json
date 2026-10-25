@@ -1,6 +1,6 @@
 {
   "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
-  "checksum": "sha256:5dc8aeb6f1c1a925639dbf040da7fb501c6f58a186f31be24e247c9521dc2200",
+  "checksum": "sha256:426cf041878098d2003e46f15d755f4ed9f25c6d9d4f9d12167c14209e1f02b1",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The vendor-supplier pack's metadata, converted from its v1 vertical bundle.",
   "format": "attome-changeset/v1",
@@ -253,7 +253,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expiry Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

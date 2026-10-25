@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:3a4552ceeef8cf1d69095a0e9d3e4808a3f65d42381f83815fd1baaf873bb59c",
+  "checksum": "sha256:8a81dd2db78f930272b47982bf44db490af2b17bb1dc4a4fb29c6b71d1530828",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Region presets (X12-T1): the country, tax-rate and identity-document reference entities every region shares, and Saudi Arabia: SAR, VAT 15% with zero-rated and exempt categories, the national ID, Iqama and CR formats (the ID and Iqama check digit is Luhn), the +966 mobile format, the national address format, and a Sunday-to-Thursday business calendar in Asia/Riyadh with the fixed-date public holidays (Founding Day, National Day). Eid holidays follow the moon sighting and are added per year (Z12).",
   "format": "attome-changeset/v1",
@@ -672,7 +672,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Effective From",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -698,7 +698,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Effective To",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

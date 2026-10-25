@@ -1,6 +1,6 @@
 {
   "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
-  "checksum": "sha256:c0f845de15ca5bfb19a95f6f3067abc1c7b25984fda3c9c76b88fcfa4018ccbd",
+  "checksum": "sha256:11536ebfca992ad378e48e12a7ddf21f862ba8316a85e7ac86894c5c17cbf55d",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The sales pack's metadata, converted from its v1 vertical bundle.",
   "format": "attome-changeset/v1",
@@ -199,7 +199,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ordered On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -519,7 +519,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expires On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

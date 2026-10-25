@@ -31,8 +31,8 @@
         { "logicalname": "recipients", "display_name": "Recipients", "field_type": "text" },
         { "logicalname": "delivery", "display_name": "Delivery", "field_type": "choice", "is_required": true, "is_filterable": true, "options": { "choices": ["in_app", "email_link"], "multi": false } },
         { "logicalname": "skip_if_empty", "display_name": "Skip If Empty", "field_type": "bool" },
-        { "logicalname": "next_run_at", "display_name": "Next Run", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "last_run_at", "display_name": "Last Run", "field_type": "date", "is_sortable": true }
+        { "logicalname": "next_run_at", "display_name": "Next Run", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_run_at", "display_name": "Last Run", "field_type": "date_time", "is_sortable": true }
       ]
     }
   ],

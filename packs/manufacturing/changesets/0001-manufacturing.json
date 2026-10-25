@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:09a13e3ab908fa9006563583cf3025b57e241cf1ba2ad6360c0e7beb4b039533",
+  "checksum": "sha256:8bd14079a973780e43a2143a750dca214711143dbbc6c0619c60986ea6f32698",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Manufacturing (X6-T1), the commercial and after-sales side; production, bills of materials, inventory and costing stay in the ERP and MES: customer sites, sales agreements with planned and actual volumes, rebate programmes with accruals and payouts, tenders with local-content scores, samples, quality complaints through 8D stages and product compliance documents. Cost and margin fields are masked. Roles, report queries and a sidebar.",
   "format": "attome-changeset/v1",
@@ -208,7 +208,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -234,7 +234,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -625,7 +625,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -651,7 +651,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1043,7 +1043,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Deadline",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1306,7 +1306,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Sent",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1843,7 +1843,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Valid Until",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

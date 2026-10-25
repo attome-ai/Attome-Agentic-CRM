@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:b3cd71e0849c93642c5b8e2d0e4fa3e7d70270074538045fc92863d082500a45",
+  "checksum": "sha256:69ec7326d235c57eed78b434724e852d2f7922374b4ae1e4f9eda212cf3b6e5c",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/xrm-core-api-key.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -30,7 +30,7 @@
       "args": {
         "definition": {
           "display_name": "Created At",
-          "field_type": "date",
+          "field_type": "date_time",
           "logicalname": "created_at"
         }
       },
@@ -62,7 +62,7 @@
       "args": {
         "definition": {
           "display_name": "Last Used At",
-          "field_type": "date",
+          "field_type": "date_time",
           "logicalname": "last_used_at"
         }
       },

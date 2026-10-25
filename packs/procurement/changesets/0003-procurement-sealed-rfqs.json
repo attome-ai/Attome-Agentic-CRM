@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:336cf8b3c15f266f332244924ce99c6f59c10481e54c34ef68ab8bf0c98fc83f",
+  "checksum": "sha256:6fb6f57ce444766bd0add761e8c645f0020643bdeb7be93afc454b92df49c862",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "Sealed RFQs (W3-T4): requests for quotation with a bid deadline, and bids whose price, lead time and notes are sensitive (no field profile grants them) until the opening job copies them into readable fields at the deadline; the award keeps its bid and reason.",
   "format": "attome-changeset/v1",
@@ -156,7 +156,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Bids Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -269,7 +269,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Awarded",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -555,7 +555,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Opened",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

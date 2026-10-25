@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:41a49959268383ad219b1436baa536fb7d55b2395927ddcfca3ebe11f52ee895",
+  "checksum": "sha256:75c4de1990e2ac2b043d298a30fe4a3dff5dd6c4c7a01f1e4eaac879a9982e21",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Workforce management (G17-T2): planning groups with service-level targets, shift templates and breaks (including the Ramadan pattern), rule sets per country, schedules and shift assignments, preferences, swap requests and overtime offers.",
   "format": "attome-changeset/v1",
@@ -859,7 +859,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "From",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -885,7 +885,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "To",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1015,7 +1015,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1041,7 +1041,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1486,7 +1486,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1512,7 +1512,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "End",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

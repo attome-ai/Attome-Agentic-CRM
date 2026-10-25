@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:8c65d0f8a2185a8c3e76e5f7a008d830bf320cdada05560ddec8638b405b3c2a",
+  "checksum": "sha256:526325f5e9b667aa27214407c24bf7135eeb05a910fe20b2f02c9d185332abaf",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Vendor management (W2-T1): onboarding stage, a hold that blocks new orders with its reason, masked bank details, categories and the vendor contacts given portal access.",
   "format": "attome-changeset/v1",
@@ -339,7 +339,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Invited",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -485,7 +485,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "On Hold Since",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

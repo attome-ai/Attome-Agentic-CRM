@@ -80,7 +80,7 @@
         {
           "data_classification": "general",
           "display_name": "Handed Over",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,
@@ -95,7 +95,7 @@
         {
           "data_classification": "general",
           "display_name": "Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": true,
           "is_required": false,
@@ -110,7 +110,7 @@
         {
           "data_classification": "general",
           "display_name": "Returned",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,

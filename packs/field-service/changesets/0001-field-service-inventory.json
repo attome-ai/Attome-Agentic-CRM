@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:2cb59d08efa2e906f032b4794f916e5ab481d70faf8d655dd22224ba73b0f1c4",
+  "checksum": "sha256:b8c5cce564a5d6616bfa9df7fbb74d935ad448e7e06efcfd023473b46a261794",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Inventory (I6-T1): stock balances per product and location kept as a roll-up of append-only movements, reservations, serial numbers and lots. It uses the stock_location of the fulfilment pack when both are installed.",
   "format": "attome-changeset/v1",
@@ -147,7 +147,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Warranty Until",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -244,7 +244,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Manufactured",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -270,7 +270,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expires",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -604,7 +604,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Moved",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -857,7 +857,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expires",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

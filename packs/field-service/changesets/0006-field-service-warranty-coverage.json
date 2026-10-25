@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:cc8c0cced603db2a8357843f098e37d1cd9d17bb5a1732d3e97d99f375a6e03e",
+  "checksum": "sha256:3b15acbde7036bac4eded42e4596d7bd64ab5502cbe181570c4523507fa70767",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "Warranty coverage (I10-T2): a travel line kind covered by the warranty term's travel percent, and the end date a warranty entitlement was last reminded for, so the nightly expiry reminder goes once per end date.",
   "format": "attome-changeset/v1",
@@ -47,7 +47,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expiry Reminded For",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

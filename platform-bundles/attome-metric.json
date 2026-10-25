@@ -35,7 +35,7 @@
       "is_append_only": false,
       "attributes": [
         { "logicalname": "metric_ref", "display_name": "Metric", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_metric_definition" },
-        { "logicalname": "period_start", "display_name": "Period Start", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "period_start", "display_name": "Period Start", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "target_value", "display_name": "Target Value", "field_type": "number", "is_required": true },
         { "logicalname": "threshold_warn", "display_name": "Warn Threshold", "field_type": "number" },
         { "logicalname": "threshold_crit", "display_name": "Critical Threshold", "field_type": "number" }

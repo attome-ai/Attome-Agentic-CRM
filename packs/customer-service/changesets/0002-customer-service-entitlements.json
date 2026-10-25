@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:aabf474a226d8da09e3c428a1af3248dba06e3c8e473e1915cc1c7a0d61181f0",
+  "checksum": "sha256:7330d5e7fc62cef79191fd2ee918da49675155cdc6132c19446346df1536a560",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Entitlements (G10-T1): what a customer is entitled to (cases or hours) under a contract, for which products or assets, in which coverage window and with which SLA and cost split, and the usage ledger each case draws from it.",
   "format": "attome-changeset/v1",
@@ -195,7 +195,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "From",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -221,7 +221,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "To",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -567,7 +567,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Used At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,

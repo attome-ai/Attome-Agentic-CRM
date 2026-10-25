@@ -255,7 +255,7 @@
         {
           "data_classification": "general",
           "display_name": "Promised Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": true,

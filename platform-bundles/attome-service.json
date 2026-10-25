@@ -71,23 +71,23 @@
         { "logicalname": "resolution_code", "display_name": "Resolution Code", "field_type": "text", "is_sortable": true, "is_filterable": true },
         { "logicalname": "csat_score", "display_name": "CSAT Score", "field_type": "number", "is_sortable": true },
         { "logicalname": "sla_policy_id", "display_name": "SLA Policy", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_sla_policy" },
-        { "logicalname": "resolution_due_at", "display_name": "Resolution Due At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "resolution_due_at", "display_name": "Resolution Due At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "sla_breached", "display_name": "SLA Breached", "field_type": "bool", "is_sortable": true, "is_filterable": true },
         { "logicalname": "sla_warned", "display_name": "SLA Warning Sent", "field_type": "bool", "is_filterable": true },
         { "logicalname": "sla_calculation_status", "display_name": "SLA Calculation Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["calculated", "unresolved"], "multi": false } },
         { "logicalname": "sla_unresolved_reason", "display_name": "SLA Unresolved Reason", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["calendar_unresolved", "calendar_no_working_time", "business_hours_invalid", "calculation_failed"], "multi": false } },
         { "logicalname": "escalation_level", "display_name": "Escalation Level", "field_type": "number", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "escalated_at", "display_name": "Escalated At", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "resolved_at", "display_name": "Resolved At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "escalated_at", "display_name": "Escalated At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "resolved_at", "display_name": "Resolved At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "severity", "display_name": "Severity", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["low", "medium", "high", "critical"], "multi": false } },
         { "logicalname": "impact", "display_name": "Impact", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["low", "medium", "high", "critical"], "multi": false } },
         { "logicalname": "root_cause", "display_name": "Root Cause", "field_type": "text" },
         { "logicalname": "contributing_factors", "display_name": "Contributing Factors (JSON array of text)", "field_type": "text" },
-        { "logicalname": "detected_at", "display_name": "Detected At", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "mitigated_at", "display_name": "Mitigated At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "detected_at", "display_name": "Detected At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "mitigated_at", "display_name": "Mitigated At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "major", "display_name": "Major Incident", "field_type": "bool", "is_sortable": true, "is_filterable": true },
         { "logicalname": "work_queue_ref", "display_name": "Work Queue", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_work_queue" },
-        { "logicalname": "claimed_at", "display_name": "Claimed At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "claimed_at", "display_name": "Claimed At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "merged_numbers", "display_name": "Merged Ticket Numbers", "field_type": "text", "is_filterable": true }
       ]
     },
@@ -123,10 +123,10 @@
         { "logicalname": "state", "display_name": "State", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["running", "paused"], "multi": false } },
         { "logicalname": "paused_reason", "display_name": "Paused Reason", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["waiting_customer", "on_hold", "out_of_scope"], "multi": false } },
         { "logicalname": "elapsed_business_seconds", "display_name": "Elapsed Business Seconds", "field_type": "number" },
-        { "logicalname": "state_changed_at", "display_name": "State Changed At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "state_changed_at", "display_name": "State Changed At", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "unsettled_segments", "display_name": "Unsettled Running Segments (JSON, awaiting a usable calendar)", "field_type": "text" },
         { "logicalname": "target_attribute", "display_name": "Target Attribute", "field_type": "text" },
-        { "logicalname": "next_due_at", "display_name": "Next Due At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "next_due_at", "display_name": "Next Due At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "next_due_kind", "display_name": "Next Due Kind", "field_type": "choice", "is_filterable": true, "options": { "choices": ["warning", "breach"], "multi": false } }
       ]
     },
@@ -145,11 +145,11 @@
         { "logicalname": "calendar_content_hash", "display_name": "Calendar Content Hash (SHA-256)", "field_type": "text", "is_filterable": true },
         { "logicalname": "calendar_tzdb_version", "display_name": "Calendar Time Zone Database Version", "field_type": "text", "is_filterable": true },
         { "logicalname": "calendar_version", "display_name": "Calendar Version", "field_type": "number", "is_filterable": true },
-        { "logicalname": "start_at", "display_name": "Start At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
-        { "logicalname": "end_at", "display_name": "End At", "field_type": "date", "is_sortable": true },
+        { "logicalname": "start_at", "display_name": "Start At", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "end_at", "display_name": "End At", "field_type": "date_time", "is_sortable": true },
         { "logicalname": "target_business_seconds", "display_name": "Target Business Seconds", "field_type": "number" },
         { "logicalname": "business_seconds", "display_name": "Business Seconds Counted", "field_type": "number" },
-        { "logicalname": "result_due_at", "display_name": "Resulting Due At", "field_type": "date", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "result_due_at", "display_name": "Resulting Due At", "field_type": "date_time", "is_sortable": true, "is_filterable": true }
       ]
     },
     {
@@ -235,7 +235,7 @@
         { "logicalname": "offering_ref", "display_name": "Offering", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "service_offering" },
         { "logicalname": "version_number", "display_name": "Version", "field_type": "number", "is_required": true, "is_sortable": true },
         { "logicalname": "snapshot", "display_name": "Snapshot (JSON)", "field_type": "text" },
-        { "logicalname": "published_at", "display_name": "Published At", "field_type": "date", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "published_at", "display_name": "Published At", "field_type": "date_time", "is_sortable": true, "is_filterable": true }
       ]
     },
     {

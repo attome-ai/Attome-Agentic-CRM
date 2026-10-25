@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:a802e4c49ab370f5d7cf9328917f9d412573939e0c9d32b334f220ef546ce462",
+  "checksum": "sha256:999c959739a42349a0b8e7d70a10646dbc9f8d91bbb3e66795c5ddc52d754fc3",
   "closed_at": "2026-10-20T00:00:00Z",
   "description": "H8-T1: a public status page: components and their status, incidents and maintenance with their updates, and email subscribers who are told of each published update.",
   "format": "attome-changeset/v1",
@@ -363,7 +363,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Started",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -389,7 +389,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Resolved",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -538,7 +538,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -564,7 +564,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -832,7 +832,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Notified At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -935,7 +935,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Confirmed At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -961,7 +961,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Unsubscribed At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:84b6d9c3bf20d75598a309ecf6d33691be8cc15eae8ea4998e9008600de83d03",
+  "checksum": "sha256:637e4e0ddd3766221ac8e2aa543b8aa8021b022b13bdda7444865980ec367808",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Business continuity (R15-T1): business impact analysis per process with its recovery time and point objectives, continuity plans, and exercises with their results and the platform drill they used.",
   "format": "attome-changeset/v1",
@@ -275,7 +275,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Reviewed",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -535,7 +535,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Next Review",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -666,7 +666,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Held",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

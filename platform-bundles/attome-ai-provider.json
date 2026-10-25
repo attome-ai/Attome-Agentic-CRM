@@ -44,7 +44,7 @@
           "is_sortable": true, "is_filterable": true,
           "options": { "choices": ["healthy", "degraded", "unhealthy", "unknown"], "multi": false }
         },
-        { "logicalname": "last_health_check", "display_name": "Last Health Check", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_health_check", "display_name": "Last Health Check", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         {
           "logicalname": "data_residency", "display_name": "Data Residency", "field_type": "choice",
           "is_filterable": true,

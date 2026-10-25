@@ -303,7 +303,7 @@
         {
           "data_classification": "general",
           "display_name": "Computed",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,

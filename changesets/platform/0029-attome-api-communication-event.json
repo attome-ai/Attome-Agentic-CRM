@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:86b819a2e5cc1b8bd1897823ae9eb4251ea975379bff3a0dc33b23a856a1740e",
+  "checksum": "sha256:7a21d63ee959f593e7bca7df81ca4b93d80800180d43785ed4e006a22b1cd37d",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-communication-event.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -78,7 +78,7 @@
       "args": {
         "definition": {
           "display_name": "Occurred At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_filterable": true,
           "is_required": true,
           "is_sortable": true,

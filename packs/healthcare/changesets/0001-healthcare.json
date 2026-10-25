@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:1995ec0645a6e5ded2a9c4cae4357c5fe63ef2ab1d8f1397406389585b84cd94",
+  "checksum": "sha256:47a4b654d8120c87933ab6cbc2948bf4511ce1ed08d249326deeff8d7532d674",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Healthcare clinics (X4-T1), outside the clinical record: patients (health data as a special category, masked), providers and locations, appointments, visits, referrals with stages and SLAs, insurance eligibility and pre-authorisation (NPHIES through a connector), care programmes and patient complaints. The medical record stays in the HIS or EMR, linked by id. Roles, report queries and a sidebar.",
   "format": "attome-changeset/v1",
@@ -461,7 +461,7 @@
         "definition": {
           "data_classification": "personal",
           "display_name": "Birth Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -752,7 +752,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Starts",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -778,7 +778,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Ends",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -998,7 +998,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1316,7 +1316,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Due By",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1554,7 +1554,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Submitted",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1837,7 +1837,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Enrolled",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -2030,7 +2030,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Received",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -2056,7 +2056,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Regulator Deadline",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

@@ -34,7 +34,7 @@ pub async fn ensure_columns(db: &DbPool, entity_id: Uuid) -> Result<(), AppError
         entity_id,
         STAGE_ENTERED_ATTRIBUTE,
         "Entered stage",
-        "date",
+        "date_time",
         false,
         false,
         true,

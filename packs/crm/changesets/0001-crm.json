@@ -1,6 +1,6 @@
 {
   "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
-  "checksum": "sha256:7c05769d93e0525aebbb78ecafcc647955f83ac2b9b02936dbce427d0fc5a7b0",
+  "checksum": "sha256:20c35afa2c3d84d9e8a89f461ef502216857403f138b7941df0e9d2a5e265e53",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The crm pack's metadata, converted from its v1 vertical bundle.",
   "format": "attome-changeset/v1",
@@ -265,7 +265,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Activity Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -749,7 +749,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expected Close Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

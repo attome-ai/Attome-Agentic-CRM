@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:b3632db3f518fea536f4118e8659d4ff9c4ca2360f11010d418d329afde9401c",
+  "checksum": "sha256:f3e7d5a9fdc07043798616d4492f823cfe00d7bc39a8ef345d7e12ecd21915fb",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Opportunity lines (D6-T2): product lines with list and sales price, discounts, units and one-time or recurring value, their revenue schedules, and the deal totals, price list and primary quote on the opportunity.",
   "format": "attome-changeset/v1",
@@ -319,7 +319,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Service Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -558,7 +558,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Period Start",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

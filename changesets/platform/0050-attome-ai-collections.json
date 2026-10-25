@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:cc711b0b4c730538797d333b95138353fa6a527f30944f392951e3a72e52a3d6",
+  "checksum": "sha256:cdad5db7fd2ba7b8f0e8716116f0c3aa0f324ed680db79ceb0698702de9ea8f1",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-collections.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -456,7 +456,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Promised Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": true,

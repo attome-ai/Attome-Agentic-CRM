@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:31b2f29e2a32b7c096df83e627a5c16e41f95a2a04b63ce4aeac5c8b5522c1e4",
+  "checksum": "sha256:937ed6ac550071b8a0a6d90e5deb3f58a48f3834237edc3f5af0cb090ad19f9e",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Customer payments (F5-T1): payments and their allocations to invoices (append-only), refunds, disputes, saved payment methods (gateway tokens, masked), payment links and gateway payouts; credit limit, payment terms and credit hold on accounts.",
   "format": "attome-changeset/v1",
@@ -293,7 +293,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Received On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -520,7 +520,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Allocated On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -853,7 +853,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Evidence Due",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1114,7 +1114,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Consent Recorded",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1341,7 +1341,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expires",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1367,7 +1367,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Used",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1498,7 +1498,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Payout Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,

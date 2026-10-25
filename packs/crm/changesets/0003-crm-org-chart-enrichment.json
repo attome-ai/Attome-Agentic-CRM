@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:aa4b1819c04303bda208551a72d489feb29e4c46faec48e09e807646190e9800",
+  "checksum": "sha256:05ab06dc28412c87b61b16640093c6f656cd4c1892de52081dc360ee22d31d70",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Org chart (D23-T2): reports-to, dotted line, department and former-employee fields on contact. Enrichment (D24-T2): legal names, CR and VAT numbers, ISIC industry, size and revenue bands, founding year, head office, logo, social links and technologies on account; department, seniority, email verification, mobile, city, country and LinkedIn on contact and lead. The ISIC code list entity with its 21 sections (D24-T3 seeds the full list). Lead qualification fields (D3-T1): budget, authority, need, timeline and disqualify reason.",
   "format": "attome-changeset/v1",
@@ -326,7 +326,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Left On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

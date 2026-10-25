@@ -21,7 +21,7 @@
         { "logicalname": "max_concurrent", "display_name": "Max Concurrent", "field_type": "number" },
         { "logicalname": "max_payload_bytes", "display_name": "Max Payload Bytes", "field_type": "number" },
         { "logicalname": "auto_disable_days", "display_name": "Auto Disable Days", "field_type": "number" },
-        { "logicalname": "last_used_at", "display_name": "Last Used At", "field_type": "date" }
+        { "logicalname": "last_used_at", "display_name": "Last Used At", "field_type": "date_time" }
       ]
     },
     {

@@ -38,10 +38,10 @@
         { "logicalname": "is_confidential", "display_name": "Confidential", "field_type": "bool", "is_sortable": true, "is_filterable": true },
         { "logicalname": "budget_amount", "display_name": "Budget Amount", "field_type": "number", "is_sortable": true },
         { "logicalname": "budget_consumed", "display_name": "Budget Consumed", "field_type": "number", "is_sortable": true },
-        { "logicalname": "start_date", "display_name": "Start Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "target_end_date", "display_name": "Target End Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "actual_start_date", "display_name": "Actual Start Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "actual_end_date", "display_name": "Actual End Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "start_date", "display_name": "Start Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "target_end_date", "display_name": "Target End Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "actual_start_date", "display_name": "Actual Start Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "actual_end_date", "display_name": "Actual End Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "description", "display_name": "Description", "field_type": "text" },
         { "logicalname": "objectives", "display_name": "Objectives", "field_type": "text" },
         { "logicalname": "success_criteria", "display_name": "Success Criteria", "field_type": "text" },
@@ -60,8 +60,8 @@
         { "logicalname": "points", "display_name": "Points", "field_type": "number", "is_sortable": true, "is_filterable": true },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["not_started", "in_progress", "done", "blocked"], "multi": false } },
         { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
-        { "logicalname": "start_date", "display_name": "Start Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "due_date", "display_name": "Due Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "start_date", "display_name": "Start Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "due_date", "display_name": "Due Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "sequence", "display_name": "Sequence", "field_type": "number", "is_sortable": true },
         { "logicalname": "description", "display_name": "Description", "field_type": "text" }
       ]
@@ -80,7 +80,7 @@
       "attributes": [
         { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
         { "logicalname": "label", "display_name": "Label", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
-        { "logicalname": "captured_at", "display_name": "Captured At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "captured_at", "display_name": "Captured At", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "captured_by", "display_name": "Captured By", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
         { "logicalname": "trigger", "display_name": "Trigger", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["initial", "change_request", "manual"], "multi": false } }
       ]
@@ -90,8 +90,8 @@
       "attributes": [
         { "logicalname": "baseline_id", "display_name": "Baseline", "field_type": "lookup", "lookup_entity": "project_baseline", "is_required": true, "is_filterable": true },
         { "logicalname": "work_item_id", "display_name": "Work Item", "field_type": "lookup", "lookup_entity": "project_work_item", "is_required": true, "is_filterable": true },
-        { "logicalname": "planned_start", "display_name": "Planned Start", "field_type": "date", "is_sortable": true },
-        { "logicalname": "planned_due", "display_name": "Planned Due", "field_type": "date", "is_sortable": true },
+        { "logicalname": "planned_start", "display_name": "Planned Start", "field_type": "date_time", "is_sortable": true },
+        { "logicalname": "planned_due", "display_name": "Planned Due", "field_type": "date_time", "is_sortable": true },
         { "logicalname": "planned_points", "display_name": "Planned Points", "field_type": "number", "is_sortable": true },
         { "logicalname": "planned_budget", "display_name": "Planned Budget", "field_type": "number", "is_sortable": true }
       ]
@@ -103,17 +103,17 @@
         { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "lookup_entity": "user_account", "is_required": true, "is_filterable": true },
         { "logicalname": "internal_cost_rate", "display_name": "Internal Cost Rate", "field_type": "number", "is_sensitive": true, "is_sortable": true },
         { "logicalname": "billable_rate", "display_name": "Billable Rate", "field_type": "number", "is_sensitive": true, "is_sortable": true },
-        { "logicalname": "effective_date", "display_name": "Effective Date", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true }
+        { "logicalname": "effective_date", "display_name": "Effective Date", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true }
       ]
     },
     {
       "logicalname": "project_timesheet", "display_name": "Timesheet", "is_append_only": false,
       "attributes": [
         { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "lookup_entity": "user_account", "is_required": true, "is_filterable": true },
-        { "logicalname": "week_start_date", "display_name": "Week Start Date", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "week_start_date", "display_name": "Week Start Date", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["draft", "submitted", "approved", "rejected"], "multi": false } },
         { "logicalname": "approved_by", "display_name": "Approved By", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
-        { "logicalname": "approved_at", "display_name": "Approved At", "field_type": "date", "is_sortable": true }
+        { "logicalname": "approved_at", "display_name": "Approved At", "field_type": "date_time", "is_sortable": true }
       ]
     },
     {
@@ -121,7 +121,7 @@
       "attributes": [
         { "logicalname": "work_item_id", "display_name": "Work Item", "field_type": "lookup", "lookup_entity": "project_work_item", "is_required": true, "is_filterable": true },
         { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "lookup_entity": "user_account", "is_required": true, "is_filterable": true },
-        { "logicalname": "entry_date", "display_name": "Entry Date", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "entry_date", "display_name": "Entry Date", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "hours", "display_name": "Hours", "field_type": "number", "is_required": true, "is_sortable": true },
         { "logicalname": "is_billable", "display_name": "Billable", "field_type": "bool", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "timesheet_id", "display_name": "Timesheet", "field_type": "lookup", "lookup_entity": "project_timesheet", "is_filterable": true },
@@ -134,7 +134,7 @@
         { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
         { "logicalname": "work_item_id", "display_name": "Work Item", "field_type": "lookup", "lookup_entity": "project_work_item", "is_filterable": true },
-        { "logicalname": "due_date", "display_name": "Due Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "due_date", "display_name": "Due Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["draft", "submitted", "accepted", "rejected"], "multi": false } },
         { "logicalname": "description", "display_name": "Description", "field_type": "text" }
       ]
@@ -148,7 +148,7 @@
         { "logicalname": "severity", "display_name": "Severity", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["low", "medium", "high", "critical"], "multi": false } },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["open", "mitigating", "resolved", "closed"], "multi": false } },
         { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
-        { "logicalname": "identified_date", "display_name": "Identified Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "identified_date", "display_name": "Identified Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true },
         { "logicalname": "description", "display_name": "Description", "field_type": "text" }
       ]
     },
@@ -163,7 +163,7 @@
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["pending", "approved", "rejected"], "multi": false } },
         { "logicalname": "is_customer_facing", "display_name": "Customer Facing", "field_type": "bool", "is_sortable": true, "is_filterable": true },
         { "logicalname": "requested_by", "display_name": "Requested By", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
-        { "logicalname": "requested_date", "display_name": "Requested Date", "field_type": "date", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "requested_date", "display_name": "Requested Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true }
       ]
     },
     {
@@ -183,8 +183,8 @@
         { "logicalname": "regarding_id", "display_name": "Regarding Record", "field_type": "text", "is_required": true, "is_filterable": true },
         { "logicalname": "allocation_percent", "display_name": "Allocation %", "field_type": "number", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "hours_per_week", "display_name": "Hours Per Week", "field_type": "number" },
-        { "logicalname": "start_date", "display_name": "Start Date", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
-        { "logicalname": "end_date", "display_name": "End Date", "field_type": "date", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "start_date", "display_name": "Start Date", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "end_date", "display_name": "End Date", "field_type": "date_time", "is_sortable": true, "is_filterable": true }
       ]
     },
     {
@@ -202,7 +202,7 @@
       "attributes": [
         { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
         { "logicalname": "title", "display_name": "Title", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
-        { "logicalname": "occurred_at", "display_name": "Occurred At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "occurred_at", "display_name": "Occurred At", "field_type": "date_time", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "organizer_id", "display_name": "Organizer", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
         { "logicalname": "attendees", "display_name": "Attendees", "field_type": "text" },
         { "logicalname": "notes", "display_name": "Notes", "field_type": "text" }

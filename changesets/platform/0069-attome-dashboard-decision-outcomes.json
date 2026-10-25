@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:179a54de89cf8aa8646a129682935cbcf997ce95263b7a865026ad6aa5bdc096",
+  "checksum": "sha256:58bbd743b512f3bab0e7ea5914356eef7940168a5e15c64fccc969e32b220b28",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-dashboard-decision-outcomes.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -14,7 +14,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Executed At",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": true,
           "is_required": false,

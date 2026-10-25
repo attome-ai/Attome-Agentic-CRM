@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:c74b215837ceaf50a544240d88a66881bdcacbe5c8729c77f640091fbd8557f3",
+  "checksum": "sha256:83647b7f96a93a96230dee6ca498b85b108adcaa77f40a445281f8cc36fe7142",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Financial services (X3-T1) for banks, finance companies and Takaful: clients on the CRM account and contact, financial accounts read from core banking (a reference, never posted), KYC onboarding with identity verification, registry check, sanctions result, risk rating and periodic review; financing applications through intake, credit review, approval, offer, disbursement or decline, with Islamic structures; credit reviews decided by a person; regulated complaints with regulator deadlines; a relationship manager book. Card numbers are masked. Roles, report queries and a sidebar.",
   "format": "attome-changeset/v1",
@@ -310,7 +310,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Opened",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -370,7 +370,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Last Synced",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -501,7 +501,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Identity Verified",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -673,7 +673,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Next Review",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": true,
           "is_required": false,
@@ -1337,7 +1337,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Decided",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1579,7 +1579,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Received",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1605,7 +1605,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Regulator Deadline",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": true,
           "is_required": false,
@@ -1796,7 +1796,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expires",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

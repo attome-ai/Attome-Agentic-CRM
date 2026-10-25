@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:03446d2beb0bc5a7cf62646f9fac908ff780ef4c77b9be70ee7538f9cefe0c36",
+  "checksum": "sha256:9b3f82182c3685435f5e6b557e90daabb1cb6e9b05294b5481689ec730897d1b",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Fulfilment (F6-T2): stock locations, fulfilment orders and lines sourced from a sales order, shipments with packages and lines, append-only delivery proof, holds and exceptions.",
   "format": "attome-changeset/v1",
@@ -409,7 +409,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Promised Date",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -714,7 +714,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Expected",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -974,7 +974,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Shipped",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1000,7 +1000,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Delivered",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1026,7 +1026,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Last Event",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,
@@ -1506,7 +1506,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Captured",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": true,
@@ -1716,7 +1716,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Released",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": true,
           "is_filterable": false,
           "is_required": false,

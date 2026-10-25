@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:c78f7774b897a261d41931c80ee73a5542e8994fdce777b03a0690b9ac931798",
+  "checksum": "sha256:ea3f33a9201e3c89c90103c4698a987ca742cc1a001ca665eecb2b26fa044beb",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-sales-scoring.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -389,7 +389,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Computed",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,

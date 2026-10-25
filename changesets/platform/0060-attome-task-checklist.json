@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:0384f59b7d68b9433c3a49f89f4b866de400c0834e73a0429f2c8df92bad53e1",
+  "checksum": "sha256:da71902f0351b032db77d3e65aeb2c069d62a8eea6769bf38a25680468ccc391",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-task-checklist.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -59,7 +59,7 @@
         "definition": {
           "data_classification": "general",
           "display_name": "Done On",
-          "field_type": "date",
+          "field_type": "date_time",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,
