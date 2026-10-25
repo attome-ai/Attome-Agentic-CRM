@@ -27,6 +27,8 @@ pub mod bin;
 pub mod bot_handoff;
 pub mod bulk;
 pub mod business;
+/// Z12-T12: holidays an agent lists and proposes.
+pub mod calendar;
 pub mod claim_check;
 pub mod classify;
 pub mod collections;
@@ -137,6 +139,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(system_status::descriptor());
     all.push(ops_slo::descriptor());
     all.extend(approvals::descriptors());
+    all.extend(calendar::descriptors());
     all.push(secrets_list::descriptor());
     all.push(settings::list_descriptor());
     all.push(settings::set_descriptor());
@@ -221,6 +224,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(system_status::SystemStatus));
     all.push(Box::new(ops_slo::OpsSloHealth));
     all.extend(approvals::executors());
+    all.extend(calendar::executors());
     all.push(Box::new(secrets_list::SecretsList));
     all.push(Box::new(settings::SettingsList));
     all.push(Box::new(settings::SettingsSet));
