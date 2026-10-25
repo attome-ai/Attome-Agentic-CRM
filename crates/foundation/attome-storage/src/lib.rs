@@ -104,6 +104,8 @@ mod error;
 pub mod health;
 mod local;
 pub mod mirror;
+/// Z6-T2: resumable multipart uploads.
+pub mod multipart;
 /// AB6-T4: object store calls through `attome_outbound`.
 mod outbound;
 mod presign;

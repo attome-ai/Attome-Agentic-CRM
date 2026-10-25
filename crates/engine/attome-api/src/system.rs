@@ -373,6 +373,8 @@ impl EngineSystem {
             // is mounted through `ModelRegistry` by `DocumentModel` instead,
             // gated on MODULE_DOCUMENT — see `attome_document`'s crate doc.
             .merge(attome_document::files::routes())
+            // Z6-T2: resumable multipart uploads.
+            .merge(attome_document::multipart_routes::routes())
             // K1-T1: share links, and their public download routes.
             .merge(attome_document::share::routes())
             // K1-T2: check-out and check-in of a record's file.

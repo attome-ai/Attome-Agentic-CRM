@@ -897,6 +897,8 @@ pub async fn process(state: &EngineState, session_id: Uuid) -> Result<(), AppErr
 /// queued, and expiring them at the 15-minute TTL destroyed legitimate
 /// uploads behind any backlog longer than that (UP-F1).
 pub async fn prune_expired_sessions(state: &EngineState) -> Result<(), AppError> {
+    // Z6-T2: stale multipart uploads first, so their sessions expire below.
+    crate::multipart_routes::prune_stale_multipart(state).await?;
     expire_abandoned_pending_sessions(state).await?;
     reject_scan_deadline_sessions(state).await
 }
@@ -910,6 +912,10 @@ async fn expire_abandoned_pending_sessions(state: &EngineState) -> Result<(), Ap
     let expired: Vec<(Uuid, String)> = sqlx::query_as(
         "SELECT id, quarantine_key FROM upload_session
           WHERE status = 'pending' AND created_at < $1
+            AND NOT EXISTS (SELECT 1 FROM upload_multipart m
+                             WHERE m.session_id = upload_session.id
+                               AND m.status IN ('open', 'assembled')
+                               AND m.created_at > NOW() - INTERVAL '24 hours')
             AND legal_hold = false
             AND (retention_expires_at IS NULL OR retention_expires_at < NOW())
             AND is_deleted = false

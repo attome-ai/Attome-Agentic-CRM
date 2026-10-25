@@ -52,6 +52,8 @@ pub mod import_reader;
 pub mod import_stage;
 /// Z6-T3: the weekly read-back of a sample of stored files.
 pub mod integrity;
+/// Z6-T2: resumable multipart uploads.
+pub mod multipart_routes;
 pub mod share;
 /// K1-T4: document text for global search.
 pub mod text_extract;
@@ -86,5 +88,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         "document",
     ));
     doc.merge(core(transcribe::openapi_fragment()));
+    doc.merge(core(multipart_routes::openapi_fragment()));
     doc
 }
