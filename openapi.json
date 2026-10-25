@@ -8513,7 +8513,7 @@
             }
           },
           "422": {
-            "description": "The stored rule no longer validates against the live schema",
+            "description": "The stored rule no longer validates against the live schema, or one of its test cases does not hold (A11-T4)",
             "content": {
               "application/json": {
                 "schema": {
@@ -8742,6 +8742,299 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/business-rules/{id}/test-cases": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List a rule's test cases",
+        "description": "A11-T4: the example records and expected outcomes the rule's publish\nruns. Administrators only.",
+        "operationId": "list_rule_test_cases",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The business rule",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The rule's test cases, at most 100",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RuleTestCase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The rule is not a business rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Add a test case to a rule",
+        "description": "A11-T4: an example record and whether the rule must let its save pass or\nrefuse it, with the values its set_value policies must produce. Checked\nat every publish. Administrators only. Audited.",
+        "operationId": "create_rule_test_case",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The business rule",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleTestCaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The test case",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleTestCase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The rule has a test case of this name, or already 100",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing name, an expect other than pass or fail, or not a business rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/business-rules/{id}/test-cases/{case_id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Remove a test case from a rule",
+        "description": "A11-T4. Administrators only. Audited.",
+        "operationId": "delete_rule_test_case",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The business rule",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "description": "The test case",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such rule or test case",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
       }
     },
     "/api/v1/admin/caches": {
@@ -60397,6 +60690,77 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/approvals/bulk-decide": {
+      "post": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "Decide many of my approval requests",
+        "description": "Z10-T10: decides up to 100 plan-bearing requests the caller may decide,\neach through the single decision's own path (eligibility, row version,\ntransaction, audit events and execution), so one failing never stops the\nothers. A request whose current step asks for a step-up or a signature\nis skipped, not decided.",
+        "operationId": "bulk_decide_approvals",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDecideBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each request's outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDecideResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown decision, no items, more than 100, or a comment too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "each request is decided through the single-decision path, which writes its own Approved/Rejected event and decision digest in its own transaction",
+          "reason": "delegated",
+          "via": "do_decide"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/approvals/email-link": {
       "post": {
         "tags": [
@@ -60958,6 +61322,432 @@
             {
               "category": "business_event",
               "operation": "execute"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/approvals/{id}/recall": {
+      "post": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "Recall my approval request",
+        "description": "Z10-T10: the requester takes their own pending request back to change\nit (`If-Match` names the request's `row_version`); it stays as\n`recalled`, and `.../resubmit` sends the corrected one. Only the\nrequester, only while pending.",
+        "operationId": "recall_approval",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The approval request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The request's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The recalled request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller did not submit this request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided, being decided, or a stale row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match is missing or not a row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "cancelled"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/approvals/{id}/recommendations": {
+      "get": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "List an approval request's recommendations",
+        "description": "Z10-T11: what eligible approvers (or agents acting for them) recommend,\noldest first. The requester and the current step's eligible approvers\nmay read them.",
+        "operationId": "list_approval_recommendations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The approval request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The recommendations, at most 100",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_Recommendation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither the requester nor an eligible approver",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "Recommend a decision on an approval request",
+        "description": "Z10-T11: an eligible approver (or an agent acting for one) recommends\napproving or rejecting, with reasons. It decides nothing; the approver\nstill decides.",
+        "operationId": "create_approval_recommendation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The approval request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The recommendation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recommendation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an eligible approver of the current step",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request is no longer pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "recommended is not approve or reject, or the reasons are empty or too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/approvals/{id}/resubmit": {
+      "post": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "Resubmit a recalled approval request",
+        "description": "Z10-T10: the corrected request after a recall: the same action,\nrequester and regarding record, the new payload, linked to the recalled\none. It is matched against the action's current approval policy, as a\nnew submission is. Only the requester, once per recall.",
+        "operationId": "resubmit_approval",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The recalled approval request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResubmitBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller did not submit the recalled request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request is not recalled, or was already resubmitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The action's policy no longer validates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "submitted"
             }
           ],
           "policy": "mandatory"
@@ -70180,6 +70970,181 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/calendar-feeds": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Add a calendar feed",
+        "description": "Z12-T8: an iCal feed whose all-day events the daily fetch turns into the\ncalendar's holidays, never over a manual or pack holiday. Administrators\nonly. Audited.",
+        "operationId": "create_calendar_feed",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarFeedBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The feed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarFeed"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not an https URL, or one that reaches a private address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/calendar-feeds/{id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Remove a calendar feed",
+        "description": "Z12-T8. The holidays it brought stay until removed by hand.\nAdministrators only. Audited.",
+        "operationId": "delete_calendar_feed",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The feed",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such feed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/calendar-sightings": {
       "get": {
         "tags": [
@@ -77309,6 +78274,81 @@
         "x-idempotent": "key",
         "x-module": "billing",
         "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/email/webhooks/{provider}": {
+      "post": {
+        "tags": [
+          "email"
+        ],
+        "summary": "Receive provider email events",
+        "description": "Z8-T5: bounces, complaints and unsubscribes from Amazon SES (through\nSNS) or SendGrid's signed event webhook. Public: the provider's\nsignature is the credential. A hard bounce or complaint suppresses every\nstream, an unsubscribe bulk mail only, and five soft bounces in seven\ndays suppress the address.",
+        "operationId": "receive_email_feedback",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "description": "`ses` or `sendgrid`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The provider's event payload, as it sends it",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted"
+          },
+          "401": {
+            "description": "Unsigned, wrongly signed, stale or from a topic not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such provider, or it is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -89551,6 +90591,1096 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/cluster": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "The database cluster's status",
+        "description": "AB2-T7: `single` without a configured Patroni cluster; otherwise the\nmembers Patroni reports (read at most every five seconds) and the last\nrecorded failover. Needs `ops.read`.",
+        "operationId": "get_ops_cluster",
+        "responses": {
+          "200": {
+            "description": "The cluster's status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClusterStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/disasters": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Declare a disaster",
+        "description": "AB3-T7: records the declaration. Needs `ops.dr.declare`. Audited.",
+        "operationId": "declare_ops_disaster",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclareDisaster"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The declared disaster",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Disaster"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.dr.declare",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An empty or too long scenario or summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/disasters/approvals/{approval_id}": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "A disaster action's approval",
+        "description": "AB3-T7: whether the second person approved yet. Needs `ops.dr.declare`.",
+        "operationId": "get_ops_disaster_approval",
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "description": "The approval request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The approval's status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisasterApproval"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.dr.declare",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such disaster approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/disasters/{id}/actions": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Ask for a disaster action",
+        "description": "AB3-T7: switching to the recovery site, replacing live data or failing\nback waits for a second `ops.dr.declare` holder: the answer is the\napproval request, which the requester can never decide. Audited.",
+        "operationId": "request_ops_disaster_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The declared disaster",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisasterActionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The approval the action waits on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisasterApproval"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.dr.declare",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such disaster",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The disaster is closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown action, or no Operations role to approve it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "submitted"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/disasters/{id}/close": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Close a disaster",
+        "description": "AB3-T7: `If-Match` names the row version. Audited.",
+        "operationId": "close_ops_disaster",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The declared disaster",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The disaster's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The closed disaster",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Disaster"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.dr.declare",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such disaster",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already closed, or a stale row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match is missing or not a row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "closed"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/drills": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "List drills",
+        "description": "AB4-T6: recorded drills, newest first, without their evidence;\noptionally of one kind. Needs `ops.read`.",
+        "operationId": "list_ops_drills",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "description": "Only drills of this kind.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of drills",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DrillRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/drills/evidence": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Record a drill's evidence",
+        "description": "AB4-T6: the signed `attome-evidence/v1` report `attome drill` wrote. The\nsignature must hold against `ops.drill_public_keys`. Stored once: a\nreplay answers 200 with the stored id. Needs `ops.drill.run`. Audited\nwith the evidence's SHA-256.",
+        "operationId": "record_ops_drill_evidence",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedEvidence"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Already stored; the stored id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceRecorded"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceRecorded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.drill.run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not attome-evidence/v1, a signature that does not hold, or no configured key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/drills/{id}": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Get a drill's evidence",
+        "description": "AB4-T6: the signed evidence as it was uploaded, for an auditor to verify\nwith `attome drill verify`. Needs `ops.read`.",
+        "operationId": "get_ops_drill",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The drill",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The signed evidence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedEvidence"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such drill",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/failovers": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "List failovers",
+        "description": "AB2-T7: every recorded failover and switchover, newest first. Needs\n`ops.read`.",
+        "operationId": "list_ops_failovers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of failovers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_FailoverEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/upgrades": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "List upgrades",
+        "description": "AB8-T6: the upgrade history, newest first. Needs `ops.read`.",
+        "operationId": "list_ops_upgrades",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of upgrades",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_Upgrade"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Record an upgrade's start",
+        "description": "AB8-T6: the versions, the safety point and the pre-upgrade check\nreport. Needs `ops.upgrade.run` and a fresh step-up\n(`platform_upgrade`, 15 minutes). Audited.",
+        "operationId": "start_ops_upgrade",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartUpgrade"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The upgrade, started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upgrade"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials, or `reauth_required` without a step-up in the last 15 minutes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.upgrade.run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A version that is empty or not a version string",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/upgrades/{id}": {
+      "patch": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Record an upgrade's status",
+        "description": "AB8-T6: verified, failed or rolled back, with the verification's\nevidence id and when the contract step ran. `If-Match` names the row\nversion. Audited.",
+        "operationId": "update_ops_upgrade",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The upgrade",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The upgrade's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpgradeStatus"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The upgrade",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upgrade"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.upgrade.run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such upgrade",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A stale row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing If-Match, or a status the upgrade cannot move to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/pay/{token}": {
@@ -131201,6 +133331,80 @@
           }
         }
       },
+      "BulkDecideBody": {
+        "type": "object",
+        "required": [
+          "items",
+          "decision"
+        ],
+        "properties": {
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "decision": {
+            "type": "string",
+            "description": "`\"approve\"` or `\"reject\"`, for every request."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchItem"
+            },
+            "description": "At most 100 requests."
+          }
+        },
+        "additionalProperties": false
+      },
+      "BulkDecideResponse": {
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkDecideResult"
+            }
+          }
+        }
+      },
+      "BulkDecideResult": {
+        "type": "object",
+        "description": "One request's outcome in a bulk decision.",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why a request failed: `stale`, `decided`, `forbidden`, `not_found`,\n`invalid` or `error`."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why a request was skipped."
+          },
+          "status": {
+            "type": "string",
+            "description": "The request's status after the decision, `skipped` for a step that\nasks for a step-up or a signature, or `failed`."
+          }
+        }
+      },
       "BulkEditPreview": {
         "type": "object",
         "description": "B5-T2: what a bulk edit would do, without doing it.",
@@ -132756,6 +134960,67 @@
               "$ref": "#/components/schemas/CalendarTimeRange"
             },
             "description": "Empty: the date is closed. Otherwise these ranges replace the\nweekday's hours for that date."
+          }
+        }
+      },
+      "CalendarFeed": {
+        "type": "object",
+        "description": "A feed.",
+        "required": [
+          "id",
+          "calendar_id",
+          "url",
+          "enabled"
+        ],
+        "properties": {
+          "calendar_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the last fetch failed: an HTTP status or a parse failure."
+          },
+          "last_fetched_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "CalendarFeedBody": {
+        "type": "object",
+        "description": "A feed as an administrator adds it.",
+        "required": [
+          "calendar_id",
+          "url"
+        ],
+        "properties": {
+          "calendar_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string",
+            "description": "An `https` URL whose host resolves to a public address."
           }
         }
       },
@@ -134424,6 +136689,36 @@
           }
         }
       },
+      "Check": {
+        "type": "object",
+        "description": "One check a drill ran.",
+        "required": [
+          "name",
+          "result"
+        ],
+        "properties": {
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/CheckResult"
+          }
+        }
+      },
+      "CheckResult": {
+        "type": "string",
+        "enum": [
+          "pass",
+          "fail",
+          "skipped"
+        ]
+      },
       "CheckoutRequest": {
         "type": "object",
         "properties": {
@@ -135262,6 +137557,85 @@
               "null"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "ClusterMember": {
+        "type": "object",
+        "description": "One database node.",
+        "required": [
+          "name",
+          "role"
+        ],
+        "properties": {
+          "lag_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Bytes behind the leader, when Patroni knows."
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "state": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timeline": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "ClusterStatus": {
+        "type": "object",
+        "description": "The cluster now.",
+        "required": [
+          "mode",
+          "members"
+        ],
+        "properties": {
+          "last_failover": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FailoverEvent"
+              }
+            ]
+          },
+          "leader": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClusterMember"
+            }
+          },
+          "mode": {
+            "type": "string",
+            "description": "`single` (no Patroni cluster configured) or `ha`."
+          },
+          "synchronous_standby": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -141574,6 +143948,23 @@
           }
         }
       },
+      "DeclareDisaster": {
+        "type": "object",
+        "required": [
+          "scenario",
+          "summary"
+        ],
+        "properties": {
+          "scenario": {
+            "type": "string",
+            "description": "What happened, such as `site_loss` or `data_corruption`."
+          },
+          "summary": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "Declared": {
         "type": "object",
         "description": "The declaration.",
@@ -142960,6 +145351,109 @@
           "both"
         ]
       },
+      "Disaster": {
+        "type": "object",
+        "description": "A declared disaster.",
+        "required": [
+          "id",
+          "declared_by",
+          "declared_at",
+          "scenario",
+          "summary",
+          "sla_excluded",
+          "row_version"
+        ],
+        "properties": {
+          "closed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "declared_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "declared_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "exclusion_evidence": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "scenario": {
+            "type": "string"
+          },
+          "sla_excluded": {
+            "type": "boolean"
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      },
+      "DisasterActionBody": {
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "`switch_site`, `replace_live_data` or `failback`."
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "DisasterApproval": {
+        "type": "object",
+        "description": "The approval a disaster action waits on.",
+        "required": [
+          "approval_id",
+          "status"
+        ],
+        "properties": {
+          "action": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "approval_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "disaster_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `approved`, `rejected`, `expired`, ..."
+          }
+        }
+      },
       "DiscardBody": {
         "type": "object",
         "required": [
@@ -143751,6 +146245,93 @@
                 "$ref": "#/components/schemas/DriftDiff"
               }
             ]
+          }
+        }
+      },
+      "DrillRun": {
+        "type": "object",
+        "description": "One recorded drill, without its evidence.",
+        "required": [
+          "id",
+          "kind",
+          "started_at",
+          "finished_at",
+          "overall_ok",
+          "restore_ok",
+          "provenance_ok",
+          "platform_version",
+          "key_id",
+          "sha256",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data_size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key_id": {
+            "type": "string",
+            "description": "The signing key's id."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`restore`, `failover`, `chaos`, `upgrade`, `secrets`, `recovery` or\n`drain`."
+          },
+          "overall_ok": {
+            "type": "boolean"
+          },
+          "platform_version": {
+            "type": "string"
+          },
+          "provenance_ok": {
+            "type": "boolean"
+          },
+          "restore_ok": {
+            "type": "boolean"
+          },
+          "rpo_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "rto_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "sha256": {
+            "type": "string",
+            "description": "The SHA-256 of the evidence's canonical bytes, as the audit event\nrecords it."
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uploaded_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -145735,6 +148316,114 @@
           }
         }
       },
+      "Evidence": {
+        "type": "object",
+        "description": "One drill's evidence.",
+        "required": [
+          "schema",
+          "kind",
+          "drill_id",
+          "started_at",
+          "finished_at",
+          "platform_version",
+          "checks",
+          "restore_ok",
+          "provenance_ok",
+          "overall_ok"
+        ],
+        "properties": {
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Check"
+            }
+          },
+          "data_size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
+          "deployment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "drill_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "extra": {
+            "type": "object",
+            "description": "What a kind records beyond these fields."
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "image_digest": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EvidenceKind"
+          },
+          "overall_ok": {
+            "type": "boolean"
+          },
+          "platform_version": {
+            "type": "string"
+          },
+          "provenance_ok": {
+            "type": "boolean"
+          },
+          "restore_ok": {
+            "type": "boolean"
+          },
+          "rpo_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Data lost, measured: the recovery point."
+          },
+          "rto_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Time to serve again, measured: the recovery time."
+          },
+          "schema": {
+            "type": "string",
+            "description": "Always [`SCHEMA`]."
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EvidenceKind": {
+        "type": "string",
+        "description": "What a drill exercised.",
+        "enum": [
+          "restore",
+          "failover",
+          "chaos",
+          "upgrade",
+          "secrets",
+          "recovery",
+          "drain"
+        ]
+      },
       "EvidencePack": {
         "type": "object",
         "description": "Events, their proofs, the public keys and how to check them offline.",
@@ -145806,6 +148495,28 @@
               "null"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "EvidenceRecorded": {
+        "type": "object",
+        "description": "An upload's outcome.",
+        "required": [
+          "id",
+          "sha256",
+          "created"
+        ],
+        "properties": {
+          "created": {
+            "type": "boolean",
+            "description": "False when this evidence was already stored."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sha256": {
+            "type": "string"
           }
         }
       },
@@ -146539,6 +149250,73 @@
               "null"
             ],
             "description": "L7-T5: a change-stream cursor that continues from the export's own\nsnapshot: reading a subscription from it yields exactly the changes\nthe export did not see."
+          }
+        }
+      },
+      "FailoverEvent": {
+        "type": "object",
+        "description": "One recorded failover.",
+        "required": [
+          "id",
+          "kind",
+          "new_leader",
+          "started_at"
+        ],
+        "properties": {
+          "cause": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "duration_ms": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`failover`, `switchover` or `redis_failover`."
+          },
+          "new_leader": {
+            "type": "string"
+          },
+          "old_leader": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timeline": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "writes_lost": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -165104,6 +167882,127 @@
           }
         }
       },
+      "PaginatedResponse_DrillRun": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One recorded drill, without its evidence.",
+              "required": [
+                "id",
+                "kind",
+                "started_at",
+                "finished_at",
+                "overall_ok",
+                "restore_ok",
+                "provenance_ok",
+                "platform_version",
+                "key_id",
+                "sha256",
+                "created_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "data_size_bytes": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64"
+                },
+                "finished_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "key_id": {
+                  "type": "string",
+                  "description": "The signing key's id."
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`restore`, `failover`, `chaos`, `upgrade`, `secrets`, `recovery` or\n`drain`."
+                },
+                "overall_ok": {
+                  "type": "boolean"
+                },
+                "platform_version": {
+                  "type": "string"
+                },
+                "provenance_ok": {
+                  "type": "boolean"
+                },
+                "restore_ok": {
+                  "type": "boolean"
+                },
+                "rpo_seconds": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double"
+                },
+                "rto_seconds": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double"
+                },
+                "sha256": {
+                  "type": "string",
+                  "description": "The SHA-256 of the evidence's canonical bytes, as the audit event\nrecords it."
+                },
+                "started_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "uploaded_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_DsrRequestSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -166022,6 +168921,107 @@
                 "webportal_user_id": {
                   "type": "string",
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_FailoverEvent": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One recorded failover.",
+              "required": [
+                "id",
+                "kind",
+                "new_leader",
+                "started_at"
+              ],
+              "properties": {
+                "cause": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "duration_ms": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64"
+                },
+                "ended_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`failover`, `switchover` or `redis_failover`."
+                },
+                "new_leader": {
+                  "type": "string"
+                },
+                "old_leader": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "started_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "timeline": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64"
+                },
+                "writes_lost": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64"
                 }
               }
             }
@@ -171753,6 +174753,85 @@
           }
         }
       },
+      "PaginatedResponse_Recommendation": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One recommendation on an approval request: approve or reject and why,\nfrom an eligible approver or an agent acting for one. It decides nothing.",
+              "required": [
+                "id",
+                "request_id",
+                "recommended",
+                "reasons",
+                "recommended_by",
+                "created_at"
+              ],
+              "properties": {
+                "agent_session": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The agent session that wrote it, when an agent did."
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "reasons": {
+                  "type": "string"
+                },
+                "recommended": {
+                  "type": "string",
+                  "description": "`approve` or `reject`."
+                },
+                "recommended_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "request_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_RecordShare": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -172941,6 +176020,79 @@
                 },
                 "user_name": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_RuleTestCase": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One test case.",
+              "required": [
+                "id",
+                "rule_ref",
+                "name",
+                "record",
+                "expect"
+              ],
+              "properties": {
+                "expect": {
+                  "type": "string",
+                  "description": "`pass` or `fail`."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "record": {
+                  "type": "object",
+                  "description": "The example record, attribute to value."
+                },
+                "rule_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "set_values": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "The values the rule's `set_value` policies must produce."
                 }
               }
             }
@@ -176528,6 +179680,123 @@
                 }
               ],
               "description": "One planned undo step."
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_Upgrade": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One upgrade.",
+              "required": [
+                "id",
+                "status",
+                "row_version"
+              ],
+              "properties": {
+                "check_report": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "contract_applied_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "finished_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "from_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "safety_point": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The backup or snapshot the upgrade can go back to."
+                },
+                "started_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "started_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`started`, `verified`, `failed` or `rolled_back`."
+                },
+                "to_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "verification_evidence_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              }
             }
           },
           "page": {
@@ -182301,6 +185570,69 @@
           }
         }
       },
+      "RecommendBody": {
+        "type": "object",
+        "required": [
+          "recommended",
+          "reasons"
+        ],
+        "properties": {
+          "reasons": {
+            "type": "string",
+            "description": "Why, 1 to 2000 characters."
+          },
+          "recommended": {
+            "type": "string",
+            "description": "`approve` or `reject`."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Recommendation": {
+        "type": "object",
+        "description": "One recommendation on an approval request: approve or reject and why,\nfrom an eligible approver or an agent acting for one. It decides nothing.",
+        "required": [
+          "id",
+          "request_id",
+          "recommended",
+          "reasons",
+          "recommended_by",
+          "created_at"
+        ],
+        "properties": {
+          "agent_session": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The agent session that wrote it, when an agent did."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reasons": {
+            "type": "string"
+          },
+          "recommended": {
+            "type": "string",
+            "description": "`approve` or `reject`."
+          },
+          "recommended_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "RecordColumn": {
         "type": "object",
         "required": [
@@ -184744,6 +188076,19 @@
           }
         }
       },
+      "ResubmitBody": {
+        "type": "object",
+        "required": [
+          "payload"
+        ],
+        "properties": {
+          "payload": {
+            "type": "object",
+            "description": "The corrected payload."
+          }
+        },
+        "additionalProperties": false
+      },
       "RetentionActionSummary": {
         "type": "object",
         "required": [
@@ -186194,6 +189539,71 @@
           "portal_role": {
             "type": "boolean",
             "description": "`true` for a web-portal role, `false` for a staff role."
+          }
+        }
+      },
+      "RuleTestCase": {
+        "type": "object",
+        "description": "One test case.",
+        "required": [
+          "id",
+          "rule_ref",
+          "name",
+          "record",
+          "expect"
+        ],
+        "properties": {
+          "expect": {
+            "type": "string",
+            "description": "`pass` or `fail`."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "record": {
+            "type": "object",
+            "description": "The example record, attribute to value."
+          },
+          "rule_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "set_values": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The values the rule's `set_value` policies must produce."
+          }
+        }
+      },
+      "RuleTestCaseBody": {
+        "type": "object",
+        "description": "A new test case.",
+        "required": [
+          "name",
+          "expect"
+        ],
+        "properties": {
+          "expect": {
+            "type": "string",
+            "description": "`pass` or `fail`."
+          },
+          "name": {
+            "type": "string"
+          },
+          "record": {
+            "type": "object"
+          },
+          "set_values": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       },
@@ -190626,6 +194036,28 @@
           }
         }
       },
+      "SignedEvidence": {
+        "type": "object",
+        "description": "Evidence with its signature.",
+        "required": [
+          "evidence",
+          "key_id",
+          "signature"
+        ],
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/Evidence"
+          },
+          "key_id": {
+            "type": "string",
+            "description": "The first 16 hex characters of the SHA-256 of the public key."
+          },
+          "signature": {
+            "type": "string",
+            "description": "Base64 Ed25519 signature of the evidence's canonical bytes."
+          }
+        }
+      },
       "SignerAction": {
         "type": "object",
         "description": "A signer's action.",
@@ -192474,6 +195906,36 @@
             "description": "**Required.** `\"read\"` | `\"reversible\"` | `\"consequential\"`. There is no\ndefault: the person starting the session states its ceiling. It never\ngrants anything the caller's own privileges do not already allow."
           }
         }
+      },
+      "StartUpgrade": {
+        "type": "object",
+        "description": "An upgrade starting.",
+        "required": [
+          "from_version",
+          "to_version"
+        ],
+        "properties": {
+          "check_report": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The pre-upgrade checks' report."
+          },
+          "from_version": {
+            "type": "string"
+          },
+          "safety_point": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to_version": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
       },
       "StatOut": {
         "type": "object",
@@ -198240,6 +201702,119 @@
           }
         }
       },
+      "Upgrade": {
+        "type": "object",
+        "description": "One upgrade.",
+        "required": [
+          "id",
+          "status",
+          "row_version"
+        ],
+        "properties": {
+          "check_report": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "contract_applied_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "from_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "safety_point": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The backup or snapshot the upgrade can go back to."
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "started_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`started`, `verified`, `failed` or `rolled_back`."
+          },
+          "to_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verification_evidence_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "UpgradeStatus": {
+        "type": "object",
+        "description": "An upgrade's status change.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "contract_applied_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the contract step (the old schema's removal) ran."
+          },
+          "status": {
+            "type": "string",
+            "description": "`verified`, `failed` or `rolled_back`."
+          },
+          "verification_evidence_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The signed evidence of the verification (AB4-T2)."
+          }
+        },
+        "additionalProperties": false
+      },
       "UploadSessionRequest": {
         "type": "object",
         "required": [
@@ -200378,6 +203953,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -200429,7 +204006,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  }
 }

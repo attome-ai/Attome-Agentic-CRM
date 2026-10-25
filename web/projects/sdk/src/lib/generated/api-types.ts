@@ -1749,6 +1749,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/business-rules/{id}/test-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a rule's test cases
+         * @description A11-T4: the example records and expected outcomes the rule's publish
+         *     runs. Administrators only.
+         */
+        get: operations["list_rule_test_cases"];
+        put?: never;
+        /**
+         * Add a test case to a rule
+         * @description A11-T4: an example record and whether the rule must let its save pass or
+         *     refuse it, with the values its set_value policies must produce. Checked
+         *     at every publish. Administrators only. Audited.
+         */
+        post: operations["create_rule_test_case"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/business-rules/{id}/test-cases/{case_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a test case from a rule
+         * @description A11-T4. Administrators only. Audited.
+         */
+        delete: operations["delete_rule_test_case"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/caches": {
         parameters: {
             query?: never;
@@ -11495,6 +11542,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/approvals/bulk-decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide many of my approval requests
+         * @description Z10-T10: decides up to 100 plan-bearing requests the caller may decide,
+         *     each through the single decision's own path (eligibility, row version,
+         *     transaction, audit events and execution), so one failing never stops the
+         *     others. A request whose current step asks for a step-up or a signature
+         *     is skipped, not decided.
+         */
+        post: operations["bulk_decide_approvals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/approvals/email-link": {
         parameters: {
             query?: never;
@@ -11626,6 +11697,80 @@ export interface paths {
          *     otherwise gets exactly the same 403 an ineligible admin would.
          */
         post: operations["decide_approval_eligible"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{id}/recall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recall my approval request
+         * @description Z10-T10: the requester takes their own pending request back to change
+         *     it (`If-Match` names the request's `row_version`); it stays as
+         *     `recalled`, and `.../resubmit` sends the corrected one. Only the
+         *     requester, only while pending.
+         */
+        post: operations["recall_approval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{id}/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List an approval request's recommendations
+         * @description Z10-T11: what eligible approvers (or agents acting for them) recommend,
+         *     oldest first. The requester and the current step's eligible approvers
+         *     may read them.
+         */
+        get: operations["list_approval_recommendations"];
+        put?: never;
+        /**
+         * Recommend a decision on an approval request
+         * @description Z10-T11: an eligible approver (or an agent acting for one) recommends
+         *     approving or rejecting, with reasons. It decides nothing; the approver
+         *     still decides.
+         */
+        post: operations["create_approval_recommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{id}/resubmit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resubmit a recalled approval request
+         * @description Z10-T10: the corrected request after a recall: the same action,
+         *     requester and regarding record, the new payload, linked to the recalled
+         *     one. It is matched against the action's current approval policy, as a
+         *     new submission is. Only the requester, once per recall.
+         */
+        post: operations["resubmit_approval"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13752,6 +13897,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calendar-feeds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a calendar feed
+         * @description Z12-T8: an iCal feed whose all-day events the daily fetch turns into the
+         *     calendar's holidays, never over a manual or pack holiday. Administrators
+         *     only. Audited.
+         */
+        post: operations["create_calendar_feed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar-feeds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a calendar feed
+         * @description Z12-T8. The holidays it brought stay until removed by hand.
+         *     Administrators only. Audited.
+         */
+        delete: operations["delete_calendar_feed"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calendar-sightings": {
         parameters: {
             query?: never;
@@ -15290,6 +15478,30 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_onboard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/webhooks/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Receive provider email events
+         * @description Z8-T5: bounces, complaints and unsubscribes from Amazon SES (through
+         *     SNS) or SendGrid's signed event webhook. Public: the provider's
+         *     signature is the credential. A hard bounce or complaint suppresses every
+         *     stream, an unsubscribe bulk mail only, and five soft bounces in seven
+         *     days suppress the address.
+         */
+        post: operations["receive_email_feedback"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18076,6 +18288,244 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/cluster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The database cluster's status
+         * @description AB2-T7: `single` without a configured Patroni cluster; otherwise the
+         *     members Patroni reports (read at most every five seconds) and the last
+         *     recorded failover. Needs `ops.read`.
+         */
+        get: operations["get_ops_cluster"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/disasters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Declare a disaster
+         * @description AB3-T7: records the declaration. Needs `ops.dr.declare`. Audited.
+         */
+        post: operations["declare_ops_disaster"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/disasters/approvals/{approval_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A disaster action's approval
+         * @description AB3-T7: whether the second person approved yet. Needs `ops.dr.declare`.
+         */
+        get: operations["get_ops_disaster_approval"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/disasters/{id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a disaster action
+         * @description AB3-T7: switching to the recovery site, replacing live data or failing
+         *     back waits for a second `ops.dr.declare` holder: the answer is the
+         *     approval request, which the requester can never decide. Audited.
+         */
+        post: operations["request_ops_disaster_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/disasters/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a disaster
+         * @description AB3-T7: `If-Match` names the row version. Audited.
+         */
+        post: operations["close_ops_disaster"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/drills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List drills
+         * @description AB4-T6: recorded drills, newest first, without their evidence;
+         *     optionally of one kind. Needs `ops.read`.
+         */
+        get: operations["list_ops_drills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/drills/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a drill's evidence
+         * @description AB4-T6: the signed `attome-evidence/v1` report `attome drill` wrote. The
+         *     signature must hold against `ops.drill_public_keys`. Stored once: a
+         *     replay answers 200 with the stored id. Needs `ops.drill.run`. Audited
+         *     with the evidence's SHA-256.
+         */
+        post: operations["record_ops_drill_evidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/drills/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a drill's evidence
+         * @description AB4-T6: the signed evidence as it was uploaded, for an auditor to verify
+         *     with `attome drill verify`. Needs `ops.read`.
+         */
+        get: operations["get_ops_drill"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/failovers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List failovers
+         * @description AB2-T7: every recorded failover and switchover, newest first. Needs
+         *     `ops.read`.
+         */
+        get: operations["list_ops_failovers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/upgrades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List upgrades
+         * @description AB8-T6: the upgrade history, newest first. Needs `ops.read`.
+         */
+        get: operations["list_ops_upgrades"];
+        put?: never;
+        /**
+         * Record an upgrade's start
+         * @description AB8-T6: the versions, the safety point and the pre-upgrade check
+         *     report. Needs `ops.upgrade.run` and a fresh step-up
+         *     (`platform_upgrade`, 15 minutes). Audited.
+         */
+        post: operations["start_ops_upgrade"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/upgrades/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Record an upgrade's status
+         * @description AB8-T6: verified, failed or rolled back, with the verification's
+         *     evidence id and when the contract step ran. `If-Match` names the row
+         *     version. Audited.
+         */
+        patch: operations["update_ops_upgrade"];
         trace?: never;
     };
     "/api/v1/pay/{token}": {
@@ -27382,6 +27832,33 @@ export interface components {
             /** @description The copy's undo list, as a single clone returns it. */
             undo: components["schemas"]["CloneUndoItem"][];
         };
+        BulkDecideBody: {
+            comment?: string | null;
+            /** @description `"approve"` or `"reject"`, for every request. */
+            decision: string;
+            /** @description At most 100 requests. */
+            items: components["schemas"]["BatchItem"][];
+        };
+        BulkDecideResponse: {
+            results: components["schemas"]["BulkDecideResult"][];
+        };
+        /** @description One request's outcome in a bulk decision. */
+        BulkDecideResult: {
+            /**
+             * @description Why a request failed: `stale`, `decided`, `forbidden`, `not_found`,
+             *     `invalid` or `error`.
+             */
+            error_code?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description Why a request was skipped. */
+            reason?: string | null;
+            /**
+             * @description The request's status after the decision, `skipped` for a step that
+             *     asks for a step-up or a signature, or `failed`.
+             */
+            status: string;
+        };
         /** @description B5-T2: what a bulk edit would do, without doing it. */
         BulkEditPreview: {
             /** @description Records picked that the caller can read. */
@@ -27976,6 +28453,27 @@ export interface components {
              *     weekday's hours for that date.
              */
             ranges: components["schemas"]["CalendarTimeRange"][];
+        };
+        /** @description A feed. */
+        CalendarFeed: {
+            /** Format: uuid */
+            calendar_id: string;
+            enabled: boolean;
+            /** Format: uuid */
+            id: string;
+            /** @description Why the last fetch failed: an HTTP status or a parse failure. */
+            last_error?: string | null;
+            /** Format: date-time */
+            last_fetched_at?: string | null;
+            url: string;
+        };
+        /** @description A feed as an administrator adds it. */
+        CalendarFeedBody: {
+            /** Format: uuid */
+            calendar_id: string;
+            enabled?: boolean;
+            /** @description An `https` URL whose host resolves to a public address. */
+            url: string;
         };
         /** @description Z12-T6: one calendar with its holiday rules and seasons. */
         CalendarFull: components["schemas"]["CalendarDetail"] & {
@@ -28626,6 +29124,14 @@ export interface components {
             /** @description `inbound` (the visitor) or `outbound` (the bot, or a human agent). */
             direction: string;
         };
+        /** @description One check a drill ran. */
+        Check: {
+            detail?: string | null;
+            name: string;
+            result: components["schemas"]["CheckResult"];
+        };
+        /** @enum {string} */
+        CheckResult: "pass" | "fail" | "skipped";
         CheckoutRequest: {
             /** @description Why it is checked out, shown to others (at most 500 characters). */
             note?: string | null;
@@ -28935,6 +29441,28 @@ export interface components {
             message: string;
             /** Format: int32 */
             seq?: number | null;
+        };
+        /** @description One database node. */
+        ClusterMember: {
+            /**
+             * Format: int64
+             * @description Bytes behind the leader, when Patroni knows.
+             */
+            lag_bytes?: number | null;
+            name: string;
+            role: string;
+            state?: string | null;
+            /** Format: int64 */
+            timeline?: number | null;
+        };
+        /** @description The cluster now. */
+        ClusterStatus: {
+            last_failover?: null | components["schemas"]["FailoverEvent"];
+            leader?: string | null;
+            members: components["schemas"]["ClusterMember"][];
+            /** @description `single` (no Patroni cluster configured) or `ha`. */
+            mode: string;
+            synchronous_standby?: string | null;
         };
         CodeBody: {
             code: string;
@@ -31459,6 +31987,11 @@ export interface components {
             status_title?: string | null;
             status_title_ar?: string | null;
         };
+        DeclareDisaster: {
+            /** @description What happened, such as `site_loss` or `data_corruption`. */
+            scenario: string;
+            summary: string;
+        };
         /** @description The declaration. */
         Declared: {
             already_declared: boolean;
@@ -31986,6 +32519,38 @@ export interface components {
         };
         /** @enum {string} */
         Direction: "outbound" | "inbound" | "both";
+        /** @description A declared disaster. */
+        Disaster: {
+            /** Format: date-time */
+            closed_at?: string | null;
+            /** Format: date-time */
+            declared_at: string;
+            /** Format: uuid */
+            declared_by: string;
+            exclusion_evidence?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+            scenario: string;
+            sla_excluded: boolean;
+            summary: string;
+        };
+        DisasterActionBody: {
+            /** @description `switch_site`, `replace_live_data` or `failback`. */
+            action: string;
+            detail?: string | null;
+        };
+        /** @description The approval a disaster action waits on. */
+        DisasterApproval: {
+            action?: string | null;
+            /** Format: uuid */
+            approval_id: string;
+            /** Format: uuid */
+            disaster_id?: string | null;
+            /** @description `pending`, `approved`, `rejected`, `expired`, ... */
+            status: string;
+        };
         DiscardBody: {
             /** @description Why the dead letter is dropped; kept on the audit event. */
             reason: string;
@@ -32287,6 +32852,41 @@ export interface components {
         DriftReport: {
             applied?: null | components["schemas"]["AppliedRef"];
             drift?: null | components["schemas"]["DriftDiff"];
+        };
+        /** @description One recorded drill, without its evidence. */
+        DrillRun: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: int64 */
+            data_size_bytes?: number | null;
+            /** Format: date-time */
+            finished_at: string;
+            /** Format: uuid */
+            id: string;
+            /** @description The signing key's id. */
+            key_id: string;
+            /**
+             * @description `restore`, `failover`, `chaos`, `upgrade`, `secrets`, `recovery` or
+             *     `drain`.
+             */
+            kind: string;
+            overall_ok: boolean;
+            platform_version: string;
+            provenance_ok: boolean;
+            restore_ok: boolean;
+            /** Format: double */
+            rpo_seconds?: number | null;
+            /** Format: double */
+            rto_seconds?: number | null;
+            /**
+             * @description The SHA-256 of the evidence's canonical bytes, as the audit event
+             *     records it.
+             */
+            sha256: string;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: uuid */
+            uploaded_by?: string | null;
         };
         /** @enum {string} */
         Drillability: "exact" | "explain_only" | "none";
@@ -33163,6 +33763,44 @@ export interface components {
             /** Format: uuid */
             scenario_id: string;
         };
+        /** @description One drill's evidence. */
+        Evidence: {
+            checks: components["schemas"]["Check"][];
+            /** Format: int64 */
+            data_size_bytes?: number | null;
+            deployment_id?: string | null;
+            /** Format: uuid */
+            drill_id: string;
+            /** @description What a kind records beyond these fields. */
+            extra?: Record<string, never>;
+            /** Format: date-time */
+            finished_at: string;
+            image_digest?: string | null;
+            kind: components["schemas"]["EvidenceKind"];
+            overall_ok: boolean;
+            platform_version: string;
+            provenance_ok: boolean;
+            restore_ok: boolean;
+            /**
+             * Format: double
+             * @description Data lost, measured: the recovery point.
+             */
+            rpo_seconds?: number | null;
+            /**
+             * Format: double
+             * @description Time to serve again, measured: the recovery time.
+             */
+            rto_seconds?: number | null;
+            /** @description Always [`SCHEMA`]. */
+            schema: string;
+            /** Format: date-time */
+            started_at: string;
+        };
+        /**
+         * @description What a drill exercised.
+         * @enum {string}
+         */
+        EvidenceKind: "restore" | "failover" | "chaos" | "upgrade" | "secrets" | "recovery" | "drain";
         /** @description Events, their proofs, the public keys and how to check them offline. */
         EvidencePack: {
             events: Record<string, never>[];
@@ -33181,6 +33819,14 @@ export interface components {
             record_id?: string | null;
             /** Format: date-time */
             to?: string | null;
+        };
+        /** @description An upload's outcome. */
+        EvidenceRecorded: {
+            /** @description False when this evidence was already stored. */
+            created: boolean;
+            /** Format: uuid */
+            id: string;
+            sha256: string;
         };
         EvidenceRow: {
             action_id: string;
@@ -33501,6 +34147,26 @@ export interface components {
              *     the export did not see.
              */
             stream_token?: string | null;
+        };
+        /** @description One recorded failover. */
+        FailoverEvent: {
+            cause?: string | null;
+            /** Format: int64 */
+            duration_ms?: number | null;
+            /** Format: date-time */
+            ended_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description `failover`, `switchover` or `redis_failover`. */
+            kind: string;
+            new_leader: string;
+            old_leader?: string | null;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: int64 */
+            timeline?: number | null;
+            /** Format: int64 */
+            writes_lost?: number | null;
         };
         /** @description One kept item, as the caller may see it now. */
         FavouriteItem: {
@@ -40624,6 +41290,54 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DrillRun: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: int64 */
+                data_size_bytes?: number | null;
+                /** Format: date-time */
+                finished_at: string;
+                /** Format: uuid */
+                id: string;
+                /** @description The signing key's id. */
+                key_id: string;
+                /**
+                 * @description `restore`, `failover`, `chaos`, `upgrade`, `secrets`, `recovery` or
+                 *     `drain`.
+                 */
+                kind: string;
+                overall_ok: boolean;
+                platform_version: string;
+                provenance_ok: boolean;
+                restore_ok: boolean;
+                /** Format: double */
+                rpo_seconds?: number | null;
+                /** Format: double */
+                rto_seconds?: number | null;
+                /**
+                 * @description The SHA-256 of the evidence's canonical bytes, as the audit event
+                 *     records it.
+                 */
+                sha256: string;
+                /** Format: date-time */
+                started_at: string;
+                /** Format: uuid */
+                uploaded_by?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_DsrRequestSummary: {
             items: {
                 block_reason?: string | null;
@@ -41014,6 +41728,39 @@ export interface components {
                 status: string;
                 /** Format: uuid */
                 webportal_user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_FailoverEvent: {
+            items: {
+                cause?: string | null;
+                /** Format: int64 */
+                duration_ms?: number | null;
+                /** Format: date-time */
+                ended_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** @description `failover`, `switchover` or `redis_failover`. */
+                kind: string;
+                new_leader: string;
+                old_leader?: string | null;
+                /** Format: date-time */
+                started_at: string;
+                /** Format: int64 */
+                timeline?: number | null;
+                /** Format: int64 */
+                writes_lost?: number | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -43152,6 +43899,38 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Recommendation: {
+            items: {
+                /**
+                 * Format: uuid
+                 * @description The agent session that wrote it, when an agent did.
+                 */
+                agent_session?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                reasons: string;
+                /** @description `approve` or `reject`. */
+                recommended: string;
+                /** Format: uuid */
+                recommended_by: string;
+                /** Format: uuid */
+                request_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_RecordShare: {
             items: {
                 /** @description `view` or `action` (`deny` rows are listed too, read-only). */
@@ -43614,6 +44393,33 @@ export interface components {
                 /** Format: uuid */
                 user_id: string;
                 user_name: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RuleTestCase: {
+            items: {
+                /** @description `pass` or `fail`. */
+                expect: string;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /** @description The example record, attribute to value. */
+                record: Record<string, never>;
+                /** Format: uuid */
+                rule_ref: string;
+                /** @description The values the rule's `set_value` policies must produce. */
+                set_values?: Record<string, never> | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -44937,6 +45743,43 @@ export interface components {
                 /** @enum {string} */
                 step: "not_undoable";
             })[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Upgrade: {
+            items: {
+                check_report?: Record<string, never> | null;
+                /** Format: date-time */
+                contract_applied_at?: string | null;
+                /** Format: date-time */
+                finished_at?: string | null;
+                from_version?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: int64 */
+                row_version: number;
+                /** @description The backup or snapshot the upgrade can go back to. */
+                safety_point?: string | null;
+                /** Format: date-time */
+                started_at?: string | null;
+                /** Format: uuid */
+                started_by?: string | null;
+                /** @description `started`, `verified`, `failed` or `rolled_back`. */
+                status: string;
+                to_version?: string | null;
+                /** Format: uuid */
+                verification_evidence_id?: string | null;
+            }[];
             /** Format: int64 */
             page: number;
             /** Format: int64 */
@@ -47231,6 +48074,34 @@ export interface components {
             /** @description Up to 50 opens, newest last. */
             items: components["schemas"]["RecentOpen"][];
         };
+        RecommendBody: {
+            /** @description Why, 1 to 2000 characters. */
+            reasons: string;
+            /** @description `approve` or `reject`. */
+            recommended: string;
+        };
+        /**
+         * @description One recommendation on an approval request: approve or reject and why,
+         *     from an eligible approver or an agent acting for one. It decides nothing.
+         */
+        Recommendation: {
+            /**
+             * Format: uuid
+             * @description The agent session that wrote it, when an agent did.
+             */
+            agent_session?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            reasons: string;
+            /** @description `approve` or `reject`. */
+            recommended: string;
+            /** Format: uuid */
+            recommended_by: string;
+            /** Format: uuid */
+            request_id: string;
+        };
         RecordColumn: {
             /** @description The whitelisted data type (`number`, `date`, `choice`, `lookup`, ...). */
             data_type: string;
@@ -48216,6 +49087,10 @@ export interface components {
             scopes: components["schemas"]["ScopeRestriction"][];
             status: string;
         };
+        ResubmitBody: {
+            /** @description The corrected payload. */
+            payload: Record<string, never>;
+        };
         RetentionActionSummary: {
             action_type: string;
             /** Format: date-time */
@@ -48844,6 +49719,28 @@ export interface components {
             portal?: string | null;
             /** @description `true` for a web-portal role, `false` for a staff role. */
             portal_role: boolean;
+        };
+        /** @description One test case. */
+        RuleTestCase: {
+            /** @description `pass` or `fail`. */
+            expect: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The example record, attribute to value. */
+            record: Record<string, never>;
+            /** Format: uuid */
+            rule_ref: string;
+            /** @description The values the rule's `set_value` policies must produce. */
+            set_values?: Record<string, never> | null;
+        };
+        /** @description A new test case. */
+        RuleTestCaseBody: {
+            /** @description `pass` or `fail`. */
+            expect: string;
+            name: string;
+            record?: Record<string, never>;
+            set_values?: Record<string, never> | null;
         };
         RuleTestRequest: {
             as?: null | components["schemas"]["TestAudience"];
@@ -50470,6 +51367,14 @@ export interface components {
         SignInUrl: {
             url: string;
         };
+        /** @description Evidence with its signature. */
+        SignedEvidence: {
+            evidence: components["schemas"]["Evidence"];
+            /** @description The first 16 hex characters of the SHA-256 of the public key. */
+            key_id: string;
+            /** @description Base64 Ed25519 signature of the evidence's canonical bytes. */
+            signature: string;
+        };
         /** @description A signer's action. */
         SignerAction: {
             /** @description `code` (email me a code), `sign` or `decline`. */
@@ -51208,6 +52113,14 @@ export interface components {
              *     grants anything the caller's own privileges do not already allow.
              */
             risk_ceiling: string;
+        };
+        /** @description An upgrade starting. */
+        StartUpgrade: {
+            /** @description The pre-upgrade checks' report. */
+            check_report?: Record<string, never> | null;
+            from_version: string;
+            safety_point?: string | null;
+            to_version: string;
         };
         StatOut: {
             /** Format: double */
@@ -53302,6 +54215,45 @@ export interface components {
             graph: unknown;
             /** Format: int64 */
             row_version: number;
+        };
+        /** @description One upgrade. */
+        Upgrade: {
+            check_report?: Record<string, never> | null;
+            /** Format: date-time */
+            contract_applied_at?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            from_version?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+            /** @description The backup or snapshot the upgrade can go back to. */
+            safety_point?: string | null;
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: uuid */
+            started_by?: string | null;
+            /** @description `started`, `verified`, `failed` or `rolled_back`. */
+            status: string;
+            to_version?: string | null;
+            /** Format: uuid */
+            verification_evidence_id?: string | null;
+        };
+        /** @description An upgrade's status change. */
+        UpgradeStatus: {
+            /**
+             * Format: date-time
+             * @description When the contract step (the old schema's removal) ran.
+             */
+            contract_applied_at?: string | null;
+            /** @description `verified`, `failed` or `rolled_back`. */
+            status: string;
+            /**
+             * Format: uuid
+             * @description The signed evidence of the verification (AB4-T2).
+             */
+            verification_evidence_id?: string | null;
         };
         UploadSessionRequest: {
             checksum_sha256?: string | null;
@@ -59296,7 +60248,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description The stored rule no longer validates against the live schema */
+            /** @description The stored rule no longer validates against the live schema, or one of its test cases does not hold (A11-T4) */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -59420,6 +60372,187 @@ export interface operations {
             };
             /** @description The stored rule no longer compiles against the live schema */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_rule_test_cases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The business rule */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rule's test cases, at most 100 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RuleTestCase"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such rule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rule is not a business rule */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_rule_test_case: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The business rule */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleTestCaseBody"];
+            };
+        };
+        responses: {
+            /** @description The test case */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleTestCase"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such rule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rule has a test case of this name, or already 100 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing name, an expect other than pass or fail, or not a business rule */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_rule_test_case: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The business rule */
+                id: string;
+                /** @description The test case */
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such rule or test case */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -90935,6 +92068,48 @@ export interface operations {
             };
         };
     };
+    bulk_decide_approvals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkDecideBody"];
+            };
+        };
+        responses: {
+            /** @description Each request's outcome */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkDecideResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown decision, no items, more than 100, or a comment too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     read_approval_email_link: {
         parameters: {
             query?: never;
@@ -91256,6 +92431,271 @@ export interface operations {
                 };
             };
             /** @description Request failed validation, more than 10 attachments, or an attachment the caller cannot read */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    recall_approval: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The request's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The approval request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The recalled request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequestView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller did not submit this request */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such request */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, being decided, or a stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match is missing or not a row_version */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_approval_recommendations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The approval request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The recommendations, at most 100 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Recommendation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither the requester nor an eligible approver */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such request */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_approval_recommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The approval request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendBody"];
+            };
+        };
+        responses: {
+            /** @description The recommendation */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Recommendation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an eligible approver of the current step */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such request */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is no longer pending */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description recommended is not approve or reject, or the reasons are empty or too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resubmit_approval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The recalled approval request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResubmitBody"];
+            };
+        };
+        responses: {
+            /** @description The new request */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequestView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller did not submit the recalled request */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such request */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is not recalled, or was already resubmitted */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The action's policy no longer validates */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -96908,6 +98348,114 @@ export interface operations {
             };
         };
     };
+    create_calendar_feed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarFeedBody"];
+            };
+        };
+        responses: {
+            /** @description The feed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarFeed"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an https URL, or one that reaches a private address */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_calendar_feed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The feed */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such feed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_calendar_sightings: {
         parameters: {
             query?: {
@@ -101317,6 +102865,50 @@ export interface operations {
             };
             /** @description A bad OTP, or ZATCA refused a step (the reason is kept on the device) */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    receive_email_feedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `ses` or `sendgrid` */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        /** @description The provider's event payload, as it sends it */
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unsigned, wrongly signed, stale or from a topic not configured */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such provider, or it is not configured */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -108730,6 +110322,682 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ops_cluster: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cluster's status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClusterStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    declare_ops_disaster: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclareDisaster"];
+            };
+        };
+        responses: {
+            /** @description The declared disaster */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Disaster"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.dr.declare */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An empty or too long scenario or summary */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ops_disaster_approval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The approval request */
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The approval's status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisasterApproval"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.dr.declare */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such disaster approval */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    request_ops_disaster_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The declared disaster */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisasterActionBody"];
+            };
+        };
+        responses: {
+            /** @description The approval the action waits on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisasterApproval"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.dr.declare */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such disaster */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The disaster is closed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown action, or no Operations role to approve it */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    close_ops_disaster: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The disaster's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The declared disaster */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The closed disaster */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Disaster"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.dr.declare */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such disaster */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already closed, or a stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match is missing or not a row_version */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ops_drills: {
+        parameters: {
+            query?: {
+                /** @description Only drills of this kind. */
+                kind?: string;
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of drills */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DrillRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown kind */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    record_ops_drill_evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignedEvidence"];
+            };
+        };
+        responses: {
+            /** @description Already stored; the stored id */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceRecorded"];
+                };
+            };
+            /** @description Stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceRecorded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.drill.run */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not attome-evidence/v1, a signature that does not hold, or no configured key */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ops_drill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The drill */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The signed evidence */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignedEvidence"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such drill */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ops_failovers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of failovers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_FailoverEvent"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ops_upgrades: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of upgrades */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Upgrade"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_ops_upgrade: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartUpgrade"];
+            };
+        };
+        responses: {
+            /** @description The upgrade, started */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Upgrade"];
+                };
+            };
+            /** @description Missing or invalid credentials, or `reauth_required` without a step-up in the last 15 minutes */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.upgrade.run */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A version that is empty or not a version string */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_ops_upgrade: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The upgrade's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The upgrade */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpgradeStatus"];
+            };
+        };
+        responses: {
+            /** @description The upgrade */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Upgrade"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.upgrade.run */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such upgrade */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing If-Match, or a status the upgrade cannot move to */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
