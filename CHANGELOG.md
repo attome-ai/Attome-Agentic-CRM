@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- `seo.draft` agent action (E13-T11): drafts a content page's search titles, descriptions and FAQ
+  in Arabic and English, internal links to other published pages of its site and an explanation and fix
+  for each audit finding; returns a checked draft (lengths flagged, unknown links dropped) and saves
+  nothing. Administrators only, behind `content.seo_agent`.
 - DocuSign (K4-T3): a connector adapter sends envelopes for signature (documents, signers in routing
   order on `/sn1/`-style anchors) and reads an envelope's status; inbound hooks gain a `docusign`
   preset that checks DocuSign Connect's `X-DocuSign-Signature-n` HMAC, and Connect messages map onto

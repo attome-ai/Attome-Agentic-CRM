@@ -427,6 +427,7 @@ dependencies = [
  "attome-commission",
  "attome-compliance",
  "attome-config",
+ "attome-content",
  "attome-core",
  "attome-db",
  "attome-field",
