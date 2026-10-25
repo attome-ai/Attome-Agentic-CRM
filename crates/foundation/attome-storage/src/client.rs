@@ -113,12 +113,21 @@ impl StorageClient {
 /// `storage.backend` names.
 pub async fn create_storage_client(config: &AppConfig) -> Result<StorageClient, StorageError> {
     let storage = &config.storage;
-    match storage.backend {
+    let mut client = match storage.backend {
         StorageBackend::S3 => create_storage_client_for(storage.s3_target(), "storage").await,
         StorageBackend::Local => create_local_client(&storage.local).await,
         StorageBackend::Azure => create_azure_client(&storage.azure),
         StorageBackend::Gcs => create_gcs_client(&storage.gcs),
+    }?;
+    // Z6-T4: the upload store only; the audit-anchor bucket stays as it is.
+    if storage.encrypts_files() {
+        client.inner = Arc::new(crate::encrypt::Encrypted::new(
+            client.inner,
+            storage.encryption_key.clone(),
+        ));
+        info!("files are encrypted at rest by the server");
     }
+    Ok(client)
 }
 
 /// Builds a client for **any** one S3-compatible bucket named by an

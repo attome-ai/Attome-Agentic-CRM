@@ -1487,6 +1487,22 @@ impl AppConfig {
         if let Err((field, reason)) = self.metadata.release_report.check() {
             return Err(ConfigError::Invalid { field, reason });
         }
+        // Z6-T4 — the file encryption ring is optional, but a configured one
+        // must be well formed, and asking for client-side encryption without
+        // one is a boot error rather than files silently left in the clear.
+        if !self.storage.encryption_key.is_empty() {
+            Self::check_secret_ring(
+                "storage.encryption_key",
+                &self.storage.encryption_key,
+                production,
+            )?;
+            Self::check_hex_key_ring("storage.encryption_key", &self.storage.encryption_key)?;
+        } else if self.storage.encrypt_client_side {
+            return Err(ConfigError::Invalid {
+                field: "storage.encrypt_client_side".into(),
+                reason: "needs storage.encryption_key".into(),
+            });
+        }
         // D-788 rule 9 — the recovery-archive ring is optional (absent = the
         // archive-needing operations fail closed), but a configured one must
         // be well formed: a malformed ring is a boot error, never a runtime

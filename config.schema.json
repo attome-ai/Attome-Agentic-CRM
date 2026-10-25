@@ -3112,6 +3112,34 @@
           "description": "`host:port` of a ClamAV `clamd` daemon (INSTREAM protocol) the async\nscan job submits uploaded bytes to. Empty (the default) means no\nscanner is configured — the scan job then fails closed (rejects,\nnever promotes) rather than silently skipping malware scanning.",
           "type": "string"
         },
+        "encrypt_client_side": {
+          "default": false,
+          "description": "Z6-T4: encrypt files in the server on S3, Azure or GCS too, instead of\nrelying on the backend's own server-side encryption. Needs\n`encryption_key`. Presigned download links then serve ciphertext, so\nleave it off unless downloads go through the server.",
+          "type": "boolean"
+        },
+        "encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "Z6-T4: the key-encryption-key ring files are encrypted under, its own\ntrust domain (D-069). Each file gets its own data key, wrapped by this\nring's active key and stored in the file's header. Set, it encrypts\nevery file on `local` storage, and on the other backends when\n`encrypt_client_side` is true; empty (the default), nothing is\nencrypted by the server. Every entry is 64 hex chars (a boot error\notherwise). Keep old keys in the ring after a rotation: files sealed\nunder them still name them.",
+          "writeOnly": true
+        },
         "gcs": {
           "$ref": "#/$defs/GcsStorageSettings"
         },

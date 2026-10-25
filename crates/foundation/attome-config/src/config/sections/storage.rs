@@ -261,6 +261,22 @@ pub struct StorageSection {
     /// never promotes) rather than silently skipping malware scanning.
     #[serde(default)]
     pub clamd_address: String,
+    /// Z6-T4: the key-encryption-key ring files are encrypted under, its own
+    /// trust domain (D-069). Each file gets its own data key, wrapped by this
+    /// ring's active key and stored in the file's header. Set, it encrypts
+    /// every file on `local` storage, and on the other backends when
+    /// `encrypt_client_side` is true; empty (the default), nothing is
+    /// encrypted by the server. Every entry is 64 hex chars (a boot error
+    /// otherwise). Keep old keys in the ring after a rotation: files sealed
+    /// under them still name them.
+    #[serde(default)]
+    pub encryption_key: crate::KeyRing,
+    /// Z6-T4: encrypt files in the server on S3, Azure or GCS too, instead of
+    /// relying on the backend's own server-side encryption. Needs
+    /// `encryption_key`. Presigned download links then serve ciphertext, so
+    /// leave it off unless downloads go through the server.
+    #[serde(default)]
+    pub encrypt_client_side: bool,
 }
 
 impl StorageSection {
@@ -270,6 +286,13 @@ impl StorageSection {
     /// record erasure all delete real objects through it. That is exactly why
     /// audit anchors cannot live in this bucket; see
     /// [`AnchorStoreSection`](crate::AnchorStoreSection).
+    /// Z6-T4: whether the server encrypts files itself: a ring is set, and
+    /// the backend is local disk or `encrypt_client_side` asks for it.
+    pub fn encrypts_files(&self) -> bool {
+        !self.encryption_key.is_empty()
+            && (self.backend == StorageBackend::Local || self.encrypt_client_side)
+    }
+
     pub fn s3_target(&self) -> S3Target<'_> {
         S3Target {
             endpoint: &self.s3_endpoint,
@@ -308,6 +331,8 @@ impl std::fmt::Debug for StorageSection {
             .field("max_entity_storage_bytes", &self.max_entity_storage_bytes)
             .field("quota_warning_pct", &self.quota_warning_pct)
             .field("clamd_address", &self.clamd_address)
+            .field("encryption_key", &self.encryption_key)
+            .field("encrypt_client_side", &self.encrypt_client_side)
             .finish()
     }
 }

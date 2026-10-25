@@ -2156,7 +2156,9 @@ dependencies = [
 name = "attome-storage"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
  "async-trait",
+ "attome-auth",
  "attome-config",
  "attome-outbound",
  "bytes",

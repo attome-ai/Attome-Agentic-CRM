@@ -99,6 +99,7 @@
 //! [`health_check`] rather than failing quietly.
 
 mod client;
+pub mod encrypt;
 mod error;
 pub mod health;
 mod local;

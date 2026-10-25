@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Files encrypted at rest by the server (Z6-T4): with `storage.encryption_key` set, every file on
+  local disk (and on S3, Azure or GCS with `storage.encrypt_client_side`) is sealed with its own
+  AES-256-GCM data key in 1 MiB chunks, the data key wrapped by that ring and kept in the file's header.
+  Reads, ranges and multipart uploads stay streaming; files written before it was turned on read back
+  unchanged; a rotation keeps old files readable while their key stays in the ring.
 - Per-key API quotas (S10-T1): an administrator sets an API key's own requests-per-minute budget
   (`PUT /api/v1/admin/api-keys/{id}/quota`, a configuration audit event; `null` clears it), and the
   rate limiter refuses the key's request past it with `429` (`RateLimit-Policy: api_key_quota`) on any
