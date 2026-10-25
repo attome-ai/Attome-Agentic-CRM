@@ -479,32 +479,21 @@ pub fn plan_backstop_ttl(plan: &ApprovalPlan) -> chrono::Duration {
 /// id), so this is the one accepted `position:` shape.
 pub const POSITION_MANAGER_OF_REQUESTER: &str = "position:manager_of_requester";
 
-/// Rejects an `approvers` token this workspace cannot resolve, *before* it
-/// is ever saved into a policy — the strict counterpart of
-/// `resolve_step_approvers`'s best-effort-skip-unknown-tokens behavior at
-/// decide time. Supported today: `"user:<uuid>"`, `"role:<uuid>"`,
-/// `"team:<uuid>"` (`team` membership, `user_account_mm_team`)
-/// and the literal `"position:manager_of_requester"` (`position`'s
-/// `parent_position_ref` hierarchy via `user_account_mm_position`) —
-/// rejecting anything else here means an operator finds out at policy-save
-/// time, not the first time a request against it can never be decided.
+/// Rejects an `approvers` token no registered resolver can resolve,
+/// *before* it is ever saved into a policy — the strict counterpart of
+/// `resolve_step_approvers`'s skip-unknown-tokens behavior at decide time,
+/// so an operator finds out at policy-save time, not the first time a
+/// request against it can never be decided. The tokens are the prefixes of
+/// [`crate::approval_resolvers::registry`] (Z10-T6).
 pub fn validate_approver_token(token: &str) -> Result<(), AppError> {
-    for prefix in ["user:", "role:", "team:"] {
-        if let Some(rest) = token.strip_prefix(prefix) {
-            return Uuid::parse_str(rest).map(|_| ()).map_err(|_| {
-                AppError::Validation(format!(
-                    "invalid approver token {token:?}: {prefix} must be followed by a uuid"
-                ))
-            });
-        }
+    let registry = crate::approval_resolvers::registry();
+    match registry.lookup(token) {
+        Some((resolver, rest)) => resolver.validate(rest),
+        None => Err(AppError::Validation(format!(
+            "unsupported approver token {token:?}: the known kinds are {}",
+            registry.prefixes().join(", ")
+        ))),
     }
-    if token == POSITION_MANAGER_OF_REQUESTER {
-        return Ok(());
-    }
-    Err(AppError::Validation(format!(
-        "unsupported approver token {token:?} — only \"user:<uuid>\", \"role:<uuid>\", \
-         \"team:<uuid>\" and \"{POSITION_MANAGER_OF_REQUESTER}\" are resolvable in this release"
-    )))
 }
 
 /// Runs [`validate_approver_token`] over every step of a plan — called by
@@ -539,72 +528,34 @@ pub fn validate_plan_approvers(plan: &ApprovalPlan) -> Result<(), AppError> {
 pub async fn resolve_step_approvers(
     state: &EngineState,
     step: &ApprovalStep,
-    action_type: &str,
-    requested_by: Uuid,
+    request: &ApprovalRequest,
 ) -> Result<(usize, Vec<Uuid>, Vec<Uuid>, HashMap<Uuid, Uuid>), AppError> {
+    resolve_step_approvers_for(
+        state,
+        step,
+        &crate::approval_resolvers::ResolveCtx::of(request),
+    )
+    .await
+}
+
+/// [`resolve_step_approvers`] from a [`crate::approval_resolvers::ResolveCtx`]
+/// rather than a stored request.
+pub async fn resolve_step_approvers_for(
+    state: &EngineState,
+    step: &ApprovalStep,
+    ctx: &crate::approval_resolvers::ResolveCtx<'_>,
+) -> Result<(usize, Vec<Uuid>, Vec<Uuid>, HashMap<Uuid, Uuid>), AppError> {
+    let action_type = ctx.action_type;
+    let requested_by = ctx.requested_by;
+    let registry = crate::approval_resolvers::registry();
     let mut principals: HashSet<Uuid> = HashSet::new();
     for token in &step.approvers {
-        if let Some(id) = token.strip_prefix("user:")
-            && let Ok(id) = Uuid::parse_str(id)
-        {
-            principals.insert(id);
-        } else if let Some(role_id) = token.strip_prefix("role:")
-            && let Ok(role_id) = Uuid::parse_str(role_id)
-        {
-            let rows: Vec<(Uuid,)> = sqlx::query_as(
-                "SELECT ur.user_ref FROM user_account_mm_role ur \
-                     JOIN user_account u ON u.id = ur.user_ref \
-                     WHERE ur.role_ref = $1 AND ur.is_deleted = false \
-                       AND (u.is_active IS NULL OR u.is_active = TRUE)",
-            )
-            .bind(role_id)
-            .fetch_all(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-            principals.extend(rows.into_iter().map(|(id,)| id));
-        } else if let Some(team_id) = token.strip_prefix("team:")
-            && let Ok(team_id) = Uuid::parse_str(team_id)
-        {
-            let rows: Vec<(Uuid,)> = sqlx::query_as(
-                "SELECT tm.user_ref FROM user_account_mm_team tm \
-                     JOIN user_account u ON u.id = tm.user_ref \
-                     WHERE tm.team_ref = $1 AND tm.is_deleted = false \
-                       AND (u.is_active IS NULL OR u.is_active = TRUE)",
-            )
-            .bind(team_id)
-            .fetch_all(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-            principals.extend(rows.into_iter().map(|(id,)| id));
-        } else if token == POSITION_MANAGER_OF_REQUESTER {
-            // Every user holding the parent position of any position
-            // `requested_by` holds — dual-hatting means more than one such
-            // user is possible, same as `role:`'s "every member" semantics.
-            // A requester holding no position, or holding only root
-            // positions (no `parent_position_ref`), resolves to no one —
-            // this step then falls back on whatever other tokens it names,
-            // same as an empty `role:` membership does today.
-            let rows: Vec<(Uuid,)> = sqlx::query_as(
-                "SELECT DISTINCT mgr.user_ref \
-                 FROM user_account_mm_position req_pos \
-                 JOIN position pos \
-                     ON pos.id = req_pos.position_ref AND pos.is_deleted = false \
-                 JOIN user_account_mm_position mgr \
-                     ON mgr.position_ref = pos.parent_position_ref AND mgr.is_deleted = false \
-                 JOIN user_account u ON u.id = mgr.user_ref \
-                 WHERE req_pos.user_ref = $1 AND req_pos.is_deleted = false \
-                   AND pos.parent_position_ref IS NOT NULL \
-                   AND (u.is_active IS NULL OR u.is_active = TRUE)",
-            )
-            .bind(requested_by)
-            .fetch_all(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-            principals.extend(rows.into_iter().map(|(id,)| id));
+        // An unknown token is skipped here (best-effort at decide time) —
+        // validate_approver_token/validate_plan_approvers is what actually
+        // stops one being saved into a policy in the first place.
+        if let Some((resolver, rest)) = registry.lookup(token) {
+            principals.extend(resolver.resolve(state, rest, ctx).await?);
         }
-        // Any other token shape is skipped here (best-effort at decide
-        // time) — validate_approver_token/validate_plan_approvers is what
-        // actually stops one being saved into a policy in the first place.
     }
     principals.remove(&requested_by);
 
@@ -702,7 +653,7 @@ pub async fn decide_request_step_with(
         AppError::internal("approval request step index out of range for its own plan")
     })?;
     let (population, principals, allowed, delegate_of) =
-        resolve_step_approvers(state, step, &request.action_type, request.requested_by).await?;
+        resolve_step_approvers(state, step, request).await?;
     let on_behalf_of = decider_on_behalf_of(decider_id, &principals, &delegate_of);
     attome_approval::decide_step_with(
         &state.base.db,
@@ -750,7 +701,7 @@ pub async fn create_request_delegation(
         AppError::internal("approval request step index out of range for its own plan")
     })?;
     let (_population, principals, _allowed, _delegate_of) =
-        resolve_step_approvers(state, step, &request.action_type, request.requested_by).await?;
+        resolve_step_approvers(state, step, request).await?;
     if !principals.contains(&from_user) {
         return Err(AppError::Forbidden);
     }
@@ -1050,8 +1001,7 @@ pub async fn apply_and_audit_step_timeout_with(
         let step_index = usize::try_from(request.step).unwrap_or(0);
         if let Some(step) = plan.steps.get(step_index)
             && let Ok((_pop, _principals, allowed, _delegate_of)) =
-                resolve_step_approvers(state, step, &request.action_type, request.requested_by)
-                    .await
+                resolve_step_approvers(state, step, &request).await
         {
             notify_ids = allowed;
         }

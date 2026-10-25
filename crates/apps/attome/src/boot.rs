@@ -444,6 +444,14 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // present, so select one before Redis/S3/SMTP constructs a TLS client.
     // A prior caller may already have installed the same process-wide value.
     let _ = rustls::crypto::ring::default_provider().install_default();
+    // Z10-T6: approval steps may name a service queue (`queue:<uuid>`).
+    // Installed before any seed can validate a plan, since the registry is
+    // fixed on first use.
+    if !attome_audit::approval_resolvers::install_extra(vec![std::sync::Arc::new(
+        attome_api::approval_queue_resolver::QueueResolver,
+    )]) {
+        tracing::warn!("approver resolvers were already fixed; queue: tokens will not resolve");
+    }
 
     // ENTERPRISE-AUDIT-2026-07-24 finding #6 follow-up: `idempotency.
     // mandatory_operations` and `approval.required_actions` are free-form

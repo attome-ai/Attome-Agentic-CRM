@@ -1,6 +1,8 @@
 pub mod admin;
 pub mod anchor;
 pub mod approval;
+/// Z10-T6: approver tokens resolve through a registry of resolvers.
+pub mod approval_resolvers;
 /// Audit plan item 3.10 / D-541 rule 5: bulk parent `BulkAccepted`/
 /// `BulkCompleted` events (C13/I13).
 pub mod bulk;

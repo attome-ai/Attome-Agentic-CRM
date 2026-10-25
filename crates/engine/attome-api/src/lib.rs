@@ -19,6 +19,8 @@ mod approval_policy_admin;
 /// M9-T1: approval processes, submit and recall.
 pub mod approval_email;
 pub mod approval_process;
+/// Z10-T6: the `queue:<uuid>` approver resolver.
+pub mod approval_queue_resolver;
 /// audit-10-10 Phase 6 items 6.1-6.3 — self-service record history and my-
 /// activity read APIs over the audit ledger. `mod`, not `pub`: nothing else
 /// in this crate reaches into it, same posture as `communication`/

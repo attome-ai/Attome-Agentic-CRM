@@ -192,13 +192,8 @@ async fn mail_step(state: &EngineState, request_id: Uuid) -> Result<usize, AppEr
     else {
         return Ok(0);
     };
-    let (_, _, allowed, _) = attome_audit::approval::resolve_step_approvers(
-        state,
-        step,
-        &request.action_type,
-        request.requested_by,
-    )
-    .await?;
+    let (_, _, allowed, _) =
+        attome_audit::approval::resolve_step_approvers(state, step, &request).await?;
     let mut approvers = Vec::new();
     for user_id in allowed.into_iter().take(MAX_APPROVERS) {
         let Ok(ctx) = state.base.security.resolve(user_id).await else {

@@ -4962,6 +4962,267 @@ fn sensitivity_label_round_trips() {
     })
 }
 
+/// Z10-T6: one approval step resolved for a record of `entity`.
+async fn resolve_for(
+    state: &EngineState,
+    token: &str,
+    requested_by: Uuid,
+    entity: &str,
+    record: Uuid,
+) -> Vec<Uuid> {
+    let step: attome_approval::ApprovalStep =
+        serde_json::from_value(serde_json::json!({ "mode": "any", "approvers": [token] }))
+            .expect("a step");
+    let ctx = attome_audit::approval_resolvers::ResolveCtx {
+        requested_by,
+        regarding_entity: Some(entity),
+        regarding_id: Some(record),
+        action_type: "test.resolve",
+    };
+    let (_, principals, _, _) =
+        attome_audit::approval::resolve_step_approvers_for(state, &step, &ctx)
+            .await
+            .expect("resolve");
+    principals
+}
+
+async fn seed_user_row(db: &attome_db::DbPool) -> Uuid {
+    let id = Uuid::now_v7();
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
+        .bind(id)
+        .bind(format!("resolver-test-{id}"))
+        .execute(db)
+        .await
+        .expect("insert user");
+    id
+}
+
+async fn seed_held_position(db: &attome_db::DbPool, parent: Option<Uuid>, holder: Uuid) -> Uuid {
+    let id = Uuid::now_v7();
+    sqlx::query("INSERT INTO position (id, name, parent_position_ref) VALUES ($1, $2, $3)")
+        .bind(id)
+        .bind(format!("resolver-test-position-{id}"))
+        .bind(parent)
+        .execute(db)
+        .await
+        .expect("insert position");
+    sqlx::query(
+        "INSERT INTO user_account_mm_position (id, user_ref, position_ref) VALUES ($1, $2, $3)",
+    )
+    .bind(Uuid::now_v7())
+    .bind(holder)
+    .bind(id)
+    .execute(db)
+    .await
+    .expect("hold position");
+    id
+}
+
+/// A fresh entity with one record: its name, id, the record and its owner.
+async fn owned_record(
+    app: &axum::Router,
+    state: &EngineState,
+    admin_cookie: &str,
+    prefix: &str,
+) -> (String, String, Uuid, Uuid) {
+    let (logicalname, entity_id) = create_entity(app, admin_cookie, prefix).await;
+    create_field(
+        app,
+        admin_cookie,
+        &entity_id,
+        r#"{"logicalname":"name","name":"Name","field_type":"text"}"#,
+    )
+    .await;
+    sync_registry(state).await;
+    let (record, _) = create_hierarchy_node(app, admin_cookie, &logicalname, "r", None).await;
+    let record = Uuid::parse_str(&record).unwrap();
+    let owner: Option<Uuid> = sqlx::query_scalar(&format!(
+        "SELECT owner_ref FROM \"{logicalname}\" WHERE id = $1"
+    ))
+    .bind(record)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("owner_ref");
+    (
+        logicalname,
+        entity_id,
+        record,
+        owner.expect("a created record has an owner"),
+    )
+}
+
+/// Z10-T6: `owner` names the regarding record's owner.
+#[test]
+fn owner_resolver_returns_record_owner() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (logicalname, _, record, owner) =
+            owned_record(&app, &state, &admin_cookie, "resowner").await;
+        let someone = seed_user_row(&state.base.db).await;
+        assert_eq!(
+            resolve_for(&state, "owner", someone, &logicalname, record).await,
+            vec![owner]
+        );
+    })
+}
+
+/// Z10-T6: `owner_manager` and `manager_chain:<n>` climb the owner's
+/// positions.
+#[test]
+fn manager_chain_two_levels() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (logicalname, _, record, owner) =
+            owned_record(&app, &state, &admin_cookie, "reschain").await;
+        let top = seed_user_row(&db).await;
+        let middle = seed_user_row(&db).await;
+        let p0 = seed_held_position(&db, None, top).await;
+        let p1 = seed_held_position(&db, Some(p0), middle).await;
+        seed_held_position(&db, Some(p1), owner).await;
+        let someone = seed_user_row(&db).await;
+
+        assert_eq!(
+            resolve_for(&state, "owner_manager", someone, &logicalname, record).await,
+            vec![middle]
+        );
+        assert_eq!(
+            resolve_for(&state, "manager_chain:1", someone, &logicalname, record).await,
+            vec![middle]
+        );
+        assert_eq!(
+            resolve_for(&state, "manager_chain:2", someone, &logicalname, record).await,
+            vec![top]
+        );
+        assert!(
+            resolve_for(&state, "manager_chain:3", someone, &logicalname, record)
+                .await
+                .is_empty()
+        );
+    })
+}
+
+/// Z10-T6: `attribute:<field>` reads only a lookup to `user_account`.
+#[test]
+fn attribute_resolver_rejects_non_user_lookup() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (logicalname, entity_id, record, _) =
+            owned_record(&app, &state, &admin_cookie, "resattr").await;
+        let users = state
+            .entities
+            .load()
+            .get("user_account")
+            .map(|m| m.entity_id)
+            .expect("user_account is an entity");
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            &format!(
+                r#"{{"logicalname":"approver_ref","name":"Approver","field_type":"lookup","lookup_entity_ref":"{users}"}}"#
+            ),
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            &format!(
+                r#"{{"logicalname":"parent_ref","name":"Parent","field_type":"lookup","lookup_entity_ref":"{entity_id}"}}"#
+            ),
+        )
+        .await;
+        sync_registry(&state).await;
+        let approver = seed_user_row(&db).await;
+        sqlx::query(&format!(
+            "UPDATE \"{logicalname}\" SET approver_ref = $2, parent_ref = $1 WHERE id = $1"
+        ))
+        .bind(record)
+        .bind(approver)
+        .execute(&db)
+        .await
+        .expect("set lookups");
+        let someone = seed_user_row(&db).await;
+
+        assert_eq!(
+            resolve_for(
+                &state,
+                "attribute:approver_ref",
+                someone,
+                &logicalname,
+                record
+            )
+            .await,
+            vec![approver]
+        );
+        assert!(
+            resolve_for(
+                &state,
+                "attribute:parent_ref",
+                someone,
+                &logicalname,
+                record
+            )
+            .await
+            .is_empty(),
+            "a lookup to another entity never names an approver"
+        );
+        assert!(
+            resolve_for(
+                &state,
+                "attribute:no_such_field",
+                someone,
+                &logicalname,
+                record
+            )
+            .await
+            .is_empty()
+        );
+    })
+}
+
+/// Z10-T6: a token no resolver knows is refused when a plan is saved.
+#[test]
+fn unknown_prefix_rejected_at_save() {
+    use attome_audit::approval::validate_approver_token;
+    assert!(validate_approver_token("bogus:1").is_err());
+    assert!(validate_approver_token("owner").is_ok());
+    assert!(validate_approver_token("owner_manager").is_ok());
+    assert!(validate_approver_token("manager_chain:9").is_err());
+    assert!(validate_approver_token("attribute:approver_ref").is_ok());
+    assert!(validate_approver_token(&format!("user:{}", Uuid::now_v7())).is_ok());
+}
+
+/// Z10-T6: a resolver naming the requester still leaves them out.
+#[test]
+fn requester_never_resolves_as_approver() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (logicalname, _, record, owner) =
+            owned_record(&app, &state, &admin_cookie, "resself").await;
+        assert!(
+            resolve_for(&state, "owner", owner, &logicalname, record)
+                .await
+                .is_empty(),
+            "the owner asking never approves their own request"
+        );
+    })
+}
+
 /// F019: `GET .../ancestors` and `GET .../descendants` walk a self-referencing
 /// `parent_ref` chain (`a` -> `b` -> `c`) via the recursive-CTE endpoints,
 /// nearest-first for ancestors, breadth order for descendants.

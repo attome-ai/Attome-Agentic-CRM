@@ -136,13 +136,8 @@ pub(crate) async fn is_eligible(
     let Some(step) = plan.steps.get(step_index) else {
         return Ok(false);
     };
-    let (_, _, allowed, _) = attome_audit::approval::resolve_step_approvers(
-        state,
-        step,
-        &request.action_type,
-        request.requested_by,
-    )
-    .await?;
+    let (_, _, allowed, _) =
+        attome_audit::approval::resolve_step_approvers(state, step, request).await?;
     if !allowed.contains(&ctx.user_id) {
         return Ok(false);
     }
