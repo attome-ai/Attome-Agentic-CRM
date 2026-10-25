@@ -6,7 +6,7 @@ import { HttpEventType } from '@angular/common/http';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CurrencyService, LangService } from '@attome/base';
-import { FieldInputComponent } from './field-input.component';
+import { FieldInputComponent, fromLocalDateTimeInput, toLocalDateTimeInput } from './field-input.component';
 import { EntityService } from '../../services/entity.service';
 import { FileUploadService } from '../file-upload.service';
 import {
@@ -455,5 +455,21 @@ describe('FieldInputComponent — business-rule policy (D-789)', () => {
     expect(el.querySelector('.xf-rule-message')?.textContent).toContain('Too large');
     expect(el.querySelector('[data-testid="field-server-error"]')?.textContent).toContain('locked by the rule');
     expect(el.textContent).toContain('fieldPolicy.requiredLocked');
+  });
+});
+
+describe('date_time input values (Y2-T1)', () => {
+  it('shows a stored moment in the viewer zone and stores it back as the same instant', () => {
+    const stored = '2026-10-25T08:30:00.000Z';
+    const shown = toLocalDateTimeInput(stored);
+    expect(shown).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(fromLocalDateTimeInput(shown)).toBe(stored);
+  });
+
+  it('treats empty and unparseable values safely', () => {
+    expect(toLocalDateTimeInput(null)).toBe('');
+    expect(toLocalDateTimeInput('not a date')).toBe('');
+    expect(fromLocalDateTimeInput('')).toBeNull();
+    expect(fromLocalDateTimeInput('nope')).toBeUndefined();
   });
 });

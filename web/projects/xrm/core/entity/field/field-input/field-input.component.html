@@ -90,7 +90,7 @@
 
     @case ('date_time') {
       <input [id]="field().name" type="datetime-local" class="xf-input"
-             [formControlName]="field().name" />
+             [value]="localDateTime()" (change)="setDateTime($any($event.target).value)" />
     }
 
     @case ('date') {

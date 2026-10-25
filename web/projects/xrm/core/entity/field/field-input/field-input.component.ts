@@ -27,6 +27,24 @@ import { FieldHistoryComponent } from '../field-history/field-history.component'
 import { ImageUploadComponent } from '../image-upload/image-upload.component';
 import { ScanFieldOptions, scanToValues } from './scan-to-values';
 
+/** Y2-T1: a stored moment as a `datetime-local` value in the viewer's zone;
+ *  empty for none or one that does not parse. */
+export function toLocalDateTimeInput(value: unknown): string {
+  if (typeof value !== 'string' || !value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Y2-T1: a `datetime-local` value (the viewer's zone) as the moment to
+ *  store; `null` for an empty input, `undefined` for one that does not parse. */
+export function fromLocalDateTimeInput(raw: string): string | null | undefined {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
 @Component({
   selector: 'attome-field-input',
   standalone: true,
@@ -141,6 +159,19 @@ export class FieldInputComponent implements OnInit, OnDestroy {
 
   /** Puts a past value back into the control; saving the form writes it. */
   restoreValue(value: unknown): void {
+    this.ctrl.setValue(value);
+    this.ctrl.markAsDirty();
+  }
+
+  /** Y2-T1: the control's moment for the `datetime-local` input. */
+  localDateTime(): string {
+    return toLocalDateTimeInput(this.ctrl.value);
+  }
+
+  /** Y2-T1: writes the moment the `datetime-local` input holds. */
+  setDateTime(raw: string): void {
+    const value = fromLocalDateTimeInput(raw);
+    if (value === undefined) return;
     this.ctrl.setValue(value);
     this.ctrl.markAsDirty();
   }
