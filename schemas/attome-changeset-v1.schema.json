@@ -193,6 +193,10 @@
             "remove_calendar_holiday",
             "add_calendar_exception",
             "remove_calendar_exception",
+            "upsert_calendar_rule",
+            "retire_calendar_rule",
+            "upsert_calendar_season",
+            "retire_calendar_season",
             "ensure_privilege",
             "upsert_role",
             "grant_role_privilege",
@@ -357,6 +361,18 @@
         },
         {
           "$ref": "#/$defs/op_remove_calendar_exception"
+        },
+        {
+          "$ref": "#/$defs/op_upsert_calendar_rule"
+        },
+        {
+          "$ref": "#/$defs/op_retire_calendar_rule"
+        },
+        {
+          "$ref": "#/$defs/op_upsert_calendar_season"
+        },
+        {
+          "$ref": "#/$defs/op_retire_calendar_season"
         },
         {
           "$ref": "#/$defs/op_ensure_privilege"
@@ -1786,6 +1802,164 @@
               }
             },
             "exception": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        }
+      }
+    },
+    "op_upsert_calendar_rule": {
+      "description": "upsert_calendar_rule (stage 1)",
+      "properties": {
+        "op": {
+          "const": "upsert_calendar_rule"
+        },
+        "phase": {
+          "const": "expand"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "calendar",
+            "rule"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "calendar": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            },
+            "rule": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        },
+        "args": {
+          "type": "object",
+          "required": [
+            "definition"
+          ]
+        }
+      },
+      "required": [
+        "args"
+      ]
+    },
+    "op_retire_calendar_rule": {
+      "description": "retire_calendar_rule (stage 1)",
+      "properties": {
+        "op": {
+          "const": "retire_calendar_rule"
+        },
+        "phase": {
+          "const": "contract"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "calendar",
+            "rule"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "calendar": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            },
+            "rule": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        }
+      }
+    },
+    "op_upsert_calendar_season": {
+      "description": "upsert_calendar_season (stage 1)",
+      "properties": {
+        "op": {
+          "const": "upsert_calendar_season"
+        },
+        "phase": {
+          "const": "expand"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "calendar",
+            "season"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "calendar": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            },
+            "season": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        },
+        "args": {
+          "type": "object",
+          "required": [
+            "definition"
+          ]
+        }
+      },
+      "required": [
+        "args"
+      ]
+    },
+    "op_retire_calendar_season": {
+      "description": "retire_calendar_season (stage 1)",
+      "properties": {
+        "op": {
+          "const": "retire_calendar_season"
+        },
+        "phase": {
+          "const": "contract"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "calendar",
+            "season"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "calendar": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            },
+            "season": {
               "type": "string",
               "minLength": 1,
               "not": {

@@ -193,6 +193,22 @@ const RECORDED: &[(&str, &[&str])] = &[
         "DELETE /api/v1/admin/calendars/{id}/exceptions/{exception_id}",
         &["remove_calendar_exception"],
     ),
+    (
+        "POST /api/v1/admin/calendars/{id}/holiday-rules",
+        &["upsert_calendar_rule"],
+    ),
+    (
+        "DELETE /api/v1/admin/calendars/{id}/holiday-rules/{rule_id}",
+        &["retire_calendar_rule"],
+    ),
+    (
+        "POST /api/v1/admin/calendars/{id}/seasons",
+        &["upsert_calendar_season"],
+    ),
+    (
+        "DELETE /api/v1/admin/calendars/{id}/seasons/{season_id}",
+        &["retire_calendar_season"],
+    ),
     // Engines (lane L5).
     ("POST /api/v1/admin/queries", &["upsert_query"]),
     ("PATCH /api/v1/admin/queries/{id}", &["upsert_query"]),

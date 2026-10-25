@@ -28,11 +28,13 @@ use axum::{
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::admin_hooks as hooks;
-use crate::bundle::model::{CalendarDef, CalendarExceptionDef, HolidayDef};
+use crate::bundle::model::{
+    CalendarDef, CalendarExceptionDef, HolidayDef, HolidayRuleDef, SeasonDef,
+};
 use attome_records::query_admin::{
     ReconcileStep, customized_marker, map_unique_violation, reconcile_step,
 };
@@ -51,6 +53,15 @@ pub(crate) struct CalendarDetail {
     /// `product`, `project` or `customer`. Only a changeset of that layer
     /// may update or retire it (409 `layer_mismatch` otherwise).
     owner_layer: String,
+    /// Z12-T4: the calendar this one inherits from.
+    parent_calendar_id: Option<Uuid>,
+    /// The parent's name (how a changeset names it).
+    parent: Option<String>,
+    /// Z12-T3: an ISO 3166 country code, such as `SA`.
+    country_code: Option<String>,
+    name_ar: Option<String>,
+    /// Z12-T5: the calendar's content version.
+    current_version: i32,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -65,6 +76,15 @@ pub(crate) struct CalendarBody {
     hours: Value,
     #[serde(default)]
     is_default: bool,
+    /// Z12-T6: the calendar this one inherits from; its chain may not loop
+    /// or run deeper than three calendars.
+    #[serde(default)]
+    parent_calendar_id: Option<Uuid>,
+    /// An ISO 3166 two-letter country code.
+    #[serde(default)]
+    country_code: Option<String>,
+    #[serde(default)]
+    name_ar: Option<String>,
 }
 
 fn default_hours() -> Value {
@@ -72,7 +92,9 @@ fn default_hours() -> Value {
 }
 
 const CALENDAR_SELECT: &str = "SELECT id, name, description, tz, working_days, hours, is_default, is_active, \
-     owner_layer FROM calendar";
+     owner_layer, parent_calendar_id, \
+     (SELECT p.name FROM calendar p WHERE p.id = calendar.parent_calendar_id) AS parent, \
+     country_code, name_ar, current_version FROM calendar";
 
 /// List calendars
 ///
@@ -125,7 +147,7 @@ async fn list_calendars(
     tag = "admin",
     params(("id" = Uuid, Path, description = "The calendar")),
     responses(
-        (status = 200, description = "Success", body = CalendarDetail),
+        (status = 200, description = "The calendar with its holiday rules and seasons", body = CalendarFull),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
@@ -136,15 +158,42 @@ async fn get_calendar(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
-) -> Result<Json<CalendarDetail>, AppError> {
+) -> Result<Json<CalendarFull>, AppError> {
     let sql = format!("{CALENDAR_SELECT} WHERE id = $1 AND is_active = true");
-    let row = sqlx::query_as(&sql)
+    let calendar: CalendarDetail = sqlx::query_as(&sql)
         .bind(id)
         .fetch_optional(&state.base.db)
         .await
         .map_err(AppError::internal)?
         .ok_or(AppError::NotFound)?;
-    Ok(Json(row))
+    let rules = sqlx::query_as(&format!(
+        "{RULE_SELECT} WHERE calendar_id = $1 AND is_active = true ORDER BY name"
+    ))
+    .bind(id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let seasons = sqlx::query_as(&format!(
+        "{SEASON_SELECT} WHERE calendar_id = $1 AND is_active = true ORDER BY name"
+    ))
+    .bind(id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(CalendarFull {
+        calendar,
+        rules,
+        seasons,
+    }))
+}
+
+/// Z12-T6: one calendar with its holiday rules and seasons.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct CalendarFull {
+    #[serde(flatten)]
+    calendar: CalendarDetail,
+    rules: Vec<RuleDetail>,
+    seasons: Vec<SeasonDetail>,
 }
 
 /// Create a calendar
@@ -235,13 +284,18 @@ pub(crate) async fn create_calendar_in_tx(
         clear_other_defaults(tx, None).await?;
     }
     let id = Uuid::now_v7();
+    if let Some(parent) = body.parent_calendar_id {
+        check_parent_in_tx(tx, id, parent).await?;
+    }
     sqlx::query(
-        "INSERT INTO calendar (id, name, description, tz, working_days, hours, is_default, is_active, is_customized, created_at, created_by, owner_layer) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, true, true, NOW(), $8, $9)",
+        "INSERT INTO calendar (id, name, description, tz, working_days, hours, is_default, is_active, is_customized, created_at, created_by, owner_layer, \
+                               parent_calendar_id, country_code, name_ar) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, true, true, NOW(), $8, $9, $10, $11, $12)",
     )
     .bind(id).bind(body.name.trim()).bind(body.description.as_deref().map(str::trim))
     .bind(body.tz.trim()).bind(&body.working_days).bind(&body.hours).bind(body.is_default)
     .bind(actor).bind(layer.as_str())
+    .bind(body.parent_calendar_id).bind(country(body)).bind(name_ar(body))
     .execute(&mut **tx).await.map_err(map_unique_violation)?;
     read_calendar_in_tx(tx, id).await
 }
@@ -257,11 +311,16 @@ pub(crate) async fn update_calendar_in_tx(
     if body.is_default {
         clear_other_defaults(tx, Some(id)).await?;
     }
+    if let Some(parent) = body.parent_calendar_id {
+        check_parent_in_tx(tx, id, parent).await?;
+    }
     let changed = sqlx::query(
-        "UPDATE calendar SET name=$2, description=$3, tz=$4, working_days=$5, hours=$6, is_default=$7, is_customized=true \
+        "UPDATE calendar SET name=$2, description=$3, tz=$4, working_days=$5, hours=$6, is_default=$7, is_customized=true, \
+                parent_calendar_id=$8, country_code=$9, name_ar=$10 \
          WHERE id=$1 AND is_active=true",
     ).bind(id).bind(body.name.trim()).bind(body.description.as_deref().map(str::trim))
      .bind(body.tz.trim()).bind(&body.working_days).bind(&body.hours).bind(body.is_default)
+     .bind(body.parent_calendar_id).bind(country(body)).bind(name_ar(body))
      .execute(&mut **tx).await.map_err(map_unique_violation)?;
     if changed.rows_affected() == 0 {
         return Err(AppError::NotFound);
@@ -467,10 +526,91 @@ fn validate_body(body: &CalendarBody) -> Result<(), AppError> {
     if body.tz.trim().is_empty() {
         return Err(AppError::Validation("calendar timezone is required".into()));
     }
+    if let Some(code) = body.country_code.as_deref().map(str::trim)
+        && !code.is_empty()
+        && !(code.len() == 2 && code.bytes().all(|b| b.is_ascii_alphabetic()))
+    {
+        return Err(AppError::Validation(
+            "country_code is a two-letter ISO 3166 code, such as SA".into(),
+        ));
+    }
     // D-517 — the same strict parser the runtime loader uses, so a definition
     // that would load as a partial calendar is rejected here instead.
     attome_core::calendar::validate_definition(&body.tz, &body.working_days, &body.hours)
         .map_err(|e| AppError::Validation(e.0))
+}
+
+fn country(body: &CalendarBody) -> Option<String> {
+    body.country_code
+        .as_deref()
+        .map(str::trim)
+        .filter(|c| !c.is_empty())
+        .map(str::to_ascii_uppercase)
+}
+
+fn name_ar(body: &CalendarBody) -> Option<&str> {
+    body.name_ar
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+}
+
+/// Z12-T6 (the Z12-T4 rules): `id` may inherit from `parent` when the
+/// parent is an active calendar, the chain from the parent up does not pass
+/// through `id`, and the deepest chain through `id` (its ancestors, itself
+/// and its descendants) holds at most
+/// [`attome_core::calendar::MAX_CALENDAR_DEPTH`] calendars.
+async fn check_parent_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    id: Uuid,
+    parent: Uuid,
+) -> Result<(), AppError> {
+    let max = attome_core::calendar::MAX_CALENDAR_DEPTH;
+    let mut above = 0usize;
+    let mut next = Some(parent);
+    while let Some(current) = next {
+        if current == id {
+            return Err(AppError::Validation(
+                "a calendar cannot inherit from itself, directly or through its parents".into(),
+            ));
+        }
+        above += 1;
+        if above > max {
+            break;
+        }
+        let row: Option<Option<Uuid>> = sqlx::query_scalar(
+            "SELECT parent_calendar_id FROM calendar WHERE id = $1 AND is_active = true",
+        )
+        .bind(current)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+        let Some(up) = row else {
+            return Err(AppError::Validation(format!(
+                "the parent calendar {current} is not an active calendar"
+            )));
+        };
+        next = up;
+    }
+    let below: i32 = sqlx::query_scalar(
+        "WITH RECURSIVE down(id, depth) AS ( \
+             SELECT id, 1 FROM calendar WHERE parent_calendar_id = $1 AND is_active = true \
+             UNION ALL \
+             SELECT c.id, d.depth + 1 FROM calendar c JOIN down d ON c.parent_calendar_id = d.id \
+              WHERE c.is_active = true AND d.depth < $2 \
+         ) SELECT COALESCE(max(depth), 0) FROM down",
+    )
+    .bind(id)
+    .bind(i32::try_from(max).unwrap_or(i32::MAX))
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    if above + 1 + usize::try_from(below).unwrap_or(0) > max {
+        return Err(AppError::Validation(format!(
+            "calendars inherit through at most {max} levels"
+        )));
+    }
+    Ok(())
 }
 
 /// At most one active default calendar deployment-wide
@@ -1300,6 +1440,906 @@ async fn delete_exception(
     Ok(StatusCode::NO_CONTENT)
 }
 
+// ── Holiday rules and seasons (Z12-T6) ───────────────────────────────────────
+
+#[derive(sqlx::FromRow, Serialize, ToSchema)]
+pub(crate) struct RuleDetail {
+    id: Uuid,
+    calendar_id: Uuid,
+    name: String,
+    name_ar: Option<String>,
+    /// An `attome_calendar::rules::HolidayRule`, such as
+    /// `{"kind": "hijri", "month": 10, "day": 1, "span_days": 3}`.
+    #[schema(value_type = Object)]
+    rule: Value,
+    needs_sighting: bool,
+    owner_layer: String,
+}
+
+const RULE_SELECT: &str = "SELECT id, calendar_id, name, name_ar, rule, needs_sighting, owner_layer \
+     FROM calendar_holiday_rule";
+
+#[derive(sqlx::FromRow, Serialize, ToSchema)]
+pub(crate) struct SeasonDetail {
+    id: Uuid,
+    calendar_id: Uuid,
+    name: String,
+    name_ar: Option<String>,
+    /// An `attome_calendar::rules::Season`: `start` and `end` rules and the
+    /// hours per weekday between them.
+    #[schema(value_type = Object)]
+    definition: Value,
+    owner_layer: String,
+}
+
+const SEASON_SELECT: &str =
+    "SELECT id, calendar_id, name, name_ar, definition, owner_layer FROM calendar_season";
+
+/// The current Gregorian year, for checking a rule expands.
+fn this_year() -> i32 {
+    use chrono::Datelike;
+    chrono::Utc::now().year()
+}
+
+/// A holiday rule as given: it parses, a sighted rule is a Hijri one, and it
+/// expands for this year and the next.
+fn check_rule(def: &HolidayRuleDef) -> Result<attome_core::calendar::rules::HolidayRule, String> {
+    use attome_core::calendar::rules::{HolidayRule, expand};
+    if def.name.trim().is_empty() || def.name.len() > 200 {
+        return Err("a holiday rule has a name of at most 200 characters".into());
+    }
+    let rule: HolidayRule = serde_json::from_value(def.rule.clone())
+        .map_err(|e| format!("rule '{}': {e}", def.name))?;
+    if def.needs_sighting && !matches!(rule, HolidayRule::Hijri { .. }) {
+        return Err(format!(
+            "rule '{}': only a Hijri holiday waits for a sighting",
+            def.name
+        ));
+    }
+    for year in [this_year(), this_year() + 1] {
+        expand(&rule, year).map_err(|e| format!("rule '{}': {e}", def.name))?;
+    }
+    Ok(rule)
+}
+
+/// A season as given: it parses and expands for this year.
+fn check_season(def: &SeasonDef) -> Result<(), String> {
+    use attome_core::calendar::rules::{Season, expand_season};
+    if def.name.trim().is_empty() || def.name.len() > 200 {
+        return Err("a season has a name of at most 200 characters".into());
+    }
+    let season: Season = serde_json::from_value(def.definition.clone())
+        .map_err(|e| format!("season '{}': {e}", def.name))?;
+    expand_season(&season, this_year()).map_err(|e| format!("season '{}': {e}", def.name))?;
+    Ok(())
+}
+
+async fn calendar_exists(db: &attome_db::DbPool, calendar_id: Uuid) -> Result<(), AppError> {
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM calendar WHERE id = $1 AND is_active = true)",
+    )
+    .bind(calendar_id)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if exists {
+        Ok(())
+    } else {
+        Err(AppError::NotFound)
+    }
+}
+
+/// The holiday-rule POST's write, transaction-scoped (`upsert_calendar_rule`):
+/// the calendar's live rule of that name is replaced, or a new one added
+/// with the recording's layer.
+pub(crate) async fn upsert_rule_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    recording: &Recording,
+    calendar_id: Uuid,
+    actor: Uuid,
+    def: &HolidayRuleDef,
+) -> Result<RuleDetail, AppError> {
+    let existing: Option<(Uuid, String)> = sqlx::query_as(
+        "SELECT id, owner_layer FROM calendar_holiday_rule \
+          WHERE calendar_id = $1 AND name = $2 AND is_active = true FOR UPDATE",
+    )
+    .bind(calendar_id)
+    .bind(def.name.trim())
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let id = match existing {
+        Some((id, owner)) => {
+            hooks::check_row_owner(recording, &owner)?;
+            sqlx::query(
+                "UPDATE calendar_holiday_rule \
+                    SET name_ar = $2, rule = $3, needs_sighting = $4, row_version = row_version + 1 \
+                  WHERE id = $1",
+            )
+            .bind(id)
+            .bind(def.name_ar.as_deref())
+            .bind(&def.rule)
+            .bind(def.needs_sighting)
+            .execute(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+            id
+        }
+        None => {
+            let layer = recording.stamp()?;
+            let id = Uuid::now_v7();
+            sqlx::query(
+                "INSERT INTO calendar_holiday_rule \
+                     (id, calendar_id, name, name_ar, rule, needs_sighting, created_by, owner_layer) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+            )
+            .bind(id)
+            .bind(calendar_id)
+            .bind(def.name.trim())
+            .bind(def.name_ar.as_deref())
+            .bind(&def.rule)
+            .bind(def.needs_sighting)
+            .bind(actor)
+            .bind(layer.as_str())
+            .execute(&mut **tx)
+            .await
+            .map_err(map_unique_violation)?;
+            id
+        }
+    };
+    sqlx::query_as(&format!("{RULE_SELECT} WHERE id = $1"))
+        .bind(id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(AppError::internal)
+}
+
+/// The holiday-rule DELETE's write (a soft removal), transaction-scoped
+/// (`retire_calendar_rule`).
+pub(crate) async fn retire_rule_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    recording: &Recording,
+    calendar_id: Uuid,
+    rule_id: Uuid,
+) -> Result<RuleDetail, AppError> {
+    lock_date_row_owner(tx, recording, "calendar_holiday_rule", calendar_id, rule_id).await?;
+    sqlx::query("UPDATE calendar_holiday_rule SET is_active = false WHERE id = $1")
+        .bind(rule_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    sqlx::query_as(&format!("{RULE_SELECT} WHERE id = $1"))
+        .bind(rule_id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(AppError::internal)
+}
+
+/// The season POST's write, transaction-scoped (`upsert_calendar_season`).
+pub(crate) async fn upsert_season_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    recording: &Recording,
+    calendar_id: Uuid,
+    actor: Uuid,
+    def: &SeasonDef,
+) -> Result<SeasonDetail, AppError> {
+    let existing: Option<(Uuid, String)> = sqlx::query_as(
+        "SELECT id, owner_layer FROM calendar_season \
+          WHERE calendar_id = $1 AND name = $2 AND is_active = true FOR UPDATE",
+    )
+    .bind(calendar_id)
+    .bind(def.name.trim())
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let id = match existing {
+        Some((id, owner)) => {
+            hooks::check_row_owner(recording, &owner)?;
+            sqlx::query(
+                "UPDATE calendar_season SET name_ar = $2, definition = $3, \
+                        row_version = row_version + 1 WHERE id = $1",
+            )
+            .bind(id)
+            .bind(def.name_ar.as_deref())
+            .bind(&def.definition)
+            .execute(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+            id
+        }
+        None => {
+            let layer = recording.stamp()?;
+            let id = Uuid::now_v7();
+            sqlx::query(
+                "INSERT INTO calendar_season \
+                     (id, calendar_id, name, name_ar, definition, created_by, owner_layer) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            )
+            .bind(id)
+            .bind(calendar_id)
+            .bind(def.name.trim())
+            .bind(def.name_ar.as_deref())
+            .bind(&def.definition)
+            .bind(actor)
+            .bind(layer.as_str())
+            .execute(&mut **tx)
+            .await
+            .map_err(map_unique_violation)?;
+            id
+        }
+    };
+    sqlx::query_as(&format!("{SEASON_SELECT} WHERE id = $1"))
+        .bind(id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(AppError::internal)
+}
+
+/// The season DELETE's write (a soft removal), transaction-scoped
+/// (`retire_calendar_season`).
+pub(crate) async fn retire_season_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    recording: &Recording,
+    calendar_id: Uuid,
+    season_id: Uuid,
+) -> Result<SeasonDetail, AppError> {
+    lock_date_row_owner(tx, recording, "calendar_season", calendar_id, season_id).await?;
+    sqlx::query("UPDATE calendar_season SET is_active = false WHERE id = $1")
+        .bind(season_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    sqlx::query_as(&format!("{SEASON_SELECT} WHERE id = $1"))
+        .bind(season_id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(AppError::internal)
+}
+
+/// The recorded op for a rule: target `{calendar, rule}` (a rule is
+/// identified by its name within its calendar).
+async fn rule_op(
+    tx: &mut attome_db::Tx<'_>,
+    op: Op,
+    row: &RuleDetail,
+) -> Result<RecordedOp, AppError> {
+    let calendar = calendar_name_in_tx(tx, row.calendar_id).await?;
+    hooks::recorded(
+        op,
+        "calendar_holiday_rule",
+        row.id,
+        serde_json::json!({ "calendar": calendar, "rule": row.name }),
+        row,
+    )
+}
+
+/// The recorded op for a season: target `{calendar, season}`.
+async fn season_op(
+    tx: &mut attome_db::Tx<'_>,
+    op: Op,
+    row: &SeasonDetail,
+) -> Result<RecordedOp, AppError> {
+    let calendar = calendar_name_in_tx(tx, row.calendar_id).await?;
+    hooks::recorded(
+        op,
+        "calendar_season",
+        row.id,
+        serde_json::json!({ "calendar": calendar, "season": row.name }),
+        row,
+    )
+}
+
+/// Add or change a holiday rule
+///
+/// Z12-T6: a holiday that recurs — a fixed date, the nth weekday of a month,
+/// a Hijri date (optionally waiting for a moon sighting) or a one-off date —
+/// named once within the calendar; posting the same name replaces it. The
+/// rule must expand for this year and the next. Administrators only.
+/// Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/calendars/{id}/holiday-rules",
+    tag = "admin",
+    params(("id" = Uuid, Path, description = "The calendar")),
+    request_body = HolidayRuleDef,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 201, description = "The rule as stored", body = RuleDetail),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such calendar", body = ErrorResponse),
+        (status = 409, description = "Another layer owns the rule of that name", body = ErrorResponse),
+        (status = 422, description = "A rule that does not parse or expand, or a sighting on a rule that is not Hijri", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn create_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    recording: RecordingCtx,
+    Path(calendar_id): Path<Uuid>,
+    Json(body): Json<HolidayRuleDef>,
+) -> Result<(StatusCode, Json<RuleDetail>), AppError> {
+    check_rule(&body).map_err(AppError::Validation)?;
+    calendar_exists(&state.base.db, calendar_id).await?;
+    recording.preflight(&state.base.db).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row = upsert_rule_in_tx(&mut tx, &recording, calendar_id, ctx.user_id, &body).await?;
+    let op = rule_op(&mut tx, Op::UpsertCalendarRule, &row).await?;
+    recording.record(&mut tx, op).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    audit_calendar_change(
+        &state,
+        ctx.user_id,
+        calendar_id,
+        AuditOperation::Update,
+        "calendar.rule_saved",
+        &format!("holiday rule '{}' saved", row.name),
+    )
+    .await;
+    Ok((StatusCode::CREATED, Json(row)))
+}
+
+/// Remove a holiday rule
+///
+/// Removes a holiday rule; its sightings go with it. Administrators only.
+/// Audited.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/admin/calendars/{id}/holiday-rules/{rule_id}",
+    tag = "admin",
+    params(("id" = Uuid, Path, description = "The calendar"), ("rule_id" = Uuid, Path, description = "The rule")),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 204, description = "Removed"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such rule on this calendar", body = ErrorResponse),
+        (status = 409, description = "Another layer owns the rule", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn delete_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    recording: RecordingCtx,
+    Path((calendar_id, rule_id)): Path<(Uuid, Uuid)>,
+) -> Result<StatusCode, AppError> {
+    recording.preflight(&state.base.db).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row = retire_rule_in_tx(&mut tx, &recording, calendar_id, rule_id).await?;
+    let op = rule_op(&mut tx, Op::RetireCalendarRule, &row).await?;
+    recording.record(&mut tx, op).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    audit_calendar_change(
+        &state,
+        ctx.user_id,
+        calendar_id,
+        AuditOperation::Update,
+        "calendar.rule_removed",
+        &format!("holiday rule '{}' removed", row.name),
+    )
+    .await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Add or change a season
+///
+/// Z12-T6: hours that replace the usual ones between two rules (Ramadan's
+/// short day, say), named once within the calendar; posting the same name
+/// replaces it. The season must expand for this year. Administrators only.
+/// Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/calendars/{id}/seasons",
+    tag = "admin",
+    params(("id" = Uuid, Path, description = "The calendar")),
+    request_body = SeasonDef,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 201, description = "The season as stored", body = SeasonDetail),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such calendar", body = ErrorResponse),
+        (status = 409, description = "Another layer owns the season of that name", body = ErrorResponse),
+        (status = 422, description = "A season that does not parse or expand", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn create_season(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    recording: RecordingCtx,
+    Path(calendar_id): Path<Uuid>,
+    Json(body): Json<SeasonDef>,
+) -> Result<(StatusCode, Json<SeasonDetail>), AppError> {
+    check_season(&body).map_err(AppError::Validation)?;
+    calendar_exists(&state.base.db, calendar_id).await?;
+    recording.preflight(&state.base.db).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row = upsert_season_in_tx(&mut tx, &recording, calendar_id, ctx.user_id, &body).await?;
+    let op = season_op(&mut tx, Op::UpsertCalendarSeason, &row).await?;
+    recording.record(&mut tx, op).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    audit_calendar_change(
+        &state,
+        ctx.user_id,
+        calendar_id,
+        AuditOperation::Update,
+        "calendar.season_saved",
+        &format!("season '{}' saved", row.name),
+    )
+    .await;
+    Ok((StatusCode::CREATED, Json(row)))
+}
+
+/// Remove a season
+///
+/// Removes a season. Administrators only. Audited.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/admin/calendars/{id}/seasons/{season_id}",
+    tag = "admin",
+    params(("id" = Uuid, Path, description = "The calendar"), ("season_id" = Uuid, Path, description = "The season")),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 204, description = "Removed"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such season on this calendar", body = ErrorResponse),
+        (status = 409, description = "Another layer owns the season", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn delete_season(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    recording: RecordingCtx,
+    Path((calendar_id, season_id)): Path<(Uuid, Uuid)>,
+) -> Result<StatusCode, AppError> {
+    recording.preflight(&state.base.db).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row = retire_season_in_tx(&mut tx, &recording, calendar_id, season_id).await?;
+    let op = season_op(&mut tx, Op::RetireCalendarSeason, &row).await?;
+    recording.record(&mut tx, op).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    audit_calendar_change(
+        &state,
+        ctx.user_id,
+        calendar_id,
+        AuditOperation::Update,
+        "calendar.season_removed",
+        &format!("season '{}' removed", row.name),
+    )
+    .await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ── Sightings (Z12-T6) ───────────────────────────────────────────────────────
+
+/// How far a confirmed start may sit from the expected one, in days.
+const MAX_SIGHTING_SHIFT_DAYS: i64 = 3;
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub(crate) struct SightingBody {
+    rule_id: Uuid,
+    hijri_year: i32,
+    /// The Gregorian day the holiday starts, as announced.
+    #[schema(value_type = String, format = "date")]
+    confirmed_start: NaiveDate,
+}
+
+/// One sighted holiday of a Gregorian year: when it is expected to start and,
+/// once confirmed, when it does.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct SightingRow {
+    rule_id: Uuid,
+    rule_name: String,
+    calendar_id: Uuid,
+    hijri_year: i32,
+    #[schema(value_type = String, format = "date")]
+    expected_start: NaiveDate,
+    #[schema(value_type = Option<String>, format = "date")]
+    confirmed_start: Option<NaiveDate>,
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub(crate) struct SightingQuery {
+    /// The Gregorian year; this year when absent.
+    year: Option<i32>,
+}
+
+/// The first day of a sighted Hijri rule in each Hijri year that starts in
+/// Gregorian `year`: `(hijri_year, expected_start)`.
+fn expected_starts(
+    rule: &attome_core::calendar::rules::HolidayRule,
+    year: i32,
+) -> Result<Vec<(i32, NaiveDate)>, AppError> {
+    use attome_core::calendar::rules::{HolidayRule, expand};
+    let HolidayRule::Hijri { month, day, .. } = rule else {
+        return Ok(Vec::new());
+    };
+    let first = HolidayRule::Hijri {
+        month: *month,
+        day: *day,
+        span_days: 1,
+    };
+    expand(&first, year)
+        .map_err(|e| AppError::Validation(e.to_string()))?
+        .into_iter()
+        .map(|date| {
+            attome_core::calendar::hijri::to_hijri(date)
+                .map(|h| (i32::from(h.year), date))
+                .map_err(|e| AppError::Validation(e.to_string()))
+        })
+        .collect()
+}
+
+/// Confirm a sighting
+///
+/// Z12-T6: the day a sighted Hijri holiday really starts this Hijri year, as
+/// announced. Every calendar using the rule moves the holiday from the
+/// expected day to this one. At most three days from the expected start.
+/// Administrators only. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/calendar-sightings",
+    tag = "admin",
+    request_body = SightingBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The sighting as stored", body = SightingRow),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such active rule", body = ErrorResponse),
+        (status = 422, description = "The rule waits for no sighting, or the start is too far from the expected one", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn confirm_sighting(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<SightingBody>,
+) -> Result<Json<SightingRow>, AppError> {
+    let rule: Option<(Uuid, String, Value, bool)> = sqlx::query_as(
+        "SELECT calendar_id, name, rule, needs_sighting FROM calendar_holiday_rule \
+          WHERE id = $1 AND is_active = true",
+    )
+    .bind(body.rule_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (calendar_id, rule_name, rule, needs_sighting) = rule.ok_or(AppError::NotFound)?;
+    if !needs_sighting {
+        return Err(AppError::Validation(
+            "this rule does not wait for a sighting".into(),
+        ));
+    }
+    let rule: attome_core::calendar::rules::HolidayRule =
+        serde_json::from_value(rule).map_err(AppError::internal)?;
+    let year = {
+        use chrono::Datelike;
+        body.confirmed_start.year()
+    };
+    let mut expected = None;
+    for y in [year - 1, year, year + 1] {
+        if let Some((_, start)) = expected_starts(&rule, y)?
+            .into_iter()
+            .find(|(hy, _)| *hy == body.hijri_year)
+        {
+            expected = Some(start);
+            break;
+        }
+    }
+    let expected = expected.ok_or_else(|| {
+        AppError::Validation(format!(
+            "the rule has no start in Hijri year {} near {}",
+            body.hijri_year, body.confirmed_start
+        ))
+    })?;
+    if (body.confirmed_start - expected).num_days().abs() > MAX_SIGHTING_SHIFT_DAYS {
+        return Err(AppError::Validation(format!(
+            "{} is more than {MAX_SIGHTING_SHIFT_DAYS} days from the expected start {expected}",
+            body.confirmed_start
+        )));
+    }
+    sqlx::query(
+        "INSERT INTO calendar_sighting (rule_id, hijri_year, confirmed_start, confirmed_by) \
+         VALUES ($1, $2, $3, $4) \
+         ON CONFLICT (rule_id, hijri_year) DO UPDATE \
+            SET confirmed_start = EXCLUDED.confirmed_start, \
+                confirmed_by = EXCLUDED.confirmed_by, confirmed_at = now()",
+    )
+    .bind(body.rule_id)
+    .bind(body.hijri_year)
+    .bind(body.confirmed_start)
+    .bind(ctx.user_id)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    audit_calendar_change(
+        &state,
+        ctx.user_id,
+        calendar_id,
+        AuditOperation::Update,
+        "calendar.sighting_confirmed",
+        &format!(
+            "'{rule_name}' {} starts {} (expected {expected})",
+            body.hijri_year, body.confirmed_start
+        ),
+    )
+    .await;
+    Ok(Json(SightingRow {
+        rule_id: body.rule_id,
+        rule_name,
+        calendar_id,
+        hijri_year: body.hijri_year,
+        expected_start: expected,
+        confirmed_start: Some(body.confirmed_start),
+    }))
+}
+
+/// Sightings of a year
+///
+/// Every sighted holiday expected to start in the Gregorian year, with the
+/// start confirmed so far. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/calendar-sightings",
+    tag = "admin",
+    params(SightingQuery),
+    responses(
+        (status = 200, description = "Expected and confirmed starts, earliest first", body = Vec<SightingRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_sightings(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(query): Query<SightingQuery>,
+) -> Result<Json<Vec<SightingRow>>, AppError> {
+    let year = query.year.unwrap_or_else(this_year);
+    let rules: Vec<(Uuid, Uuid, String, Value)> = sqlx::query_as(
+        "SELECT r.id, r.calendar_id, r.name, r.rule FROM calendar_holiday_rule r \
+           JOIN calendar c ON c.id = r.calendar_id AND c.is_active = true \
+          WHERE r.is_active = true AND r.needs_sighting = true ORDER BY r.name",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let confirmed: std::collections::HashMap<(Uuid, i32), NaiveDate> =
+        sqlx::query_as::<_, (Uuid, i32, NaiveDate)>(
+            "SELECT rule_id, hijri_year, confirmed_start FROM calendar_sighting",
+        )
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .into_iter()
+        .map(|(rule, year, start)| ((rule, year), start))
+        .collect();
+    let mut out = Vec::new();
+    for (rule_id, calendar_id, rule_name, rule) in rules {
+        let Ok(rule) = serde_json::from_value(rule) else {
+            continue;
+        };
+        for (hijri_year, expected_start) in expected_starts(&rule, year)? {
+            out.push(SightingRow {
+                rule_id,
+                rule_name: rule_name.clone(),
+                calendar_id,
+                hijri_year,
+                expected_start,
+                confirmed_start: confirmed.get(&(rule_id, hijri_year)).copied(),
+            });
+        }
+    }
+    out.sort_by_key(|s| (s.expected_start, s.rule_name.clone()));
+    Ok(Json(out))
+}
+
+// ── Assignments (Z12-T6) ─────────────────────────────────────────────────────
+
+/// Which calendar a person or a team works to.
+#[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
+pub(crate) struct AssignmentRow {
+    subject_type: String,
+    subject_id: Uuid,
+    calendar_id: Uuid,
+    row_version: i64,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub(crate) struct AssignmentBody {
+    calendar_id: Uuid,
+    /// Required to change an assignment that exists (409 when stale).
+    #[serde(default)]
+    row_version: Option<i64>,
+}
+
+fn check_subject_type(subject_type: &str) -> Result<(), AppError> {
+    if matches!(subject_type, "user" | "team") {
+        Ok(())
+    } else {
+        Err(AppError::Validation("subject_type is user or team".into()))
+    }
+}
+
+/// A calendar assignment
+///
+/// The calendar a person (`user`) or a team works to. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/calendar-assignments/{subject_type}/{subject_id}",
+    tag = "admin",
+    params(("subject_type" = String, Path, description = "`user` or `team`"), ("subject_id" = Uuid, Path, description = "The user or team")),
+    responses(
+        (status = 200, description = "The assignment", body = AssignmentRow),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No calendar is assigned", body = ErrorResponse),
+        (status = 422, description = "An unknown subject type", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_assignment(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path((subject_type, subject_id)): Path<(String, Uuid)>,
+) -> Result<Json<AssignmentRow>, AppError> {
+    check_subject_type(&subject_type)?;
+    sqlx::query_as(
+        "SELECT subject_type, subject_id, calendar_id, row_version FROM calendar_assignment \
+          WHERE subject_type = $1 AND subject_id = $2",
+    )
+    .bind(&subject_type)
+    .bind(subject_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .map(Json)
+    .ok_or(AppError::NotFound)
+}
+
+/// Assign a calendar
+///
+/// Sets the calendar a person or a team works to; their business time is
+/// counted on it. Administrators only. Audited.
+#[utoipa::path(
+    put,
+    path = "/api/v1/calendar-assignments/{subject_type}/{subject_id}",
+    tag = "admin",
+    params(("subject_type" = String, Path, description = "`user` or `team`"), ("subject_id" = Uuid, Path, description = "The user or team")),
+    request_body = AssignmentBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The assignment as stored", body = AssignmentRow),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such active calendar", body = ErrorResponse),
+        (status = 409, description = "The assignment exists and `row_version` is missing or stale", body = ErrorResponse),
+        (status = 422, description = "An unknown subject type", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn put_assignment(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path((subject_type, subject_id)): Path<(String, Uuid)>,
+    Json(body): Json<AssignmentBody>,
+) -> Result<Json<AssignmentRow>, AppError> {
+    check_subject_type(&subject_type)?;
+    calendar_exists(&state.base.db, body.calendar_id).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let current: Option<i64> = sqlx::query_scalar(
+        "SELECT row_version FROM calendar_assignment \
+          WHERE subject_type = $1 AND subject_id = $2 FOR UPDATE",
+    )
+    .bind(&subject_type)
+    .bind(subject_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let row: AssignmentRow = match current {
+        None => sqlx::query_as(
+            "INSERT INTO calendar_assignment (subject_type, subject_id, calendar_id) \
+             VALUES ($1, $2, $3) \
+             RETURNING subject_type, subject_id, calendar_id, row_version",
+        )
+        .bind(&subject_type)
+        .bind(subject_id)
+        .bind(body.calendar_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(map_unique_violation)?,
+        Some(version) => {
+            if body.row_version != Some(version) {
+                return Err(AppError::VersionConflict);
+            }
+            sqlx::query_as(
+                "UPDATE calendar_assignment SET calendar_id = $3, row_version = row_version + 1 \
+                  WHERE subject_type = $1 AND subject_id = $2 \
+                 RETURNING subject_type, subject_id, calendar_id, row_version",
+            )
+            .bind(&subject_type)
+            .bind(subject_id)
+            .bind(body.calendar_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?
+        }
+    };
+    tx.commit().await.map_err(AppError::internal)?;
+    attome_audit::write_business_event(
+        &state,
+        "calendar_assignment",
+        subject_id,
+        AuditOperation::Update,
+        "calendar.assigned",
+        ctx.user_id,
+        None,
+        None,
+        format!(
+            "{subject_type} {subject_id} works to calendar {}",
+            body.calendar_id
+        ),
+    )
+    .await;
+    Ok(Json(row))
+}
+
+/// Remove a calendar assignment
+///
+/// The person or team works to the default calendar again. Administrators
+/// only. Audited.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/calendar-assignments/{subject_type}/{subject_id}",
+    tag = "admin",
+    params(("subject_type" = String, Path, description = "`user` or `team`"), ("subject_id" = Uuid, Path, description = "The user or team")),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 204, description = "Removed"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No calendar is assigned", body = ErrorResponse),
+        (status = 422, description = "An unknown subject type", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn delete_assignment(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path((subject_type, subject_id)): Path<(String, Uuid)>,
+) -> Result<StatusCode, AppError> {
+    check_subject_type(&subject_type)?;
+    let removed =
+        sqlx::query("DELETE FROM calendar_assignment WHERE subject_type = $1 AND subject_id = $2")
+            .bind(&subject_type)
+            .bind(subject_id)
+            .execute(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if removed.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
+    attome_audit::write_business_event(
+        &state,
+        "calendar_assignment",
+        subject_id,
+        AuditOperation::Update,
+        "calendar.unassigned",
+        ctx.user_id,
+        None,
+        None,
+        format!("{subject_type} {subject_id} no longer has its own calendar"),
+    )
+    .await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 // ── Service reconcile API (P-environment-promotion §5 step 13) ────────────────
 
 #[derive(sqlx::FromRow)]
@@ -1312,6 +2352,157 @@ struct CalendarProbeRow {
     is_default: bool,
     is_active: bool,
     is_customized: bool,
+    parent_calendar_id: Option<Uuid>,
+    country_code: Option<String>,
+    name_ar: Option<String>,
+}
+
+/// Z12-T6: whether the calendar's live rules (or seasons) differ from the
+/// bundle's, by name and content. `table`/`content` are constants of this
+/// file.
+async fn live_named_differ(
+    db: &attome_db::DbPool,
+    table: &'static str,
+    content: &'static str,
+    calendar_id: Uuid,
+    desired: &std::collections::BTreeMap<String, Value>,
+) -> Result<bool, AppError> {
+    let rows: Vec<(String, Value)> = sqlx::query_as(&format!(
+        "SELECT name, {content} FROM {table} WHERE calendar_id = $1 AND is_active = true"
+    ))
+    .bind(calendar_id)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let live: std::collections::BTreeMap<String, Value> = rows.into_iter().collect();
+    Ok(&live != desired)
+}
+
+/// A bundle's rules as the comparison sees them: name to its stored content.
+fn rule_contents(rules: &[HolidayRuleDef]) -> std::collections::BTreeMap<String, Value> {
+    rules
+        .iter()
+        .map(|r| {
+            (
+                r.name.trim().to_owned(),
+                serde_json::json!({ "name_ar": r.name_ar, "rule": r.rule, "needs_sighting": r.needs_sighting }),
+            )
+        })
+        .collect()
+}
+
+/// A bundle's seasons as the comparison sees them.
+fn season_contents(seasons: &[SeasonDef]) -> std::collections::BTreeMap<String, Value> {
+    seasons
+        .iter()
+        .map(|s| {
+            (
+                s.name.trim().to_owned(),
+                serde_json::json!({ "name_ar": s.name_ar, "definition": s.definition }),
+            )
+        })
+        .collect()
+}
+
+/// Z12-T6: makes the calendar's live rules exactly `rules`, by name.
+async fn reconcile_rules(
+    tx: &mut attome_db::Tx<'_>,
+    calendar_id: Uuid,
+    rules: &[HolidayRuleDef],
+    layer: Layer,
+) -> Result<(), AppError> {
+    let names: Vec<String> = rules.iter().map(|r| r.name.trim().to_owned()).collect();
+    sqlx::query(
+        "UPDATE calendar_holiday_rule SET is_active = false \
+          WHERE calendar_id = $1 AND is_active = true AND NOT (name = ANY($2))",
+    )
+    .bind(calendar_id)
+    .bind(&names)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    for rule in rules {
+        let updated = sqlx::query(
+            "UPDATE calendar_holiday_rule \
+                SET name_ar = $3, rule = $4, needs_sighting = $5, row_version = row_version + 1 \
+              WHERE calendar_id = $1 AND name = $2 AND is_active = true",
+        )
+        .bind(calendar_id)
+        .bind(rule.name.trim())
+        .bind(rule.name_ar.as_deref())
+        .bind(&rule.rule)
+        .bind(rule.needs_sighting)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+        if updated.rows_affected() == 0 {
+            sqlx::query(
+                "INSERT INTO calendar_holiday_rule \
+                     (id, calendar_id, name, name_ar, rule, needs_sighting, owner_layer) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            )
+            .bind(Uuid::now_v7())
+            .bind(calendar_id)
+            .bind(rule.name.trim())
+            .bind(rule.name_ar.as_deref())
+            .bind(&rule.rule)
+            .bind(rule.needs_sighting)
+            .bind(layer.as_str())
+            .execute(&mut **tx)
+            .await
+            .map_err(map_unique_violation)?;
+        }
+    }
+    Ok(())
+}
+
+/// Z12-T6: makes the calendar's live seasons exactly `seasons`, by name.
+async fn reconcile_seasons(
+    tx: &mut attome_db::Tx<'_>,
+    calendar_id: Uuid,
+    seasons: &[SeasonDef],
+    layer: Layer,
+) -> Result<(), AppError> {
+    let names: Vec<String> = seasons.iter().map(|s| s.name.trim().to_owned()).collect();
+    sqlx::query(
+        "UPDATE calendar_season SET is_active = false \
+          WHERE calendar_id = $1 AND is_active = true AND NOT (name = ANY($2))",
+    )
+    .bind(calendar_id)
+    .bind(&names)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    for season in seasons {
+        let updated = sqlx::query(
+            "UPDATE calendar_season SET name_ar = $3, definition = $4, \
+                    row_version = row_version + 1 \
+              WHERE calendar_id = $1 AND name = $2 AND is_active = true",
+        )
+        .bind(calendar_id)
+        .bind(season.name.trim())
+        .bind(season.name_ar.as_deref())
+        .bind(&season.definition)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+        if updated.rows_affected() == 0 {
+            sqlx::query(
+                "INSERT INTO calendar_season (id, calendar_id, name, name_ar, definition, owner_layer) \
+                 VALUES ($1, $2, $3, $4, $5, $6)",
+            )
+            .bind(Uuid::now_v7())
+            .bind(calendar_id)
+            .bind(season.name.trim())
+            .bind(season.name_ar.as_deref())
+            .bind(&season.definition)
+            .bind(layer.as_str())
+            .execute(&mut **tx)
+            .await
+            .map_err(map_unique_violation)?;
+        }
+    }
+    Ok(())
 }
 
 #[derive(sqlx::FromRow)]
@@ -1413,10 +2604,35 @@ pub async fn reconcile_calendar(
         .map_err(|e| AppError::Validation(format!("calendar '{name}': {}", e.0)))?;
     let desired = desired_dates(&desc.holidays, desc.exceptions.as_deref())
         .map_err(|e| AppError::Validation(format!("calendar '{name}': {}", e.0)))?;
+    // Z12-T6: rules and seasons a bundle carries are checked as the admin
+    // routes check them.
+    for rule in desc.rules.iter().flatten() {
+        check_rule(rule).map_err(|e| AppError::Validation(format!("calendar '{name}': {e}")))?;
+    }
+    for season in desc.seasons.iter().flatten() {
+        check_season(season)
+            .map_err(|e| AppError::Validation(format!("calendar '{name}': {e}")))?;
+    }
     let db = &state.base.db;
+    let desired_parent: Option<Uuid> = match desc.parent.as_deref().map(str::trim) {
+        Some(parent) if !parent.is_empty() => Some(
+            sqlx::query_scalar("SELECT id FROM calendar WHERE name = $1 AND is_active = true")
+                .bind(parent)
+                .fetch_optional(db)
+                .await
+                .map_err(AppError::internal)?
+                .ok_or_else(|| {
+                    AppError::Validation(format!(
+                        "calendar '{name}': its parent '{parent}' is not an active calendar"
+                    ))
+                })?,
+        ),
+        _ => None,
+    };
 
     let current: Option<CalendarProbeRow> = sqlx::query_as(
-        "SELECT id, description, tz, working_days, hours, is_default, is_active, is_customized \
+        "SELECT id, description, tz, working_days, hours, is_default, is_active, is_customized, \
+                parent_calendar_id, country_code, name_ar \
          FROM calendar WHERE name = $1",
     )
     .bind(name)
@@ -1430,6 +2646,39 @@ pub async fn reconcile_calendar(
         Some(row) => live_dates_differ(db, row.id, &desired).await?,
         None => false,
     };
+    // Z12-T6: rules and seasons, when the bundle carries them.
+    let named_differ = match current.as_ref() {
+        Some(row) => {
+            let rules = match &desc.rules {
+                Some(rules) => {
+                    live_named_differ(
+                        db,
+                        "calendar_holiday_rule",
+                        "jsonb_build_object('name_ar', name_ar, 'rule', rule, 'needs_sighting', needs_sighting)",
+                        row.id,
+                        &rule_contents(rules),
+                    )
+                    .await?
+                }
+                None => false,
+            };
+            let seasons = match &desc.seasons {
+                Some(seasons) => {
+                    live_named_differ(
+                        db,
+                        "calendar_season",
+                        "jsonb_build_object('name_ar', name_ar, 'definition', definition)",
+                        row.id,
+                        &season_contents(seasons),
+                    )
+                    .await?
+                }
+                None => false,
+            };
+            rules || seasons
+        }
+        None => false,
+    };
     let state_differs = current.as_ref().is_some_and(|row| {
         row.description != desc.description
             || row.tz != tz
@@ -1437,6 +2686,10 @@ pub async fn reconcile_calendar(
             || row.hours != desc.hours
             || row.is_default != desc.is_default
             || dates_differ
+            || named_differ
+            || (desired_parent.is_some() && row.parent_calendar_id != desired_parent)
+            || (desc.country_code.is_some() && row.country_code != desc.country_code)
+            || (desc.name_ar.is_some() && row.name_ar != desc.name_ar)
     });
     let status = current.as_ref().map(|r| (r.is_customized, r.is_active));
     let step = reconcile_step(policy, status, state_differs);
@@ -1506,6 +2759,35 @@ pub async fn reconcile_calendar(
             reconcile_holidays(&mut tx, id, &desired.holidays, layer).await?;
             if let Some(exceptions) = &desired.exceptions {
                 reconcile_exceptions(&mut tx, id, exceptions, layer).await?;
+            }
+            // Z12-T6: inheritance, country, Arabic name, rules and seasons,
+            // each only when the bundle carries it.
+            if let Some(parent) = desired_parent {
+                check_parent_in_tx(&mut tx, id, parent).await?;
+                sqlx::query("UPDATE calendar SET parent_calendar_id = $2 WHERE id = $1")
+                    .bind(id)
+                    .bind(parent)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(AppError::internal)?;
+            }
+            if desc.country_code.is_some() || desc.name_ar.is_some() {
+                sqlx::query(
+                    "UPDATE calendar SET country_code = COALESCE($2, country_code), \
+                            name_ar = COALESCE($3, name_ar) WHERE id = $1",
+                )
+                .bind(id)
+                .bind(desc.country_code.as_deref())
+                .bind(desc.name_ar.as_deref())
+                .execute(&mut *tx)
+                .await
+                .map_err(AppError::internal)?;
+            }
+            if let Some(rules) = &desc.rules {
+                reconcile_rules(&mut tx, id, rules, layer).await?;
+            }
+            if let Some(seasons) = &desc.seasons {
+                reconcile_seasons(&mut tx, id, seasons, layer).await?;
             }
             tx.commit().await.map_err(AppError::internal)?;
             id
@@ -1757,6 +3039,32 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/admin/calendars/{id}/exceptions/{exception_id}",
             axum::routing::delete(delete_exception),
+        )
+        .route(
+            "/api/v1/admin/calendars/{id}/holiday-rules",
+            axum::routing::post(create_rule),
+        )
+        .route(
+            "/api/v1/admin/calendars/{id}/holiday-rules/{rule_id}",
+            axum::routing::delete(delete_rule),
+        )
+        .route(
+            "/api/v1/admin/calendars/{id}/seasons",
+            axum::routing::post(create_season),
+        )
+        .route(
+            "/api/v1/admin/calendars/{id}/seasons/{season_id}",
+            axum::routing::delete(delete_season),
+        )
+        .route(
+            "/api/v1/calendar-sightings",
+            get(list_sightings).post(confirm_sighting),
+        )
+        .route(
+            "/api/v1/calendar-assignments/{subject_type}/{subject_id}",
+            get(get_assignment)
+                .put(put_assignment)
+                .delete(delete_assignment),
         )
         .route(
             "/api/v1/calendars/{id}/calculate",
@@ -2013,7 +3321,16 @@ async fn correct_hijri_month(
     delete_exception,
     list_hijri_months,
     correct_hijri_month,
-    calculate
+    calculate,
+    create_rule,
+    delete_rule,
+    create_season,
+    delete_season,
+    confirm_sighting,
+    list_sightings,
+    get_assignment,
+    put_assignment,
+    delete_assignment
 ))]
 struct ApiDocFragment;
 
@@ -2034,6 +3351,9 @@ mod tests {
             working_days: working_days.iter().map(|d| d.to_string()).collect(),
             hours,
             is_default: false,
+            parent_calendar_id: None,
+            country_code: None,
+            name_ar: None,
         }
     }
 

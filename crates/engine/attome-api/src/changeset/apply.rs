@@ -515,7 +515,11 @@ fn parent_of(op: &DocOp) -> Option<Parent> {
         | Op::AddCalendarHoliday
         | Op::RemoveCalendarHoliday
         | Op::AddCalendarException
-        | Op::RemoveCalendarException => Parent::Calendar(op.t("calendar").to_owned()),
+        | Op::RemoveCalendarException
+        | Op::UpsertCalendarRule
+        | Op::RetireCalendarRule
+        | Op::UpsertCalendarSeason
+        | Op::RetireCalendarSeason => Parent::Calendar(op.t("calendar").to_owned()),
         _ => return None,
     })
 }
@@ -1191,7 +1195,10 @@ impl Ctx<'_> {
         };
         let actor = self.actor.unwrap_or(Uuid::nil());
         let settings = attome_compliance::governance_admin::MasterData {
-            is_master: op.arg("is_master").and_then(Value::as_bool).unwrap_or(false),
+            is_master: op
+                .arg("is_master")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
             hub_style: op
                 .arg("hub_style")
                 .and_then(Value::as_str)
@@ -1625,6 +1632,10 @@ mod tests {
                     | Op::RemoveCalendarHoliday
                     | Op::AddCalendarException
                     | Op::RemoveCalendarException
+                    | Op::UpsertCalendarRule
+                    | Op::RetireCalendarRule
+                    | Op::UpsertCalendarSeason
+                    | Op::RetireCalendarSeason
             );
             assert_eq!(
                 parent_of(&dummy).is_none(),

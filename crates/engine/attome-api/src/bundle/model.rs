@@ -436,6 +436,49 @@ pub struct CalendarDef {
     /// list, keyed by `exception_date`. Export always writes `Some`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exceptions: Option<Vec<CalendarExceptionDef>>,
+    /// Z12-T4: the calendar this one inherits from, by name. `None` leaves
+    /// the target's parent alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent: Option<String>,
+    /// Z12-T3: an ISO 3166 country code, such as `SA`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub country_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name_ar: Option<String>,
+    /// Z12-T6: holiday rules by name. `None` leaves the target's alone;
+    /// `Some` is the exact list. Export writes them when there are any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rules: Option<Vec<HolidayRuleDef>>,
+    /// Z12-T6: seasonal hours by name, the same way as `rules`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seasons: Option<Vec<SeasonDef>>,
+}
+
+/// One `calendar_holiday_rule` row (Z12-T6), embedded under its calendar and
+/// identified by `name` within it. `rule` is an
+/// `attome_calendar::rules::HolidayRule` (`{"kind": "hijri", "month": 10,
+/// "day": 1, "span_days": 3}`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct HolidayRuleDef {
+    pub name: String,
+    #[serde(default)]
+    pub name_ar: Option<String>,
+    #[schema(value_type = Object)]
+    pub rule: serde_json::Value,
+    /// A Hijri holiday whose start moves when the moon is sighted.
+    #[serde(default)]
+    pub needs_sighting: bool,
+}
+
+/// One `calendar_season` row (Z12-T6), identified by `name` within its
+/// calendar. `definition` is an `attome_calendar::rules::Season`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct SeasonDef {
+    pub name: String,
+    #[serde(default)]
+    pub name_ar: Option<String>,
+    #[schema(value_type = Object)]
+    pub definition: serde_json::Value,
 }
 
 fn default_calendar_hours() -> serde_json::Value {

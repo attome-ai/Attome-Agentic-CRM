@@ -187,6 +187,8 @@ pub fn required_args(op: Op) -> &'static [&'static str] {
         | Op::UpsertCalendar
         | Op::AddCalendarHoliday
         | Op::AddCalendarException
+        | Op::UpsertCalendarRule
+        | Op::UpsertCalendarSeason
         | Op::EnsurePrivilege
         | Op::UpsertRole
         | Op::AddRoleGrantCondition
@@ -946,7 +948,38 @@ impl<'a> Fold<'a> {
                     .or_else(|| self.live.calendars.iter().find(|c| c.name == def.name));
                 def.holidays = base.map(|c| c.holidays.clone()).unwrap_or_default();
                 def.exceptions = base.and_then(|c| c.exceptions.clone());
+                // Z12-T6: rules and seasons ride their own ops.
+                def.rules = base.and_then(|c| c.rules.clone());
+                def.seasons = base.and_then(|c| c.seasons.clone());
                 replace_or_push(&mut self.out.calendars, def, |c| c.name.clone());
+            }
+            Op::UpsertCalendarRule => {
+                let def: HolidayRuleDef = op.definition()?;
+                let cal = self.calendar(op.t("calendar"), op)?;
+                replace_or_push(cal.rules.get_or_insert_with(Vec::new), def, |r| {
+                    r.name.clone()
+                });
+            }
+            Op::RetireCalendarRule => {
+                let name = op.t("rule").to_owned();
+                let cal = self.calendar(op.t("calendar"), op)?;
+                cal.rules
+                    .get_or_insert_with(Vec::new)
+                    .retain(|r| r.name != name);
+            }
+            Op::UpsertCalendarSeason => {
+                let def: SeasonDef = op.definition()?;
+                let cal = self.calendar(op.t("calendar"), op)?;
+                replace_or_push(cal.seasons.get_or_insert_with(Vec::new), def, |s| {
+                    s.name.clone()
+                });
+            }
+            Op::RetireCalendarSeason => {
+                let name = op.t("season").to_owned();
+                let cal = self.calendar(op.t("calendar"), op)?;
+                cal.seasons
+                    .get_or_insert_with(Vec::new)
+                    .retain(|s| s.name != name);
             }
             Op::AddCalendarHoliday => {
                 let def: HolidayDef = op.definition()?;
@@ -1319,7 +1352,11 @@ fn component_key(op: &DocOp) -> Option<(&'static str, String)> {
         | Op::AddCalendarHoliday
         | Op::RemoveCalendarHoliday
         | Op::AddCalendarException
-        | Op::RemoveCalendarException => (COMPONENT_CALENDAR, op.t("calendar").to_owned()),
+        | Op::RemoveCalendarException
+        | Op::UpsertCalendarRule
+        | Op::RetireCalendarRule
+        | Op::UpsertCalendarSeason
+        | Op::RetireCalendarSeason => (COMPONENT_CALENDAR, op.t("calendar").to_owned()),
         Op::EnsurePrivilege => (COMPONENT_PRIVILEGE, op.t("privilege").to_owned()),
         Op::UpsertRole
         | Op::GrantRolePrivilege

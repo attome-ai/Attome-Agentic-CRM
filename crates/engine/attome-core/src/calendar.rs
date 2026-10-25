@@ -32,6 +32,8 @@
 /// AG1: the Umm al-Qura Hijri calendar, for crates that reach the calendar
 /// through this one.
 pub use attome_calendar::hijri;
+/// Z12-T6: holiday rules and seasons, for the admin API's checks.
+pub use attome_calendar::rules;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 

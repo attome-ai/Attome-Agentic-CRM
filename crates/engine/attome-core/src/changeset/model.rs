@@ -167,6 +167,10 @@ op_catalogue! {
     RemoveCalendarHoliday => "remove_calendar_holiday", Contract, 1, ["calendar", "date"];
     AddCalendarException => "add_calendar_exception", Expand, 1, ["calendar", "exception"];
     RemoveCalendarException => "remove_calendar_exception", Contract, 1, ["calendar", "exception"];
+    UpsertCalendarRule => "upsert_calendar_rule", Expand, 1, ["calendar", "rule"];
+    RetireCalendarRule => "retire_calendar_rule", Contract, 1, ["calendar", "rule"];
+    UpsertCalendarSeason => "upsert_calendar_season", Expand, 1, ["calendar", "season"];
+    RetireCalendarSeason => "retire_calendar_season", Contract, 1, ["calendar", "season"];
     EnsurePrivilege => "ensure_privilege", Expand, 1, ["privilege"];
     UpsertRole => "upsert_role", Expand, 1, ["role"];
     GrantRolePrivilege => "grant_role_privilege", Expand, 1, ["role", "privilege"];
@@ -283,8 +287,8 @@ mod tests {
             ours, names,
             "Op::ALL must equal the schema's op enum, in order"
         );
-        assert_eq!(Op::ALL.len(), 65);
-        assert_eq!(Op::ALL.iter().filter(|op| op.stage() == 1).count(), 58);
+        assert_eq!(Op::ALL.len(), 69);
+        assert_eq!(Op::ALL.iter().filter(|op| op.stage() == 1).count(), 62);
         assert_eq!(Op::ALL.iter().filter(|op| op.stage() == 2).count(), 7);
 
         for op in Op::ALL {

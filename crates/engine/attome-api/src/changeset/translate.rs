@@ -55,8 +55,8 @@ use crate::bundle::export::{
 };
 use crate::bundle::model::{
     AppDef, CalendarDef, CalendarExceptionDef, FieldSecurityProfileDef, GrantCondition, HolidayDef,
-    LabelDef, PrivilegeDef, QueryEntityMapping, QueryRef, RelationshipDef, RoleDef, RuleDef,
-    StateModelDef, StateTransitionDef,
+    HolidayRuleDef, LabelDef, PrivilegeDef, QueryEntityMapping, QueryRef, RelationshipDef, RoleDef,
+    RuleDef, SeasonDef, StateModelDef, StateTransitionDef,
 };
 
 /// Columns that are identity or bookkeeping, never part of a definition.
@@ -360,7 +360,7 @@ pub(crate) async fn translate(
         }
         Op::UpsertCalendar => {
             let def: CalendarDef = c.parse(&[])?;
-            args_definition(c.definition(&def, &["holidays", "exceptions"])?)
+            args_definition(c.definition(&def, &["holidays", "exceptions", "rules", "seasons"])?)
         }
         Op::AddCalendarHoliday => {
             let def: HolidayDef = c.parse(&[])?;
@@ -368,6 +368,14 @@ pub(crate) async fn translate(
         }
         Op::AddCalendarException => {
             let def: CalendarExceptionDef = c.parse(&[])?;
+            args_definition(c.definition(&def, &[])?)
+        }
+        Op::UpsertCalendarRule => {
+            let def: HolidayRuleDef = c.parse(&[])?;
+            args_definition(c.definition(&def, &[])?)
+        }
+        Op::UpsertCalendarSeason => {
+            let def: SeasonDef = c.parse(&[])?;
             args_definition(c.definition(&def, &[])?)
         }
         Op::EnsurePrivilege => {
@@ -453,6 +461,8 @@ pub(crate) async fn translate(
         | Op::RetireCalendar
         | Op::RemoveCalendarHoliday
         | Op::RemoveCalendarException
+        | Op::RetireCalendarRule
+        | Op::RetireCalendarSeason
         | Op::RevokeRolePrivilege
         | Op::RemoveRoleGrantCondition
         | Op::ClearRoleEntityAccess

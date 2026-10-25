@@ -493,6 +493,9 @@ struct CalendarRow {
     hours: serde_json::Value,
     is_default: bool,
     is_customized: bool,
+    parent: Option<String>,
+    country_code: Option<String>,
+    name_ar: Option<String>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -515,8 +518,10 @@ struct ExceptionRow {
 /// object, same posture as `view`).
 async fn export_calendars(db: &DbPool, bundle: &mut Bundle) -> Result<(), AppError> {
     let rows: Vec<CalendarRow> = sqlx::query_as(
-        "SELECT id, name, description, tz, working_days, hours, is_default, is_customized \
-         FROM calendar WHERE is_active = true",
+        "SELECT c.id, c.name, c.description, c.tz, c.working_days, c.hours, c.is_default, \
+                c.is_customized, p.name AS parent, c.country_code, c.name_ar \
+           FROM calendar c LEFT JOIN calendar p ON p.id = c.parent_calendar_id \
+          WHERE c.is_active = true",
     )
     .fetch_all(db)
     .await
@@ -557,6 +562,46 @@ async fn export_calendars(db: &DbPool, bundle: &mut Bundle) -> Result<(), AppErr
             });
     }
 
+    // Z12-T6: rules and seasons, written only for a calendar that has any so
+    // a calendar without them exports exactly as before.
+    let rule_rows: Vec<(Uuid, String, Option<String>, serde_json::Value, bool)> = sqlx::query_as(
+        "SELECT calendar_id, name, name_ar, rule, needs_sighting FROM calendar_holiday_rule \
+          WHERE is_active = true ORDER BY name",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut rules_by_calendar: HashMap<Uuid, Vec<HolidayRuleDef>> = HashMap::new();
+    for (calendar_id, name, name_ar, rule, needs_sighting) in rule_rows {
+        rules_by_calendar
+            .entry(calendar_id)
+            .or_default()
+            .push(HolidayRuleDef {
+                name,
+                name_ar,
+                rule,
+                needs_sighting,
+            });
+    }
+    let season_rows: Vec<(Uuid, String, Option<String>, serde_json::Value)> = sqlx::query_as(
+        "SELECT calendar_id, name, name_ar, definition FROM calendar_season \
+          WHERE is_active = true ORDER BY name",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut seasons_by_calendar: HashMap<Uuid, Vec<SeasonDef>> = HashMap::new();
+    for (calendar_id, name, name_ar, definition) in season_rows {
+        seasons_by_calendar
+            .entry(calendar_id)
+            .or_default()
+            .push(SeasonDef {
+                name,
+                name_ar,
+                definition,
+            });
+    }
+
     for c in rows {
         bundle.calendars.push(CalendarDef {
             name: c.name,
@@ -568,6 +613,11 @@ async fn export_calendars(db: &DbPool, bundle: &mut Bundle) -> Result<(), AppErr
             is_customized: c.is_customized,
             holidays: holidays_by_calendar.remove(&c.id).unwrap_or_default(),
             exceptions: Some(exceptions_by_calendar.remove(&c.id).unwrap_or_default()),
+            parent: c.parent,
+            country_code: c.country_code,
+            name_ar: c.name_ar,
+            rules: rules_by_calendar.remove(&c.id),
+            seasons: seasons_by_calendar.remove(&c.id),
         });
     }
     Ok(())

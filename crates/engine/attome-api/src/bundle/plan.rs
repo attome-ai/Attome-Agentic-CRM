@@ -882,6 +882,13 @@ fn diff_calendars(live: &Bundle, desired: &Bundle, diff: &mut Diff, opts: PlanOp
     for c in &desired.calendars {
         let mut skip = Vec::new();
         unmanaged(&mut skip, "exceptions", c.exceptions.is_none());
+        // Z12-T6: inheritance, country, Arabic name, rules and seasons a
+        // bundle leaves out are left alone, so they do not show as changes.
+        unmanaged(&mut skip, "parent", c.parent.is_none());
+        unmanaged(&mut skip, "country_code", c.country_code.is_none());
+        unmanaged(&mut skip, "name_ar", c.name_ar.is_none());
+        unmanaged(&mut skip, "rules", c.rules.is_none());
+        unmanaged(&mut skip, "seasons", c.seasons.is_none());
         diff.push(upsert_entry(
             COMPONENT_CALENDAR,
             c.name.clone(),

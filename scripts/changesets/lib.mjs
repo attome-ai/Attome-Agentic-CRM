@@ -207,6 +207,10 @@ export const OPS = {
   remove_calendar_holiday: op(C, ['calendar', 'date']),
   add_calendar_exception: op(E, ['calendar', 'exception'], ['definition']),
   remove_calendar_exception: op(C, ['calendar', 'exception']),
+  upsert_calendar_rule: op(E, ['calendar', 'rule'], ['definition']),
+  retire_calendar_rule: op(C, ['calendar', 'rule']),
+  upsert_calendar_season: op(E, ['calendar', 'season'], ['definition']),
+  retire_calendar_season: op(C, ['calendar', 'season']),
   // security: privileges, roles and their grants (RoleDef without its child lists)
   ensure_privilege: op(E, ['privilege'], ['definition']),
   upsert_role: op(E, ['role'], ['definition']),

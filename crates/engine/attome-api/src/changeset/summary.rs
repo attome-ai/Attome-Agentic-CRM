@@ -141,7 +141,9 @@ fn sentence(op_name: &str, target: &Map<String, Value>, args: &Map<String, Value
                 format!(
                     "Make the table {} master data ({}).",
                     e(),
-                    c.a("hub_style").and_then(Value::as_str).unwrap_or("no hub style")
+                    c.a("hub_style")
+                        .and_then(Value::as_str)
+                        .unwrap_or("no hub style")
                 )
             } else {
                 format!("The table {} is no longer master data.", e())
@@ -264,6 +266,26 @@ fn sentence(op_name: &str, target: &Map<String, Value>, args: &Map<String, Value
         Op::RemoveCalendarException => format!(
             "Remove the exception {} from the calendar {}.",
             c.qt("exception"),
+            c.qt("calendar")
+        ),
+        Op::UpsertCalendarRule => format!(
+            "Create or update the holiday rule {} of the calendar {}.",
+            c.qt("rule"),
+            c.qt("calendar")
+        ),
+        Op::RetireCalendarRule => format!(
+            "Remove the holiday rule {} from the calendar {}.",
+            c.qt("rule"),
+            c.qt("calendar")
+        ),
+        Op::UpsertCalendarSeason => format!(
+            "Create or update the season {} of the calendar {}.",
+            c.qt("season"),
+            c.qt("calendar")
+        ),
+        Op::RetireCalendarSeason => format!(
+            "Remove the season {} from the calendar {}.",
+            c.qt("season"),
             c.qt("calendar")
         ),
         Op::EnsurePrivilege => format!("Make sure the privilege {} exists.", c.qt("privilege")),
