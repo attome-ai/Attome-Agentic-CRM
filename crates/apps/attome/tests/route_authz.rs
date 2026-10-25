@@ -157,6 +157,16 @@ const MAX_BARE_RECORD_SCOPED: usize = 6;
 /// route silently pre-authorizes whatever later claims that path.
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
+        "GET",
+        "/api/v1/marketing/unsubscribe/{token}",
+        "E3-T1: a static page with one button for the token it was given; it reads nothing and changes nothing. Bypass-listed by its one-segment shape.",
+    ),
+    (
+        "POST",
+        "/api/v1/marketing/unsubscribe/{token}",
+        "E3-T1: the random per-recipient token from a campaign email is the credential and only stops bulk mail to that one address; an unknown token answers the same page. Bypass-listed by its one-segment shape.",
+    ),
+    (
         "POST",
         "/api/v1/email/webhooks/{provider}",
         "Z8-T5: a sending provider's event webhook; the provider's own signature (an SNS certificate from an amazonaws.com address for a configured topic, or SendGrid's ECDSA key from config) is the credential, checked before anything is read, and it only adds suppressions. Bypass-listed by its two exact provider paths.",

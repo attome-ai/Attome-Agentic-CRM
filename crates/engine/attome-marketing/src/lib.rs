@@ -15,6 +15,9 @@ pub mod deliverability;
 pub mod dmarc;
 /// E25-T1: dynamic blocks chosen per recipient.
 pub mod dynamic_blocks;
+/// E16-T1: SMS campaigns with consent, an estimate and quiet hours.
+/// E3-T1: email campaigns on the bulk stream, with one-click unsubscribe.
+pub mod email_campaign;
 /// E2-T2: email designs to email-safe HTML and plain text.
 pub mod email_render;
 pub mod events;
@@ -36,7 +39,6 @@ pub mod segment_insight;
 /// E7-T6: live segments re-checked from the change feed.
 pub mod segment_live;
 pub mod send_time;
-/// E16-T1: SMS campaigns with consent, an estimate and quiet hours.
 pub mod sms_campaign;
 pub mod social_publish;
 /// E7-T5: static list members by hand, view, form, flow and import.
@@ -58,6 +60,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <segment_insight::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<events::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<sms_campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<email_campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<deliverability::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<forms::ApiDocFragment as utoipa::OpenApi>::openapi());

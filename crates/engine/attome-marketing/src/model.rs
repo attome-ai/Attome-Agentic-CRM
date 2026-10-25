@@ -83,6 +83,10 @@ impl EngineModel for MarketingModel {
                 "/api/v1/marketing/lists/{id}/sms/send",
                 post(crate::sms_campaign::post_sms_send),
             )
+            .route(
+                "/api/v1/marketing/lists/{id}/email/send",
+                post(crate::email_campaign::post_email_send),
+            )
             .merge(crate::deliverability::routes::routes())
             .merge(crate::static_list::routes())
             .merge(crate::dynamic_blocks::routes())

@@ -1855,6 +1855,7 @@ mod tests {
             communication_id: Some(Uuid::now_v7()),
             attachments: Vec::new(),
             stream: Default::default(),
+            list_unsubscribe: None,
         })));
     }
 
@@ -1873,6 +1874,7 @@ mod tests {
             communication_id: None,
             attachments: Vec::new(),
             stream: Default::default(),
+            list_unsubscribe: None,
         })));
     }
 
@@ -2803,6 +2805,7 @@ mod tests {
                 communication_id: None,
                 attachments: Vec::new(),
                 stream: Default::default(),
+                list_unsubscribe: None,
             }))
             .priority(),
             JobPriority::High

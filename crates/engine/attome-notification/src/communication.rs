@@ -563,6 +563,7 @@ pub async fn write_communication_with(
                 communication_id: Some(communication_id),
                 attachments: options.attachments.clone(),
                 stream: Default::default(),
+                list_unsubscribe: None,
             }));
             match options.send_at {
                 Some(at) => attome_jobs::enqueue_at_in_tx(&mut tx, job, at).await,

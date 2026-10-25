@@ -188,6 +188,14 @@ pub fn catch_all(cfg: &EmailSection) -> Option<&str> {
         .filter(|a| !a.is_empty())
 }
 
+/// E3-T1: the unsubscribe headers of a bulk message.
+const LIST_UNSUBSCRIBE: lettre::message::header::HeaderName =
+    lettre::message::header::HeaderName::new_from_ascii_str("List-Unsubscribe");
+const LIST_UNSUBSCRIBE_POST: lettre::message::header::HeaderName =
+    lettre::message::header::HeaderName::new_from_ascii_str("List-Unsubscribe-Post");
+/// The `List-Unsubscribe-Post` value RFC 8058 fixes.
+pub const ONE_CLICK: &str = "List-Unsubscribe=One-Click";
+
 /// The header that names a test-mode message's real recipients.
 const ORIGINAL_TO: lettre::message::header::HeaderName =
     lettre::message::header::HeaderName::new_from_ascii_str("X-Attome-Original-To");
@@ -228,6 +236,18 @@ fn build_email(cfg: &EmailSection, msg: &EmailMessage) -> Result<Message, SendEr
     }
     if let Some(in_reply_to) = &msg.in_reply_to {
         builder = builder.in_reply_to(in_reply_to.clone());
+    }
+    // E3-T1: one-click unsubscribe for bulk mail (RFC 8058).
+    if let Some(url) = &msg.list_unsubscribe {
+        builder = builder
+            .raw_header(lettre::message::header::HeaderValue::new(
+                LIST_UNSUBSCRIBE,
+                format!("<{url}>"),
+            ))
+            .raw_header(lettre::message::header::HeaderValue::new(
+                LIST_UNSUBSCRIBE_POST,
+                ONE_CLICK.to_owned(),
+            ));
     }
     if let Some(references) = &msg.references {
         builder = builder.references(references.clone());
@@ -657,6 +677,7 @@ mod tests {
             communication_id: None,
             attachments: Vec::new(),
             stream: Default::default(),
+            list_unsubscribe: None,
         }
     }
 

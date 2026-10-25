@@ -108,6 +108,13 @@ pub struct EmailMessage {
     /// same forward-compat reasoning as the other optional fields.
     #[serde(default)]
     pub stream: EmailStream,
+    /// E3-T1: the one-click unsubscribe address (an `https:` URL) of a bulk
+    /// message. When set, the message carries `List-Unsubscribe: <url>` and
+    /// `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058).
+    /// `#[serde(default)]`, same forward-compat reasoning as the other
+    /// optional fields.
+    #[serde(default)]
+    pub list_unsubscribe: Option<String>,
 }
 
 /// Z8-T3: which stream a message belongs to.
@@ -176,6 +183,7 @@ mod tests {
             communication_id: None,
             attachments: Vec::new(),
             stream: Default::default(),
+            list_unsubscribe: None,
         }
     }
 

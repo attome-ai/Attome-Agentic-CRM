@@ -321,6 +321,7 @@ async fn send_one(state: &EngineState, sender: &Sender, record_id: Uuid) -> Resu
         communication_id: None,
         attachments: Vec::new(),
         stream: attome_email::EmailStream::Bulk,
+        list_unsubscribe: None,
     }));
     let mut tx = attome_db::tx::begin(db).await?;
     attome_jobs::enqueue_in_tx(&mut tx, job)

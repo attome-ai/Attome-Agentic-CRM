@@ -320,6 +320,15 @@ fn is_service_intake_path(path: &str) -> bool {
     !id.is_empty() && is_requests && no_trailing_segment
 }
 
+/// E3-T1: a campaign email's unsubscribe page and its one-click POST,
+/// `/api/v1/marketing/unsubscribe/{token}`: one non-empty segment, nothing
+/// after. The handler (`attome_marketing::email_campaign`) looks the
+/// random token up and answers the same page for an unknown one.
+fn is_marketing_unsubscribe_path(path: &str) -> bool {
+    path.strip_prefix("/api/v1/marketing/unsubscribe/")
+        .is_some_and(|token| !token.is_empty() && !token.contains('/'))
+}
+
 /// E10-T1: a marketing form submission,
 /// `/api/v1/marketing/forms/{id}/submit`: one id segment, the literal
 /// `submit`, nothing after. The handler
@@ -385,6 +394,7 @@ pub fn is_bypass(path: &str) -> bool {
         || is_payment_link_path(path)
         || is_service_intake_path(path)
         || is_marketing_form_path(path)
+        || is_marketing_unsubscribe_path(path)
         || is_email_tracking_path(path)
         || is_sms_receipt_path(path)
         || is_booking_path(path)
@@ -439,6 +449,15 @@ pub(crate) fn is_csrf_exempt(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_one_segment_marketing_unsubscribe_paths_are_public() {
+        assert!(is_bypass("/api/v1/marketing/unsubscribe/0123abcd"));
+        assert!(is_bypass("/api/v1/marketing/unsubscribe/{token}"));
+        assert!(!is_bypass("/api/v1/marketing/unsubscribe/"));
+        assert!(!is_bypass("/api/v1/marketing/unsubscribe/a/b"));
+        assert!(!is_bypass("/api/v1/marketing/lists/x/email/send"));
+    }
 
     #[test]
     fn exact_bypass_paths_match() {

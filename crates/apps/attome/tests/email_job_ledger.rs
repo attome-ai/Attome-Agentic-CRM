@@ -198,6 +198,7 @@ async fn queued(db: &attome_db::DbPool) -> (Uuid, attome_email::EmailMessage) {
         communication_id: None,
         attachments: Vec::new(),
         stream: Default::default(),
+        list_unsubscribe: None,
     };
     (id, message)
 }

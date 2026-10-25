@@ -765,6 +765,7 @@ pub async fn create_dispatch_in_tx(
                 communication_id: None,
                 attachments: Vec::new(),
                 stream: Default::default(),
+                list_unsubscribe: None,
             })),
             &dedup_key,
         )
@@ -1112,6 +1113,7 @@ async fn send_email(
             communication_id: None,
             attachments: Vec::new(),
             stream: Default::default(),
+            list_unsubscribe: None,
         },
     )
     .await

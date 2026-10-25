@@ -2919,6 +2919,8 @@ const DEDUP_KEY_INBOUND_MAIL: &str = "inbound-mail";
 const DEDUP_KEY_CASE_SUMMARY: &str = "case-summary";
 /// E16-T1: SMS campaign sending (a registered job type).
 const DEDUP_KEY_SMS_CAMPAIGN: &str = "sms-campaign";
+/// E3-T1: the email campaign sweep (a registered job type).
+const DEDUP_KEY_EMAIL_CAMPAIGN: &str = "email-campaign";
 const DEDUP_KEY_WEBINAR_SYNC: &str = "webinar-sync";
 const DEDUP_KEY_BLOCKLIST_CHECK: &str = "marketing-blocklist-check";
 const DEDUP_KEY_REPUTATION_FETCH: &str = "marketing-reputation-fetch";
@@ -3104,6 +3106,8 @@ pub const CASE_SUMMARY: attome_jobs::JobType = attome_jobs::JobType::new("case_s
 
 /// E16-T1: SMS campaigns sent in batches outside each recipient's quiet hours.
 pub const SMS_CAMPAIGN: attome_jobs::JobType = attome_jobs::JobType::new("sms_campaign", 1);
+/// E3-T1: the next batch of each email campaign.
+pub const EMAIL_CAMPAIGN: attome_jobs::JobType = attome_jobs::JobType::new("email_campaign", 1);
 
 /// E6-T4: today's and yesterday's deliverability rollup, recomputed.
 pub const DELIVERABILITY_ROLLUP: attome_jobs::JobType =
@@ -3562,6 +3566,20 @@ pub fn register_job_types() {
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if made > 0 {
                     tracing::info!(made, "case summary: run complete");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            EMAIL_CAMPAIGN,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let queued = attome_marketing::email_campaign::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if queued > 0 {
+                    tracing::info!(queued, "email campaign: run complete");
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
@@ -4967,6 +4985,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == INBOUND_MAIL.name => DEDUP_KEY_INBOUND_MAIL,
         EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
         EngineJob::Registered(job) if job.name == SMS_CAMPAIGN.name => DEDUP_KEY_SMS_CAMPAIGN,
+        EngineJob::Registered(job) if job.name == EMAIL_CAMPAIGN.name => DEDUP_KEY_EMAIL_CAMPAIGN,
         EngineJob::Registered(job) if job.name == WEBINAR_SYNC.name => DEDUP_KEY_WEBINAR_SYNC,
         EngineJob::Registered(job) if job.name == BLOCKLIST_CHECK.name => DEDUP_KEY_BLOCKLIST_CHECK,
         EngineJob::Registered(job) if job.name == REPUTATION_FETCH.name => {
@@ -5623,6 +5642,25 @@ pub fn spawn_case_summary_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_CASE_SUMMARY, "case summary");
+}
+
+/// E3-T1: every minute, the next batch of each email campaign.
+pub fn spawn_email_campaign_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(EMAIL_CAMPAIGN.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "email campaign: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_EMAIL_CAMPAIGN,
+        "email campaign",
+    );
 }
 
 /// E16-T1: every five minutes, the next batch of each SMS campaign.

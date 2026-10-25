@@ -367,6 +367,9 @@ impl EngineSystem {
             // E14-T6: tracking batches, queued and never written on the
             // request path (own licence, flag, rate limits; exact bypass).
             .merge(attome_marketing::tracking::collect::public_routes())
+            // E3-T1: a campaign email's one-click unsubscribe; the random
+            // per-recipient token is the credential (bypass by path shape).
+            .merge(attome_marketing::email_campaign::public_routes())
             // D-486 — M55 moved to `attome-document`. `files::routes()` stays
             // mounted HERE, ungated, because it serves
             // `/api/v1/{entity}/{id}/files/{field}/…` for a `file`-typed

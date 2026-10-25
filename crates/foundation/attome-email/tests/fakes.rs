@@ -26,6 +26,8 @@ fn message_to(recipient: &str, subject: &str) -> attome_email::EmailMessage {
         communication_id: None,
         attachments: Vec::new(),
         stream: Default::default(),
+        list_unsubscribe: None,
+        list_unsubscribe: None,
     }
 }
 

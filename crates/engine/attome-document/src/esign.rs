@@ -351,6 +351,7 @@ fn email_job(to: &str, subject: String, text: String) -> attome_core::jobs::Engi
         communication_id: None,
         attachments: Vec::new(),
         stream: Default::default(),
+        list_unsubscribe: None,
     }))
 }
 

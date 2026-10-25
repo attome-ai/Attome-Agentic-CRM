@@ -210,6 +210,7 @@ pub async fn do_reset_user_mfa(
             communication_id: None,
             attachments: Vec::new(),
             stream: Default::default(),
+            list_unsubscribe: None,
         }));
         attome_jobs::enqueue_in_tx(tx.tx(), job)
             .await

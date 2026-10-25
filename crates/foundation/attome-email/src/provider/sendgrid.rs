@@ -53,6 +53,14 @@ pub(crate) fn request_body(msg: &OutgoingEmail<'_>) -> Value {
         "subject": message.subject,
         "content": content,
     });
+    // E3-T1: one-click unsubscribe for bulk mail (RFC 8058).
+    if let Some(url) = &message.list_unsubscribe {
+        headers.insert("List-Unsubscribe".into(), json!(format!("<{url}>")));
+        headers.insert(
+            "List-Unsubscribe-Post".into(),
+            json!("List-Unsubscribe=One-Click"),
+        );
+    }
     if !headers.is_empty() {
         body["headers"] = Value::Object(headers);
     }
@@ -134,6 +142,7 @@ mod tests {
                 content_base64: "JVBERi0xLjQK".into(),
             }],
             stream: Default::default(),
+            list_unsubscribe: None,
         }
     }
 
