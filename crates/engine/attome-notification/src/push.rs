@@ -286,11 +286,40 @@ fn text(config: &Value, key: &str) -> Option<String> {
 }
 
 /// What a push says.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct PushMessage {
     pub title: String,
     pub body: String,
     pub route: Option<String>,
+    /// J12-T2: buttons on the notification, and what the service worker
+    /// needs to act on one without opening the app.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actions: Option<PushActions>,
+}
+
+/// J12-T2: the buttons of an actionable push.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct PushActions {
+    /// `(action id, button title)`, in order.
+    pub buttons: Vec<(String, String)>,
+    /// The approval link token the buttons decide with: single use, bound
+    /// to one approver, request and step (M9-T3's `approval_email_link`).
+    pub approval_token: String,
+}
+
+/// J12-T2: the buttons of an approval push. A low-risk request (one the
+/// approver may decide from a link, `approval.email_decide_actions`) gets
+/// Approve and Reject, which decide through the link token without opening
+/// the app; any other request gets none, so tapping it opens the request
+/// page, which needs sign-in. Pure.
+pub fn approval_actions(token: &str, low_risk: bool) -> Option<PushActions> {
+    low_risk.then(|| PushActions {
+        buttons: vec![
+            ("approve".to_owned(), "Approve / موافقة".to_owned()),
+            ("reject".to_owned(), "Reject / رفض".to_owned()),
+        ],
+        approval_token: token.to_owned(),
+    })
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -313,7 +342,7 @@ pub fn web_payload(msg: &PushMessage) -> Value {
         .as_deref()
         .filter(|r| r.starts_with('/') && !r.starts_with("//"))
         .unwrap_or("/");
-    json!({
+    let mut payload = json!({
         "notification": {
             "title": msg.title,
             "body": msg.body,
@@ -326,7 +355,21 @@ pub fn web_payload(msg: &PushMessage) -> Value {
                 }
             }
         }
-    })
+    });
+    // J12-T2: the buttons, and the token `sw.js` decides with (its
+    // notificationclick listener runs before Angular's for these actions).
+    if let Some(actions) = &msg.actions {
+        payload["notification"]["actions"] = Value::Array(
+            actions
+                .buttons
+                .iter()
+                .map(|(action, title)| json!({ "action": action, "title": title }))
+                .collect(),
+        );
+        payload["notification"]["data"]["approval"] = json!({ "token": actions.approval_token });
+        payload["notification"]["requireInteraction"] = Value::Bool(true);
+    }
+    payload
 }
 
 async fn send_web(p: &Provider, a: &Address, msg: &PushMessage) -> Result<(u16, String), AppError> {
@@ -347,6 +390,7 @@ async fn send_web(p: &Provider, a: &Address, msg: &PushMessage) -> Result<(u16, 
             title: msg.title.chars().take(200).collect(),
             body: msg.body.chars().take(1000).collect(),
             route: msg.route.clone(),
+            actions: msg.actions.clone(),
         };
         payload = serde_json::to_vec(&web_payload(&short)).map_err(AppError::internal)?;
     }
@@ -821,11 +865,57 @@ mod tests {
     use super::*;
 
     #[test]
+    fn push_actions_only_for_low_risk_approvals() {
+        let low = approval_actions("pub.secret", true).unwrap();
+        assert_eq!(
+            low.buttons
+                .iter()
+                .map(|(a, _)| a.as_str())
+                .collect::<Vec<_>>(),
+            vec!["approve", "reject"]
+        );
+        assert_eq!(low.approval_token, "pub.secret");
+        assert_eq!(approval_actions("pub.secret", false), None);
+
+        let msg = PushMessage {
+            title: "Approval needed".into(),
+            body: "Discount 12%".into(),
+            route: Some("/approval-link".into()),
+            actions: Some(low),
+        };
+        let payload = web_payload(&msg);
+        assert_eq!(payload["notification"]["actions"][0]["action"], "approve");
+        assert_eq!(payload["notification"]["actions"][1]["action"], "reject");
+        assert_eq!(
+            payload["notification"]["data"]["approval"]["token"],
+            "pub.secret"
+        );
+        // The default tap still opens the app.
+        assert_eq!(
+            payload["notification"]["data"]["onActionClick"]["default"]["url"],
+            "/approval-link"
+        );
+    }
+
+    #[test]
+    fn push_actions_absent_on_an_ordinary_push() {
+        let payload = web_payload(&PushMessage {
+            title: "Ticket 42".into(),
+            body: "updated".into(),
+            route: None,
+            actions: None,
+        });
+        assert!(payload["notification"].get("actions").is_none());
+        assert!(payload["notification"]["data"].get("approval").is_none());
+    }
+
+    #[test]
     fn a_web_push_opens_its_route_in_the_app() {
         let msg = PushMessage {
             title: "Ticket 42".into(),
             body: "updated".into(),
             route: Some("/xrm/entity/ticket/form/42".into()),
+            actions: None,
         };
         let payload = web_payload(&msg);
         assert_eq!(payload["notification"]["title"], "Ticket 42");

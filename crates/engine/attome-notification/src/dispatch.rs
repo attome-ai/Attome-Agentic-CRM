@@ -1177,6 +1177,7 @@ async fn send_channel(
                     title: subject.to_owned(),
                     body: payload.body_text.to_owned(),
                     route: payload.route.map(str::to_owned),
+                    actions: None,
                 },
             )
             .await

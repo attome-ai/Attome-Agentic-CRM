@@ -710,6 +710,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Actionable approval pushes (J12-T2): each approver who gets an approval email also gets a push with the
+  same single-use link token. For a low-risk request (`approval.email_decide_actions`) the push has
+  Approve and Reject buttons that the service worker sends to `POST /api/v1/approvals/email-link/decide`
+  without opening the app; any other request's push only opens the request. Quick replies are not built.
 - SEO routes (E13-T8): `GET`/`PUT /api/v1/admin/content/pages/{id}/seo` (If-Match; every save is a
   configuration event, named `content_page.seo_indexing` when the canonical URL or noindex changed),
   `GET .../seo/findings`, `POST .../seo/audit`, topic clusters under `/api/v1/admin/content/seo/topics`

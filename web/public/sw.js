@@ -6,7 +6,7 @@
  * `attome-share` and the browser is sent to /xrm/share, which saves them as
  * the person's own documents through the API.
  *
- * This listener is registered before ngsw-worker.js, whose fetch listener
+ * These listeners are registered before ngsw-worker.js, whose fetch listener
  * answers every request (POST included): once this one answers the share
  * POST it stops the event, so Angular's never sees it.
  */
@@ -40,6 +40,50 @@ async function keepShare(request) {
   };
   await cache.put(`${SHARE_PATH}/meta`, new Response(JSON.stringify(meta), { headers: { 'content-type': 'application/json' } }));
   return Response.redirect('/xrm/share', 303);
+}
+
+/*
+ * J12-T2: Approve and Reject on an approval push decide without opening the
+ * app. The push carries the approver's single-use link token (the same one
+ * their email carries); the decision goes to the public link route, which
+ * checks the token and decides as that approver. Any other tap is left to
+ * Angular's listener below, which opens the app.
+ */
+const DECIDE_PATH = '/api/v1/approvals/email-link/decide';
+
+self.addEventListener('notificationclick', event => {
+  const token = event.notification?.data?.approval?.token;
+  if (!token || (event.action !== 'approve' && event.action !== 'reject')) return;
+  event.stopImmediatePropagation();
+  event.notification.close();
+  event.waitUntil(decideFromPush(token, event.action, event.notification.data.route));
+});
+
+async function decideFromPush(token, decision, route) {
+  let ok = false;
+  try {
+    const response = await fetch(DECIDE_PATH, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token, decision }),
+    });
+    ok = response.ok;
+  } catch {
+    ok = false;
+  }
+  const title = ok
+    ? (decision === 'approve' ? 'Approved / تمت الموافقة' : 'Rejected / تم الرفض')
+    : 'Not decided / لم يُتخذ القرار';
+  const body = ok ? '' : 'Open the request to decide. / افتح الطلب لاتخاذ القرار.';
+  await self.registration.showNotification(title, {
+    body,
+    icon: '/icons/icon-192.png',
+    data: {
+      route,
+      onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: route || '/' } },
+    },
+  });
 }
 
 importScripts('./ngsw-worker.js');

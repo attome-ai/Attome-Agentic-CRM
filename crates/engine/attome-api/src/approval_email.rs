@@ -240,6 +240,11 @@ async fn mail_step(state: &EngineState, request_id: Uuid) -> Result<usize, AppEr
         return Ok(0);
     }
     let frontend = state.base.config.frontend_url();
+    // J12-T2: each approver's push, sent after the commit (no I/O inside
+    // the transaction) with the same single-use token as their email.
+    let low_risk = decide_here(state, &request.action_type);
+    let mut pushes: Vec<(Uuid, attome_notification::push::PushMessage)> =
+        Vec::with_capacity(recipients.len());
     for (user_id, email) in &recipients {
         let bearer = issue_link_in_tx(&mut tx, state, &request, *user_id).await?;
         let link = format!("{frontend}/approval-link#{bearer}");
@@ -251,6 +256,15 @@ async fn mail_step(state: &EngineState, request_id: Uuid) -> Result<usize, AppEr
                 .and_then(Value::as_str)
                 .unwrap_or(&request.action_type)
         );
+        pushes.push((
+            *user_id,
+            attome_notification::push::PushMessage {
+                title: subject.clone(),
+                body: format!("{requester} asks for your decision"),
+                route: Some(format!("/approval-link#{bearer}")),
+                actions: attome_notification::push::approval_actions(&bearer, low_risk),
+            },
+        ));
         let (subject, text_body, html_body) = attome_email::templates::generic_notification(
             &subject,
             &mail_body(&request, &requester, &link),
@@ -288,6 +302,14 @@ async fn mail_step(state: &EngineState, request_id: Uuid) -> Result<usize, AppEr
         .map_err(AppError::internal)?;
     }
     attome_db::tx::commit(tx).await?;
+    // A push that fails is logged; the email and the token stand.
+    for (user_id, message) in &pushes {
+        if let Err(error) =
+            attome_notification::push::send_to_user(state, Some(*user_id), message).await
+        {
+            tracing::warn!(%user_id, %error, "approval push not delivered");
+        }
+    }
     Ok(recipients.len())
 }
 
