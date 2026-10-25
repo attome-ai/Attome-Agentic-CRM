@@ -156,6 +156,8 @@ pub fn routes() -> Router<EngineState> {
         .merge(crate::preferences::routes())
         // J12-T1: the caller's own push addresses.
         .merge(crate::push::routes())
+        // J1-T1: the caller's own email signature.
+        .merge(crate::signature::routes())
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
@@ -170,5 +172,6 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(crate::preferences::openapi_fragment());
     doc.merge(crate::push::openapi_fragment());
+    doc.merge(crate::signature::openapi_fragment());
     doc
 }

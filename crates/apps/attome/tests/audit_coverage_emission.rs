@@ -2608,6 +2608,17 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 ]})),
             )
         }
+        // J1-T1: the caller's own email signature.
+        "PUT /api/v1/me/email-signature" => {
+            let (user, _) = seed_user(&fx.base, "email-signature").await;
+            let token = session_token(&fx.base, user, false).await;
+            request(
+                "PUT",
+                "/api/v1/me/email-signature",
+                Some(&token),
+                Some(json!({"body": "Sara\nSales", "row_version": 0})),
+            )
+        }
         "DELETE /api/v1/auth/api-keys/{id}" => {
             let key = admin(
                 fx,

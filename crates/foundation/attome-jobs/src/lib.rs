@@ -304,6 +304,37 @@ pub async fn enqueue_in_tx<J: Job>(tx: &mut attome_db::Tx<'_>, job: J) -> Result
     Ok(())
 }
 
+/// J1-T1: [`enqueue_in_tx`] for a job that must not run before `run_at`
+/// (an email sent later), committed with the caller's own writes. No
+/// worker wake-up: nothing can run it before `run_at` anyway.
+pub async fn enqueue_at_in_tx<J: Job>(
+    tx: &mut attome_db::Tx<'_>,
+    job: J,
+    run_at: DateTime<Utc>,
+) -> Result<(), sqlx::Error> {
+    let namespace = namespace_for(&job);
+    let priority = job.priority().apalis_priority();
+    let max_attempts = job.max_attempts();
+    let payload = serde_json::to_value(JobEnvelope::new_with_trace_context(
+        job,
+        current_traceparent(),
+    ))
+    .map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+    sqlx::query(attome_db::tagged_sql!(
+        "jobs.queue",
+        "SELECT apalis.push_job(\
+             job_type => $1, job => $2::json, run_at => $3, priority => $4, max_attempts => $5)"
+    ))
+    .bind(namespace)
+    .bind(payload)
+    .bind(run_at)
+    .bind(priority)
+    .bind(max_attempts)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
 /// [`enqueue`] for a caller that holds a pool rather than a typed storage
 /// handle: the same queue, priority and attempt routing, through
 /// `apalis.push_job`, with the same worker wake-up.

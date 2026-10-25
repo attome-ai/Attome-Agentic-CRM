@@ -27,7 +27,8 @@
 
 use attome_core::EngineState;
 use attome_notification::communication::{
-    CommunicationResponse, notify_internal_recipients, validate_recipients, write_communication,
+    CommunicationResponse, SendOptions, notify_internal_recipients, validate_recipients,
+    write_communication_with,
 };
 use attome_security::RecordAction;
 use attome_security::record_action::Update;
@@ -39,6 +40,7 @@ use axum::{
     http::StatusCode,
     routing::post,
 };
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -60,6 +62,10 @@ pub struct ComposeRequest {
     pub recipient_user_ids: Vec<Uuid>,
     pub subject: String,
     pub body: String,
+    /// J1-T1: send no earlier than this (email only, up to 90 days ahead).
+    /// The author's signature is appended to an email either way.
+    #[serde(default)]
+    pub send_at: Option<DateTime<Utc>>,
 }
 
 impl std::fmt::Debug for ComposeRequest {
@@ -71,6 +77,9 @@ impl std::fmt::Debug for ComposeRequest {
 #[derive(Deserialize, ToSchema)]
 pub struct ReplyRequest {
     pub body: String,
+    /// J1-T1: send no earlier than this (email only, up to 90 days ahead).
+    #[serde(default)]
+    pub send_at: Option<DateTime<Utc>>,
 }
 
 impl std::fmt::Debug for ReplyRequest {
@@ -203,7 +212,7 @@ async fn compose(
         return Err(AppError::Validation("body is required".into()));
     }
 
-    let outcome = write_communication(
+    let outcome = write_communication_with(
         &state,
         &ctx,
         ctx.user_id,
@@ -219,6 +228,10 @@ async fn compose(
         None,
         None,
         None,
+        SendOptions {
+            send_at: body.send_at,
+            signature: true,
+        },
     )
     .await?;
 
@@ -290,7 +303,7 @@ async fn reply(
         format!("Re: {}", parent.subject)
     };
 
-    let outcome = write_communication(
+    let outcome = write_communication_with(
         &state,
         &ctx,
         ctx.user_id,
@@ -306,6 +319,10 @@ async fn reply(
         Some(parent.thread_id),
         parent.message_id.as_deref(),
         parent.references_header.as_deref(),
+        SendOptions {
+            send_at: body.send_at,
+            signature: true,
+        },
     )
     .await?;
 

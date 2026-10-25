@@ -18,7 +18,7 @@ use attome_records::mutation_ring::{
     GrantInvalidation, MutationActor, MutationAudit, MutationRing, MutationSideEffects,
 };
 use attome_types::AppError;
-use chrono::Utc;
+use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
 use serde_json::{Map, Value};
 use utoipa::ToSchema;
@@ -37,6 +37,45 @@ impl std::fmt::Debug for CommunicationResponse {
         f.debug_struct("CommunicationResponse")
             .finish_non_exhaustive()
     }
+}
+
+/// J1-T1: how a composed email goes out. The default is what every
+/// engine caller wants: now, without a signature.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SendOptions {
+    /// Send no earlier than this (email only): the `SendEmail` job is
+    /// enqueued with this `run_at`, in the same transaction as the row.
+    pub send_at: Option<DateTime<Utc>>,
+    /// Append the author's signature ([`crate::signature`]) to an outbound
+    /// email. Set by the compose and reply routes, where a person writes.
+    pub signature: bool,
+}
+
+/// How far ahead an email may be scheduled.
+pub const MAX_SEND_AHEAD_DAYS: i64 = 90;
+
+/// Refuses a `send_at` on a channel other than email, in the past, or more
+/// than [`MAX_SEND_AHEAD_DAYS`] ahead.
+pub fn validate_send_at(
+    channel: &str,
+    send_at: Option<DateTime<Utc>>,
+    now: DateTime<Utc>,
+) -> Result<(), AppError> {
+    let Some(at) = send_at else { return Ok(()) };
+    if channel != "email" {
+        return Err(AppError::Validation(
+            "send_at is only for channel=email".into(),
+        ));
+    }
+    if at <= now {
+        return Err(AppError::Validation("send_at must be in the future".into()));
+    }
+    if at > now + Duration::days(MAX_SEND_AHEAD_DAYS) {
+        return Err(AppError::Validation(format!(
+            "send_at is at most {MAX_SEND_AHEAD_DAYS} days ahead"
+        )));
+    }
+    Ok(())
 }
 
 /// Validates `channel` against Phase 1's two supported values and returns
@@ -177,6 +216,9 @@ pub async fn notify_internal_recipients(
 ///
 /// `in_reply_to`/`parent_thread_id`/`parent_message_id`/`parent_references`
 /// are all `None` for a fresh compose and all `Some` for a reply.
+///
+/// Sends now and without a signature; [`write_communication_with`] takes
+/// [`SendOptions`].
 #[allow(clippy::too_many_arguments)]
 pub async fn write_communication(
     state: &EngineState,
@@ -195,12 +237,70 @@ pub async fn write_communication(
     parent_message_id: Option<&str>,
     parent_references: Option<&str>,
 ) -> Result<CommunicationResponse, AppError> {
+    write_communication_with(
+        state,
+        ctx,
+        acting_user_id,
+        entity_name,
+        record_id,
+        channel,
+        direction,
+        to_addresses,
+        recipient_user_ids,
+        subject,
+        body,
+        in_reply_to,
+        parent_thread_id,
+        parent_message_id,
+        parent_references,
+        SendOptions::default(),
+    )
+    .await
+}
+
+/// [`write_communication`] with [`SendOptions`] (J1-T1): a later send time
+/// and the author's signature.
+#[allow(clippy::too_many_arguments)]
+pub async fn write_communication_with(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    acting_user_id: Uuid,
+    entity_name: &str,
+    record_id: Uuid,
+    channel: &str,
+    direction: &str,
+    to_addresses: &[String],
+    recipient_user_ids: &[Uuid],
+    subject: &str,
+    body: &str,
+    in_reply_to: Option<Uuid>,
+    parent_thread_id: Option<Uuid>,
+    parent_message_id: Option<&str>,
+    parent_references: Option<&str>,
+    options: SendOptions,
+) -> Result<CommunicationResponse, AppError> {
     let (comm_entity_id, comm_entity_name, comm_attrs, _) =
         resolve_entity(state, "communication").await?;
     let (event_entity_id, event_entity_name, event_attrs, _) =
         resolve_entity(state, "communication_event").await?;
 
     let now = Utc::now();
+    validate_send_at(channel, options.send_at, now)?;
+    // J1-T1: the signature is part of what is stored and sent, so the
+    // timeline shows the message as the recipient got it.
+    let signature = if options.signature && channel == "email" && direction == "outbound" {
+        crate::signature::for_user(&state.base.db, acting_user_id).await?
+    } else {
+        None
+    };
+    let signed;
+    let body = match signature {
+        Some(sig) => {
+            signed = crate::signature::append(body, &sig, crate::tracking::looks_like_html(body));
+            signed.as_str()
+        }
+        None => body,
+    };
     let message_id =
         (channel == "email").then(|| format!("<{}@{}>", Uuid::now_v7(), mail_domain(state)));
     let references = if channel == "email" {
@@ -226,7 +326,10 @@ pub async fn write_communication(
     obj.insert("subject".into(), Value::String(subject.to_string()));
     obj.insert("body".into(), Value::String(body.to_string()));
     obj.insert("status".into(), Value::String(status.to_string()));
-    obj.insert("sent_at".into(), Value::String(now.to_rfc3339()));
+    obj.insert(
+        "sent_at".into(),
+        Value::String(options.send_at.unwrap_or(now).to_rfc3339()),
+    );
     obj.insert(
         "author_id".into(),
         Value::String(acting_user_id.to_string()),
@@ -457,9 +560,11 @@ pub async fn write_communication(
                 communication_id: Some(communication_id),
                 attachments: Vec::new(),
             }));
-            attome_jobs::enqueue_in_tx(&mut tx, job)
-                .await
-                .map_err(AppError::internal)?;
+            match options.send_at {
+                Some(at) => attome_jobs::enqueue_at_in_tx(&mut tx, job, at).await,
+                None => attome_jobs::enqueue_in_tx(&mut tx, job).await,
+            }
+            .map_err(AppError::internal)?;
         }
     } else {
         write_event(
@@ -509,4 +614,29 @@ pub async fn write_communication(
         channel: channel.to_string(),
         status: status.to_string(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn send_at_must_be_a_future_email_within_the_window() {
+        let now = Utc::now();
+        assert!(validate_send_at("email", None, now).is_ok());
+        assert!(validate_send_at("email", Some(now + Duration::hours(2)), now).is_ok());
+        for (channel, at) in [
+            ("internal", now + Duration::hours(2)),
+            ("email", now - Duration::minutes(1)),
+            ("email", now + Duration::days(MAX_SEND_AHEAD_DAYS + 1)),
+        ] {
+            assert!(
+                matches!(
+                    validate_send_at(channel, Some(at), now),
+                    Err(AppError::Validation(_))
+                ),
+                "{channel} at {at} must be refused"
+            );
+        }
+    }
 }

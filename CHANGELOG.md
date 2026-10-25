@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Record emails can be sent later and carry a signature (J1-T1): compose and reply on a record take
+  an optional `send_at` (email only, up to 90 days ahead; the send job waits until then, committed
+  with the message), and each user's own signature (`GET`/`PUT /api/v1/me/email-signature`,
+  migration 0252) is appended to the emails they write, below a `-- ` line or escaped in HTML.
 - Search settings in the page editor (E13-T12): page settings gain a search and sharing panel with
   title and description length counters (Arabic marks don't count), search-result and sharing-card
   previews (right to left for Arabic), a page check with its score and findings, and "go to block".

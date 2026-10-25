@@ -588,3 +588,83 @@ fn compose_then_reply_thread_round_trips() {
         );
     })
 }
+
+/// J1-T1: an email composed for later carries the author's signature in the
+/// stored row and its `SendEmail` job waits for `send_at`.
+#[test]
+fn scheduled_compose_is_signed_and_waits_for_send_at() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (admin_id, admin_cookie) = seed_admin(&system).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/api/v1/me/email-signature")
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"body":"Sara Ali\nSales","row_version":0}"#))
+                    .unwrap(),
+            )
+            .await
+            .expect("set the signature");
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let send_at = chrono::Utc::now() + chrono::Duration::hours(3);
+        let to = format!("later-{}@example.test", Uuid::now_v7());
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/v1/user_account/{admin_id}/communications"))
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json")
+                    .header(
+                        "x-idempotency-key",
+                        format!("comm-later-{}", Uuid::now_v7()),
+                    )
+                    .body(Body::from(
+                        serde_json::json!({
+                            "channel": "email",
+                            "to": [to],
+                            "subject": "Later",
+                            "body": "See you then.",
+                            "send_at": send_at.to_rfc3339(),
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .expect("compose for later");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let comm_id: Uuid = body_json(res).await["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+
+        let stored: String = sqlx::query_scalar("SELECT body FROM communication WHERE id = $1")
+            .bind(comm_id)
+            .fetch_one(&db)
+            .await
+            .expect("the communication row");
+        assert_eq!(stored, "See you then.\n\n-- \nSara Ali\nSales");
+
+        let run_at: chrono::DateTime<chrono::Utc> = sqlx::query_scalar(
+            "SELECT run_at FROM apalis.jobs WHERE job::text LIKE '%' || $1 || '%'",
+        )
+        .bind(comm_id.to_string())
+        .fetch_one(&db)
+        .await
+        .expect("the SendEmail job");
+        assert!(
+            (run_at - send_at).num_seconds().abs() <= 1,
+            "the job runs at send_at, not now: {run_at} vs {send_at}"
+        );
+    })
+}

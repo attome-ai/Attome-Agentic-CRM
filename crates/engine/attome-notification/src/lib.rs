@@ -16,6 +16,8 @@ pub mod recipient;
 pub mod reminders;
 pub mod seed;
 pub mod service;
+/// J1-T1: each user's email signature.
+pub mod signature;
 /// D16-T1: email open and click tracking.
 pub mod tracking;
 
