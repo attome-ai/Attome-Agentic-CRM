@@ -1,0 +1,109 @@
+{
+  "author": "packs",
+  "checksum": "sha256:ef2d52e7b3443f7df20775502f6c314c6c8b7ae6e17455e012788cc065a58933",
+  "closed_at": "2026-10-25T00:00:00Z",
+  "description": "SSP allocation (F11-T4): how each performance obligation's standalone selling price was found (an entered SSP, the median standalone sale, the list price less a discount, or cost plus a margin) and which SSP version it used.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d19-7e15-9b15-15c015c015f4",
+  "layer": "product",
+  "name": "ledger-ssp-allocation",
+  "opened_at": "2026-10-25T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "SSP Method",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ssp_method",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "entered",
+              "median_standalone",
+              "list_less_discount",
+              "cost_plus"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "performance_obligation",
+        "field": "ssp_method"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "SSP Version",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ssp_version",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "performance_obligation",
+        "field": "ssp_version"
+      }
+    },
+    {
+      "args": {
+        "display_name": "طريقة سعر البيع المستقل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.ssp_method",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إصدار سعر البيع المستقل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.ssp_version",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "ledger",
+  "seq": 4,
+  "title": "Pack: SSP method and version on obligations"
+}

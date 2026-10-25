@@ -199,6 +199,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Revenue allocation by standalone selling price (F11-T4): each new revenue contract's price is split over
+  its obligations in proportion to their SSPs (an entered `ssp_entry`, else the median standalone sale,
+  else list price less `revrec.ssp_list_discount_percent`, else cost plus `revrec.ssp_cost_margin_percent`),
+  the rounding cent on the largest, with the method and SSP version stored (ledger pack `0004`);
+  `PUT /api/v1/ledger/revrec/ssp` adds a product's next SSP version.
 - LinkedIn Lead Gen Forms (D30-T1): a connector adapter reads a form's questions and pages through an
   ad account's sponsored responses since a time (versioned Marketing API), and maps each onto `lead`
   fields (standard questions built in, custom ones by the connection's map, `source` =

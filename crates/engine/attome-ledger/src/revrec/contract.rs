@@ -183,6 +183,14 @@ pub async fn build_from_source(
 ) -> Result<Built, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let built = build_in(&mut tx, source_kind, source_id).await?;
+    // F11-T4: the price allocated by standalone selling price.
+    crate::revrec::allocation::allocate_contract(
+        &mut tx,
+        built.contract,
+        chrono::Utc::now().date_naive(),
+        &crate::revrec::allocation::fallback(state),
+    )
+    .await?;
     attome_db::tx::commit(tx).await?;
     Ok(built)
 }

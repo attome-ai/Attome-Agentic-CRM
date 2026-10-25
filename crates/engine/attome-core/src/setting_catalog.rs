@@ -426,6 +426,26 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // F11-T4: the SSP fallbacks.
+        SettingDescriptor::new(
+            "revrec.ssp_list_discount_percent",
+            "Percent taken off a product's list price to give its standalone selling price, when \
+         it has no entered SSP and too few sales on its own to observe one (F11-T4). 0 by \
+         default.",
+            || json!({"type": "number", "minimum": 0, "maximum": 100}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+        SettingDescriptor::new(
+            "revrec.ssp_cost_margin_percent",
+            "Percent added to a product's cost to give its standalone selling price, when it has \
+         no entered SSP, too few sales on its own and no list price (F11-T4). 0 by default.",
+            || json!({"type": "number", "minimum": 0, "maximum": 1000}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
         // L2-T3: the quality scoring's issue caps.
         SettingDescriptor::new(
             "quality.max_issues_per_run",
