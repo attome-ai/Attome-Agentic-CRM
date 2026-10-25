@@ -6471,6 +6471,34 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        // A11-T4: a rule's test cases.
+        "POST /api/v1/admin/business-rules/{id}/test-cases" => {
+            let id = rule(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/business-rules/{id}/test-cases"),
+                t,
+                Some(json!({ "name": uniq("case"), "record": {}, "expect": "pass" })),
+            )
+        }
+        "DELETE /api/v1/admin/business-rules/{id}/test-cases/{case_id}" => {
+            let id = rule(fx).await;
+            let case = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("/api/v1/admin/business-rules/{id}/test-cases"),
+                    Some(json!({ "name": uniq("case"), "record": {}, "expect": "pass" })),
+                )
+                .await,
+            );
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/business-rules/{id}/test-cases/{case}"),
+                t,
+                None,
+            )
+        }
         // ── migration projects ──────────────────────────────────────────────
         "POST /api/v1/admin/migration-projects" => request(
             "POST",

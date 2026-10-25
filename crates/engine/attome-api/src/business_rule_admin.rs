@@ -947,6 +947,56 @@ fn test_business(
 
 // ── Publish ─────────────────────────────────────────────────────────────────
 
+/// A11-T4: the rule's test cases that do not hold, one message each.
+async fn failing_cases(state: &EngineState, rule: &BusinessRule) -> Result<Vec<String>, AppError> {
+    use crate::rule_test_cases::{CaseRun, cases_of, judge};
+    if rule.kind != BUSINESS_KIND {
+        return Ok(Vec::new());
+    }
+    let cases = cases_of(state, rule.id).await?;
+    if cases.is_empty() {
+        return Ok(Vec::new());
+    }
+    let attrs = store::attrs_for_entity(state, &rule.entity_logicalname).ok_or_else(|| {
+        AppError::Validation(format!(
+            "no registered entity found with logicalname '{}'",
+            rule.entity_logicalname
+        ))
+    })?;
+    let now = Utc::now();
+    Ok(cases
+        .iter()
+        .filter_map(|case| {
+            let req = RuleTestRequest {
+                record: case.record.as_object().cloned().unwrap_or_default(),
+                audience: None,
+            };
+            let run = match test_business(rule, &attrs, &req, now) {
+                Ok(out) => CaseRun {
+                    errors: out
+                        .errors
+                        .iter()
+                        .filter(|e| e.severity == "error")
+                        .map(|e| {
+                            e.message
+                                .clone()
+                                .or_else(|| e.field.clone())
+                                .unwrap_or_else(|| "an error".to_owned())
+                        })
+                        .collect(),
+                    set_values: out.set_values,
+                    error: out.error,
+                },
+                Err(e) => CaseRun {
+                    error: Some(e.to_string()),
+                    ..CaseRun::default()
+                },
+            };
+            judge(case, &run)
+        })
+        .collect())
+}
+
 /// Publish a business rule
 ///
 /// Publish a business rule. Administrators only. Audited.
@@ -962,7 +1012,7 @@ fn test_business(
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 404, description = "No such rule", body = ErrorResponse),
         (status = 409, description = "A concurrent publish, `layer_mismatch`, or a changeset refusal", body = ErrorResponse),
-        (status = 422, description = "The stored rule no longer validates against the live schema", body = ErrorResponse),
+        (status = 422, description = "The stored rule no longer validates against the live schema, or one of its test cases does not hold (A11-T4)", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -988,6 +1038,14 @@ async fn publish_rule(
     };
     if !checked.issues.is_empty() {
         return Err(store::issues_error(&checked.issues));
+    }
+    // A11-T4: every test case must hold before the rule goes live.
+    let failing = failing_cases(&state, &stored).await?;
+    if !failing.is_empty() {
+        return Err(AppError::Validation(format!(
+            "the rule's test cases do not hold: {}",
+            failing.join("; ")
+        )));
     }
     let mode = store::write_mode(&state, &recording).await?;
 
@@ -1056,6 +1114,8 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/validation/stats",
             get(crate::validation_stats::validation_stats),
         )
+        // A11-T4: test cases the publish runs.
+        .merge(crate::rule_test_cases::routes())
         // O9-T1: rule-change and flow-change scenarios.
         .route(
             "/api/v1/scenarios/{id}/simulations",
@@ -1085,7 +1145,9 @@ pub fn routes() -> Router<EngineState> {
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
-    <ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(crate::rule_test_cases::openapi_fragment());
+    doc
 }
 
 #[cfg(test)]

@@ -13,14 +13,16 @@ mod api_usage_admin;
 /// `view_admin`/`calendar_admin` are — `bundle` reconciles it.
 pub mod app_admin;
 mod approval_admin;
+/// M9-T1: approval processes, submit and recall.
+pub mod approval_email;
 /// N30-T8/T9 — `/api/v1/admin/approvals/metrics`.
 mod approval_metrics;
 mod approval_policy_admin;
-/// M9-T1: approval processes, submit and recall.
-pub mod approval_email;
 pub mod approval_process;
 /// Z10-T6: the `queue:<uuid>` approver resolver.
 pub mod approval_queue_resolver;
+/// Y7-T7: the change feed's AsyncAPI document.
+pub mod asyncapi;
 /// audit-10-10 Phase 6 items 6.1-6.3 — self-service record history and my-
 /// activity read APIs over the audit ledger. `mod`, not `pub`: nothing else
 /// in this crate reaches into it, same posture as `communication`/
@@ -36,8 +38,6 @@ pub mod bulk_transform;
 /// hash, export, plan). `pub` because the routes, the apply job, and
 /// `crates/bundle-tool` consume its types.
 pub mod bundle;
-/// Y7-T7: the change feed's AsyncAPI document.
-pub mod asyncapi;
 /// Y7-T5: raising builder-defined business events, and the `events.raise`
 /// flow step.
 pub mod business_event;
@@ -61,20 +61,20 @@ mod changes_admin;
 /// translation, the JCS checksum and the review summary. `pub` for the same
 /// reason `bundle` is: the apply engine and `crates/server` consume it.
 pub mod changeset;
+/// T6-T2: customer flags.
+mod customer_flags_admin;
 /// Z15-T13 — `/api/v1/admin/customer-tests`.
 mod customer_test_admin;
 /// A30-T1 — `/api/v1/admin/env-variables`.
 mod env_variable_admin;
-/// T6-T2: customer flags.
-mod customer_flags_admin;
-/// B8-T2: creating and filling records from record templates.
-mod record_template_routes;
 /// A20-T2: agent-drafted label translations for review.
 pub mod label_drafts;
 /// AA9-T6 — the limits registry, its values and use.
 pub mod limits_admin;
 mod mentions;
 mod ratelimit_admin;
+/// B8-T2: creating and filling records from record templates.
+mod record_template_routes;
 /// AC7-T11 — `/api/v1/admin/sbom`.
 mod sbom_admin;
 /// AA13-T8 — `/api/v1/admin/slo`.
@@ -87,11 +87,11 @@ mod autonumber_admin;
 /// D-789 §6.1 — `/api/v1/admin/business-rules` (CRUD, validate, test,
 /// publish). Replaces `/api/v1/admin/rules*` (D-790).
 pub mod business_rule_admin;
-pub mod validation_simulation;
-pub mod validation_stats;
 /// D-789 §8 — the `business_rules` field-reference hook (rename, delete,
 /// retype) registered in `field_hooks`.
 pub mod business_rule_hooks;
+/// L7-T3: change-stream subscriptions for integration identities.
+pub mod change_stream;
 /// M52 Phase 1 (D-465) — outbound compose/reply routes for `communication`
 /// (email + internal channels, threading). `pub` because
 /// `openapi_document` and `server`'s router composition need the module's
@@ -100,9 +100,6 @@ pub mod communication;
 /// M52 Phase 1 (D-465) — delivery-status timeline child entity
 /// (`communication_event`). Seed-only, same shape as `communication_seed`.
 mod content_public;
-/// Z6-T1: the signed `/api/v1/storage/local` route the local-disk storage
-/// backend hands out in place of presigned bucket URLs.
-mod storage_local;
 /// M12 (data management) — record export. `pub` only for `process`, which
 /// `crates/server/src/jobs.rs`'s `EngineJob::DataExport` arm calls; the
 /// route handlers stay module-private.
@@ -139,14 +136,19 @@ pub mod features_admin;
 pub mod field_changes;
 /// Solution 7 Phase 2 (D-788) — the field reference-hook registry.
 pub mod field_hooks;
+pub mod inbound_hooks;
 /// M18 Data Catalog Phase 1 (D-466) — idempotent `glossary_term`
 /// registration; see that module's doc.
 mod jobs_admin;
 mod license_admin;
+/// L5-T4: lineage graph routes.
+pub mod lineage_admin;
 /// M02/D-412 — `/api/v1/admin/settings` + `/api/v1/settings/me`. `pub` only
 /// for `openapi_fragment` (mounted by `openapi.rs`) and `routes` (mounted by
 /// `system.rs`); handlers stay module-private.
 pub mod live;
+/// L1-T5: data steward routes over master entities' golden records.
+pub mod master_admin;
 /// M05 Phase 1 (D-426) — `/api/v1/admin/entities/{entity_id}/labels` CRUD.
 /// `pub` only for `openapi_fragment` (mounted by `openapi.rs`) and `routes`
 /// (mounted by `system.rs`); handlers stay module-private, same shape as
@@ -193,6 +195,8 @@ pub mod my_work_workflow;
 pub mod omnichannel_metrics;
 mod openapi;
 mod profiler_admin;
+/// L2-T2: the data-quality dimensions.
+pub mod quality;
 /// `profiler_finding` entity provisioning — see that file's own doc
 /// comment (`document/module-feature-moat/PROFILER-2026-09-09.md` group G).
 /// `pub` only for `seed`, called from `system.rs`'s `.build()`, same shape
@@ -231,6 +235,9 @@ pub mod reminder_access;
 /// `retire_rule` and the export mapping. `pub` for the bundle/changeset
 /// appliers' `reconcile_rule`/`retire_rule`/`export_defs`.
 pub mod rule_admin;
+/// A11-T4: business-rule test cases, run at publish.
+pub mod rule_test_cases;
+pub mod schedules_admin;
 /// M45 Phase 2 (D-472) — schema-building, field-security-on-authoring, the
 /// compiled-rule cache, and rule evaluation shared by `rule_admin` (CRUD/
 /// test/publish) and `entity_mutation` (the create/update retrofit). `pub`
@@ -239,17 +246,6 @@ pub mod rule_admin;
 mod schema;
 mod seed_support;
 mod service_public;
-pub mod inbound_hooks;
-/// L7-T3: change-stream subscriptions for integration identities.
-pub mod change_stream;
-/// L5-T4: lineage graph routes.
-pub mod lineage_admin;
-/// L1-T5: data steward routes over master entities' golden records.
-pub mod master_admin;
-/// L2-T2: the data-quality dimensions.
-pub mod quality;
-pub mod schedules_admin;
-pub mod stage_process_api;
 pub mod settings_admin;
 /// `pub` for the service reconcile API (`reconcile_sidebar_item` & co.,
 /// P-environment-promotion §5 step 13) — the handlers stay module-private.
@@ -261,6 +257,10 @@ mod sidebar_seed;
 /// itself stays private — `routes`/`openapi_fragment` are reached via
 /// `crate::signoff::…` from `system.rs`/`openapi.rs`.
 mod signoff;
+pub mod stage_process_api;
+/// Z6-T1: the signed `/api/v1/storage/local` route the local-disk storage
+/// backend hands out in place of presigned bucket URLs.
+mod storage_local;
 mod system;
 mod system_health;
 pub mod table_health;
@@ -268,6 +268,8 @@ pub mod table_health;
 /// module's own doc comment. No `EngineModel`/licence gate, same posture as
 /// `note_seed`/`follow_seed`.
 mod tag_seed;
+pub mod validation_simulation;
+pub mod validation_stats;
 pub mod view_admin;
 mod webcrawl_admin;
 
