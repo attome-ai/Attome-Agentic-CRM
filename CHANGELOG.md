@@ -194,6 +194,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Embedded dashboards (P8-T1): an administrator lets named `https://` sites frame a dashboard
+  (`POST /api/v1/admin/dashboards/{id}/embeds`; `DELETE /api/v1/admin/dashboard-embeds/{id}` stops it,
+  both configuration audit events). The host site's server asks for a viewer token
+  (`POST /api/v1/admin/dashboard-embeds/{id}/tokens`) that fixes the dashboard parameters for one viewer
+  and lives at most an hour; the public `POST /api/v1/embed/dashboard/data` reads a page with it, as the
+  embed's creator, with those parameters and `Content-Security-Policy: frame-ancestors <the embed's
+  sites>` in place of `X-Frame-Options: DENY`. The Angular embed page is still to come.
 - Records management (K7-T1): `POST /api/v1/admin/records/categories` (and `GET`) keeps records
   categories; `POST /api/v1/admin/records/declarations` declares a record under one, after which the
   generic update, delete, hard delete and restore refuse it with `409`. `POST

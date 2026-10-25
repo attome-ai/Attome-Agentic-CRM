@@ -131,5 +131,6 @@ impl EngineModel for DashboardModel {
             .merge(crate::health::routes())
             .merge(crate::decision::routes())
             .merge(crate::scenario::routes())
+            .merge(crate::embed::routes())
     }
 }

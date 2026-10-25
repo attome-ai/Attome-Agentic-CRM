@@ -5029,6 +5029,32 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             t,
             Some(json!({"body": "User-agent: *\nDisallow: /drafts/\n"})),
         ),
+        // P8-T1: embedding a dashboard in another site, and stopping it.
+        "POST /api/v1/admin/dashboards/{id}/embeds" => {
+            let dashboard = embeddable_dashboard(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/dashboards/{dashboard}/embeds"),
+                t,
+                Some(json!({"allowed_origins": ["https://portal.example.sa"]})),
+            )
+        }
+        "DELETE /api/v1/admin/dashboard-embeds/{id}" => {
+            let dashboard = embeddable_dashboard(fx).await;
+            let embed = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/dashboards/{dashboard}/embeds"),
+                Some(json!({"allowed_origins": ["https://portal.example.sa"]})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/dashboard-embeds/{}", id_of(&embed)),
+                t,
+                None,
+            )
+        }
         "PATCH /api/v1/admin/content/pages/{id}/review-by" => {
             let (id, row_version) = content_page(fx).await;
             with_if_match(
@@ -7209,6 +7235,21 @@ async fn content_space(fx: &Fx) -> Uuid {
         )
         .await,
     )
+}
+
+/// P8-T1: a live dashboard owned by the admin, to embed.
+async fn embeddable_dashboard(fx: &Fx) -> Uuid {
+    let id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO attome_dashboard (id, name, dashboard_type, owner_id, is_active) VALUES ($1, $2, 'personal', $3, true)",
+    )
+    .bind(id)
+    .bind(uniq("embedded"))
+    .bind(fx.admin_id)
+    .execute(&fx.base.db)
+    .await
+    .expect("insert a dashboard to embed");
+    id
 }
 
 /// E13-T8: a topic cluster, as the create route answers it.

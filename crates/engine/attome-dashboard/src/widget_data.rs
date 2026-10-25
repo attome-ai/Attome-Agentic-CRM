@@ -996,7 +996,21 @@ async fn page_data(
     Path((dashboard_id, page_id)): Path<(Uuid, Uuid)>,
     Json(inputs): Json<WidgetInputs>,
 ) -> Result<Json<PageDataResponse>, AppError> {
-    let definition = load_definition(&state, &ctx, dashboard_id, inputs.preview).await?;
+    Ok(Json(
+        run_page(&state, &ctx, dashboard_id, page_id, inputs).await?,
+    ))
+}
+
+/// Executes every widget of one page as `ctx`; the page data route and the
+/// embed route (P8-T1) both answer with it.
+pub(crate) async fn run_page(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    dashboard_id: Uuid,
+    page_id: Uuid,
+    inputs: WidgetInputs,
+) -> Result<PageDataResponse, AppError> {
+    let definition = load_definition(state, ctx, dashboard_id, inputs.preview).await?;
     let (page, widgets) = find_page(&definition.snapshot, page_id).ok_or(AppError::NotFound)?;
     // A request-level input error (an unknown parameter) is the caller's
     // mistake, not one widget's: refuse the whole request.
@@ -1004,14 +1018,13 @@ async fn page_data(
         &declared_parameters(&definition.snapshot, page.get("id").and_then(Value::as_str)),
         &inputs.parameters,
     )?;
-    let ctx: &SecurityContext = &ctx;
     let page = page.clone();
     let widgets: Vec<Value> = widgets.into_iter().cloned().collect();
     let pending: Vec<_> = widgets
         .into_iter()
         .enumerate()
         .map(|(index, widget)| {
-            run_page_widget(&state, ctx, &definition, &page, widget, &inputs, index)
+            run_page_widget(state, ctx, &definition, &page, widget, &inputs, index)
         })
         .collect();
     let results: Vec<(usize, PageWidgetResult)> = futures_util::stream::iter(pending)
@@ -1020,12 +1033,12 @@ async fn page_data(
         .await;
     let mut results = results;
     results.sort_by_key(|(index, _)| *index);
-    Ok(Json(PageDataResponse {
+    Ok(PageDataResponse {
         page_id,
         definition_source: definition.source,
         published_version_number: definition.version_number,
         widgets: results.into_iter().map(|(_, result)| result).collect(),
-    }))
+    })
 }
 
 pub fn routes() -> Router<EngineState> {

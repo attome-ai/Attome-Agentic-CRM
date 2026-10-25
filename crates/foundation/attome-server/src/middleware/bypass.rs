@@ -111,6 +111,10 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // holds it; the handler checks the signature and expiry and answers the
     // same 404 for every miss.
     "/api/v1/content/preview",
+    // P8-T1: an embedded dashboard's page data. The signed, short-lived
+    // viewer token in the body is the credential; the handler checks it and
+    // that the embed is live, and reads as the embed's creator.
+    "/api/v1/embed/dashboard/data",
     // Work Intake self-service portal (M70, D-423): public offering
     // browsing and request-status-by-token lookup. Its handlers
     // (`xrm_server::service_public`) do their own manual license check and

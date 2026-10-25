@@ -6,6 +6,7 @@ pub mod decision;
 pub mod decision_outcome;
 pub mod declarative_widget;
 pub mod drill;
+pub mod embed;
 pub mod execution;
 pub mod health;
 pub mod layout;
@@ -48,6 +49,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(health::openapi_fragment());
     doc.merge(decision::openapi_fragment());
     doc.merge(scenario::openapi_fragment());
+    doc.merge(embed::openapi_fragment());
     doc
 }
 

@@ -174,6 +174,14 @@ fn hsts_header_value(max_age_secs: u64, include_subdomains: bool) -> Option<Head
 /// Z5-T10: the set depends on the surface ([`surface_for`]), decided from
 /// the request path before the inner layers run; the values themselves were
 /// built once at boot.
+/// P8-T1: a response that a named set of other sites may frame (an embedded
+/// dashboard) carries this extension with its `frame-ancestors …` directive.
+/// The API surface then sends that policy instead of `X-Frame-Options:
+/// DENY`; a page swaps it for its own `frame-ancestors 'none'`. Nothing a
+/// client sends can set it.
+#[derive(Debug, Clone)]
+pub struct FrameAncestors(pub HeaderValue);
+
 pub async fn security_headers(values: SecurityHeaderValues, req: Request, next: Next) -> Response {
     let surface = surface_for(req.uri().path());
     let embeddable = is_cross_origin_resource(req.uri().path());
@@ -182,12 +190,20 @@ pub async fn security_headers(values: SecurityHeaderValues, req: Request, next: 
         .extensions()
         .get::<crate::web::CspNonce>()
         .map(|n| n.0.clone());
+    let frame_ancestors = response.extensions_mut().remove::<FrameAncestors>();
     let headers = response.headers_mut();
     match surface {
         Surface::App | Surface::Portal => {
-            let csp = nonce
+            let mut csp = nonce
                 .and_then(|n| HeaderValue::from_str(&policy_with_nonce(&n)).ok())
                 .unwrap_or(values.csp);
+            if let Some(FrameAncestors(allowed)) = &frame_ancestors
+                && let (Ok(policy), Ok(allowed)) = (csp.to_str(), allowed.to_str())
+                && let Ok(swapped) =
+                    HeaderValue::from_str(&policy.replacen("frame-ancestors 'none'", allowed, 1))
+            {
+                csp = swapped;
+            }
             headers.insert(values.csp_header_name, csp);
             headers.insert(
                 "reporting-endpoints",
@@ -203,7 +219,14 @@ pub async fn security_headers(values: SecurityHeaderValues, req: Request, next: 
             );
         }
         Surface::Api => {
-            headers.insert("x-frame-options", HeaderValue::from_static("DENY"));
+            match frame_ancestors {
+                Some(FrameAncestors(allowed)) => {
+                    headers.insert("content-security-policy", allowed);
+                }
+                None => {
+                    headers.insert("x-frame-options", HeaderValue::from_static("DENY"));
+                }
+            }
             headers.insert(
                 "permissions-policy",
                 HeaderValue::from_static(API_PERMISSIONS_POLICY),
@@ -415,6 +438,39 @@ mod tests {
         assert_eq!(headers.get("x-frame-options").unwrap(), "DENY");
         assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
         assert!(headers.contains_key("strict-transport-security"));
+    }
+
+    /// P8-T1: a response marked frameable by named sites says so instead of
+    /// DENY; an unmarked one is still DENY.
+    #[tokio::test]
+    async fn frame_ancestors_extension_replaces_deny() {
+        use axum::response::IntoResponse as _;
+        let app = Router::new()
+            .route(
+                "/api/v1/embed/dashboard/data",
+                get(|| async {
+                    let mut response = StatusCode::OK.into_response();
+                    response
+                        .extensions_mut()
+                        .insert(FrameAncestors(HeaderValue::from_static(
+                            "frame-ancestors https://portal.example",
+                        )));
+                    response
+                }),
+            )
+            .layer(axum::middleware::from_fn(move |req, next| {
+                security_headers(values(true), req, next)
+            }));
+        let response = app
+            .oneshot(request_for("/api/v1/embed/dashboard/data"))
+            .await
+            .unwrap();
+        let headers = response.headers();
+        assert!(!headers.contains_key("x-frame-options"));
+        assert_eq!(
+            headers.get("content-security-policy").unwrap(),
+            "frame-ancestors https://portal.example"
+        );
     }
 
     /// Z5-T10: a page keeps the CSP and is not given the API's frame header.
