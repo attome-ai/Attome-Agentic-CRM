@@ -3416,6 +3416,11 @@ mod tests {
             is_default: false,
             is_active: true,
             owner_layer: "project".into(),
+            parent_calendar_id: None,
+            parent: None,
+            country_code: None,
+            name_ar: None,
+            current_version: 1,
         };
         for op in [Op::UpsertCalendar, Op::RetireCalendar] {
             let recorded = calendar_op(op, &row).expect("op");
