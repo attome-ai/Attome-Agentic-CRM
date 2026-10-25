@@ -69,6 +69,8 @@ struct Ack {
     ok: bool,
 }
 
+/// My MFA status
+///
 /// Whether the caller's own account has a confirmed TOTP enrollment — the
 /// self-service UI's only way to know whether to render "Enable" or "Disable"
 /// (the enroll/confirm/disable/regenerate endpoints are mutation-only).
@@ -146,6 +148,8 @@ async fn record_failed_code(
     }
 }
 
+/// Start MFA enrolment
+///
 /// Starts (or restarts) enrollment. Gated on `auth.mfa_policy != "off"` —
 /// a deployment kill switch means no one can enroll, not just that login
 /// stops requiring it (mirrors `reset_request`'s `email.enabled` gate).
@@ -193,6 +197,9 @@ async fn enroll(
     ))
 }
 
+/// Confirm MFA enrolment
+///
+/// Confirms the caller's pending TOTP secret with a current code and returns the recovery codes once. The change is audited.
 #[utoipa::path(
     post,
     path = "/api/v1/auth/mfa/confirm",
@@ -235,6 +242,8 @@ async fn confirm(
     Ok(Json(RecoveryCodesBody { recovery_codes }))
 }
 
+/// Turn off MFA
+///
 /// Disables the caller's MFA. The TOTP or recovery code in the request is this
 /// request's step-up (D-510 rule 8): it is verified once, satisfies freshness
 /// for this request only, and writes no elevation. Only a cookie session with
@@ -303,6 +312,8 @@ async fn disable(
     Ok(Json(Ack { ok: true }).into_response())
 }
 
+/// Regenerate recovery codes
+///
 /// Regenerates the caller's recovery codes. The TOTP code in the request is
 /// this request's step-up (D-510 rule 8): it is verified once, satisfies
 /// freshness for this request only, and writes no elevation. Only TOTP is

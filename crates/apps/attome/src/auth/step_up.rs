@@ -104,6 +104,8 @@ pub(super) struct StepUpStatusBody {
     acceptable_factors: Vec<String>,
 }
 
+/// Whether a step-up is needed
+///
 /// Reads whether the caller's own session could perform `operation` now, by
 /// running the operation's guard without acting on it (D-510 rule 9;
 /// attome-auth hardening 2.1d). It starts no challenge and writes nothing. The
@@ -153,6 +155,8 @@ pub(super) async fn step_up_status(
     }))
 }
 
+/// Start a step-up challenge
+///
 /// Starts a single-use step-up challenge for `operation` on the caller's own
 /// session. An account with no local factor gets `reauth_required` naming what
 /// it needs, such as `totp_enrollment_required`.
@@ -204,6 +208,8 @@ pub(super) async fn start_step_up(
     ))
 }
 
+/// Verify a step-up challenge
+///
 /// Verifies a step-up challenge and elevates the caller's session. Every
 /// failure, including a wrong credential, an expired or reused challenge, or
 /// one for another session or operation, is `reauth_required`.
@@ -512,6 +518,8 @@ pub(super) async fn start_oidc_step_up(
         .into_response())
 }
 
+/// OIDC step-up callback
+///
 /// The OIDC provider's redirect back from a federated step-up. Bypass-listed
 /// (`/api/v1/auth/step-up-callback/`): no session cookie survives the
 /// cross-site redirect, so the user, family and operation come only from the

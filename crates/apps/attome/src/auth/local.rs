@@ -181,6 +181,8 @@ fn base64url_decode(input: &str) -> Option<Vec<u8>> {
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
 
+/// Register a local account
+///
 /// P-registration-gating (D-128): `auth.registration_mode` gates this before
 /// any DB work — `"disabled"` (the default) rejects outright, `"invite"`
 /// requires a valid `invitation_token` matching `body.email`
@@ -347,6 +349,8 @@ fn login_guard_event(name: String) -> SecurityEvent {
     .named(name)
 }
 
+/// Sign in with email and password
+///
 /// P2.8 step 7 (D-069): a correct password no longer always mints a session —
 /// see `accounts::LoginOutcome`. The `MfaRequired`/`MfaEnrollmentRequired`
 /// branches respond 200 with a `pending_token` instead of `Set-Cookie`; the
@@ -682,6 +686,8 @@ async fn failed_login_subject(
     })
 }
 
+/// Finish sign-in with a TOTP code
+///
 /// Completes an `MfaRequired` login with a TOTP code. Bypass-listed — the
 /// caller has no session cookie yet (that's the whole point); identity comes
 /// from `pending_token`, a short-lived, purpose-scoped token distinct from
@@ -761,6 +767,8 @@ pub(super) async fn mfa_verify(
         .into_response())
 }
 
+/// Finish sign-in with a recovery code
+///
 /// Same as `mfa_verify` but via a single-use recovery code instead of a live
 /// TOTP code.
 #[utoipa::path(
@@ -835,6 +843,8 @@ pub(super) async fn mfa_recovery(
         .into_response())
 }
 
+/// Start required MFA enrolment
+///
 /// Starts forced enrollment (`mfa_policy = "required"`, account not yet
 /// enrolled) using the `MfaEnrollmentRequired` pending token in place of a
 /// session. Bypass-listed for the same reason as `mfa_verify`.
@@ -884,6 +894,8 @@ pub(super) async fn mfa_pending_enroll(
         .into_response())
 }
 
+/// Confirm required MFA enrolment
+///
 /// Confirms forced enrollment and, on success, issues a real session
 /// immediately (the `mfa_policy = "required"` first-login path completes in
 /// one round trip: enroll, confirm, done) — plus the one-time-viewable
@@ -965,6 +977,8 @@ pub(super) async fn mfa_pending_confirm(
         .into_response())
 }
 
+/// Request a password reset
+///
 /// Always responds 200 regardless of whether `body.email` matched an account
 /// (anti-enumeration, guidelines/P-account-lifecycle) — only a match actually
 /// enqueues an email. Bypass-listed, IP-rate-limited (this route classifies
@@ -1091,6 +1105,8 @@ pub(super) async fn reset_request(
     Ok((StatusCode::OK, Json(Ack { ok: true })).into_response())
 }
 
+/// Reset a password with a reset token
+///
 /// Confirms a presented reset token. `reset::confirm` applies the whole reset
 /// in one transaction (D-509): it consumes the token, sets the new password,
 /// expires the account's other reset links, revokes every refresh token the
@@ -1166,6 +1182,8 @@ pub(super) async fn reset_confirm(
     Ok((StatusCode::OK, Json(Ack { ok: true })).into_response())
 }
 
+/// Confirm an email address
+///
 /// Confirms a presented email-verification token, flipping
 /// `user_account.email_verified`. Bypass-listed — the user isn't
 /// necessarily logged in when clicking the emailed link.

@@ -91,6 +91,9 @@ impl std::fmt::Debug for CreateApiKeyBody {
     }
 }
 
+/// List my API keys
+///
+/// The caller's own API keys: name, prefix, scopes, last use and expiry. The secret is never returned after creation.
 #[utoipa::path(
     get,
     path = "/api/v1/auth/api-keys",
@@ -157,6 +160,9 @@ async fn list_api_keys(
     )))
 }
 
+/// Create an API key
+///
+/// Creates an API key for the caller and returns its secret once. The key acts as the caller, limited to the scopes it is given; the creation is audited.
 #[utoipa::path(
     post,
     path = "/api/v1/auth/api-keys",
@@ -259,11 +265,14 @@ async fn create_api_key(
     ))
 }
 
+/// Revoke an API key
+///
+/// Revokes one of the caller's own API keys at once; requests made with it are refused from then on. The revocation is audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/auth/api-keys/{id}",
     tag = "auth",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The API key")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "Success"),

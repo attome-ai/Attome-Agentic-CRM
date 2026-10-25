@@ -210,6 +210,8 @@ async fn enqueue_notification_backfill(state: &AppState, user_id: Uuid, flow: &s
     }
 }
 
+/// Sign out
+///
 /// Invalidates the presented session server-side (Plan 1.6a): denylists the
 /// access token's `jti` for its remaining lifetime and revokes the refresh
 /// token row, then clears both cookies. Malformed/absent/already-expired
@@ -418,6 +420,8 @@ pub(super) async fn refresh_session(
         .into_response())
 }
 
+/// The current session
+///
 /// The Angular client's sole source of "am I logged in" truth
 /// (P-session-refresh-hardening, D-129) — bootstraps from this call at app
 /// init instead of trusting a localStorage marker. Protected (NOT
@@ -458,6 +462,8 @@ pub(super) async fn session_info(
     }))
 }
 
+/// My linked identities
+///
 /// P-federation-linking-policy §4.3(a) UI support — self-scoped read of the
 /// caller's own linked federated identities, backing the `/settings/security`
 /// page's "already linked" state so it doesn't have to blindly offer every

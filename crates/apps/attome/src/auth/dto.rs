@@ -132,10 +132,13 @@ impl std::fmt::Debug for OidcCallbackQuery {
 /// happen to match. BAU-25 applies to it identically.
 #[derive(Deserialize, IntoParams)]
 pub struct IdentityLinkOidcCallbackQuery {
+    /// The authorization code to exchange. `None` on an `error` redirect.
     #[serde(default)]
     pub code: Option<String>,
+    /// The `state` the provider echoes back: the flow's single-use id.
     #[serde(default)]
     pub state: Option<String>,
+    /// The provider's error code (`access_denied`, `consent_required`, ...).
     #[serde(default)]
     pub error: Option<String>,
 }
@@ -152,6 +155,7 @@ impl std::fmt::Debug for IdentityLinkOidcCallbackQuery {
 /// user and family from the session token.
 #[derive(Deserialize, IntoParams)]
 pub struct StepUpFederatedStartQuery {
+    /// The step-up challenge to continue at the provider.
     pub challenge_id: String,
 }
 
@@ -166,10 +170,13 @@ impl std::fmt::Debug for StepUpFederatedStartQuery {
 /// step-up callback; same wire shape as `OidcCallbackQuery`, BAU-25 included.
 #[derive(Deserialize, IntoParams)]
 pub struct StepUpOidcCallbackQuery {
+    /// The authorization code to exchange. `None` on an `error` redirect.
     #[serde(default)]
     pub code: Option<String>,
+    /// The `state` the provider echoes back: the flow's single-use id.
     #[serde(default)]
     pub state: Option<String>,
+    /// The provider's error code (`access_denied`, `consent_required`, ...).
     #[serde(default)]
     pub error: Option<String>,
 }

@@ -18,6 +18,9 @@ use attome_audit::security::SecurityAuditor;
 use attome_auth::auth_context::AuthContext;
 use attome_types::ErrorResponse;
 
+/// Sign in with Google
+///
+/// Exchanges a Google ID token for a session, creating or linking the account as the registration and linking settings allow. Public and rate-limited like the password sign-in.
 #[utoipa::path(
     post,
     path = "/api/v1/auth/google",
@@ -83,6 +86,8 @@ pub(super) async fn google_login(
         .into_response())
 }
 
+/// Google sign-in settings
+///
 /// P-frontend-baseline step 5 (D-071/D-073) — public directory endpoint so the
 /// login page can fetch the Google client id at runtime instead of it being
 /// duplicated as a hardcoded literal in `environment.ts`. Falls under the
@@ -109,6 +114,8 @@ pub(super) async fn google_config(State(state): State<AppState>) -> Json<GoogleC
     })
 }
 
+/// Self-registration settings
+///
 /// P-registration-gating (D-128) — lets the Angular login page hide the
 /// sign-up form/link when `auth.registration_mode` isn't `"public"`, instead
 /// of showing it and letting every submission fail with a 403. Falls under
@@ -130,6 +137,8 @@ pub(super) async fn register_config(State(state): State<AppState>) -> Json<Regis
     })
 }
 
+/// Link a Google identity
+///
 /// P-federation-linking-policy §4.3(a) extended to Google — analog of
 /// `identity_link_oidc_start`, but Google's
 /// credential flow is a single synchronous POST from the Google Identity

@@ -199,6 +199,8 @@ fn form_urldecode(value: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
+/// Start an OIDC sign-in
+///
 /// P2.8 (D-065) — starts the generic OIDC authorization-code + PKCE flow for
 /// a config-driven provider (`config.oidc.providers.{provider}`). Redirects
 /// the browser straight to the IdP; `AppError::NotFound` for an unconfigured
@@ -209,7 +211,7 @@ fn form_urldecode(value: &str) -> String {
     get,
     path = "/api/v1/auth/oidc/{provider}/login",
     tag = "auth",
-    params(("provider" = String, Path)),
+    params(("provider" = String, Path, description = "The OIDC provider's key")),
     responses(
         (status = 200, description = "Success"),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
@@ -284,7 +286,7 @@ pub(super) async fn oidc_login(
     tag = "auth",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Login)])))),
     params(
-        ("provider" = String, Path),
+        ("provider" = String, Path, description = "The OIDC provider's key"),
         OidcCallbackQuery,
     ),
     responses(
@@ -493,11 +495,14 @@ pub(super) async fn identity_link_step_up_redirect(
     }
 }
 
+/// Start linking an OIDC identity
+///
+/// Redirects the signed-in caller to the OIDC provider to link that identity to their own account, as the linking policy allows. The provider returns to the identity-link callback.
 #[utoipa::path(
     get,
     path = "/api/v1/auth/identity-link/oidc/{provider}",
     tag = "auth",
-    params(("provider" = String, Path)),
+    params(("provider" = String, Path, description = "The OIDC provider's key")),
     responses(
         (status = 200, description = "Not returned: every accepted request gets a 303 redirect. Listed because every documented operation declares a 2xx."),
         (status = 303, description = "Redirect to the provider. When the session has no step-up for `identity_link` within 5 minutes, redirect instead to `{frontend}/settings/security?reauth_required=identity_link`, with no provider state created"),
@@ -558,6 +563,8 @@ pub(super) async fn identity_link_oidc_start(
         .into_response())
 }
 
+/// OIDC identity-link callback
+///
 /// P-federation-linking-policy §4.3(a) callback — bypass-listed
 /// (`attome_server::middleware::bypass`'s `/api/v1/auth/identity-link-callback/`
 /// subtree prefix). This route deliberately does NOT require
@@ -574,7 +581,7 @@ pub(super) async fn identity_link_oidc_start(
     path = "/api/v1/auth/identity-link-callback/oidc/{provider}",
     tag = "auth",
     params(
-        ("provider" = String, Path),
+        ("provider" = String, Path, description = "The OIDC provider's key"),
         IdentityLinkOidcCallbackQuery,
     ),
     responses(
@@ -718,6 +725,8 @@ async fn identity_link_oidc_callback_inner(
     .await
 }
 
+/// List sign-in providers
+///
 /// P2.8 step 5 — public directory of configured OIDC providers so the Angular
 /// login page can render provider buttons without duplicating provider keys/
 /// labels in frontend config (killing the hardcoded-client-id pattern that
