@@ -120,15 +120,21 @@ async fn get_cluster(
     State(state): State<EngineState>,
     _ctx: Authorized<Privilege<OpsRead>>,
 ) -> Result<Json<ClusterStatus>, AppError> {
+    cluster_status(&state).await.map(Json)
+}
+
+/// The cluster's status, as `GET /api/v1/ops/cluster` answers it (the
+/// `ops.cluster_status` agent action reads it too, AB2-T12).
+pub async fn cluster_status(state: &EngineState) -> Result<ClusterStatus, AppError> {
     let urls = &state.base.config.ops.patroni_api_urls;
     if urls.is_empty() {
-        return Ok(Json(ClusterStatus {
+        return Ok(ClusterStatus {
             mode: "single".into(),
             leader: Some("local".into()),
             members: Vec::new(),
             synchronous_standby: None,
             last_failover: None,
-        }));
+        });
     }
     let cached = CACHE
         .lock()
@@ -165,7 +171,7 @@ async fn get_cluster(
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    Ok(Json(status))
+    Ok(status)
 }
 
 /// List failovers

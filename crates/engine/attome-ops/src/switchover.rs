@@ -134,7 +134,25 @@ async fn request_switchover(
     ctx: Authorized<Privilege<OpsClusterSwitchover>>,
     Json(body): Json<SwitchoverRequest>,
 ) -> Result<(StatusCode, Json<SwitchoverApproval>), AppError> {
-    check_request(&body)?;
+    let request = submit(&state, ctx.user_id, &body).await?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(SwitchoverApproval {
+            approval_id: request.id,
+            status: request.status.to_string(),
+        }),
+    ))
+}
+
+/// Submits the `ops.switchover` approval for `requester` (the route, and
+/// the `ops.propose_switchover` agent action, AB2-T12). Never calls
+/// Patroni.
+pub async fn submit(
+    state: &EngineState,
+    requester: Uuid,
+    body: &SwitchoverRequest,
+) -> Result<attome_approval::ApprovalRequest, AppError> {
+    check_request(body)?;
     if state.base.config.ops.patroni_api_urls.is_empty() {
         return Err(AppError::Validation(
             "no Patroni cluster is configured (ops.patroni_api_urls)".into(),
@@ -161,22 +179,16 @@ async fn request_switchover(
         }],
     };
     let request = attome_audit::approval::gate_with_plan_regarding(
-        &state,
+        state,
         ACTION_SWITCHOVER,
         json!({ "candidate": body.candidate, "reason": body.reason.trim() }),
-        ctx.user_id,
+        requester,
         plan,
         None,
     )
     .await?;
     tracing::info!(approval_id = %request.id, "database switchover requested");
-    Ok((
-        StatusCode::ACCEPTED,
-        Json(SwitchoverApproval {
-            approval_id: request.id,
-            status: request.status.to_string(),
-        }),
-    ))
+    Ok(request)
 }
 
 fn internal(e: impl std::fmt::Display) -> OpsError {

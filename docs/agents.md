@@ -149,6 +149,10 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   recording's transcript (summary and next steps, extracted locally) and saves nothing.
 - Service levels (administrators): `ops.slo_health` lists each SLO class with its status and the share
   of its 30-day error budget left, from the server's own metrics store.
+- Database cluster (with the ops module): `ops.cluster_status` (`ops.read`) reads the members, lag,
+  synchronous standby and last failover; `ops.propose_switchover` (`ops.cluster.switchover`) only
+  creates the switchover approval request. A second person in the Operations role approves it, never
+  an agent, and only then does the server ask Patroni to move the leader.
 - Secrets (administrators, reads only): `secrets.list` names every configured secret with the
   features that use it, whether it is set and how many days its active key has been in use. It never
   returns a value or a key id, and there is no tool that writes or rotates a secret.
