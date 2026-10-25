@@ -291,6 +291,7 @@ async fn mail_step(state: &EngineState, request_id: Uuid) -> Result<usize, AppEr
                 references: None,
                 communication_id: None,
                 attachments: Vec::new(),
+                stream: Default::default(),
             })),
         )
         .await

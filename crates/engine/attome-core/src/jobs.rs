@@ -1794,6 +1794,12 @@ impl attome_jobs::Job for EngineJob {
     }
 
     fn is_batch(&self) -> bool {
+        // Z8-T3: bulk mail never takes the fast lane's slots.
+        if let EngineJob::SendEmail(msg) = self
+            && msg.stream == attome_email::EmailStream::Bulk
+        {
+            return true;
+        }
         registered_type(self).map_or_else(
             || EngineJob::is_batch(self),
             |job_type| job_type.lane == attome_jobs::Lane::Batch,
@@ -1848,6 +1854,7 @@ mod tests {
             references: None,
             communication_id: Some(Uuid::now_v7()),
             attachments: Vec::new(),
+            stream: Default::default(),
         })));
     }
 
@@ -1865,6 +1872,7 @@ mod tests {
             references: None,
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         })));
     }
 
@@ -2794,6 +2802,7 @@ mod tests {
                 references: None,
                 communication_id: None,
                 attachments: Vec::new(),
+                stream: Default::default(),
             }))
             .priority(),
             JobPriority::High

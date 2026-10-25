@@ -559,13 +559,22 @@ async fn send_in_span(
 
     // Z8-T6: in test mode the catch-all is the one recipient.
     let recipient = normalize_email(catch_all(cfg).unwrap_or(&msg.to));
-    if suppression::is_suppressed(db, &recipient)
+    if suppression::is_suppressed_for(db, &recipient, msg.stream)
         .await
         .map_err(|e| SendError::Internal(e.to_string()))?
     {
         tracing::debug!("email: recipient is suppressed; no SMTP attempt made");
         return Err(SendError::Suppressed);
     }
+
+    // Z8-T3: each stream's own per-provider and per-domain pace.
+    crate::rate::pace(&crate::rate::limits_for(
+        cfg,
+        msg.stream,
+        provider.name(),
+        &recipient,
+    ))
+    .await?;
 
     let started = std::time::Instant::now();
     let outgoing = crate::provider::OutgoingEmail {
@@ -628,6 +637,7 @@ mod tests {
             tls_mode: None,
             test_mode_catch_all: None,
             providers: Default::default(),
+            rate_limits: Default::default(),
         }
     }
 
@@ -644,6 +654,7 @@ mod tests {
             references: None,
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         }
     }
 

@@ -287,6 +287,7 @@ mod tests {
             tls_mode: None,
             test_mode_catch_all: None,
             providers,
+            rate_limits: Default::default(),
         }
     }
 

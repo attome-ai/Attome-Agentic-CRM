@@ -259,6 +259,7 @@ mod tests {
             tls_mode: Some("none".to_string()),
             test_mode_catch_all: None,
             providers: Default::default(),
+            rate_limits: Default::default(),
         }
     }
 

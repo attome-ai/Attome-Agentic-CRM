@@ -77,6 +77,7 @@ fn dummy_email_job(to: &str) -> TestJob {
         references: None,
         communication_id: None,
         attachments: Vec::new(),
+        stream: Default::default(),
     }))
 }
 

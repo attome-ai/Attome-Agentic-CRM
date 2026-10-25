@@ -428,6 +428,7 @@ async fn notify_failure(
         references: None,
         communication_id: None,
         attachments: Vec::new(),
+        stream: Default::default(),
     };
     attome_jobs::enqueue_in_tx(
         tx,

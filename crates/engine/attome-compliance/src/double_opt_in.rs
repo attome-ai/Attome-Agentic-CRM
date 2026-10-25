@@ -183,6 +183,7 @@ pub async fn capture_grant(
             references: None,
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         })),
     )
     .await

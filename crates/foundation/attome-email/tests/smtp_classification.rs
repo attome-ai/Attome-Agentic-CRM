@@ -152,6 +152,7 @@ fn cfg_for(port: u16, user: &str) -> EmailSection {
         tls_mode: Some("none".to_string()),
         test_mode_catch_all: None,
         providers: Default::default(),
+        rate_limits: Default::default(),
     }
 }
 
@@ -168,6 +169,7 @@ fn message_to(recipient: &str) -> attome_email::EmailMessage {
         references: None,
         communication_id: None,
         attachments: Vec::new(),
+        stream: Default::default(),
     }
 }
 

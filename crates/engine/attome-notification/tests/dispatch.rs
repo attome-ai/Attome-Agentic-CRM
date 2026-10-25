@@ -295,6 +295,7 @@ async fn dispatch_email_is_idempotent_under_a_retried_enqueue() {
             references: None,
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         })),
         &dedup_key,
     )

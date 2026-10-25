@@ -357,6 +357,7 @@ async fn resend_delivery(
             references: None,
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         })),
     )
     .await

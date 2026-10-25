@@ -141,6 +141,38 @@ pub struct EmailSection {
     /// default), Amazon SES or SendGrid, chosen per sender identity.
     #[serde(default)]
     pub providers: EmailProviders,
+    /// Z8-T3: messages per minute, per stream. Transactional mail (sign-in
+    /// codes, resets, notifications) and bulk mail (surveys, campaigns) each
+    /// have their own limits, so a campaign never holds up a sign-in code.
+    /// Paced per worker node: a send over a limit waits for the minute to
+    /// turn (up to a minute), then retries later.
+    #[serde(default)]
+    pub rate_limits: EmailRateLimits,
+}
+
+/// Z8-T3: `email.rate_limits`. Each stream's own limits; a stream with
+/// none set sends as fast as the provider takes it.
+#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
+pub struct EmailRateLimits {
+    /// Limits on transactional mail.
+    #[serde(default)]
+    pub transactional: EmailStreamRates,
+    /// Limits on bulk mail.
+    #[serde(default)]
+    pub bulk: EmailStreamRates,
+}
+
+/// Z8-T3: one stream's limits, in messages per minute.
+#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
+pub struct EmailStreamRates {
+    /// By provider name (`"smtp"`, `"ses"`, `"sendgrid"`):
+    /// `{"ses": 600}`. A provider not named has no limit.
+    #[serde(default)]
+    pub providers: std::collections::BTreeMap<String, u32>,
+    /// By recipient domain, any case: `{"gmail.com": 120}`. A domain not
+    /// named has no limit.
+    #[serde(default)]
+    pub domains: std::collections::BTreeMap<String, u32>,
 }
 
 /// Z8-T1: `email.providers`. `by_sender` maps a From address (any case) to

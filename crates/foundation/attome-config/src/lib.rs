@@ -46,9 +46,9 @@ pub mod fingerprint;
 mod keyring;
 /// AA9-T1 — every limit the platform enforces, with its range.
 pub mod limits;
+mod net;
 /// R7-T1 — the data residency map and its boot check.
 pub mod residency;
-mod net;
 pub mod secret;
 /// Z1-T8 — every secret the configuration holds, without its value.
 pub mod secret_inventory;
@@ -58,15 +58,15 @@ pub use config::{
     AzureStorageSettings, BackupSection, CacheBackend, CacheRole, CacheRoleOverride, CacheRoles,
     CacheSection, CaptchaConfig, CaptchaProvider, CatalogueModel, ChangesetLayer, ChangesetMode,
     ChangesetsSection, ConfigError, DataLabel, DatabasePoolSize, DatabasePools, DatabaseSection,
-    DocgenSection, EinvoiceSection, EmailProviders, EmailSection, EventsSection, FleetSection,
-    GcsStorageSettings, GoogleAiSection, InferenceEndpoint, InferenceSection, IntegrationSection,
-    KdfSection, LocalStorageSettings, MetadataSection, ModelCapability, ModelPrice,
-    NotificationSection, ObservabilitySection, OidcProviderConfig, OidcSection, PortalSection,
-    RateLimitSection, ReleaseReportSection, RuntimeDbCredentials, S2SSection, S2sSeededClient,
-    S2sSeededPermission, S3Target, SendGridSettings, SesSettings, ShedPermits, ShedSection,
-    SpendSection, StatementClassOverrides, StatementClassTimeouts, StorageBackend, StorageSection,
-    TlsSection, TranslationSection, WebchatSection, WebcrawlSection, cidr_contains,
-    config_json_schema, endpoint_is_in_deployment,
+    DocgenSection, EinvoiceSection, EmailProviders, EmailRateLimits, EmailSection,
+    EmailStreamRates, EventsSection, FleetSection, GcsStorageSettings, GoogleAiSection,
+    InferenceEndpoint, InferenceSection, IntegrationSection, KdfSection, LocalStorageSettings,
+    MetadataSection, ModelCapability, ModelPrice, NotificationSection, ObservabilitySection,
+    OidcProviderConfig, OidcSection, PortalSection, RateLimitSection, ReleaseReportSection,
+    RuntimeDbCredentials, S2SSection, S2sSeededClient, S2sSeededPermission, S3Target,
+    SendGridSettings, SesSettings, ShedPermits, ShedSection, SpendSection, StatementClassOverrides,
+    StatementClassTimeouts, StorageBackend, StorageSection, TlsSection, TranslationSection,
+    WebchatSection, WebcrawlSection, cidr_contains, config_json_schema, endpoint_is_in_deployment,
 };
 pub use env::{APP_ENV_VAR, DEBUG_APP_ENV, app_env, is_debug_app_env, is_debug_env};
 pub use keyring::{BARE_STRING_KEY_ID, KeyRing};

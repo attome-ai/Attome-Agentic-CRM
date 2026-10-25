@@ -1508,6 +1508,20 @@
       },
       "type": "object"
     },
+    "EmailRateLimits": {
+      "description": "Z8-T3: `email.rate_limits`. Each stream's own limits; a stream with\nnone set sends as fast as the provider takes it.",
+      "properties": {
+        "bulk": {
+          "$ref": "#/$defs/EmailStreamRates",
+          "description": "Limits on bulk mail."
+        },
+        "transactional": {
+          "$ref": "#/$defs/EmailStreamRates",
+          "description": "Limits on transactional mail."
+        }
+      },
+      "type": "object"
+    },
     "EmailSection": {
       "properties": {
         "enabled": {
@@ -1518,6 +1532,10 @@
         "providers": {
           "$ref": "#/$defs/EmailProviders",
           "description": "Z8-T1: which provider sends a message: SMTP (the fields above, the\ndefault), Amazon SES or SendGrid, chosen per sender identity."
+        },
+        "rate_limits": {
+          "$ref": "#/$defs/EmailRateLimits",
+          "description": "Z8-T3: messages per minute, per stream. Transactional mail (sign-in\ncodes, resets, notifications) and bulk mail (surveys, campaigns) each\nhave their own limits, so a campaign never holds up a sign-in code.\nPaced per worker node: a send over a limit waits for the minute to\nturn (up to a minute), then retries later."
         },
         "smtp_from_address": {
           "type": "string"
@@ -1574,6 +1592,32 @@
         "smtp_from_address",
         "smtp_from_name"
       ],
+      "type": "object"
+    },
+    "EmailStreamRates": {
+      "description": "Z8-T3: one stream's limits, in messages per minute.",
+      "properties": {
+        "domains": {
+          "additionalProperties": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "default": {},
+          "description": "By recipient domain, any case: `{\"gmail.com\": 120}`. A domain not\nnamed has no limit.",
+          "type": "object"
+        },
+        "providers": {
+          "additionalProperties": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "default": {},
+          "description": "By provider name (`\"smtp\"`, `\"ses\"`, `\"sendgrid\"`):\n`{\"ses\": 600}`. A provider not named has no limit.",
+          "type": "object"
+        }
+      },
       "type": "object"
     },
     "EventsSection": {

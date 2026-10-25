@@ -297,6 +297,7 @@ pub(super) async fn register(
                 references: None,
                 communication_id: None,
                 attachments: Vec::new(),
+                stream: Default::default(),
             })),
         )
         .await
@@ -1071,6 +1072,7 @@ pub(super) async fn reset_request(
                 references: None,
                 communication_id: None,
                 attachments: Vec::new(),
+                stream: Default::default(),
             })),
         )
         .await

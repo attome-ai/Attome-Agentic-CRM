@@ -235,6 +235,7 @@ pub(super) async fn create_invitation(
             references: None,
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         }));
         attome_jobs::enqueue_in_tx(&mut tx, job)
             .await

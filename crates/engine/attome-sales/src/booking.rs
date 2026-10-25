@@ -767,6 +767,7 @@ async fn notify(
             references: None,
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         })),
     )
     .await

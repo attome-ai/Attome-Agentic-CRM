@@ -479,6 +479,7 @@ impl IssueHook for SendHook {
                 references: None,
                 communication_id: None,
                 attachments,
+                stream: Default::default(),
             };
             let mut tx = attome_db::tx::begin(&state.base.db).await?;
             let moved = sqlx::query(

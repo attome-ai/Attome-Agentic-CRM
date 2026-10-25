@@ -101,6 +101,34 @@ pub struct EmailMessage {
     /// as the other optional fields; capped by [`MAX_ATTACHMENT_BYTES`].
     #[serde(default)]
     pub attachments: Vec<EmailAttachment>,
+    /// Z8-T3: transactional (the default) or bulk. Bulk mail runs on the
+    /// batch job lane, has its own rate limits, and stops at an
+    /// unsubscribe; transactional mail stops only at a hard bounce, a
+    /// complaint or an administrator's suppression. `#[serde(default)]`,
+    /// same forward-compat reasoning as the other optional fields.
+    #[serde(default)]
+    pub stream: EmailStream,
+}
+
+/// Z8-T3: which stream a message belongs to.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EmailStream {
+    /// Mail a person is waiting for or must get: sign-in codes, resets,
+    /// invitations, notifications, invoices.
+    #[default]
+    Transactional,
+    /// Mail sent to many at once: surveys, campaigns.
+    Bulk,
+}
+
+impl EmailStream {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Transactional => "transactional",
+            Self::Bulk => "bulk",
+        }
+    }
 }
 
 /// The most attachment bytes one message carries (all files together).
@@ -147,6 +175,7 @@ mod tests {
             references: Some("<0@example.invalid>".to_string()),
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         }
     }
 

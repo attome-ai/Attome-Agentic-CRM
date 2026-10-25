@@ -284,6 +284,10 @@ Required.
 | `email.providers.ses.region` | string |  |  | e.g. `"eu-west-1"`. |
 | `email.providers.ses.secret_access_key` | string |  | yes |  |
 | `email.providers.ses.session_token` | string, optional |  | yes | A temporary credential's session token. |
+| `email.rate_limits.bulk.domains` | map |  |  | By recipient domain, any case: `{"gmail.com": 120}`. A domain not named has no limit. |
+| `email.rate_limits.bulk.providers` | map |  |  | By provider name (`"smtp"`, `"ses"`, `"sendgrid"`): `{"ses": 600}`. A provider not named has no limit. |
+| `email.rate_limits.transactional.domains` | map |  |  | By recipient domain, any case: `{"gmail.com": 120}`. A domain not named has no limit. |
+| `email.rate_limits.transactional.providers` | map |  |  | By provider name (`"smtp"`, `"ses"`, `"sendgrid"`): `{"ses": 600}`. A provider not named has no limit. |
 | `email.smtp_from_address` | string |  |  |  |
 | `email.smtp_from_name` | string |  |  |  |
 | `email.smtp_host` | string |  |  |  |

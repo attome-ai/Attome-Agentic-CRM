@@ -133,6 +133,7 @@ mod tests {
                 content_type: "application/pdf".into(),
                 content_base64: "JVBERi0xLjQK".into(),
             }],
+            stream: Default::default(),
         }
     }
 

@@ -577,6 +577,7 @@ async fn email_link(
             references: None,
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         })),
     )
     .await

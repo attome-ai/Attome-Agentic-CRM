@@ -34,6 +34,45 @@ fn unique_email() -> String {
     attome_testkit::unique_email("email-hardening-test")
 }
 
+/// Z8-T3: an unsubscribe stops bulk mail only; a sign-in code still goes.
+/// A later hard bounce stops both.
+#[tokio::test]
+async fn bulk_unsubscribe_does_not_block_a_sign_in_code() {
+    use attome_email::EmailStream;
+    let pool = skip_if_no_db!(test_pool().await);
+    let email = unique_email();
+
+    suppression::suppress(&pool, &email, SuppressionReason::Unsubscribe, None, None)
+        .await
+        .unwrap();
+    assert!(
+        suppression::is_suppressed_for(&pool, &email, EmailStream::Bulk)
+            .await
+            .unwrap()
+    );
+    assert!(
+        !suppression::is_suppressed_for(&pool, &email, EmailStream::Transactional)
+            .await
+            .unwrap(),
+        "a bulk unsubscribe must not block transactional mail"
+    );
+    assert!(!suppression::is_suppressed(&pool, &email).await.unwrap());
+
+    suppression::suppress(&pool, &email, SuppressionReason::HardBounce, None, None)
+        .await
+        .unwrap();
+    assert!(
+        suppression::is_suppressed_for(&pool, &email, EmailStream::Transactional)
+            .await
+            .unwrap()
+    );
+    assert!(
+        suppression::is_suppressed_for(&pool, &email, EmailStream::Bulk)
+            .await
+            .unwrap()
+    );
+}
+
 #[tokio::test]
 async fn is_suppressed_is_false_for_an_address_never_suppressed() {
     let pool = skip_if_no_db!(test_pool().await);

@@ -100,6 +100,7 @@ fn test_config(port: u16) -> AppConfig {
         tls_mode: Some("none".to_string()),
         test_mode_catch_all: None,
         providers: Default::default(),
+        rate_limits: Default::default(),
     };
     config
 }
@@ -194,6 +195,7 @@ async fn queued(db: &attome_db::DbPool) -> (Uuid, attome_email::EmailMessage) {
         references: None,
         communication_id: None,
         attachments: Vec::new(),
+        stream: Default::default(),
     };
     (id, message)
 }

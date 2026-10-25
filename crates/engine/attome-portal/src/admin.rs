@@ -478,6 +478,7 @@ async fn invite_user(
             references: None,
             communication_id: None,
             attachments: Vec::new(),
+            stream: Default::default(),
         })),
     )
     .await

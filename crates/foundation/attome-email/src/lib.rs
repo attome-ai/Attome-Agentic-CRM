@@ -37,6 +37,7 @@ pub mod health;
 mod message;
 /// Z8-T1 — SMTP, Amazon SES and SendGrid behind one provider trait.
 pub mod provider;
+pub mod rate;
 mod sender;
 pub mod suppression;
 pub mod templates;
@@ -49,5 +50,5 @@ pub use health::{
     CAPABILITY_PROBE_TIMEOUT, EmailHealth, health_check, health_check_authenticated,
     health_check_with_timeout,
 };
-pub use message::{EmailAttachment, EmailMessage, MAX_ATTACHMENT_BYTES};
+pub use message::{EmailAttachment, EmailMessage, EmailStream, MAX_ATTACHMENT_BYTES};
 pub use sender::{catch_all, send};

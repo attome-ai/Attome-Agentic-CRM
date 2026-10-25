@@ -51,8 +51,8 @@ pub use sections::metadata::{
     ChangesetLayer, ChangesetMode, ChangesetsSection, MetadataSection, ReleaseReportSection,
 };
 pub use sections::observability::{
-    EmailProviders, EmailSection, GoogleAiSection, ObservabilitySection, SendGridSettings,
-    SesSettings,
+    EmailProviders, EmailRateLimits, EmailSection, EmailStreamRates, GoogleAiSection,
+    ObservabilitySection, SendGridSettings, SesSettings,
 };
 pub use sections::portal::{CaptchaConfig, CaptchaProvider, PortalSection};
 pub use sections::shed::{ShedPermits, ShedSection};
