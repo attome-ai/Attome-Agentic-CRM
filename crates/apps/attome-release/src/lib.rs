@@ -35,6 +35,8 @@ pub mod intake;
 pub mod notes;
 pub mod parity;
 pub mod perf;
+/// AC4-T7: the previous release upgraded by this commit must boot.
+pub mod rehearsal;
 pub mod release;
 pub mod repro;
 pub mod sbom;
@@ -161,6 +163,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("rules", rules_step as Step),
         ("install_timing", install_timing as Step),
         ("smoke", smoke as Step),
+        ("upgrade_rehearsal", rehearsal::step as Step),
     ];
     if options.web {
         steps.push(("web", web as Step));

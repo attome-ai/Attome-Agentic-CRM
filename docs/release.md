@@ -22,7 +22,12 @@ previous tag needs an entry in `docs/dependencies/intake.json`: reason, licence,
 --check`, see [slo.md](slo.md)) and the Prometheus rules (`promtool check rules` and `promtool test
 rules`; install Prometheus's `promtool`, or point `ATTOME_PROMTOOL` at it), the install time
 (`attome init` into the empty database `ATTOME_INSTALL_DATABASE_URL` names, under ten minutes; not
-measured when it is unset), plus the web app with
+measured when it is unset), the upgrade rehearsal (with `ATTOME_REHEARSAL_SERVER_URL`, a PostgreSQL URL
+whose role may create databases: the previous release tag's own `attome init` builds its schema in a
+throwaway `attomedb_test_rehearsal_<commit>` database, this commit's `attome init` upgrades it, and
+the upgraded server must answer `/health/ready` within 120 seconds; the database and the tag's
+worktree are removed afterwards; not run when the variable is unset or the checkout has no earlier
+tag), plus the web app with
 `--web` and, with `--reproducible`, two release builds whose `attome` binaries must hash the same
 (`target/release-gate/repro.json`) and, with `--perf`, `attome perf compare`: the newest record in
 `docs/perf-history/` against the previous release's on the same machine (record one with
