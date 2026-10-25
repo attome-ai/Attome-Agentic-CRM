@@ -581,9 +581,12 @@ async fn load_user(state: &EngineState, id: Uuid) -> Result<UserRow, AppError> {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct ListQuery {
+    /// A SCIM filter, such as `userName eq "sara@example.com"`.
     pub filter: Option<String>,
+    /// The 1-based index of the first result.
     #[serde(rename = "startIndex")]
     pub start_index: Option<i64>,
+    /// How many results to return.
     pub count: Option<i64>,
 }
 

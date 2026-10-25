@@ -1012,9 +1012,11 @@ pub struct HistorySearchQuery {
     pub field: String,
     /// A condition on the value before the change.
     pub old_op: Option<HistoryCompare>,
+    /// The value `old_op` compares the old value with.
     pub old_value: Option<String>,
     /// A condition on the value after the change.
     pub new_op: Option<HistoryCompare>,
+    /// The value `new_op` compares the new value with.
     pub new_value: Option<String>,
     /// Changes on or after this moment (UTC).
     pub from: Option<DateTime<Utc>>,
