@@ -87,7 +87,7 @@ export function conditionFieldKind(
       return 'text';
     case 'number': case 'currency':
       return 'number';
-    case 'date':
+    case 'date': case 'date_time':
       return 'date';
     case 'bool':
       return 'bool';
@@ -99,7 +99,7 @@ export function conditionFieldKind(
       // D-604: a formula reads as its result type.
       switch ((field.options as { result_type?: string } | null)?.result_type) {
         case 'number': case 'currency': return 'number';
-        case 'date': return 'date';
+        case 'date': case 'date_time': return 'date';
         case 'bool': return 'bool';
         default: return 'text';
       }

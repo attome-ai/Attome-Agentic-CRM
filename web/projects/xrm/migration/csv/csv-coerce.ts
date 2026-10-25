@@ -51,7 +51,8 @@ export function coerceCell(
       const n = parseNumber(trimmed, opts.decimal);
       return n === null ? { ok: false, code: 'number' } : { ok: true, value: n };
     }
-    case 'date': {
+    case 'date':
+    case 'date_time': {
       const d = parseDate(trimmed, opts.dateFormat);
       return d === null ? { ok: false, code: 'date' } : { ok: true, value: d };
     }

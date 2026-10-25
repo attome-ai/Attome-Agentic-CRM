@@ -266,6 +266,7 @@ export function fieldTypeToFilterKind(fieldType: string): FilterKind {
     case 'number':   return 'number';
     case 'currency': return 'number';
     case 'date':     return 'date';
+    case 'date_time': return 'date';
     case 'bool':     return 'boolean';
     case 'choice':   return 'optionset';
     case 'lookup':   return 'lookup';

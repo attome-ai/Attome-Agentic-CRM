@@ -4,11 +4,13 @@ export type FieldType =
   | 'text' | 'number' | 'currency' | 'date' | 'bool' | 'choice' | 'lookup' | 'file' | 'icon' | 'color'
   // U9 (D-604, D-605): a computed `formula` (read-only, never sent back),
   // sanitized `rich_text` HTML, and an `image` (a `file` limited to images).
-  | 'formula' | 'rich_text' | 'image';
+  | 'formula' | 'rich_text' | 'image'
+  // Y2-T1: a moment (TIMESTAMPTZ); `date` is a calendar day.
+  | 'date_time';
 
 // Mirrors attome_core::formula::FormulaOptions (B-R6, D-604). The value
 // is computed by the server on every write; the form shows it read-only.
-export type FormulaResultType = 'text' | 'number' | 'currency' | 'date' | 'bool';
+export type FormulaResultType = 'text' | 'number' | 'currency' | 'date' | 'date_time' | 'bool';
 export interface FormulaOptions { expression: string; result_type: FormulaResultType; }
 
 // Per-value display hints for a `choice` field — a colored pill and/or icon

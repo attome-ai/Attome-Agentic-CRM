@@ -40,6 +40,7 @@ export function historyValue(
       if (value === 'false') return { text: translate('recordHistory.no'), isDate: false };
       return { text: value, isDate: false };
     case 'date':
+    case 'date_time':
       return { text: value, isDate: !Number.isNaN(Date.parse(value)) };
     default:
       return { text: display || value, isDate: false };
