@@ -10,6 +10,9 @@
 //! - `GET /api/v1/ops/disasters/approvals/{approval_id}` answers that
 //!   approval's status, for `drill recover --approval-id` to wait on.
 //! - `POST /api/v1/ops/disasters/{id}/close` closes it (`If-Match`).
+//! - `GET /api/v1/ops/disasters` and `GET /api/v1/ops/disasters/{id}/actions`
+//!   (`ops.read`, AB3-T10) list the disasters, open ones first, and the
+//!   actions asked for on one with their approval status.
 //!
 //! Every write commits with its Configuration event. AB11's incident
 //! service is not built, so declaring opens no incident yet.
@@ -19,10 +22,10 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
-use attome_types::{AppError, ErrorResponse};
+use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
@@ -383,10 +386,106 @@ async fn close(
     Ok(Json(disaster))
 }
 
+/// List disasters
+///
+/// AB3-T10: every declared disaster, open ones first, newest first. Needs
+/// `ops.read`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/ops/disasters",
+    tag = "ops",
+    operation_id = "list_ops_disasters",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "One page of disasters", body = PaginatedResponse<Disaster>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks ops.read", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_disasters(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<crate::upgrades::OpsRead>>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<Disaster>>, AppError> {
+    let w = page.window();
+    let items: Vec<Disaster> = sqlx::query_as(&format!(
+        "SELECT {COLUMNS} FROM ops_disaster \
+          ORDER BY closed_at IS NOT NULL, declared_at DESC, id DESC LIMIT $1 OFFSET $2"
+    ))
+    .bind(w.page_size)
+    .bind(w.offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ops_disaster")
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        w.page,
+        w.page_size,
+    )))
+}
+
+/// The most actions one disaster's list answers.
+const MAX_ACTIONS: i64 = 100;
+
+/// A disaster's actions
+///
+/// AB3-T10: the actions asked for on one disaster (newest first, at most
+/// 100), each with its approval's status. Needs `ops.read`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/ops/disasters/{id}/actions",
+    tag = "ops",
+    operation_id = "list_ops_disaster_actions",
+    params(("id" = Uuid, Path, description = "The declared disaster")),
+    responses(
+        (status = 200, description = "The actions", body = PaginatedResponse<DisasterApproval>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks ops.read", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_actions(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<crate::upgrades::OpsRead>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<PaginatedResponse<DisasterApproval>>, AppError> {
+    let rows: Vec<(Uuid, String, Option<String>)> = sqlx::query_as(
+        "SELECT id, status::text, payload->>'action' FROM approval_request \
+          WHERE action_type = $1 AND payload->>'disaster_id' = $2 \
+          ORDER BY requested_at DESC, id DESC LIMIT $3",
+    )
+    .bind(ACTION_DISASTER)
+    .bind(id.to_string())
+    .bind(MAX_ACTIONS)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let items: Vec<DisasterApproval> = rows
+        .into_iter()
+        .map(|(approval_id, status, action)| DisasterApproval {
+            approval_id,
+            status,
+            action,
+            disaster_id: Some(id),
+        })
+        .collect();
+    let n = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse::new(items, n, 1, MAX_ACTIONS)))
+}
+
 pub(crate) fn routes() -> Router<EngineState> {
     Router::new()
-        .route("/api/v1/ops/disasters", post(declare))
-        .route("/api/v1/ops/disasters/{id}/actions", post(request_action))
+        .route("/api/v1/ops/disasters", get(list_disasters).post(declare))
+        .route(
+            "/api/v1/ops/disasters/{id}/actions",
+            get(list_actions).post(request_action),
+        )
         .route(
             "/api/v1/ops/disasters/approvals/{approval_id}",
             get(approval_status),
@@ -396,7 +495,14 @@ pub(crate) fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(declare, request_action, approval_status, close),
+    paths(
+        declare,
+        request_action,
+        approval_status,
+        close,
+        list_disasters,
+        list_actions
+    ),
     components(schemas(Disaster, DeclareDisaster, DisasterActionBody, DisasterApproval))
 )]
 struct ApiDocFragment;

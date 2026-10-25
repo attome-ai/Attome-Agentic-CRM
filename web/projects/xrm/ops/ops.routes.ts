@@ -11,6 +11,12 @@ export const OPS_ROUTES: Routes = [
     path: 'cluster',
     loadComponent: () => import('./cluster/cluster-status.component').then(m => m.ClusterStatusComponent),
   },
+  // AB3-T10: recovery targets, the live recovery point, the runbook and
+  // declared disasters.
+  {
+    path: 'recovery',
+    loadComponent: () => import('./recovery/recovery.component').then(m => m.RecoveryComponent),
+  },
   // AB4-T11: recovery drills, their schedules and the auditor pack.
   {
     path: 'drills',
