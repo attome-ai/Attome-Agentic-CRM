@@ -60,6 +60,8 @@ pub mod derived_id;
 pub mod export;
 pub mod ledger;
 pub mod model;
+/// T8-T1: a bundle with a signed manifest.
+pub mod package;
 pub mod plan;
 pub mod platform;
 pub mod pull;
