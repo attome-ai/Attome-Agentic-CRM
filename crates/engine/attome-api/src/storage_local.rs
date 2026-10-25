@@ -34,6 +34,7 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct LinkQuery {
     /// The object key the link was signed for.
     key: String,

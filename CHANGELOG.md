@@ -3165,6 +3165,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- OpenAPI: about 100 list and filter parameter sets were described as required path parameters;
+  they are now optional query parameters as the routes always read them, each with a description
+  (S2-T4, S2-T5). Requests are unchanged; a client generated from the old document gains correct
+  query arguments.
 - Cancelling a running retype (`POST /api/v1/admin/data-step-runs/{id}/cancel`, Y12-T7) now undoes it
   at once: the shadow column, trigger and archive rows go and the column keeps its old type and values.
   A retype whose swap already committed is refused (409); go back with a reverse retype.

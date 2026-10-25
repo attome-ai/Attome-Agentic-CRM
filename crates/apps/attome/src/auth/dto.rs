@@ -106,6 +106,7 @@ impl std::fmt::Debug for VerifyEmailConfirmBody {
 /// error the route already knows how to render. A callback missing `state`
 /// parses too and simply fails its binding check.
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct OidcCallbackQuery {
     /// The authorization code to exchange. `None` on an `error` redirect.
     #[serde(default)]
@@ -131,6 +132,7 @@ impl std::fmt::Debug for OidcCallbackQuery {
 /// independent (one bypass-listed, one not) even though the query params
 /// happen to match. BAU-25 applies to it identically.
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct IdentityLinkOidcCallbackQuery {
     /// The authorization code to exchange. `None` on an `error` redirect.
     #[serde(default)]
@@ -154,6 +156,7 @@ impl std::fmt::Debug for IdentityLinkOidcCallbackQuery {
 /// start route continues. The operation and provider come from the path, the
 /// user and family from the session token.
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct StepUpFederatedStartQuery {
     /// The step-up challenge to continue at the provider.
     pub challenge_id: String,
@@ -169,6 +172,7 @@ impl std::fmt::Debug for StepUpFederatedStartQuery {
 /// Base-auth hardening 2.1c — the IdP's redirect back to the federated
 /// step-up callback; same wire shape as `OidcCallbackQuery`, BAU-25 included.
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct StepUpOidcCallbackQuery {
     /// The authorization code to exchange. `None` on an `error` redirect.
     #[serde(default)]

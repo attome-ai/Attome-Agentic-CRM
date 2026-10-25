@@ -423,8 +423,11 @@ impl attome_core::calendar::AbsenceSource for LeaveAbsences {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct AvailabilityQuery {
+    /// Only this user.
     pub user_id: Uuid,
+    /// From this time (inclusive).
     pub from: NaiveDate,
+    /// Up to this time (exclusive).
     pub to: NaiveDate,
 }
 

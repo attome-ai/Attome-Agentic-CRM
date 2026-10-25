@@ -82,6 +82,7 @@ impl PlaceLegalHoldResult {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListLegalHoldsQuery {
     /// `"active" | "released"`. Defaults to `"active"` — the common case
     /// (an operator checking what's currently frozen), matching
@@ -91,9 +92,11 @@ struct ListLegalHoldsQuery {
     /// unbounded, ever-growing history of released holds is the
     /// less-common query.
     status: Option<String>,
+    /// Only this entity (its logical name).
     entity_logicalname: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

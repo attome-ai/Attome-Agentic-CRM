@@ -41,12 +41,17 @@ const INVITATION_TOKEN_EXPIRY_HOURS: u64 = 168;
 // ── Deliveries ───────────────────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct DeliveryQuery {
+    /// Only this status.
     status: Option<String>,
+    /// Only this kind.
     kind: Option<String>,
+    /// Only deliveries to this address.
     recipient: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

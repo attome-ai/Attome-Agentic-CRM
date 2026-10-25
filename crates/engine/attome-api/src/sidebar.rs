@@ -1131,6 +1131,7 @@ pub async fn reactivate_sidebar_item(
 
 /// M05 Phase 1 (D-426) — `?locale=` on `GET /api/v1/sidebar/get`.
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct SidebarQuery {
     /// A BCP-47 tag, e.g. `"ar-AE"`. Omit to resolve straight to the
     /// deployment default.

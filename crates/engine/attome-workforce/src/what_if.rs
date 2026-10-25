@@ -289,6 +289,7 @@ pub async fn what_if(state: &EngineState, id: Uuid, body: &WhatIfBody) -> Result
 
 /// The hiring view's query.
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct HiringQuery {
     /// Months ahead, from this month (default 6, at most 24).
     pub months: Option<u32>,

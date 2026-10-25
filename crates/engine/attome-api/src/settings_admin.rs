@@ -810,6 +810,7 @@ async fn public_branding(
 
 /// `GET /api/v1/branding/me`.
 #[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct BrandingMeQuery {
     /// The app being shown, when it has its own theme.
     app: Option<String>,
@@ -857,6 +858,7 @@ async fn my_branding(
 
 /// `kind` of a brand asset.
 #[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct AssetKindQuery {
     /// `logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or
     /// `guidelines_pdf`.

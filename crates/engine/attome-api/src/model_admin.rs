@@ -2089,6 +2089,7 @@ const REPLY_TEMPLATE_KIND: &str = "reply_template";
 struct ReplySuggestQuery {
     /// The record's entity, e.g. `service_ticket`.
     entity: String,
+    /// Only this record.
     record_id: Uuid,
     /// The channel the reply is for (`email`, `sms`, `whatsapp`, `chat`,
     /// `portal`); `email` when unset.

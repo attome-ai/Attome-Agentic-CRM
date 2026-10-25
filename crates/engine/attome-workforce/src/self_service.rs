@@ -74,8 +74,11 @@ pub fn auto_approves(rule_breaches: usize, overlapping_shifts: usize) -> bool {
 
 /// A period.
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct Period {
+    /// From this time (inclusive).
     pub from: NaiveDate,
+    /// Up to this time (exclusive).
     pub to: NaiveDate,
 }
 
@@ -657,9 +660,13 @@ async fn post_decide(
 
 /// Whose absence, and when.
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ImpactQuery {
+    /// Only this user.
     pub user_id: Uuid,
+    /// From this time (inclusive).
     pub from: NaiveDate,
+    /// Up to this time (exclusive).
     pub to: NaiveDate,
 }
 

@@ -1889,6 +1889,7 @@ async fn calculate(
 }
 
 #[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct HijriYearQuery {
     /// The Hijri year, 1356 to 1500.
     year: u16,

@@ -77,6 +77,7 @@ pub struct RecentItem {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct RecentQuery {
     /// How many, newest first; default 20, at most 200.
     pub limit: Option<i64>,

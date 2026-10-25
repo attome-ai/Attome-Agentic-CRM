@@ -122,20 +122,28 @@ struct SetPermissionBody {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct LogQuery {
+    /// The most rows to return.
     #[serde(default = "default_page_size")]
     limit: i64,
+    /// Rows to skip.
     #[serde(default)]
     offset: i64,
+    /// Only entries after this time.
     since: Option<DateTime<Utc>>,
+    /// Only this request's entries.
     correlation_id: Option<String>,
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ClientListQuery {
+    /// Only this status.
     status: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

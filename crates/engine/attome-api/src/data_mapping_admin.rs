@@ -126,10 +126,13 @@ struct DataMappingRow {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListMappingsQuery {
+    /// Only mappings or projects into this entity (its logical name).
     target_entity: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

@@ -256,7 +256,9 @@ pub fn eliminate(lines: &[(Uuid, Decimal, Decimal, bool)]) -> BTreeMap<Uuid, (De
 #[derive(Debug, Clone, Copy, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct TrialRange {
+    /// From this time (inclusive).
     pub from: NaiveDate,
+    /// Up to this time (exclusive).
     pub to: NaiveDate,
 }
 

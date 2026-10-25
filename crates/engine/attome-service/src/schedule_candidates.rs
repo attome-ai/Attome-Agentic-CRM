@@ -490,6 +490,7 @@ pub async fn find(
 
 /// The query.
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct CandidateQuery {
     /// Also answer technicians whose van lacks parts (default false).
     #[serde(default)]

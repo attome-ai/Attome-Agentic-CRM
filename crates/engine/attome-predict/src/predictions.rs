@@ -43,8 +43,11 @@ use utoipa::IntoParams;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct PredictionListQuery {
+    /// Only records of this entity.
     pub regarding_entity: String,
+    /// Only this record.
     pub regarding_id: Uuid,
     /// One-based: page 1 is the first page.
     pub page: Option<i64>,

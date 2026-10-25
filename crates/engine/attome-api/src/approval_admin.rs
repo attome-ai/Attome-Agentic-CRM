@@ -1547,7 +1547,9 @@ impl From<ApprovalRequest> for ApprovalRequestView {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListQuery {
+    /// Only this action type.
     action_type: Option<String>,
     /// Comma-separated status filter, in the request's own vocabulary
     /// (`pending`, `approved`, `executing`, `rejected`, `expired`,
@@ -1558,6 +1560,7 @@ struct ListQuery {
     status: Option<String>,
     /// One-based — the first page is `page=1` (D-347).
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

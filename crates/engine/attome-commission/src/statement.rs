@@ -44,18 +44,24 @@ impl PrivilegeKey for StatementRead {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct MyStatementQuery {
+    /// Only this commission period.
     pub period_id: Uuid,
+    /// One-based: page 1 is the first page.
     pub page: Option<i64>,
+    /// Rows per page.
     pub page_size: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct StatementQuery {
+    /// Only this commission period.
     pub period_id: Uuid,
     /// Only this participant's rows.
     pub participant_id: Option<Uuid>,
+    /// One-based: page 1 is the first page.
     pub page: Option<i64>,
+    /// Rows per page.
     pub page_size: Option<i64>,
 }
 

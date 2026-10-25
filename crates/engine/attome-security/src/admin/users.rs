@@ -98,6 +98,7 @@ pub(super) async fn list_users(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(super) struct UserLookupQuery {
     email: String,
 }

@@ -331,6 +331,7 @@ async fn send_one(state: &EngineState, sender: &Sender, record_id: Uuid) -> Resu
 
 /// The link.
 #[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[into_params(parameter_in = Query)]
 pub struct SurveyToken {
     /// The signed token from the email.
     pub token: String,

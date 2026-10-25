@@ -155,6 +155,7 @@ async fn scan(
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct InboxQuery {
     /// Only this source (`jobs`, `batch_jobs`, `flow_trigger`, `flow_run`,
     /// `webhook`).

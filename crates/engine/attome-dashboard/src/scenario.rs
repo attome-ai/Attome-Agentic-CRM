@@ -492,6 +492,7 @@ async fn evaluate(
 }
 
 #[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct CompareQuery {
     /// Comma-separated additional scenario ids to compare against `{id}`.
     #[serde(default)]

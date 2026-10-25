@@ -39,7 +39,9 @@ pub const MAX_AGENTS: i64 = 500;
 #[derive(Debug, Clone, Copy, Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct PerformanceRange {
+    /// From this time (inclusive).
     pub from: NaiveDate,
+    /// Up to this time (exclusive).
     pub to: NaiveDate,
 }
 
@@ -268,6 +270,7 @@ pub enum RunsMetric {
 #[derive(Debug, Clone, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct RunsQuery {
+    /// The day, as YYYY-MM-DD.
     pub day: NaiveDate,
     /// `tasks`, `handoffs` or `cost`.
     #[param(value_type = String)]

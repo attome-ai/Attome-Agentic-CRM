@@ -194,6 +194,7 @@ pub async fn capture_grant(
 #[derive(Debug, Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct ConfirmQuery {
+    /// The signed token from the link.
     pub token: String,
 }
 

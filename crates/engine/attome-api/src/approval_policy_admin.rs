@@ -137,10 +137,13 @@ fn forbid_auto_approve_for_mandatory(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListQuery {
+    /// Only this action type.
     action_type: Option<String>,
     /// One-based — the first page is `page=1` (D-347).
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

@@ -61,11 +61,15 @@ struct NodeRunSummaryRow {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct InstanceListQuery {
+    /// Only this status.
     status: Option<String>,
+    /// Only instances about this record.
     correlation_entity_id: Option<Uuid>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

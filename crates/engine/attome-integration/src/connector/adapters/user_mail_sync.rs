@@ -361,10 +361,13 @@ pub struct SignInUrl {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct CallbackQuery {
+    /// The authorization code the provider sent back.
     #[serde(default)]
     pub code: Option<String>,
+    /// The state value this sign-in started with.
     #[serde(default)]
     pub state: Option<String>,
+    /// The error the provider sent back, if any.
     #[serde(default)]
     pub error: Option<String>,
 }

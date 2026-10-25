@@ -37,6 +37,7 @@ use super::resolve::resolve_entity;
 use super::timeline::readable_attr;
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(super) struct ChangeTypeQuery {
     /// True: change nothing and answer what the change would do.
     #[serde(default)]

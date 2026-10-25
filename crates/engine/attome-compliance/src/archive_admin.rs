@@ -29,13 +29,16 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListArchiveQuery {
     /// `"archived" | "restored"`. Defaults to `"archived"` — same
     /// active-first convention `legal_hold_admin::list_holds` uses.
     status: Option<String>,
+    /// Only this entity (its logical name).
     entity_logicalname: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

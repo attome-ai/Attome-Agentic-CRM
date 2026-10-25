@@ -84,7 +84,9 @@ pub(crate) struct ViewBody {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct AvailableViewsQuery {
+    /// Only this entity (its logical name).
     entity: String,
 }
 

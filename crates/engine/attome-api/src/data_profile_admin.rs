@@ -191,10 +191,13 @@ struct DataProfileRow {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListProfilesQuery {
+    /// Only this entity (its logical name).
     entity: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -676,12 +679,15 @@ struct LabelProposalRow {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListProposalsQuery {
+    /// Only this entity (its logical name).
     entity: Option<String>,
     /// `open` (the default) or `resolved`.
     status: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

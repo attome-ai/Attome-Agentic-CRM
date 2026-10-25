@@ -247,6 +247,7 @@ pub struct SendMessageResponse {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct PollQuery {
     /// The chat session's token, from the session's first message.
     pub token: String,

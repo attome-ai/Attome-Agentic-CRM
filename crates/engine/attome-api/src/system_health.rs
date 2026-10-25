@@ -311,6 +311,7 @@ const MAX_POINTS: i64 = 2_000;
 
 /// `GET /api/v1/admin/ops/metrics/query`.
 #[derive(serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct MetricQuery {
     /// A metric name, as `GET .../metrics/names` lists them.
     name: String,

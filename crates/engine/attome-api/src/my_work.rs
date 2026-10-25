@@ -30,8 +30,11 @@ use uuid::Uuid;
 /// `query/execute` exception: a large, provider-owned scan, not a bounded
 /// structural walk).
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct MyWorkListQuery {
+    /// The `next_cursor` of the previous page.
     cursor: Option<String>,
+    /// The most rows to return.
     limit: Option<i64>,
 }
 

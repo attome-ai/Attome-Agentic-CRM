@@ -361,7 +361,9 @@ const ITEM_OUTCOME_SQL: &str = "CASE WHEN status = 'succeeded' THEN 'ok' \
      WHEN status IN ('failed', 'rejected') THEN 'error' ELSE 'pending' END";
 
 #[derive(Deserialize, Default, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct BulkStatusQuery {
+    /// Include each item's outcome.
     #[serde(default)]
     include_items: Option<bool>,
     /// One-based: page 1 is the first page.

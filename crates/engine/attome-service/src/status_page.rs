@@ -368,6 +368,7 @@ pub struct StatusSubscribe {
 #[derive(Debug, Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct StatusToken {
+    /// The signed token from the link.
     pub token: String,
 }
 

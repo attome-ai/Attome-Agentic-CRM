@@ -162,9 +162,12 @@ async fn start(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct CallbackQuery {
+    /// The authorization code the provider sent back.
     #[serde(default)]
     code: Option<String>,
+    /// The state value this sign-in started with.
     #[serde(default)]
     state: Option<String>,
 }

@@ -40,6 +40,7 @@ pub struct MoveBody {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct MovePreviewQuery {
+    /// The version to move the instance to.
     pub target_version_id: Uuid,
 }
 

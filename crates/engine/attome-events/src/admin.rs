@@ -251,11 +251,15 @@ struct SubscriptionListItem {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct SubscriptionListQuery {
+    /// Only this kind.
     kind: Option<String>,
+    /// Only active (true) or inactive (false) ones.
     is_active: Option<bool>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -300,10 +304,13 @@ struct DeliveryListItem {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct DeliveryListQuery {
+    /// Only this status.
     status: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

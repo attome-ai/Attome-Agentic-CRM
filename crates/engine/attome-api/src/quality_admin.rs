@@ -54,11 +54,13 @@ struct QualityScoreView {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListScoresQuery {
     /// Filter to one entity's scores. Omit for every entity.
     entity: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -133,7 +135,9 @@ async fn list_scores(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ScoreHistoryQuery {
+    /// Only this entity (its logical name).
     entity: String,
     /// Must be one of `DIMENSIONS` — validated below rather than by the
     /// column CHECK constraint alone, so a bad value gets a 422 instead of a
@@ -141,6 +145,7 @@ struct ScoreHistoryQuery {
     dimension: String,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -232,8 +237,11 @@ struct QualityIssueView {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListIssuesQuery {
+    /// Only this entity (its logical name).
     entity: Option<String>,
+    /// Only this quality dimension.
     dimension: Option<String>,
     /// `open`, `in_progress`, `fixed`, `accepted` or `resolved`. Omit for
     /// every status.
@@ -242,6 +250,7 @@ struct ListIssuesQuery {
     owner_id: Option<Uuid>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -648,10 +657,13 @@ struct QualityRuleView {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListRulesQuery {
+    /// Only this entity (its logical name).
     entity: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

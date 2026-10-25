@@ -31,6 +31,7 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ViewQuery {
     /// The page's custom URL, e.g. `/guide/templates` — a query parameter
     /// rather than a path segment so this stays a single, easily-reasoned
@@ -285,6 +286,7 @@ async fn knowledge_feedback(
 // ── K5-T3: headless delivery ─────────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct DeliveryQuery {
     /// The content space's id.
     space: Uuid,
@@ -469,6 +471,7 @@ async fn page_html(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct SiteQuery {
     /// The page's URL path on the site, e.g. `/pricing`.
     path: String,
@@ -588,6 +591,7 @@ async fn served_html(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct SpaceQuery {
     /// The content space (site).
     space: Uuid,
@@ -736,6 +740,7 @@ async fn deliver_internal_page(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct PreviewQuery {
     /// The signed token from `POST /api/v1/admin/content/pages/{id}/preview-link`.
     token: String,
@@ -802,6 +807,7 @@ mod delivery_tests {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct SitemapQuery {
     /// The site's host name.
     site: String,
@@ -869,6 +875,7 @@ async fn site_sitemap(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct RobotsQuery {
     /// The site's host name.
     site: String,

@@ -176,6 +176,7 @@ pub(super) struct CreateRecordShareBody {
 /// required; `record_id` alone is not unique across entities, matching
 /// `record_share`'s own composite key shape).
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(super) struct ListRecordSharesQuery {
     entity: String,
     record_id: Uuid,
@@ -618,6 +619,7 @@ pub(super) struct CreateEntityDefaultShareBody {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(super) struct ListEntityDefaultSharesQuery {
     entity: String,
     /// One-based: page 1 is the first page.

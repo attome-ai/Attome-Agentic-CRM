@@ -72,6 +72,7 @@ pub struct ValidationStats {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct StatsQuery {
     /// Days of rejections to count (default 30, at most 365).
     pub days: Option<u32>,

@@ -1513,8 +1513,10 @@ async fn list_metrics(
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct SnapshotListQuery {
+    /// One-based: page 1 is the first page.
     #[param(minimum = 1)]
     pub page: Option<i64>,
+    /// Rows per page.
     #[param(minimum = 1)]
     pub page_size: Option<i64>,
     /// A dimension attribute (comma-separated for several): its members'

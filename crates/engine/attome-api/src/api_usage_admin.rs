@@ -43,12 +43,14 @@ const DEFAULT_WINDOW_DAYS: i64 = 7;
 const MAX_WINDOW_DAYS: i64 = 90;
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct SummaryQuery {
     /// How many trailing days (inclusive of today) to aggregate over.
     /// Defaults to 7, clamped to [1, 90].
     days: Option<i64>,
     /// One-based — the first page is `page=1` (D-347).
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -127,6 +129,7 @@ async fn summary(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct KeysQuery {
     /// How many trailing days of requests to count. Defaults to 7, clamped
     /// to [1, 90].
@@ -296,6 +299,7 @@ async fn set_quota(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct VersionUsageQuery {
     /// How many trailing days to look over. Defaults to 30, clamped to
     /// [1, 90].

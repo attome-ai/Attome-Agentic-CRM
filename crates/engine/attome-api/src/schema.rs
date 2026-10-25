@@ -19,6 +19,7 @@ use uuid::Uuid;
 /// and a row exists) -> the deployment default (`core.locale`, M02/D-412) ->
 /// the base `display_name` column this handler already reads.
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct SchemaQuery {
     /// A BCP-47 tag, e.g. `"ar-AE"`. Omit to resolve straight to the
     /// deployment default.

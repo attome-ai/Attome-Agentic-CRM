@@ -842,6 +842,7 @@ pub(super) async fn update_entity(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(super) struct DeleteEntityParams {
     #[serde(default)]
     hard: bool,

@@ -37,6 +37,7 @@ pub struct ConfigChange {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct StartsDiffQuery {
     /// The earlier start.
     pub a: Uuid,

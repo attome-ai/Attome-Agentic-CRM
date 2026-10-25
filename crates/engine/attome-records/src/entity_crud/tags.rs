@@ -68,6 +68,7 @@ pub struct AddTag {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct SuggestQuery {
     /// What the person has typed; matched from the start of the name,
     /// ignoring case, Arabic diacritics and letter forms.

@@ -36,7 +36,9 @@ const MAX_PROCESSES: i64 = 200;
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct ShareQuery {
+    /// From this time (inclusive).
     pub from: Option<NaiveDate>,
+    /// Up to this time (exclusive).
     pub to: Option<NaiveDate>,
 }
 
@@ -159,6 +161,7 @@ pub enum DoneBy {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct EventsQuery {
+    /// The day, as YYYY-MM-DD.
     pub day: NaiveDate,
     /// `agent` or `person`.
     #[param(value_type = String)]

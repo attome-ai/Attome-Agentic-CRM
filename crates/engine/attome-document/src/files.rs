@@ -1411,6 +1411,7 @@ pub async fn record_file_download(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct DownloadUrlQuery {
     /// Which object key to download — **required** for a multi-file field
     /// (`options.multi`, JSONB array column), since the field itself no

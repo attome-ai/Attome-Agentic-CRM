@@ -86,6 +86,7 @@ pub fn wilson_interval(x: i64, n: i64) -> Option<ConfidenceInterval> {
 /// comparison arrives in one call, at whatever grouping level the caller
 /// asks for).
 #[derive(Debug, Clone, Default, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ComparisonFilter {
     /// Restrict to one action id, e.g. `record.summarize`.
     pub action: Option<String>,

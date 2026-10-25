@@ -36,7 +36,9 @@ pub struct ProductPickerQuery {
     pub sku: Option<String>,
     /// The date the line is for; today when absent.
     pub on: Option<NaiveDate>,
+    /// One-based: page 1 is the first page.
     pub page: Option<i64>,
+    /// Rows per page.
     pub page_size: Option<i64>,
 }
 

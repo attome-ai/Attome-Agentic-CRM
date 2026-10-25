@@ -55,6 +55,7 @@ impl PrivilegeKey for DocumentCreate {
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(crate) struct TreeQuery {
     entity_name: Option<String>,
     record_id: Option<Uuid>,

@@ -101,10 +101,13 @@ impl From<RelationshipDetail> for RelationshipView {
 // ── GET /api/v1/admin/relationships ─────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListRelationshipsQuery {
+    /// Only this entity (its logical name).
     entity: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

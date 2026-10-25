@@ -712,6 +712,7 @@ async fn list_widget_types(
 }
 
 #[derive(serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct WidgetTypesQuery {
     /// D-525 — include types the viewer cannot render (hidden by default so a
     /// palette only offers renderable widgets).

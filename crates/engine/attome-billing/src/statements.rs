@@ -207,6 +207,7 @@ pub struct AgeingQuery {
     pub as_of: Option<NaiveDate>,
     /// One-based page.
     pub page: Option<i64>,
+    /// Rows per page.
     pub page_size: Option<i64>,
 }
 

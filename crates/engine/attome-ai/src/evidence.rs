@@ -32,6 +32,7 @@ use uuid::Uuid;
 pub const MAX_PAGE: i64 = 1_000;
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct EvidenceQuery {
     /// `actions` (default) or `generations`.
     #[serde(default)]
@@ -42,8 +43,10 @@ pub struct EvidenceQuery {
     /// Only this model (generations).
     #[serde(default)]
     pub model: Option<String>,
+    /// From this time (inclusive).
     #[serde(default)]
     pub from: Option<DateTime<Utc>>,
+    /// Up to this time (exclusive).
     #[serde(default)]
     pub to: Option<DateTime<Utc>>,
     /// The previous page's `next_cursor`, verbatim.

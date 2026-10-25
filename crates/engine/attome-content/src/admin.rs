@@ -60,6 +60,7 @@ fn expected_row_version(headers: &HeaderMap) -> Result<i64, AppError> {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListQuery {
     /// Every list is scoped to one space — pages in other spaces never
     /// appear, matching the admin UI's per-space "Pages" screen.
@@ -67,9 +68,11 @@ struct ListQuery {
     /// Children of this page. Omit for root-level pages. Ignored when
     /// `search` is set (search runs across the whole tree).
     parent_page_id: Option<Uuid>,
+    /// Text the name contains.
     search: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

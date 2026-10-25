@@ -381,8 +381,11 @@ pub(crate) async fn get_marketing_list_explain(
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct AsOfQuery {
+    /// The moment to read the list as of.
     pub at: DateTime<Utc>,
+    /// One-based: page 1 is the first page.
     pub page: Option<i64>,
+    /// Rows per page.
     pub page_size: Option<i64>,
 }
 

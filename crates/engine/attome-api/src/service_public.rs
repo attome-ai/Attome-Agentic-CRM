@@ -67,6 +67,7 @@ async fn list_offerings(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct StatusQuery {
     /// The `{public_id}.{secret}` bearer handed back once, at creation, by
     /// `POST /api/v1/service-offering/{id}/create-work-request`.

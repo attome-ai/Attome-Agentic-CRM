@@ -31,6 +31,7 @@ pub const MAX_SCAN_HITS: usize = 50;
 const MAX_SCAN_VALUE_CHARS: usize = 512;
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ScanFindQuery {
     /// The scanned value, exactly as read.
     pub value: String,

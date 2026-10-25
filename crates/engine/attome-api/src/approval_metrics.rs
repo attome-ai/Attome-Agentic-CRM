@@ -31,6 +31,7 @@ pub const STAMP_APPROVE_SHARE: f64 = 0.95;
 pub const STAMP_MEDIAN_SECONDS: f64 = 30.0;
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct MetricsQuery {
     /// Days back from now, 1 to 365; default 30.
     #[serde(default)]

@@ -149,10 +149,13 @@ impl TryFrom<MatchRuleRow> for MatchRuleView {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListMatchRulesQuery {
+    /// Only this entity (its logical name).
     entity: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -667,10 +670,13 @@ struct SurvivorshipRuleView {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListSurvivorshipQuery {
+    /// Only this entity (its logical name).
     entity: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -937,13 +943,16 @@ struct DuplicateCandidateView {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListCandidatesQuery {
+    /// Only this entity (its logical name).
     entity: Option<String>,
     /// `"open"` (default view for the steward queue), `"merged"`, or
     /// `"dismissed"`. Omit for every status.
     status: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -1243,8 +1252,11 @@ async fn dismiss_candidate(
 /// specific record is the correct boundary, not mere authentication. It
 /// does NOT reveal the *other* record's data, only its id.
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct RecordCandidatesQuery {
+    /// Only this entity (its logical name).
     entity: String,
+    /// Only this record.
     record_id: Uuid,
 }
 

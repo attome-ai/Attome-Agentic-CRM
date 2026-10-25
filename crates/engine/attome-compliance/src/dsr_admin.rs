@@ -114,6 +114,7 @@ fn classification_rank(c: DataClassification) -> u8 {
 // ── Request tracking ───────────────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct DsrRequestQuery {
     /// `"pending" | "blocked" | "fulfilled" | "rejected"`.
     status: Option<String>,
@@ -122,6 +123,7 @@ struct DsrRequestQuery {
     request_type: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

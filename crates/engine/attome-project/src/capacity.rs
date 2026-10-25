@@ -79,8 +79,11 @@ fn default_page_size() -> i64 {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct CapacityParams {
+    /// From this time (inclusive).
     pub from: NaiveDate,
+    /// Up to this time (exclusive).
     pub to: NaiveDate,
     /// Restrict to resources on this `team.id` — also the
     /// authorization gate for a `Team`-tier caller; see this module's doc
@@ -88,8 +91,10 @@ pub struct CapacityParams {
     pub team: Option<Uuid>,
     /// Restrict to resources holding this `resource_skill.skill` value.
     pub skill: Option<String>,
+    /// One-based: page 1 is the first page.
     #[serde(default = "default_page")]
     pub page: i64,
+    /// Rows per page.
     #[serde(default = "default_page_size")]
     pub page_size: i64,
 }

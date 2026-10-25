@@ -125,6 +125,7 @@ pub struct BillingSubscriptionChanged {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct BillingAsOfQuery {
     /// The day to read the subscription as of (`YYYY-MM-DD`); today when absent.
     pub as_of: Option<NaiveDate>,

@@ -262,16 +262,20 @@ impl From<OutcomeDbRow> for OutcomeSummaryRow {
 }
 
 #[derive(Debug, Clone, Default, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct OutcomeListQuery {
     /// Restrict to one `kind` (`ai_suggestion`, …). Unfiltered by default.
     kind: Option<String>,
+    /// Only this module.
     source_module: Option<String>,
+    /// Only records of this entity.
     regarding_entity: Option<String>,
     /// `true` — only rows still awaiting measurement; `false` — only
     /// already-measured rows; omitted — both.
     measured: Option<bool>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

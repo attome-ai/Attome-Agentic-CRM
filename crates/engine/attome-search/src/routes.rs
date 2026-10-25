@@ -187,11 +187,14 @@ pub enum Total {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct SearchParams {
     /// The query. Capped — see [`MAX_QUERY_BYTES`]/[`MAX_QUERY_TERMS`].
     pub q: String,
+    /// One-based: page 1 is the first page.
     #[serde(default = "default_page")]
     pub page: i64,
+    /// Rows per page.
     #[serde(default = "default_page_size")]
     pub page_size: i64,
     /// `human` (default) or `agent`. Selects tuning only, never the
@@ -914,9 +917,11 @@ fn empty_response(route: &Route, page: i64, page_size: i64) -> SearchResponse {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct RelatedKnowledgeParams {
     /// The `content_page` id to find semantic neighbors for.
     page_id: Uuid,
+    /// The most rows to return.
     #[serde(default)]
     limit: Option<i64>,
 }
@@ -967,11 +972,13 @@ async fn related_knowledge(
 // ── Knowledge retrieval and the gap queue (D-489) ───────────────────────────
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct KnowledgeParams {
     /// The question or topic. Held to the same byte/term caps as `/search`:
     /// GIN cost is roughly linear in term count, so a long paste must be
     /// rejected before it reaches PostgreSQL.
     q: String,
+    /// The most rows to return.
     #[serde(default)]
     limit: Option<i64>,
 }
@@ -1015,11 +1022,13 @@ async fn knowledge_search(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct GapQuery {
     /// Filter to one triage state; omit for the whole queue.
     status: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

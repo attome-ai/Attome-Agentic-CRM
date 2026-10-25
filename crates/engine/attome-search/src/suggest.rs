@@ -116,7 +116,9 @@ pub struct SuggestResponse {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct SuggestParams {
+    /// The text typed so far.
     pub q: String,
 }
 

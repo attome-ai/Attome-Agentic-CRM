@@ -1744,6 +1744,7 @@ async fn get_record(
 }
 
 #[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct FileQuery {
     /// Which file, for a multi-file field (one of the keys the record shows).
     key: Option<String>,

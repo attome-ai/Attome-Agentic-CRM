@@ -27,11 +27,13 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct DeadLetterQuery {
     /// `"fast"` (default) or `"batch"` — see `EngineJob::is_batch`.
     queue: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

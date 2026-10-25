@@ -138,6 +138,7 @@ async fn create_link(
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct PreferenceQuery {
+    /// The signed token from the link.
     pub token: String,
 }
 

@@ -117,12 +117,14 @@ pub struct SessionSummary {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct SessionListQuery {
     /// Filter to one status (`active` | `paused` | `revoked` | `ended`).
     /// Unfiltered by default — a dashboard wants to see all of them.
     status: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

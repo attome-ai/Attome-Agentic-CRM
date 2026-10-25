@@ -44,6 +44,7 @@ use uuid::Uuid;
 // ── Catalog browse/detail routes ────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct CatalogListQuery {
     /// Matches against logicalname or display name, case-insensitive substring.
     q: Option<String>,
@@ -55,6 +56,7 @@ struct CatalogListQuery {
     classification: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -375,6 +377,7 @@ async fn get_entity(
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct ImpactQuery {
+    /// Only this entity (its logical name).
     entity: String,
     /// The attribute; without it, the change is to the entity.
     attribute: Option<String>,

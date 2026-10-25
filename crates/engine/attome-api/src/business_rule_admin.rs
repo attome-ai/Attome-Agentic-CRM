@@ -105,6 +105,7 @@ async fn warnings_for(
 // ── List / get ──────────────────────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct RuleFilter {
     /// One entity's rules.
     entity: Option<String>,
@@ -114,6 +115,7 @@ struct RuleFilter {
     role_id: Option<Uuid>,
     /// Rules that apply to this web-portal role.
     portal_role_id: Option<Uuid>,
+    /// Only active (true) or inactive (false) ones.
     is_active: Option<bool>,
 }
 
@@ -616,6 +618,7 @@ struct RulesExplained {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ExplainQuery {
     /// The entity's logical name.
     entity: String,

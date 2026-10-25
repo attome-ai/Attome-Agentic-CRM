@@ -73,6 +73,7 @@ pub struct MetricLineageResponse {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct LineageQuery {
     /// The period to read snapshots for; defaults to the root metric's current
     /// period.

@@ -252,18 +252,29 @@ fn push_filters<'a>(
 // ── search ───────────────────────────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams, Debug)]
+#[into_params(parameter_in = Query)]
 struct SearchQuery {
+    /// Only this entity (its logical name).
     entity_name: Option<String>,
+    /// Only this record.
     record_id: Option<Uuid>,
+    /// Only this user.
     user_id: Option<Uuid>,
+    /// Only this user's entries, by email.
     user_email: Option<String>,
+    /// Only this operation.
     operation: Option<i32>,
+    /// Only changes to this field.
     field_name: Option<String>,
+    /// From this date (inclusive).
     date_from: Option<DateTime<Utc>>,
+    /// Up to this date (inclusive).
     date_to: Option<DateTime<Utc>>,
+    /// Only this organization's entries.
     organization_ref: Option<Uuid>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 
@@ -385,15 +396,25 @@ async fn search(
 // ── export (SIEM / CSV, streamed) ───────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams, Debug)]
+#[into_params(parameter_in = Query)]
 struct ExportQuery {
+    /// Only this entity (its logical name).
     entity_name: Option<String>,
+    /// Only this record.
     record_id: Option<Uuid>,
+    /// Only this user.
     user_id: Option<Uuid>,
+    /// Only this user's entries, by email.
     user_email: Option<String>,
+    /// Only this operation.
     operation: Option<i32>,
+    /// Only changes to this field.
     field_name: Option<String>,
+    /// Only this organization's entries.
     organization_ref: Option<Uuid>,
+    /// From this time (inclusive).
     from: Option<DateTime<Utc>>,
+    /// Up to this time (exclusive).
     to: Option<DateTime<Utc>>,
     /// `jsonl` (default) | `cef` | `csv`.
     format: Option<String>,

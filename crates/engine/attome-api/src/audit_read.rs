@@ -245,16 +245,25 @@ fn push_common_filters<'a>(qb: &mut sqlx::QueryBuilder<'a, sqlx::Postgres>, f: &
 // ── 6.1/6.2/6.3: my activity ─────────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams, Debug)]
+#[into_params(parameter_in = Query)]
 struct ActivityQuery {
+    /// From this date (inclusive).
     date_from: Option<DateTime<Utc>>,
+    /// Up to this date (inclusive).
     date_to: Option<DateTime<Utc>>,
+    /// Only this category.
     category: Option<i32>,
+    /// Only this operation.
     operation: Option<i32>,
+    /// Only this entity (its logical name).
     entity_name: Option<String>,
+    /// Only this source.
     source: Option<i32>,
+    /// Only this outcome.
     outcome: Option<i32>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
+    /// Rows per page.
     page_size: Option<i64>,
 }
 

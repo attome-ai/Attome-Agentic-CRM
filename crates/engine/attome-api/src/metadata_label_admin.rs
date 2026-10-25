@@ -917,6 +917,7 @@ pub(crate) fn workbench_status(
 }
 
 #[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct WorkbenchQuery {
     /// The language, e.g. `ar-SA`.
     locale: String,
@@ -1095,6 +1096,7 @@ async fn label_units(state: &EngineState, locale: &str) -> Result<Vec<XliffUnit>
 }
 
 #[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct XliffQuery {
     /// The language to translate into, e.g. `ar-SA`.
     locale: String,
@@ -1433,7 +1435,9 @@ async fn put_ui_text_override(
 #[derive(Deserialize, utoipa::IntoParams)]
 #[into_params(parameter_in = Query)]
 struct UiTextKeyQuery {
+    /// The language, such as `ar` or `en`.
     locale: String,
+    /// The text's key.
     key: String,
 }
 

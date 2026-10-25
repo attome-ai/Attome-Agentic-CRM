@@ -477,6 +477,7 @@ pub(super) async fn link_related(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(super) struct UnlinkQuery {
     /// The other side's record id to unlink.
     id: Uuid,

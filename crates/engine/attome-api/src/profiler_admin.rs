@@ -99,11 +99,13 @@ async fn stats(
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct TraceQuery {
     /// Top-level probe name, e.g. `"entity.create"` or `"GET /api/v1/entities/{logicalname}"`
     /// — a query param, not a path segment, since probe names routinely
     /// contain `/` and spaces that a path segment can't carry unencoded.
     name: String,
+    /// The most rows to return.
     #[serde(default = "default_trace_limit")]
     limit: i64,
 }

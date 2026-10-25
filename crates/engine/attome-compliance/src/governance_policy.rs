@@ -155,7 +155,9 @@ pub struct GovernanceRole {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct RoleQuery {
+    /// Only this user.
     pub user_id: Uuid,
+    /// Only this role.
     pub role: String,
 }
 
@@ -438,12 +440,14 @@ pub struct UpdatePolicyBody {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct PolicyListQuery {
+    /// Only this domain.
     pub domain: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct RowVersionQuery {
+    /// The current `row_version`.
     pub row_version: i64,
 }
 
@@ -1179,7 +1183,9 @@ pub struct Certification {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct CertificationQuery {
+    /// Only assets of this kind.
     pub asset_kind: String,
+    /// Only this asset.
     pub asset_ref: String,
 }
 

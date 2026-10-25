@@ -56,6 +56,7 @@ const DEFAULT_LIST_LIMIT: i64 = 50;
 // ── Wire types ───────────────────────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ImportQuery {
     /// `plan` or `apply`.
     mode: String,
@@ -172,6 +173,7 @@ impl From<PlanRow> for PlanListItem {
 }
 
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListQuery {
     /// Newest first; default 50, max 200.
     limit: Option<i64>,

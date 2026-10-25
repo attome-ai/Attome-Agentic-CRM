@@ -207,6 +207,7 @@ pub struct ScheduleDetail {
 
 /// The list filter.
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ScheduleFilter {
     /// Only this planning group's schedules.
     pub group_id: Option<Uuid>,
