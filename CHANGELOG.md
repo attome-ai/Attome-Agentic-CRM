@@ -710,6 +710,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Optional Helm chart and lease-based singletons (Y6-T1, migration 0249): `deploy/helm/attome` runs the
+  server (probes on the health routes, optional autoscaling), the worker, the audit chainer and a
+  pre-install/upgrade migrate job; `attome_jobs::lease` keeps one row per singleton loop in
+  `process_lease`, and audit chainers on several nodes now take turns through it (one polls, the others
+  wait and take over when its lease expires).
 - Legal hold scope and custodians (R4-T1, migration 0248): a hold on a record (or a whole entity) now
   also keeps every captured email linked to it, on top of the record and its file versions; chat holds
   already applied. `POST /api/v1/admin/legal-holds/{id}/custodians` emails each new custodian a

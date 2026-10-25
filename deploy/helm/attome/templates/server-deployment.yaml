@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "attome.name" . }}-server
+  labels:
+    {{- include "attome.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  {{- if not .Values.server.autoscaling.enabled }}
+  replicas: {{ .Values.server.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "attome.labels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        {{- include "attome.labels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+    spec:
+      {{- $probe := dict "port" "http" }}
+      {{- $extra := dict
+            "ports" (list (dict "name" "http" "containerPort" .Values.server.port))
+            "readinessProbe" (dict "httpGet" (merge (dict "path" "/health/ready") $probe) "periodSeconds" 10)
+            "livenessProbe" (dict "httpGet" (merge (dict "path" "/health") $probe) "periodSeconds" 20)
+            "startupProbe" (dict "httpGet" (merge (dict "path" "/health/startup") $probe) "periodSeconds" 5 "failureThreshold" 60)
+            "resources" .Values.server.resources }}
+      {{- include "attome.pod" (dict "root" . "component" "server" "command" "serve" "extra" $extra) | nindent 6 }}

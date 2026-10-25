@@ -1,0 +1,44 @@
+# Y6-T1: optional. One server with PostgreSQL is the normal install (V2-D100);
+# use this chart only when a deployment runs on Kubernetes.
+image:
+  repository: ghcr.io/attome-ai/attome
+  tag: "" # defaults to the chart's appVersion
+  pullPolicy: IfNotPresent
+
+# The configuration file every process reads (CONFIG_FILE), from a Secret the
+# operator creates, e.g.
+#   kubectl create secret generic attome-config --from-file=config.json
+# Secrets inside it come from ${VAR} environment variables, set through
+# envFromSecret.
+config:
+  secretName: attome-config
+  key: config.json
+envFromSecret: "" # a Secret whose keys become environment variables
+
+server:
+  replicas: 2
+  port: 8080 # the configuration's app.port
+  resources: {}
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+worker:
+  replicas: 1
+  resources: {}
+
+# The audit chainer is a lease-based singleton: extra replicas wait on the
+# process_lease row and take over when the holder stops renewing.
+chainer:
+  replicas: 2
+  resources: {}
+
+# Runs `attome migrate` before each install and upgrade.
+migrate:
+  enabled: true
+
+service:
+  type: ClusterIP
+  port: 80

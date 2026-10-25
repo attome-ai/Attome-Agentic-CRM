@@ -14,6 +14,8 @@ pub mod batch;
 pub mod chain;
 /// Z7-T2 — five-field cron expressions for [`schedule::Schedule`].
 pub mod cron;
+/// Y6-T1: lease-based singletons (`process_lease`).
+pub mod lease;
 pub mod registry;
 
 /// The schedule ledger that makes a periodic job run once per slot across

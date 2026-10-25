@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "attome.name" . }}-audit-chainer
+  labels:
+    {{- include "attome.labels" . | nindent 4 }}
+    app.kubernetes.io/component: audit-chainer
+spec:
+  replicas: {{ .Values.chainer.replicas }}
+  selector:
+    matchLabels:
+      {{- include "attome.labels" . | nindent 6 }}
+      app.kubernetes.io/component: audit-chainer
+  template:
+    metadata:
+      labels:
+        {{- include "attome.labels" . | nindent 8 }}
+        app.kubernetes.io/component: audit-chainer
+    spec:
+      {{- include "attome.pod" (dict "root" . "component" "audit-chainer" "command" "audit-chainer" "extra" (dict "resources" .Values.chainer.resources)) | nindent 6 }}

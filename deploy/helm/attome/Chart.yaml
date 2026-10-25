@@ -1,0 +1,6 @@
+apiVersion: v2
+name: attome
+description: Attome on Kubernetes (optional; a single server is the normal install).
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

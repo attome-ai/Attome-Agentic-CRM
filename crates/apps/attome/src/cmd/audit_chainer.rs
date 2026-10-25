@@ -52,6 +52,8 @@ use attome_core::AuditSigner;
 /// Poll cadence and per-batch cap for the chainer loop below — never varied
 /// per-deployment (dev/prod/test all ran the same values), not config knobs.
 const CHAIN_POLL_INTERVAL_MS: u64 = 500;
+/// Y6-T1: the lease name the chainers share.
+const CHAINER_LEASE: &str = "attome-audit/chainer";
 const CHAIN_BATCH_SIZE: i64 = 500;
 /// Retention-pruning tick — much coarser than the poll cadence above; a bulk
 /// `DELETE` has no business running every poll. Never varied per-deployment.
@@ -148,6 +150,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let poll_interval = std::time::Duration::from_millis(CHAIN_POLL_INTERVAL_MS);
     let mut shutdown = shutdown_signal();
+    // Y6-T1: with several chainers running (one per node), the one holding
+    // the lease polls and the others wait; the per-batch advisory locks stay
+    // the correctness guard. The lease outlives a few missed polls.
+    let holder = format!("{}:{}", std::process::id(), uuid::Uuid::now_v7());
+    let lease_ttl = (poll_interval * 10).max(std::time::Duration::from_secs(15));
 
     // P1.13 step 6: retention pruning gets its own, much coarser cadence —
     // `None` when `ingest_retention_days == 0` (pruning disabled), since
@@ -160,9 +167,20 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         tokio::select! {
             _ = &mut shutdown => {
                 tracing::info!("shutdown signal received, exiting after current poll");
+                if let Err(e) = attome_jobs::lease::release(&db, CHAINER_LEASE, &holder).await {
+                    tracing::warn!(error = %e, "audit chainer: lease not released; it expires");
+                }
                 break;
             }
             _ = tokio::time::sleep(poll_interval) => {
+                match attome_jobs::lease::try_acquire(&db, CHAINER_LEASE, &holder, lease_ttl).await {
+                    Ok(true) => {}
+                    Ok(false) => continue,
+                    Err(e) => {
+                        tracing::error!(error = %e, "audit chainer: lease check failed");
+                        continue;
+                    }
+                }
                 match attome_audit::chainer::run_once(
                     &db,
                     signer.as_ref(),
