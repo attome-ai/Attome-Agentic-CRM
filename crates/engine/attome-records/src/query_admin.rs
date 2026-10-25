@@ -22,6 +22,8 @@ use std::collections::HashSet;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+use crate::query_spec::saved::ParamDecl;
+
 /// A minimal runtime-shape twin of `attome_server::bundle::model::QueryDef` —
 /// D-477 (T3-2): `attome-server`'s `bundle/apply.rs` (the sole caller of
 /// [`reconcile_query`]) translates its own bundle-wire-shape `QueryDef` into
@@ -209,6 +211,9 @@ struct QueryDetailRow {
     /// concurrency token `update_query`'s optional `If-Match` checks.
     row_version: i64,
     owner_layer: String,
+    /// S4-T9: the saved QuerySpec and its declared parameters.
+    query_spec: Option<Value>,
+    parameters: Option<Value>,
 }
 
 // ── Changeset recording (Solution 7 Phase 1, D-785, design §1.1) ─────────────
@@ -398,6 +403,12 @@ pub struct QueryDetail {
     row_version: i64,
     /// Solution 7 (D-785): the layer that owns this query.
     owner_layer: String,
+    /// S4-T9: the saved QuerySpec, run by id through `query/run`.
+    #[schema(value_type = Option<Object>)]
+    query_spec: Option<Value>,
+    /// S4-T9: its declared parameters, `[{name, type, required}]`.
+    #[schema(value_type = Option<Vec<crate::query_spec::saved::ParamDecl>>)]
+    parameters: Option<Value>,
 }
 
 impl std::fmt::Debug for QueryDetail {
@@ -459,6 +470,8 @@ pub const ACTION_QUERY_PUBLISH: &str = "query.publish";
 #[derive(Deserialize)]
 pub struct CreateQueryBody {
     name: Option<String>,
+    /// Optional when `query_spec` is given (a spec-only query).
+    #[serde(default)]
     sql_query: String,
     table_definition: Option<String>,
     entity_logical_name: Option<Uuid>,
@@ -471,6 +484,12 @@ pub struct CreateQueryBody {
     /// all-or-nothing Global-scope-required gate at execute time.
     #[serde(default)]
     entity_mappings: Option<Vec<EntityMappingInput>>,
+    /// S4-T9: a QuerySpec run by id through `query/run`.
+    #[serde(default)]
+    query_spec: Option<Value>,
+    /// S4-T9: the parameters its `param` conditions name.
+    #[serde(default)]
+    parameters: Option<Vec<ParamDecl>>,
 }
 
 impl std::fmt::Debug for CreateQueryBody {
@@ -495,6 +514,12 @@ pub struct UpdateQueryBody {
     /// them; `Some(vec![...])` replaces them.
     #[serde(default)]
     entity_mappings: Option<Vec<EntityMappingInput>>,
+    /// S4-T9: replaces the saved QuerySpec; absent keeps it.
+    #[serde(default)]
+    query_spec: Option<Value>,
+    /// S4-T9: replaces the declared parameters; absent keeps them.
+    #[serde(default)]
+    parameters: Option<Vec<ParamDecl>>,
 }
 
 impl std::fmt::Debug for UpdateQueryBody {
@@ -504,6 +529,28 @@ impl std::fmt::Debug for UpdateQueryBody {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// S4-T9: checks a QuerySpec and its parameters for saving and returns both
+/// as stored JSON. A spec is checked against the parameters given, or none.
+fn saved_spec_values(
+    spec: Option<&Value>,
+    params: Option<&[ParamDecl]>,
+) -> Result<(Option<Value>, Option<Value>), AppError> {
+    let params_json = params
+        .map(|p| serde_json::to_value(p).map_err(AppError::internal))
+        .transpose()?;
+    let Some(spec) = spec else {
+        return Ok((None, params_json));
+    };
+    let parsed: crate::query_spec::QuerySpec = serde_json::from_value(spec.clone())
+        .map_err(|e| AppError::Validation(format!("query_spec: {e}")))?;
+    crate::query_spec::saved::validate(&parsed, params.unwrap_or(&[]))?;
+    let spec_json = serde_json::to_value(&parsed).map_err(AppError::internal)?;
+    Ok((
+        Some(spec_json),
+        Some(params_json.unwrap_or_else(|| Value::Array(Vec::new()))),
+    ))
+}
 
 fn meta_from_row(r: QueryRow) -> QueryMeta {
     QueryMeta {
@@ -535,6 +582,8 @@ fn detail_from_row(r: QueryDetailRow, entity_mappings: Vec<EntityMappingInfo>) -
         entity_mappings,
         row_version: r.row_version,
         owner_layer: r.owner_layer,
+        query_spec: r.query_spec,
+        parameters: r.parameters,
     }
 }
 
@@ -599,6 +648,11 @@ async fn plan_or_trust(
 ) -> Result<(f64, Vec<String>), AppError> {
     if skip {
         reject_unsafe_default_query_sql(sql_query)?;
+        return Ok((0.0, Vec::new()));
+    }
+    // S4-T9: a spec-only query has no SQL to lint or plan; its spec is
+    // compiled and costed on every run.
+    if sql_query.trim().is_empty() {
         return Ok((0.0, Vec::new()));
     }
     lint_and_plan(db_readonly, sql_query).await
@@ -790,8 +844,10 @@ where
     let version_id = Uuid::now_v7();
     sqlx::query(
         "INSERT INTO sql_query_version \
-         (id, query_id, sql_query, relations, cost_estimate, created_at, created_by) \
-         VALUES ($1, $2, $3, $4, $5, NOW(), $6)",
+         (id, query_id, sql_query, relations, cost_estimate, created_at, created_by, \
+          query_spec, parameters) \
+         SELECT $1, $2, $3, $4, $5, NOW(), $6, q.query_spec, q.parameters \
+           FROM sql_query q WHERE q.id = $2",
     )
     .bind(version_id)
     .bind(query_id)
@@ -873,7 +929,8 @@ pub async fn revalidate_all(
 ) -> Result<RevalidationSummary, AppError> {
     let queries: Vec<(Uuid, String)> = sqlx::query_as(
         "SELECT id, sql_query FROM sql_query \
-         WHERE (is_active IS NULL OR is_active = true) AND sql_query IS NOT NULL",
+         WHERE (is_active IS NULL OR is_active = true) AND sql_query IS NOT NULL \
+           AND sql_query <> ''",
     )
     .fetch_all(db)
     .await
@@ -1416,9 +1473,13 @@ async fn do_create_query_recorded(
     body: CreateQueryBody,
     recording: Option<&Recording>,
 ) -> Result<(StatusCode, QueryDetail), AppError> {
-    if body.sql_query.trim().is_empty() {
-        return Err(AppError::Validation("sql_query is required".into()));
+    if body.sql_query.trim().is_empty() && body.query_spec.is_none() {
+        return Err(AppError::Validation(
+            "sql_query or query_spec is required".into(),
+        ));
     }
+    let (query_spec, parameters) =
+        saved_spec_values(body.query_spec.as_ref(), body.parameters.as_deref())?;
     let sql_query = body.sql_query.trim();
     let name = body
         .name
@@ -1455,6 +1516,8 @@ async fn do_create_query_recorded(
             desired_id: None,
             recording,
             unrecorded_layer: Layer::Project,
+            query_spec: query_spec.as_ref(),
+            parameters: parameters.as_ref(),
         },
     )
     .await?;
@@ -1474,6 +1537,8 @@ async fn do_create_query_recorded(
             // Fresh row — the column default (migration 0443).
             row_version: 0,
             owner_layer: owner_layer.as_str().to_owned(),
+            query_spec,
+            parameters,
         },
     ))
 }
@@ -1501,7 +1566,7 @@ async fn get_query(
 ) -> Result<Json<QueryDetail>, AppError> {
     let row: Option<QueryDetailRow> = sqlx::query_as(
         "SELECT id, sql_query, table_definition, record_no, entity_logical_name, is_active,
-                required_privilege, is_report, row_version, owner_layer
+                required_privilege, is_report, row_version, owner_layer, query_spec, parameters
          FROM sql_query WHERE id = $1",
     )
     .bind(query_id)
@@ -1624,7 +1689,7 @@ async fn do_update_query_recorded(
 ) -> Result<QueryDetail, AppError> {
     let cur: Option<QueryDetailRow> = sqlx::query_as(
         "SELECT id, sql_query, table_definition, record_no, entity_logical_name, is_active,
-                required_privilege, is_report, row_version, owner_layer
+                required_privilege, is_report, row_version, owner_layer, query_spec, parameters
          FROM sql_query WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
     )
     .bind(query_id)
@@ -1633,6 +1698,23 @@ async fn do_update_query_recorded(
     .map_err(AppError::internal)?;
 
     let cur = cur.ok_or(AppError::NotFound)?;
+
+    // S4-T9: a given spec or parameter list replaces the stored one; the
+    // pair is checked together.
+    let (new_query_spec, new_parameters) = if body.query_spec.is_some() || body.parameters.is_some()
+    {
+        let cur_params: Option<Vec<ParamDecl>> = cur
+            .parameters
+            .clone()
+            .map(serde_json::from_value)
+            .transpose()
+            .map_err(AppError::internal)?;
+        let params = body.parameters.clone().or(cur_params);
+        let spec = body.query_spec.clone().or_else(|| cur.query_spec.clone());
+        saved_spec_values(spec.as_ref(), params.as_deref())?
+    } else {
+        (cur.query_spec.clone(), cur.parameters.clone())
+    };
 
     let new_sql = body
         .sql_query
@@ -1700,6 +1782,8 @@ async fn do_update_query_recorded(
             desired_id: None,
             recording,
             unrecorded_layer: Layer::Project,
+            query_spec: new_query_spec.as_ref(),
+            parameters: new_parameters.as_ref(),
         },
     )
     .await?;
@@ -1718,6 +1802,8 @@ async fn do_update_query_recorded(
         // A republish never changes the owner (the layer rule refused one
         // that would).
         owner_layer: cur.owner_layer,
+        query_spec: new_query_spec,
+        parameters: new_parameters,
     })
 }
 
@@ -1848,6 +1934,10 @@ struct PublishParams<'a> {
     recording: Option<&'a Recording>,
     /// The layer a new row gets when `recording` is `None`.
     unrecorded_layer: Layer,
+    /// S4-T9: the saved QuerySpec and parameters. `None` on a republish
+    /// keeps the stored ones (a bundle reconcile never carries them).
+    query_spec: Option<&'a Value>,
+    parameters: Option<&'a Value>,
 }
 
 /// Publishes a brand-new stored query: lint + plan on the readonly pool, the
@@ -1894,8 +1984,8 @@ async fn publish_new_query(
         r#"INSERT INTO sql_query
                (id, sql_query, table_definition, record_no, entity_logical_name,
                 required_privilege, is_report, is_active, is_customized, created_at,
-                owner_layer)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, NOW(), $9)"#,
+                owner_layer, query_spec, parameters)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, NOW(), $9, $10, $11)"#,
     )
     .bind(id)
     .bind(p.sql_query)
@@ -1906,6 +1996,8 @@ async fn publish_new_query(
     .bind(p.is_report)
     .bind(p.is_customized.unwrap_or(false))
     .bind(owner_layer.as_str())
+    .bind(p.query_spec)
+    .bind(p.parameters)
     .execute(&mut *tx)
     .await
     // `uq_core_sql_query_entity_name` (0133): a live named query per entity.
@@ -2100,6 +2192,7 @@ async fn republish_query(
          SET sql_query = $2, table_definition = $3, record_no = $4, entity_logical_name = $5,
              required_privilege = $6, is_report = $7, is_active = true,
              is_customized = COALESCE($8, is_customized),
+             query_spec = COALESCE($10, query_spec), parameters = COALESCE($11, parameters),
              row_version = row_version + 1
          WHERE id = $1 AND ($9::bigint IS NULL OR row_version = $9)
          RETURNING row_version",
@@ -2113,6 +2206,8 @@ async fn republish_query(
     .bind(p.is_report)
     .bind(p.is_customized)
     .bind(p.expected_row_version)
+    .bind(p.query_spec)
+    .bind(p.parameters)
     .fetch_optional(&mut *tx)
     .await
     .map_err(map_unique_violation)?;
@@ -2314,6 +2409,9 @@ pub async fn reconcile_query(
         // The bundle apply path records nothing (design §1.4).
         recording: None,
         unrecorded_layer: policy_layer(policy),
+        // Bundles carry no saved QuerySpec yet; a republish keeps the stored one.
+        query_spec: None,
+        parameters: None,
     };
     let key = desc.display_key();
     match step {

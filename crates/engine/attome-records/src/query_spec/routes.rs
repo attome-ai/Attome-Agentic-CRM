@@ -50,6 +50,13 @@ pub struct RunRequest {
     /// Plan the query and return the plan's summary instead of rows.
     #[serde(default)]
     pub explain: bool,
+    /// S4-T9: run the stored query with this id (its saved QuerySpec);
+    /// `params` are its parameter values and `spec` and `q` are absent.
+    #[serde(default)]
+    pub query_id: Option<Uuid>,
+    /// S4-T9: with `query_id`, the previous page's `next_cursor`.
+    #[serde(default)]
+    pub cursor: Option<String>,
 }
 
 impl RunRequest {
@@ -132,10 +139,46 @@ pub(crate) async fn run_query(
     ctx: Authorized<SelfService>,
     Json(body): Json<RunRequest>,
 ) -> Result<Json<RunResponse>, AppError> {
-    let spec = body.into_spec()?;
+    let spec = match body.query_id {
+        Some(id) => saved_spec(&state, &ctx, id, body).await?,
+        None => {
+            if body.cursor.is_some() {
+                return Err(AppError::Validation(
+                    "cursor goes inside spec; the top-level cursor is for query_id".into(),
+                ));
+            }
+            body.into_spec()?
+        }
+    };
     ctx.require(&spec.entity, "read")
         .map_err(|_| AppError::NotFound)?;
     Ok(Json(execute_spec(&state, &ctx, spec).await?))
+}
+
+/// S4-T9: the stored query `id`'s spec with the run's values: its
+/// `required_privilege` (the admin default otherwise) gates it as it gates
+/// `query/execute`, and each value is checked against its declaration.
+async fn saved_spec(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    id: Uuid,
+    body: RunRequest,
+) -> Result<QuerySpec, AppError> {
+    if body.spec.is_some() || body.q.is_some() {
+        return Err(AppError::Validation(
+            "a run by query_id sends values only, not spec or q".into(),
+        ));
+    }
+    let saved = super::saved::load(&state.base.db, id).await?;
+    match &saved.required_privilege {
+        Some(key) => ctx.require_key(key)?,
+        None => ctx.require_admin()?,
+    }
+    let mut spec = saved.spec;
+    spec.params = super::saved::coerce(&saved.params, &body.params)?;
+    spec.cursor = body.cursor;
+    spec.explain = body.explain;
+    Ok(spec)
 }
 
 /// Compiles and runs one spec for `ctx`, who may already read its entity:

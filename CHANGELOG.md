@@ -8,6 +8,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Saved queries with typed parameters (S4-T9): a stored query may hold a `query_spec` and
+  `parameters` (`[{name, type, required}]`, types text, number, date, uuid, bool), checked on
+  save (every `param` condition declared) and versioned with the query. `POST /api/v1/query/run`
+  with `query_id` and `params` runs it by id with values only (each checked against its type,
+  `422` otherwise), gated by the query's `required_privilege` as `query/execute` is; a spec-only
+  query needs no SQL and `query/execute` refuses it. Migration 0271.
 - Expression checks for editors and agents (Z11-T12): `POST /api/v1/admin/expressions/validate`
   checks a rule-language expression against an entity and returns its result type, or each error
   with its code and byte span, whether it runs in the database, and for a sample record the

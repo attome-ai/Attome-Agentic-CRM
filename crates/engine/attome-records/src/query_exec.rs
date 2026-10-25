@@ -1925,6 +1925,13 @@ pub async fn execute_stored_query_with_definition(
         check_select_shape(names)?;
     }
     let qrow = lookup(db, &body).await?;
+    // S4-T9: a spec-only stored query has no SQL; it runs through query/run.
+    if qrow.sql_query.trim().is_empty() {
+        return Err(AppError::Validation(
+            "this stored query is a QuerySpec; run it with POST /api/v1/query/run and query_id"
+                .into(),
+        ));
+    }
     // D-521 — pinned SQL, live security: resolved before the privilege gate
     // below so a wrong version is refused the same way for every caller, but
     // it changes nothing about which privilege or record scope applies.
