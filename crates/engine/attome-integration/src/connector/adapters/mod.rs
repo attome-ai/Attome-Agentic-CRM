@@ -4,6 +4,8 @@ pub mod calendar_sync;
 pub mod docusign;
 /// S12-T2: what the ERP connectors exchange with Attome.
 pub mod erp;
+/// D30-T1: LinkedIn Lead Gen Forms responses mapped onto leads.
+pub mod linkedin;
 /// J2-T1: the IMAP, Graph and Gmail readers behind `mailbox`.
 pub mod mail;
 pub mod mailbox;
@@ -31,6 +33,6 @@ pub mod video;
 pub mod voice;
 /// AJ4-T1: Wathq commercial registration lookups mapped to accounts.
 pub mod wathq;
+pub mod webchat;
 /// AJ3-T1: Yakeen identity checks with consent, keeping only the outcome.
 pub mod yakeen;
-pub mod webchat;

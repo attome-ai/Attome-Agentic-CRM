@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- LinkedIn Lead Gen Forms (D30-T1): a connector adapter reads a form's questions and pages through an
+  ad account's sponsored responses since a time (versioned Marketing API), and maps each onto `lead`
+  fields (standard questions built in, custom ones by the connection's map, `source` =
+  `linkedin_lead_gen`), keeping unmapped answers listed.
 - Sitemaps are built (E13-T9): an hourly job rebuilds the stored sitemap of every site whose pages
   changed (published public pages that are not `noindex`, `lastmod` and `hreflang` alternates per
   translation), splitting past 50,000 URLs into an index and parts served with
