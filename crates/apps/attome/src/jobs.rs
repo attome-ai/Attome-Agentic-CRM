@@ -2984,6 +2984,8 @@ const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
 /// AB2-T6: the Patroni cluster poll (a registered job type).
 const DEDUP_KEY_OPS_CLUSTER_POLL: &str = "ops-cluster-poll";
+/// AB4-T7: the daily overdue-drill check (a registered job type).
+const DEDUP_KEY_OPS_DRILL_SKIP_CHECK: &str = "ops-drill-skip-check";
 /// Z12-T8: the daily calendar feed fetch (a registered job type).
 const DEDUP_KEY_CALENDAR_FEED_FETCH: &str = "calendar-feed-fetch";
 /// E13-T10: the daily search-console pull (a registered job type).
@@ -3287,6 +3289,10 @@ pub const CONTENT_SEO_AUDIT: attome_jobs::JobType =
 /// AB2-T6: the database leader read from Patroni, every 15 seconds.
 pub const OPS_CLUSTER_POLL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ops::cluster::JOB, 1);
+
+/// AB4-T7: enabled drill schedules more than two days overdue, daily.
+pub const OPS_DRILL_SKIP_CHECK: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ops::drill_schedules::SKIP_CHECK_JOB, 1);
 
 /// Z12-T8: holidays read from calendar iCal feeds, daily.
 pub const CALENDAR_FEED_FETCH: attome_jobs::JobType =
@@ -4327,6 +4333,28 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            OPS_DRILL_SKIP_CHECK,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if state
+                    .modules
+                    .load()
+                    .require(attome_modules::MODULE_OPS)
+                    .is_err()
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let skipped = attome_ops::drill_schedules::record_skips(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if skipped > 0 {
+                    tracing::warn!(skipped, "recovery drills overdue");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CALENDAR_FEED_FETCH,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let read = attome_api::calendar_feed::fetch_all(&state)
@@ -4899,6 +4927,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == OPS_CLUSTER_POLL.name => {
             DEDUP_KEY_OPS_CLUSTER_POLL
+        }
+        EngineJob::Registered(job) if job.name == OPS_DRILL_SKIP_CHECK.name => {
+            DEDUP_KEY_OPS_DRILL_SKIP_CHECK
         }
         EngineJob::Registered(job) if job.name == CALENDAR_FEED_FETCH.name => {
             DEDUP_KEY_CALENDAR_FEED_FETCH
@@ -5976,6 +6007,21 @@ pub fn spawn_ops_cluster_scheduler(db: DbPool, interval: std::time::Duration) {
             "ops cluster poll",
         ),
         Err(error) => tracing::error!(%error, "ops cluster poll: not scheduled"),
+    }
+}
+
+/// AB4-T7: daily, the overdue recovery drills.
+pub fn spawn_ops_drill_skip_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(OPS_DRILL_SKIP_CHECK.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_OPS_DRILL_SKIP_CHECK,
+            "ops drill skip check",
+        ),
+        Err(error) => tracing::error!(%error, "ops drill skip check: not scheduled"),
     }
 }
 

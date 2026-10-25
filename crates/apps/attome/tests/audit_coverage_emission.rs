@@ -3978,6 +3978,24 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 1,
             )
         }
+        // AB4-T7: the restore schedule migration 0267 seeds.
+        "PATCH /api/v1/ops/drill-schedules/{id}" => {
+            let (id, version): (Uuid, i64) = sqlx::query_as(
+                "SELECT id, row_version FROM ops_drill_schedule WHERE kind = 'restore'",
+            )
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("the seeded restore drill schedule");
+            with_if_match(
+                request(
+                    "PATCH",
+                    &format!("/api/v1/ops/drill-schedules/{id}"),
+                    t,
+                    Some(json!({"enabled": true})),
+                ),
+                version,
+            )
+        }
         // AB2-T8: the fixture names a Patroni node; nothing calls it here.
         "POST /api/v1/ops/cluster/switchover" => request(
             "POST",

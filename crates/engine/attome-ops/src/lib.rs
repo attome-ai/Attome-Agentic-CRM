@@ -12,6 +12,8 @@
 pub mod cluster;
 /// AB3-T7: declared disasters under two-person control.
 pub mod disasters;
+/// AB4-T7: when each kind of drill is due.
+pub mod drill_schedules;
 /// AB4-T6: drill evidence stored in the deployment.
 pub mod drills;
 pub mod error;
@@ -39,6 +41,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(disasters::openapi_fragment());
     doc.merge(status::openapi_fragment());
     doc.merge(drills::openapi_fragment());
+    doc.merge(drill_schedules::openapi_fragment());
     doc.merge(switchover::openapi_fragment());
     doc
 }

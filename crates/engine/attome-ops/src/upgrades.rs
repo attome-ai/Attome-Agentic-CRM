@@ -114,7 +114,8 @@ fn version_ok(v: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || ".-+_".contains(c))
 }
 
-fn if_match(headers: &HeaderMap) -> Result<i64, AppError> {
+/// The `If-Match` row version (also AB4-T7's schedule changes).
+pub(crate) fn if_match(headers: &HeaderMap) -> Result<i64, AppError> {
     let raw = headers
         .get(axum::http::header::IF_MATCH)
         .ok_or_else(|| AppError::Validation("If-Match: \"<row_version>\" is required".into()))?

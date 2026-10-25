@@ -208,6 +208,8 @@ async fn record_evidence(
             }),
         ));
     };
+    // AB4-T7: the upload moves its kind's schedule on.
+    crate::drill_schedules::advance(&mut tx, &kind_name(e.kind), id).await?;
     write_security_event(
         &mut tx,
         &attome_audit::audit_service(&state),
