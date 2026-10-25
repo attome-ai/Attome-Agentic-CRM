@@ -199,6 +199,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Microsoft Teams bot (C5-T1): a connector adapter posts messages through the Bot Connector API with
+  the customer's own Azure bot app, builds notification and approval Adaptive Cards (an approval card
+  opens the request's single-use approval link), and answers link-unfurl invokes with a record card.
 - Confirmed orders split into fulfilment orders (F6-T3): every 30 seconds a change-feed consumer turns
   each newly confirmed order into one draft fulfilment order per ship-from location and delivery group
   with a line per order line (`goods`, or `service` without a product), once per order. The location

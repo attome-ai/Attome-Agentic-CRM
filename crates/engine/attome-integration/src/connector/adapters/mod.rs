@@ -23,6 +23,8 @@ pub mod sms_twilio;
 pub mod sms_unifonic;
 /// J8-T1: Messenger, Instagram, Facebook comments and Google reviews.
 pub mod social;
+/// C5-T1: a Teams bot: Bot Connector messages, approval cards, link unfurling.
+pub mod teams;
 /// AJ2-T1: UAE Pass sign-in (endpoints, code exchange, profile).
 pub mod uae_pass;
 /// D15-T1: a person's own mailbox and calendar connection.
