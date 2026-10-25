@@ -8,6 +8,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Passkey building block (Z4-T6): `attome-auth`'s `webauthn` module registers and verifies passkeys
+  (WebAuthn, pure-Rust `webauthn_rp`, no OpenSSL): Ed25519, ES256, ES384 and RS256 keys. Ceremony
+  state is stored, so any node finishes a ceremony another started; a challenge works once and lives
+  300 seconds, and an assertion whose counter did not move past the stored one is refused as a cloned
+  authenticator. No route yet; passkey sign-in (Q6) and the passkey second factor (Q5) call it.
+  Migration 0270 adds `webauthn_credential` and `webauthn_challenge`.
 - SSO-only sign-in (Q1-T7): a user whose email domain is a verified SSO-only domain, or who holds an
   SSO-only role (`PUT /api/v1/admin/security/roles/{id}/auth-policy`), can no longer sign in with a
   password; the refusal reads like a wrong password and is audited. Break-glass accounts

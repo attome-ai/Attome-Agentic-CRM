@@ -237,6 +237,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 url           = "2"
 utoipa        = { version = "5", features = ["macros", "uuid", "chrono"] }
 uuid          = { version = "1", features = ["v4", "v5", "v7", "serde"] }
+# Z4-T6: passkeys; pure Rust (RustCrypto), no OpenSSL.
+webauthn_rp   = { version = "0.3", default-features = false, features = ["serde_relaxed", "serializable_server_state"] }
 # Windows only: run `attome serve` as a Windows service (roadmap U1-T1).
 windows-service = "0.8.1"
 windows-sys     = "0.61"

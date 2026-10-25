@@ -15,7 +15,8 @@
 //! | Refresh tokens | `refresh` (rotating families, reuse detection) |
 //! | Secrets at rest | `password` (Argon2id), `apikey_hash` (peppered HMAC), `envelope` (AES-256-GCM key rings) |
 //! | Credential flows | `accounts`, `reset`, `verification`, `invitation`, `email_identity` |
-//! | Second factor | `mfa` (TOTP, recovery codes, pending challenges) |
+//! | Second factor | `mfa` (TOTP, recovery codes, pending challenges), `otp` |
+//! | Passkeys | `webauthn` (WebAuthn registration and assertion) |
 //! | Step-up | `step_up` (sensitive-operation guard, single-use challenges, elevation) |
 //! | Federation | `oidc` |
 //! | Browser transport | `cookie` |
@@ -93,6 +94,8 @@ pub mod session;
 pub mod signed_link;
 pub mod step_up;
 pub mod verification;
+/// Z4-T6: passkey (WebAuthn) registration and assertion.
+pub mod webauthn;
 
 pub use apikey_hash::{PepperRing, VerifyOutcome, dummy_hmac_hash, verify_api_key_secret};
 pub use jwt::{create_token, validate_session_token, validate_token};

@@ -41,6 +41,7 @@ totp-rs.workspace               = true
 tracing.workspace               = true
 tracing-opentelemetry.workspace = true
 uuid.workspace                  = true
+webauthn_rp.workspace           = true
 
 [dev-dependencies]
 attome-email.workspace       = true
