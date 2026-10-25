@@ -349,38 +349,30 @@
         "parameters": [
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "Filter to one status (`active` | `paused` | `revoked` | `ended`).\nUnfiltered by default — a dashboard wants to see all of them.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -684,6 +676,7 @@
           {
             "name": "from",
             "in": "query",
+            "description": "From this time (inclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -693,6 +686,7 @@
           {
             "name": "to",
             "in": "query",
+            "description": "Up to this time (exclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -1465,6 +1459,7 @@
           {
             "name": "from",
             "in": "query",
+            "description": "From this time (inclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -1474,6 +1469,7 @@
           {
             "name": "to",
             "in": "query",
+            "description": "Up to this time (exclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -1740,6 +1736,7 @@
           {
             "name": "day",
             "in": "query",
+            "description": "The day, as YYYY-MM-DD.",
             "required": true,
             "schema": {
               "type": "string",
@@ -2521,75 +2518,59 @@
         "parameters": [
           {
             "name": "kind",
-            "in": "path",
+            "in": "query",
             "description": "`actions` (default) or `generations`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "agent",
-            "in": "path",
+            "in": "query",
             "description": "Only this agent object's sessions (actions).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "model",
-            "in": "path",
+            "in": "query",
             "description": "Only this model (generations).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "from",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "From this time (inclusive).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "to",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Up to this time (exclusive).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "cursor",
-            "in": "path",
+            "in": "query",
             "description": "The previous page's `next_cursor`, verbatim.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -2747,38 +2728,29 @@
         "parameters": [
           {
             "name": "action",
-            "in": "path",
+            "in": "query",
             "description": "Restrict to one action id, e.g. `record.summarize`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "model_id",
-            "in": "path",
+            "in": "query",
             "description": "Restrict to one model id.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "prompt_version",
-            "in": "path",
+            "in": "query",
             "description": "Restrict to one prompt_version.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -3696,6 +3668,7 @@
           {
             "name": "from",
             "in": "query",
+            "description": "From this time (inclusive).",
             "required": false,
             "schema": {
               "type": "string",
@@ -3705,6 +3678,7 @@
           {
             "name": "to",
             "in": "query",
+            "description": "Up to this time (exclusive).",
             "required": false,
             "schema": {
               "type": "string",
@@ -3872,6 +3846,7 @@
           {
             "name": "day",
             "in": "query",
+            "description": "The day, as YYYY-MM-DD.",
             "required": true,
             "schema": {
               "type": "string",
@@ -4192,40 +4167,31 @@
         "parameters": [
           {
             "name": "days",
-            "in": "path",
+            "in": "query",
             "description": "How many trailing days of requests to count. Defaults to 7, clamped\nto [1, 90].",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based — the first page is `page=1` (D-347).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
+            "in": "query",
             "description": "Keys per page, up to the platform maximum.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -4396,39 +4362,31 @@
         "parameters": [
           {
             "name": "days",
-            "in": "path",
+            "in": "query",
             "description": "How many trailing days (inclusive of today) to aggregate over.\nDefaults to 7, clamped to [1, 90].",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based — the first page is `page=1` (D-347).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -4502,40 +4460,31 @@
         "parameters": [
           {
             "name": "days",
-            "in": "path",
+            "in": "query",
             "description": "How many trailing days to look over. Defaults to 30, clamped to\n[1, 90].",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based — the first page is `page=1` (D-347).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
+            "in": "query",
             "description": "Rows per page, up to the platform maximum.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -4599,37 +4548,30 @@
         "parameters": [
           {
             "name": "action_type",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this action type.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based — the first page is `page=1` (D-347).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -5510,49 +5452,39 @@
         "parameters": [
           {
             "name": "action_type",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this action type.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "Comma-separated status filter, in the request's own vocabulary\n(`pending`, `approved`, `executing`, `rejected`, `expired`,\n`executed`, `cancelled`, `invalidated`). Defaults to `pending` —\ntoday's behavior. BAP-10: `approved` and `executing` are how an\noperator finds an approved-but-unexecuted action and a claim whose\nholder died; neither was listable before. An unknown name is `422`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based — the first page is `page=1` (D-347).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -5707,14 +5639,11 @@
         "parameters": [
           {
             "name": "days",
-            "in": "path",
+            "in": "query",
             "description": "Days back from now, 1 to 365; default 30.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           }
@@ -5994,17 +5923,17 @@
             }
           },
           "401": {
-            "description": "Missing or invalid credentials",
+            "description": "Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/UnauthorizedResponse"
                 }
               }
             }
           },
           "403": {
-            "description": "Caller lacks the required privilege",
+            "description": "Caller lacks the required privilege, or an API-key caller on a step that asks for a step-up",
             "content": {
               "application/json": {
                 "schema": {
@@ -6024,7 +5953,7 @@
             }
           },
           "422": {
-            "description": "Request failed validation",
+            "description": "Request failed validation, more than 10 attachments, or an attachment the caller cannot read",
             "content": {
               "application/json": {
                 "schema": {
@@ -6723,49 +6652,39 @@
         "parameters": [
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "`\"archived\" | \"restored\"`. Defaults to `\"archived\"` — same\nactive-first convention `legal_hold_admin::list_holds` uses.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "entity_logicalname",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -7105,119 +7024,98 @@
         "parameters": [
           {
             "name": "entity_name",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "record_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this record.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "user_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this user.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "user_email",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this user's entries, by email.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "operation",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this operation.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           },
           {
             "name": "field_name",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only changes to this field.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "organization_ref",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this organization's entries.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "from",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "From this time (inclusive).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "to",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Up to this time (exclusive).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "format",
-            "in": "path",
+            "in": "query",
             "description": "`jsonl` (default) | `cef` | `csv`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -7290,131 +7188,108 @@
         "parameters": [
           {
             "name": "entity_name",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "record_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this record.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "user_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this user.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "user_email",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this user's entries, by email.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "operation",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this operation.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           },
           {
             "name": "field_name",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only changes to this field.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "date_from",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "From this date (inclusive).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "date_to",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Up to this date (inclusive).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "organization_ref",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this organization's entries.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -7791,63 +7666,49 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
+            "in": "query",
             "description": "One entity's rules.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "kind",
-            "in": "path",
+            "in": "query",
             "description": "`business` or a legacy kind.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "role_id",
-            "in": "path",
+            "in": "query",
             "description": "Rules that apply to this staff role.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "portal_role_id",
-            "in": "path",
+            "in": "query",
             "description": "Rules that apply to this web-portal role.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "is_active",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only active (true) or inactive (false) ones.",
+            "required": false,
             "schema": {
-              "type": [
-                "boolean",
-                "null"
-              ]
+              "type": "boolean"
             }
           },
           {
@@ -8034,7 +7895,7 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
+            "in": "query",
             "description": "The entity's logical name.",
             "required": true,
             "schema": {
@@ -8043,7 +7904,7 @@
           },
           {
             "name": "id",
-            "in": "path",
+            "in": "query",
             "description": "The record.",
             "required": true,
             "schema": {
@@ -11120,7 +10981,7 @@
         "parameters": [
           {
             "name": "a",
-            "in": "path",
+            "in": "query",
             "description": "The earlier start.",
             "required": true,
             "schema": {
@@ -11130,7 +10991,7 @@
           },
           {
             "name": "b",
-            "in": "path",
+            "in": "query",
             "description": "The later start.",
             "required": true,
             "schema": {
@@ -11274,7 +11135,7 @@
         "parameters": [
           {
             "name": "content_space_id",
-            "in": "path",
+            "in": "query",
             "description": "Every list is scoped to one space — pages in other spaces never\nappear, matching the admin UI's per-space \"Pages\" screen.",
             "required": true,
             "schema": {
@@ -11284,50 +11145,40 @@
           },
           {
             "name": "parent_page_id",
-            "in": "path",
+            "in": "query",
             "description": "Children of this page. Omit for root-level pages. Ignored when\n`search` is set (search runs across the whole tree).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "search",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Text the name contains.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -15512,6 +15363,254 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/customer-flags": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List customer flags",
+        "description": "List customer flags. Administrators only.",
+        "operationId": "list_customer_flags",
+        "responses": {
+          "200": {
+            "description": "Every flag (page 1 holds them all)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CustomerFlag"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/customer-flags/{name}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set a customer flag",
+        "description": "Defines a customer flag or sets its value. Setting a flag clears an\nemergency off. Administrators only. Audited.",
+        "operationId": "set_customer_flag",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The flag's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCustomerFlag"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The flag as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerFlag"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The flag exists and `row_version` is missing or stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An invalid name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/customer-flags/{name}/emergency-off": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Switch a customer flag off now",
+        "description": "Emergency off: the flag reads off everywhere at once, whatever its value,\nuntil someone sets it again. Administrators only. Audited.",
+        "operationId": "emergency_off_customer_flag",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The flag's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The flag, now off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerFlag"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such flag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/customer-tests": {
       "get": {
         "tags": [
@@ -17098,49 +17197,39 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "`\"open\"` (default view for the steward queue), `\"merged\"`, or\n`\"dismissed\"`. Omit for every status.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -17665,49 +17754,39 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "`open` (the default) or `resolved`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -17781,37 +17860,30 @@
         "parameters": [
           {
             "name": "target_entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only mappings or projects into this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -18239,37 +18311,30 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -18789,37 +18854,30 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -19230,73 +19288,58 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "dimension",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this quality dimension.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "`open`, `in_progress`, `fixed`, `accepted` or `resolved`. Omit for\nevery status.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "owner_id",
-            "in": "path",
+            "in": "query",
             "description": "L2-T4: only the issues this person owns.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -19560,37 +19603,30 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -19932,38 +19968,30 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
+            "in": "query",
             "description": "Filter to one entity's scores. Omit for every entity.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -20037,7 +20065,8 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
+            "in": "query",
+            "description": "Only this entity (its logical name).",
             "required": true,
             "schema": {
               "type": "string"
@@ -20045,7 +20074,7 @@
           },
           {
             "name": "dimension",
-            "in": "path",
+            "in": "query",
             "description": "Must be one of `DIMENSIONS` — validated below rather than by the\ncolumn CHECK constraint alone, so a bad value gets a 422 instead of a\nmasked-internal 500 from a constraint violation.",
             "required": true,
             "schema": {
@@ -20054,26 +20083,21 @@
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -20147,37 +20171,30 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -20414,37 +20431,30 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -20681,51 +20691,39 @@
         "parameters": [
           {
             "name": "source",
-            "in": "path",
+            "in": "query",
             "description": "Only this source (`jobs`, `batch_jobs`, `flow_trigger`, `flow_run`,\n`webhook`).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "group",
-            "in": "path",
+            "in": "query",
             "description": "Only this group (a `cause_group` from the groups list).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
+            "in": "query",
             "description": "Rows per page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -21556,50 +21554,39 @@
         "parameters": [
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "`\"pending\" | \"blocked\" | \"fulfilled\" | \"rejected\"`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "request_type",
-            "in": "path",
+            "in": "query",
             "description": "`\"access\" | \"erasure\" | \"portability\" | \"objection\" | \"restriction\" |\n\"rectification\"`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -22334,59 +22321,48 @@
         "parameters": [
           {
             "name": "status",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this status.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "kind",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this kind.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "recipient",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only deliveries to this address.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -23052,7 +23028,7 @@
         "parameters": [
           {
             "name": "locale",
-            "in": "path",
+            "in": "query",
             "description": "The language, e.g. `ar-SA`.",
             "required": true,
             "schema": {
@@ -23061,14 +23037,11 @@
           },
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "`untranslated`, `stale`, `draft` or `reviewed`; all when absent.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -23141,7 +23114,7 @@
         "parameters": [
           {
             "name": "locale",
-            "in": "path",
+            "in": "query",
             "description": "The language to translate into, e.g. `ar-SA`.",
             "required": true,
             "schema": {
@@ -23387,8 +23360,8 @@
           },
           {
             "name": "hard",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "required": false,
             "schema": {
               "type": "boolean"
             }
@@ -26007,48 +25980,39 @@
         "parameters": [
           {
             "name": "kind",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this kind.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "is_active",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only active (true) or inactive (false) ones.",
+            "required": false,
             "schema": {
-              "type": [
-                "boolean",
-                "null"
-              ]
+              "type": "boolean"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -26457,37 +26421,30 @@
           },
           {
             "name": "status",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this status.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -27033,6 +26990,7 @@
           {
             "name": "asset_kind",
             "in": "query",
+            "description": "Only assets of this kind.",
             "required": true,
             "schema": {
               "type": "string"
@@ -27041,6 +26999,7 @@
           {
             "name": "asset_ref",
             "in": "query",
+            "description": "Only this asset.",
             "required": true,
             "schema": {
               "type": "string"
@@ -28121,6 +28080,7 @@
           {
             "name": "user_id",
             "in": "query",
+            "description": "Only this user.",
             "required": true,
             "schema": {
               "type": "string",
@@ -28130,6 +28090,7 @@
           {
             "name": "role",
             "in": "query",
+            "description": "Only this role.",
             "required": true,
             "schema": {
               "type": "string"
@@ -28218,6 +28179,7 @@
           {
             "name": "domain",
             "in": "query",
+            "description": "Only this domain.",
             "required": false,
             "schema": {
               "type": "string",
@@ -28451,6 +28413,7 @@
           {
             "name": "row_version",
             "in": "query",
+            "description": "The current `row_version`.",
             "required": true,
             "schema": {
               "type": "integer",
@@ -28813,7 +28776,7 @@
         "parameters": [
           {
             "name": "year",
-            "in": "path",
+            "in": "query",
             "description": "The Hijri year, 1356 to 1500.",
             "required": true,
             "schema": {
@@ -29088,6 +29051,7 @@
           {
             "name": "locale",
             "in": "query",
+            "description": "The language, such as `ar` or `en`.",
             "required": true,
             "schema": {
               "type": "string"
@@ -29096,6 +29060,7 @@
           {
             "name": "key",
             "in": "query",
+            "description": "The text's key.",
             "required": true,
             "schema": {
               "type": "string"
@@ -29811,38 +29776,30 @@
         "parameters": [
           {
             "name": "queue",
-            "in": "path",
+            "in": "query",
             "description": "`\"fast\"` (default) or `\"batch\"` — see `EngineJob::is_batch`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -30280,7 +30237,7 @@
         "parameters": [
           {
             "name": "q",
-            "in": "path",
+            "in": "query",
             "description": "The question or topic. Held to the same byte/term caps as `/search`:\nGIN cost is roughly linear in term count, so a long paste must be\nrejected before it reaches PostgreSQL.",
             "required": true,
             "schema": {
@@ -30289,13 +30246,11 @@
           },
           {
             "name": "limit",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "The most rows to return.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -30369,38 +30324,30 @@
         "parameters": [
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "Filter to one triage state; omit for the whole queue.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -30634,49 +30581,39 @@
         "parameters": [
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "`\"active\" | \"released\"`. Defaults to `\"active\"` — the common case\n(an operator checking what's currently frozen), matching\n`retention_admin.rs::list_actions`'s \"no filter = the operationally\ninteresting subset\" precedent... except that endpoint defaults to\nunfiltered; this one defaults to `active` specifically because an\nunbounded, ever-growing history of released holds is the\nless-common query.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "entity_logicalname",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -31503,6 +31440,7 @@
           {
             "name": "entity",
             "in": "query",
+            "description": "Only this entity (its logical name).",
             "required": true,
             "schema": {
               "type": "string"
@@ -33001,7 +32939,7 @@
         "parameters": [
           {
             "name": "mode",
-            "in": "path",
+            "in": "query",
             "description": "`plan` or `apply`.",
             "required": true,
             "schema": {
@@ -33179,31 +33117,21 @@
         "parameters": [
           {
             "name": "limit",
-            "in": "path",
+            "in": "query",
             "description": "Newest first; default 50, max 200.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "Filter to one status (e.g. `planned`/`queued` for \"pending plans\" in\nthe lifecycle UI). Unset lists every status, as before.",
-            "required": true,
+            "required": false,
             "schema": {
-              "oneOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "$ref": "#/components/schemas/PlanStatus"
-                }
-              ]
+              "$ref": "#/components/schemas/PlanStatus"
             }
           }
         ],
@@ -35058,48 +34986,39 @@
         "parameters": [
           {
             "name": "target_entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only mappings or projects into this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "status",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this status.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -38186,7 +38105,7 @@
         "parameters": [
           {
             "name": "name",
-            "in": "path",
+            "in": "query",
             "description": "A metric name, as `GET .../metrics/names` lists them.",
             "required": true,
             "schema": {
@@ -38195,53 +38114,41 @@
           },
           {
             "name": "from",
-            "in": "path",
+            "in": "query",
             "description": "Start (UTC, ISO-8601); default an hour ago.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "to",
-            "in": "path",
+            "in": "query",
             "description": "End (UTC); default now.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "step",
-            "in": "path",
+            "in": "query",
             "description": "Seconds per point, 60 to 86,400; default 60.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "labels",
-            "in": "path",
+            "in": "query",
             "description": "Only series whose labels include these (a JSON object), for example\n`{\"endpoint\":\"/api/v1/{entity}\"}`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -38446,72 +38353,57 @@
         "parameters": [
           {
             "name": "kind",
-            "in": "path",
+            "in": "query",
             "description": "Restrict to one `kind` (`ai_suggestion`, …). Unfiltered by default.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "source_module",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this module.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "regarding_entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only records of this entity.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "measured",
-            "in": "path",
+            "in": "query",
             "description": "`true` — only rows still awaiting measurement; `false` — only\nalready-measured rows; omitted — both.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "boolean",
-                "null"
-              ]
+              "type": "boolean"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -39285,7 +39177,7 @@
         "parameters": [
           {
             "name": "name",
-            "in": "path",
+            "in": "query",
             "description": "Top-level probe name, e.g. `\"entity.create\"` or `\"GET /api/v1/entities/{logicalname}\"`\n— a query param, not a path segment, since probe names routinely\ncontain `/` and spaces that a path segment can't carry unencoded.",
             "required": true,
             "schema": {
@@ -39294,8 +39186,9 @@
           },
           {
             "name": "limit",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "The most rows to return.",
+            "required": false,
             "schema": {
               "type": "integer",
               "format": "int64"
@@ -40621,37 +40514,30 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -41068,50 +40954,39 @@
         "parameters": [
           {
             "name": "status",
-            "in": "path",
+            "in": "query",
             "description": "`\"proposed\" | \"approved\" | \"executing\" | \"completed\" | \"failed\" | \"rejected\"`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "action_type",
-            "in": "path",
+            "in": "query",
             "description": "`\"partition_archive\" | \"entity_purge\"`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -41762,37 +41637,30 @@
         "parameters": [
           {
             "name": "status",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this status.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -42385,8 +42253,9 @@
           },
           {
             "name": "limit",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "The most rows to return.",
+            "required": false,
             "schema": {
               "type": "integer",
               "format": "int64"
@@ -42394,8 +42263,9 @@
           },
           {
             "name": "offset",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows to skip.",
+            "required": false,
             "schema": {
               "type": "integer",
               "format": "int64"
@@ -42403,25 +42273,21 @@
           },
           {
             "name": "since",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only entries after this time.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "correlation_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this request's entries.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -43806,7 +43672,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Makes a user a break-glass account (Q1-T7). The user must have a\nconfirmed authenticator.",
+        "summary": "Add a break-glass account",
+        "description": "Makes a user a break-glass account (Q1-T7). The user must have a\nconfirmed authenticator.",
         "operationId": "add_break_glass",
         "requestBody": {
           "content": {
@@ -43903,7 +43770,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Removes a break-glass account (Q1-T7); refused while it is the last one\nand an SSO-only rule is in force.",
+        "summary": "Remove a break-glass account",
+        "description": "Removes a break-glass account (Q1-T7); refused while it is the last one\nand an SSO-only rule is in force.",
         "operationId": "remove_break_glass",
         "parameters": [
           {
@@ -43998,7 +43866,7 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -44006,26 +43874,20 @@
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -46671,7 +46533,7 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -46679,7 +46541,7 @@
           },
           {
             "name": "record_id",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string",
@@ -46688,26 +46550,20 @@
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -48348,7 +48204,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Sets whether a role signs in only through single sign-on (Q1-T7).",
+        "summary": "Set a role's sign-in policy",
+        "description": "Sets whether a role signs in only through single sign-on (Q1-T7).\nAdministrators only.",
         "operationId": "put_role_auth_policy",
         "parameters": [
           {
@@ -49829,7 +49686,7 @@
         "parameters": [
           {
             "name": "email",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -53199,7 +53056,7 @@
           },
           {
             "name": "kind",
-            "in": "path",
+            "in": "query",
             "description": "`logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or\n`guidelines_pdf`.",
             "required": true,
             "schema": {
@@ -53651,14 +53508,11 @@
         "parameters": [
           {
             "name": "days",
-            "in": "path",
+            "in": "query",
             "description": "Days of rejections to count (default 30, at most 365).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32",
               "minimum": 0
             }
@@ -60507,11 +60361,11 @@
             }
           },
           "401": {
-            "description": "Missing or invalid credentials",
+            "description": "Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/UnauthorizedResponse"
                 }
               }
             }
@@ -60537,7 +60391,7 @@
             }
           },
           "422": {
-            "description": "Request failed validation",
+            "description": "Request failed validation, more than 10 attachments, or an attachment the caller cannot read",
             "content": {
               "application/json": {
                 "schema": {
@@ -60767,9 +60621,9 @@
         "parameters": [
           {
             "name": "include_unsupported",
-            "in": "path",
+            "in": "query",
             "description": "D-525 — include types the viewer cannot render (hidden by default so a\npalette only offers renderable widgets).",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "boolean"
             }
@@ -62987,109 +62841,90 @@
         "parameters": [
           {
             "name": "date_from",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "From this date (inclusive).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "date_to",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Up to this date (inclusive).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           },
           {
             "name": "category",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this category.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           },
           {
             "name": "operation",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this operation.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           },
           {
             "name": "entity_name",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this entity (its logical name).",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "source",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this source.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           },
           {
             "name": "outcome",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this outcome.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -63546,38 +63381,29 @@
           },
           {
             "name": "code",
-            "in": "path",
+            "in": "query",
             "description": "The authorization code to exchange. `None` on an `error` redirect.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "state",
-            "in": "path",
+            "in": "query",
             "description": "The `state` the provider echoes back: the flow's single-use id.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "error",
-            "in": "path",
+            "in": "query",
             "description": "The provider's error code (`access_denied`, `consent_required`, ...).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -64621,38 +64447,29 @@
           },
           {
             "name": "code",
-            "in": "path",
+            "in": "query",
             "description": "The authorization code to exchange. `None` on an `error` redirect.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "state",
-            "in": "path",
+            "in": "query",
             "description": "The `state` the provider echoes back — the flow's single-use id.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "error",
-            "in": "path",
+            "in": "query",
             "description": "The provider's error code (`access_denied`, `consent_required`, …).\nLogged as the reason; never returned to the client beyond the generic\nerror page every other failure already gets.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -65085,38 +64902,29 @@
           },
           {
             "name": "code",
-            "in": "path",
+            "in": "query",
             "description": "The authorization code to exchange. `None` on an `error` redirect.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "state",
-            "in": "path",
+            "in": "query",
             "description": "The `state` the provider echoes back: the flow's single-use id.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "error",
-            "in": "path",
+            "in": "query",
             "description": "The provider's error code (`access_denied`, `consent_required`, ...).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -65436,7 +65244,7 @@
           },
           {
             "name": "challenge_id",
-            "in": "path",
+            "in": "query",
             "description": "The step-up challenge to continue at the provider.",
             "required": true,
             "schema": {
@@ -65981,6 +65789,7 @@
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -68090,14 +67899,11 @@
           },
           {
             "name": "as_of",
-            "in": "path",
+            "in": "query",
             "description": "The day to read the subscription as of (`YYYY-MM-DD`); today when absent.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date"
             }
           }
@@ -68974,7 +68780,8 @@
         "tags": [
           "sales"
         ],
-        "summary": "The booking a manage link names.",
+        "summary": "A booking from its manage link",
+        "description": "The booking a manage link names.",
         "operationId": "get_managed",
         "parameters": [
           {
@@ -69025,7 +68832,8 @@
         "tags": [
           "sales"
         ],
-        "summary": "Cancels the booking and its meeting.",
+        "summary": "Cancel a booking",
+        "description": "Cancels the booking and its meeting.",
         "operationId": "cancel_booking",
         "parameters": [
           {
@@ -69095,7 +68903,8 @@
         "tags": [
           "sales"
         ],
-        "summary": "Moves the booking to another free time with the same person.",
+        "summary": "Reschedule a booking",
+        "description": "Moves the booking to another free time with the same person.",
         "operationId": "post_reschedule",
         "parameters": [
           {
@@ -69185,7 +68994,8 @@
         "tags": [
           "sales"
         ],
-        "summary": "A booking page: its name and the times that can be booked.",
+        "summary": "A booking page",
+        "description": "A booking page: its name and the times that can be booked.",
         "operationId": "get_booking_page",
         "parameters": [
           {
@@ -69264,7 +69074,8 @@
         "tags": [
           "sales"
         ],
-        "summary": "Books a meeting at one of the page's free times.",
+        "summary": "Book a meeting",
+        "description": "Books a meeting at one of the page's free times.",
         "operationId": "post_booking",
         "parameters": [
           {
@@ -69370,7 +69181,7 @@
         "parameters": [
           {
             "name": "kind",
-            "in": "path",
+            "in": "query",
             "description": "`logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or\n`guidelines_pdf`.",
             "required": true,
             "schema": {
@@ -69430,14 +69241,11 @@
         "parameters": [
           {
             "name": "app",
-            "in": "path",
+            "in": "query",
             "description": "The app being shown, when it has its own theme.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -69630,63 +69438,49 @@
         "parameters": [
           {
             "name": "q",
-            "in": "path",
+            "in": "query",
             "description": "Matches against logicalname or display name, case-insensitive substring.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "domain",
-            "in": "path",
+            "in": "query",
             "description": "`data_domain.id` (M15) — restricts to entities assigned to\nthis domain.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "classification",
-            "in": "path",
+            "in": "query",
             "description": "`attribute_info.data_classification` (`0087`) — restricts\nto entities with at least one attribute at this classification.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -71281,7 +71075,7 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Joins a co-browse session with its code (J9-T2).",
+        "summary": "Joins a co-browse session with its code.",
         "description": "The code works once, for ten minutes; any other code answers 404.",
         "operationId": "join",
         "requestBody": {
@@ -71351,7 +71145,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Starts a co-browse session (J9-T2).",
+        "summary": "Start a co-browse session",
+        "description": "Starts a co-browse session.",
         "operationId": "start",
         "requestBody": {
           "content": {
@@ -71415,12 +71210,14 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Ends a session from the agent's side (J9-T2).",
+        "summary": "End a co-browse session",
+        "description": "Ends a session from the agent's side.",
         "operationId": "agent_end",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The session",
             "required": true,
             "schema": {
               "type": "string",
@@ -71483,12 +71280,14 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "The customer's frames after `after` (J9-T2).",
+        "summary": "The customer's frames",
+        "description": "The customer's frames after `after`.",
         "operationId": "agent_read",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The session",
             "required": true,
             "schema": {
               "type": "string",
@@ -71566,12 +71365,14 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Sends an agent frame (J9-T2).",
+        "summary": "Send an agent frame",
+        "description": "Sends an agent frame.",
         "operationId": "agent_send",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The session",
             "required": true,
             "schema": {
               "type": "string",
@@ -71660,7 +71461,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Ends a session from the customer's side (J9-T2).",
+        "summary": "Leave a co-browse session",
+        "description": "Ends a session from the customer's side.",
         "operationId": "visitor_end",
         "requestBody": {
           "content": {
@@ -71722,7 +71524,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "The agent's frames after `after`, for the customer (J9-T2).",
+        "summary": "The agent's frames",
+        "description": "The agent's frames after `after`, for the customer.",
         "operationId": "visitor_read",
         "parameters": [
           {
@@ -71791,7 +71594,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Sends a customer frame (J9-T2).",
+        "summary": "Send a customer frame",
+        "description": "Sends a customer frame.",
         "operationId": "visitor_send",
         "requestBody": {
           "content": {
@@ -72818,6 +72622,7 @@
           {
             "name": "period_id",
             "in": "query",
+            "description": "Only this commission period.",
             "required": true,
             "schema": {
               "type": "string",
@@ -72837,6 +72642,7 @@
           {
             "name": "page",
             "in": "query",
+            "description": "One-based: page 1 is the first page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -72846,6 +72652,7 @@
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -72911,6 +72718,7 @@
           {
             "name": "period_id",
             "in": "query",
+            "description": "Only this commission period.",
             "required": true,
             "schema": {
               "type": "string",
@@ -72920,6 +72728,7 @@
           {
             "name": "page",
             "in": "query",
+            "description": "One-based: page 1 is the first page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -72929,6 +72738,7 @@
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -73137,6 +72947,7 @@
           {
             "name": "token",
             "in": "query",
+            "description": "The signed token from the link.",
             "required": true,
             "schema": {
               "type": "string"
@@ -73333,6 +73144,7 @@
           {
             "name": "token",
             "in": "query",
+            "description": "The signed token from the link.",
             "required": true,
             "schema": {
               "type": "string"
@@ -73556,7 +73368,7 @@
         "parameters": [
           {
             "name": "space",
-            "in": "path",
+            "in": "query",
             "description": "The content space's id.",
             "required": true,
             "schema": {
@@ -73566,7 +73378,7 @@
           },
           {
             "name": "path",
-            "in": "path",
+            "in": "query",
             "description": "The page's URL path in that space, e.g. `/pricing`.",
             "required": true,
             "schema": {
@@ -73624,7 +73436,7 @@
         "parameters": [
           {
             "name": "space",
-            "in": "path",
+            "in": "query",
             "description": "The content space's id.",
             "required": true,
             "schema": {
@@ -73634,7 +73446,7 @@
           },
           {
             "name": "path",
-            "in": "path",
+            "in": "query",
             "description": "The page's URL path in that space, e.g. `/pricing`.",
             "required": true,
             "schema": {
@@ -73688,7 +73500,7 @@
         "parameters": [
           {
             "name": "space",
-            "in": "path",
+            "in": "query",
             "description": "The content space's id.",
             "required": true,
             "schema": {
@@ -73698,7 +73510,7 @@
           },
           {
             "name": "path",
-            "in": "path",
+            "in": "query",
             "description": "The page's URL path in that space, e.g. `/pricing`.",
             "required": true,
             "schema": {
@@ -73852,7 +73664,7 @@
         "parameters": [
           {
             "name": "token",
-            "in": "path",
+            "in": "query",
             "description": "The signed token from `POST /api/v1/admin/content/pages/{id}/preview-link`.",
             "required": true,
             "schema": {
@@ -73904,7 +73716,7 @@
         "parameters": [
           {
             "name": "site",
-            "in": "path",
+            "in": "query",
             "description": "The site's host name.",
             "required": true,
             "schema": {
@@ -73962,7 +73774,7 @@
         "parameters": [
           {
             "name": "space",
-            "in": "path",
+            "in": "query",
             "description": "The content space (site).",
             "required": true,
             "schema": {
@@ -74011,7 +73823,7 @@
         "parameters": [
           {
             "name": "path",
-            "in": "path",
+            "in": "query",
             "description": "The page's URL path on the site, e.g. `/pricing`.",
             "required": true,
             "schema": {
@@ -74065,7 +73877,7 @@
         "parameters": [
           {
             "name": "site",
-            "in": "path",
+            "in": "query",
             "description": "The site's host name.",
             "required": true,
             "schema": {
@@ -74074,26 +73886,20 @@
           },
           {
             "name": "lang",
-            "in": "path",
+            "in": "query",
             "description": "The language, such as `en` or `ar`; the first stored when absent.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "part",
-            "in": "path",
+            "in": "query",
             "description": "E13-T9: a part of a split sitemap (the index, part 0, names them);\n0 when absent.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           }
@@ -74148,7 +73954,7 @@
         "parameters": [
           {
             "name": "space",
-            "in": "path",
+            "in": "query",
             "description": "The content space (site).",
             "required": true,
             "schema": {
@@ -74200,7 +74006,7 @@
         "parameters": [
           {
             "name": "path",
-            "in": "path",
+            "in": "query",
             "description": "The page's custom URL, e.g. `/guide/templates` — a query parameter\nrather than a path segment so this stays a single, easily-reasoned\n`EXACT_BYPASS_PATHS` entry instead of a `BYPASS_SUBTREE_PREFIXES`\nwildcard (see `bypass.rs`'s own doc comment on why subtree bypasses\nneed much more careful \"does this shadow a protected route\"\nreasoning).",
             "required": true,
             "schema": {
@@ -74940,7 +74746,8 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
+            "in": "query",
+            "description": "Only this entity (its logical name).",
             "required": true,
             "schema": {
               "type": "string"
@@ -74948,7 +74755,8 @@
           },
           {
             "name": "record_id",
-            "in": "path",
+            "in": "query",
+            "description": "Only this record.",
             "required": true,
             "schema": {
               "type": "string",
@@ -76003,36 +75811,27 @@
         "parameters": [
           {
             "name": "entity_name",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "record_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "folder",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -77621,6 +77420,220 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/fulfilment/shipments/{id}/book": {
+      "post": {
+        "tags": [
+          "fulfilment"
+        ],
+        "summary": "Book a shipment with its carrier",
+        "description": "Books a packed shipment with its carrier and stores the waybill as its\ntracking number (status `booked`). Weight and pieces default to the\nshipment's packages.",
+        "operationId": "fulfilment_shipment_book",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The shipment",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Booked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booked"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks fulfilment_order.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such shipment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already booked or being booked, or the carrier is not set up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing consignee field, or the carrier refused the booking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "fulfilment",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/fulfilment/shipments/{id}/track": {
+      "post": {
+        "tags": [
+          "fulfilment"
+        ],
+        "summary": "Read a shipment's tracking status",
+        "description": "Reads the latest update of the shipment's waybill from its carrier and\nmoves the shipment's status when the update is new.",
+        "operationId": "fulfilment_shipment_track",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The shipment",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The shipment's status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tracked"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks fulfilment_order.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such shipment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The shipment is not booked with a carrier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "fulfilment",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/graph/traverse": {
       "post": {
         "tags": [
@@ -78177,6 +78190,7 @@
           {
             "name": "user_id",
             "in": "query",
+            "description": "Only this user.",
             "required": true,
             "schema": {
               "type": "string",
@@ -78186,6 +78200,7 @@
           {
             "name": "from",
             "in": "query",
+            "description": "From this time (inclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -78195,6 +78210,7 @@
           {
             "name": "to",
             "in": "query",
+            "description": "Up to this time (exclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -79248,6 +79264,7 @@
           {
             "name": "from",
             "in": "query",
+            "description": "From this time (inclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -79257,6 +79274,7 @@
           {
             "name": "to",
             "in": "query",
+            "description": "Up to this time (exclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -82551,6 +82569,7 @@
           {
             "name": "at",
             "in": "query",
+            "description": "The moment to read the list as of.",
             "required": true,
             "schema": {
               "type": "string",
@@ -82560,6 +82579,7 @@
           {
             "name": "page",
             "in": "query",
+            "description": "One-based: page 1 is the first page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -82569,6 +82589,7 @@
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -84394,7 +84415,8 @@
         "tags": [
           "notification"
         ],
-        "summary": "The caller's own email signature (J1-T1).",
+        "summary": "The caller's email signature",
+        "description": "The signature appended to the record emails the caller composes or\nreplies to, or none (J1-T1).",
         "operationId": "get_my_signature",
         "responses": {
           "200": {
@@ -84437,7 +84459,8 @@
         "tags": [
           "notification"
         ],
-        "summary": "Sets the caller's own email signature (J1-T1); an empty body clears it.",
+        "summary": "Set the caller's email signature",
+        "description": "Sets the caller's own email signature (J1-T1); an empty body clears it.\nSend the current `row_version`.",
         "operationId": "put_my_signature",
         "requestBody": {
           "content": {
@@ -84925,6 +84948,7 @@
           {
             "name": "code",
             "in": "query",
+            "description": "The authorization code the provider sent back.",
             "required": false,
             "schema": {
               "type": "string"
@@ -84933,6 +84957,7 @@
           {
             "name": "state",
             "in": "query",
+            "description": "The state value this sign-in started with.",
             "required": false,
             "schema": {
               "type": "string"
@@ -84941,6 +84966,7 @@
           {
             "name": "error",
             "in": "query",
+            "description": "The error the provider sent back, if any.",
             "required": false,
             "schema": {
               "type": "string"
@@ -85362,14 +85388,11 @@
         "parameters": [
           {
             "name": "limit",
-            "in": "path",
+            "in": "query",
             "description": "How many, newest first; default 20, at most 200.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -85853,14 +85876,11 @@
           },
           {
             "name": "period_start",
-            "in": "path",
+            "in": "query",
             "description": "The period to read snapshots for; defaults to the root metric's current\nperiod.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date"
             }
           }
@@ -85943,6 +85963,7 @@
           {
             "name": "page",
             "in": "query",
+            "description": "One-based: page 1 is the first page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -85953,6 +85974,7 @@
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -86468,6 +86490,7 @@
           {
             "name": "record_id",
             "in": "query",
+            "description": "Only this record.",
             "required": true,
             "schema": {
               "type": "string",
@@ -86757,24 +86780,20 @@
           },
           {
             "name": "cursor",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "The `next_cursor` of the previous page.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "limit",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "The most rows to return.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -87862,7 +87881,7 @@
         "parameters": [
           {
             "name": "token",
-            "in": "path",
+            "in": "query",
             "description": "The chat session's token, from the session's first message.",
             "required": true,
             "schema": {
@@ -87871,14 +87890,11 @@
           },
           {
             "name": "since",
-            "in": "path",
+            "in": "query",
             "description": "Only messages strictly after this instant. Omit to fetch the whole\nconversation so far — a short-poll GET is Phase 1's transport choice\n(see the module doc); the widget is expected to pass its last-seen\n`created_at` on every subsequent poll.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           }
@@ -87937,7 +87953,7 @@
         "parameters": [
           {
             "name": "token",
-            "in": "path",
+            "in": "query",
             "description": "The chat session's token, from the session's first message.",
             "required": true,
             "schema": {
@@ -87946,14 +87962,11 @@
           },
           {
             "name": "since",
-            "in": "path",
+            "in": "query",
             "description": "Only messages strictly after this instant. Omit to fetch the whole\nconversation so far — a short-poll GET is Phase 1's transport choice\n(see the module doc); the widget is expected to pass its last-seen\n`created_at` on every subsequent poll.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "date-time"
             }
           }
@@ -88337,7 +88350,8 @@
         "parameters": [
           {
             "name": "regarding_entity",
-            "in": "path",
+            "in": "query",
+            "description": "Only records of this entity.",
             "required": true,
             "schema": {
               "type": "string"
@@ -88345,7 +88359,8 @@
           },
           {
             "name": "regarding_id",
-            "in": "path",
+            "in": "query",
+            "description": "Only this record.",
             "required": true,
             "schema": {
               "type": "string",
@@ -88354,27 +88369,21 @@
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
+            "in": "query",
             "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`; defaults to 20.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -91901,7 +91910,8 @@
         "tags": [
           "sales"
         ],
-        "summary": "The quote a guest link shows.",
+        "summary": "A quote from its guest link",
+        "description": "The quote a guest link shows.",
         "operationId": "get_quote",
         "parameters": [
           {
@@ -91950,7 +91960,8 @@
         "tags": [
           "sales"
         ],
-        "summary": "Accepts or rejects the quote a guest link shows.",
+        "summary": "Accept or reject a quote",
+        "description": "Accepts or rejects the quote a guest link shows.",
         "operationId": "post_decision",
         "parameters": [
           {
@@ -92575,7 +92586,8 @@
         "parameters": [
           {
             "name": "from",
-            "in": "path",
+            "in": "query",
+            "description": "From this time (inclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -92584,7 +92596,8 @@
           },
           {
             "name": "to",
-            "in": "path",
+            "in": "query",
+            "description": "Up to this time (exclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -92593,33 +92606,28 @@
           },
           {
             "name": "team",
-            "in": "path",
+            "in": "query",
             "description": "Restrict to resources on this `team.id` — also the\nauthorization gate for a `Team`-tier caller; see this module's doc\ncomment.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "skill",
-            "in": "path",
+            "in": "query",
             "description": "Restrict to resources holding this `resource_skill.skill` value.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "page",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
             "schema": {
               "type": "integer",
               "format": "int64"
@@ -92627,8 +92635,9 @@
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
               "type": "integer",
               "format": "int64"
@@ -95450,6 +95459,7 @@
           {
             "name": "page",
             "in": "query",
+            "description": "One-based: page 1 is the first page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -97277,6 +97287,7 @@
           {
             "name": "page",
             "in": "query",
+            "description": "One-based: page 1 is the first page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -97286,6 +97297,7 @@
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -97356,7 +97368,8 @@
         "tags": [
           "sales"
         ],
-        "summary": "Makes a sent quote's guest link.",
+        "summary": "Make a quote's guest link",
+        "description": "Makes a sent quote's guest link.",
         "operationId": "post_guest_link",
         "parameters": [
           {
@@ -98320,7 +98333,7 @@
         "parameters": [
           {
             "name": "value",
-            "in": "path",
+            "in": "query",
             "description": "The scanned value, exactly as read.",
             "required": true,
             "schema": {
@@ -98329,14 +98342,11 @@
           },
           {
             "name": "entity",
-            "in": "path",
+            "in": "query",
             "description": "Search only this entity's scan-enabled fields.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -98502,14 +98512,11 @@
           },
           {
             "name": "with",
-            "in": "path",
+            "in": "query",
             "description": "Comma-separated additional scenario ids to compare against `{id}`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -98890,14 +98897,11 @@
           },
           {
             "name": "locale",
-            "in": "path",
+            "in": "query",
             "description": "A BCP-47 tag, e.g. `\"ar-AE\"`. Omit to resolve straight to the\ndeployment default.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -98983,7 +98987,7 @@
         "parameters": [
           {
             "name": "q",
-            "in": "path",
+            "in": "query",
             "description": "The query. Capped — see [`MAX_QUERY_BYTES`]/[`MAX_QUERY_TERMS`].",
             "required": true,
             "schema": {
@@ -98992,8 +98996,9 @@
           },
           {
             "name": "page",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
             "schema": {
               "type": "integer",
               "format": "int64"
@@ -99001,8 +99006,9 @@
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
               "type": "integer",
               "format": "int64"
@@ -99010,14 +99016,11 @@
           },
           {
             "name": "audience",
-            "in": "path",
+            "in": "query",
             "description": "`human` (default) or `agent`. Selects tuning only, never the\nenforcement path — see `router`.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -99136,7 +99139,7 @@
         "parameters": [
           {
             "name": "q",
-            "in": "path",
+            "in": "query",
             "description": "The question or topic. Held to the same byte/term caps as `/search`:\nGIN cost is roughly linear in term count, so a long paste must be\nrejected before it reaches PostgreSQL.",
             "required": true,
             "schema": {
@@ -99145,13 +99148,11 @@
           },
           {
             "name": "limit",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "The most rows to return.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -99224,7 +99225,7 @@
         "parameters": [
           {
             "name": "page_id",
-            "in": "path",
+            "in": "query",
             "description": "The `content_page` id to find semantic neighbors for.",
             "required": true,
             "schema": {
@@ -99234,13 +99235,11 @@
           },
           {
             "name": "limit",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "The most rows to return.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -99312,8 +99311,9 @@
           },
           {
             "name": "page",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
             "schema": {
               "type": "integer",
               "format": "int64"
@@ -99321,8 +99321,9 @@
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
               "type": "integer",
               "format": "int64"
@@ -99330,13 +99331,11 @@
           },
           {
             "name": "audience",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Who the results are for.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -99407,7 +99406,8 @@
         "parameters": [
           {
             "name": "q",
-            "in": "path",
+            "in": "query",
+            "description": "The text typed so far.",
             "required": true,
             "schema": {
               "type": "string"
@@ -100201,7 +100201,7 @@
         "parameters": [
           {
             "name": "token",
-            "in": "path",
+            "in": "query",
             "description": "The `{public_id}.{secret}` bearer handed back once, at creation, by\n`POST /api/v1/service-offering/{id}/create-work-request`.",
             "required": true,
             "schema": {
@@ -102034,9 +102034,9 @@
           },
           {
             "name": "include_without_parts",
-            "in": "path",
+            "in": "query",
             "description": "Also answer technicians whose van lacks parts (default false).",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "boolean"
             }
@@ -102837,14 +102837,11 @@
         "parameters": [
           {
             "name": "locale",
-            "in": "path",
+            "in": "query",
             "description": "A BCP-47 tag, e.g. `\"ar-AE\"`. Omit to resolve straight to the\ndeployment default.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -102992,7 +102989,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "J4-T2: a text someone sent to the deployment's number.",
+        "summary": "An inbound text message",
+        "description": "A text someone sent to the deployment's number.",
         "operationId": "inbound",
         "parameters": [
           {
@@ -103123,7 +103121,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Meta's subscription check.",
+        "summary": "Meta's subscription check",
+        "description": "Meta's subscription check.",
         "operationId": "meta_verify",
         "parameters": [
           {
@@ -103172,7 +103171,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Meta's signed events: messages and comments.",
+        "summary": "Meta's webhook events",
+        "description": "Meta's signed events: messages and comments.",
         "operationId": "meta_events",
         "parameters": [
           {
@@ -103235,7 +103235,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Answers a social message, comment or review through its provider.",
+        "summary": "Reply to a social message",
+        "description": "Answers a social message, comment or review through its provider.",
         "operationId": "post_reply",
         "requestBody": {
           "content": {
@@ -103510,6 +103511,7 @@
           {
             "name": "token",
             "in": "query",
+            "description": "The signed token from the link.",
             "required": true,
             "schema": {
               "type": "string"
@@ -103661,6 +103663,7 @@
           {
             "name": "token",
             "in": "query",
+            "description": "The signed token from the link.",
             "required": true,
             "schema": {
               "type": "string"
@@ -103750,7 +103753,7 @@
         "parameters": [
           {
             "name": "key",
-            "in": "path",
+            "in": "query",
             "description": "The object key the link was signed for.",
             "required": true,
             "schema": {
@@ -103759,7 +103762,7 @@
           },
           {
             "name": "expires",
-            "in": "path",
+            "in": "query",
             "description": "When the link stops working, in seconds since 1970 (UTC).",
             "required": true,
             "schema": {
@@ -103770,7 +103773,7 @@
           },
           {
             "name": "signature",
-            "in": "path",
+            "in": "query",
             "description": "HMAC-SHA256 of the method, key and expiry, in hex.",
             "required": true,
             "schema": {
@@ -103816,7 +103819,7 @@
         "parameters": [
           {
             "name": "key",
-            "in": "path",
+            "in": "query",
             "description": "The object key the link was signed for.",
             "required": true,
             "schema": {
@@ -103825,7 +103828,7 @@
           },
           {
             "name": "expires",
-            "in": "path",
+            "in": "query",
             "description": "When the link stops working, in seconds since 1970 (UTC).",
             "required": true,
             "schema": {
@@ -103836,7 +103839,7 @@
           },
           {
             "name": "signature",
-            "in": "path",
+            "in": "query",
             "description": "HMAC-SHA256 of the method, key and expiry, in hex.",
             "required": true,
             "schema": {
@@ -103912,7 +103915,7 @@
         "parameters": [
           {
             "name": "token",
-            "in": "path",
+            "in": "query",
             "description": "The signed token from the email.",
             "required": true,
             "schema": {
@@ -103994,7 +103997,7 @@
         "parameters": [
           {
             "name": "token",
-            "in": "path",
+            "in": "query",
             "description": "The signed token from the email.",
             "required": true,
             "schema": {
@@ -104160,7 +104163,7 @@
         "parameters": [
           {
             "name": "q",
-            "in": "path",
+            "in": "query",
             "description": "What the person has typed; matched from the start of the name,\nignoring case, Arabic diacritics and letter forms.",
             "required": true,
             "schema": {
@@ -105338,7 +105341,8 @@
         "parameters": [
           {
             "name": "entity",
-            "in": "path",
+            "in": "query",
+            "description": "Only this entity (its logical name).",
             "required": true,
             "schema": {
               "type": "string"
@@ -105754,7 +105758,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Rings the caller's own phone, then the number, and logs the call.",
+        "summary": "Place a call",
+        "description": "Rings the caller's own phone, then the number, and logs the call.",
         "operationId": "post_call",
         "requestBody": {
           "content": {
@@ -105838,7 +105843,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Twilio's reports on one call.",
+        "summary": "Twilio call events",
+        "description": "Twilio's reports on one call.",
         "operationId": "post_events",
         "parameters": [
           {
@@ -105901,7 +105907,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "The contact, lead or account a number belongs to, when the caller may\nsee it.",
+        "summary": "Who a phone number belongs to",
+        "description": "The contact, lead or account a number belongs to, when the caller may\nsee it.",
         "operationId": "get_lookup",
         "parameters": [
           {
@@ -105967,7 +105974,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "A PBX's call events.",
+        "summary": "PBX call events",
+        "description": "A PBX's call events.",
         "operationId": "post_pbx_events",
         "parameters": [
           {
@@ -106030,7 +106038,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "The softphone's settings and an access token for the caller.",
+        "summary": "Softphone settings",
+        "description": "The softphone's settings and an access token for the caller.",
         "operationId": "get_softphone",
         "responses": {
           "200": {
@@ -106075,7 +106084,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Twilio asks what to do with a call placed from the browser softphone:\ndial the number of the call the softphone created (`CallRef`), never a\nnumber the browser sends.",
+        "summary": "A browser softphone call",
+        "description": "Twilio asks what to do with a call placed from the browser softphone:\ndial the number of the call the softphone created (`CallRef`), never a\nnumber the browser sends.",
         "operationId": "post_twilio_client",
         "parameters": [
           {
@@ -106135,7 +106145,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "A call to the deployment's Twilio number.",
+        "summary": "An inbound Twilio call",
+        "description": "A call to the deployment's Twilio number.",
         "operationId": "post_twilio_inbound",
         "parameters": [
           {
@@ -106205,7 +106216,8 @@
         "tags": [
           "omnichannel"
         ],
-        "summary": "Twilio fetches what to do when the caller answers: dial the customer.",
+        "summary": "The answered call's instructions",
+        "description": "Twilio fetches what to do when the caller answers: dial the customer.",
         "operationId": "post_twiml",
         "parameters": [
           {
@@ -107342,37 +107354,30 @@
         "parameters": [
           {
             "name": "is_active",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only active (true) or inactive (false) ones.",
+            "required": false,
             "schema": {
-              "type": [
-                "boolean",
-                "null"
-              ]
+              "type": "boolean"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -108415,49 +108420,40 @@
         "parameters": [
           {
             "name": "status",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only this status.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "correlation_entity_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Only instances about this record.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -108899,6 +108895,7 @@
           {
             "name": "target_version_id",
             "in": "query",
+            "description": "The version to move the instance to.",
             "required": true,
             "schema": {
               "type": "string",
@@ -109653,7 +109650,8 @@
         "parameters": [
           {
             "name": "user_id",
-            "in": "path",
+            "in": "query",
+            "description": "Only this user.",
             "required": true,
             "schema": {
               "type": "string",
@@ -109662,7 +109660,8 @@
           },
           {
             "name": "from",
-            "in": "path",
+            "in": "query",
+            "description": "From this time (inclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -109671,7 +109670,8 @@
           },
           {
             "name": "to",
-            "in": "path",
+            "in": "query",
+            "description": "Up to this time (exclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -109758,14 +109758,11 @@
           },
           {
             "name": "months",
-            "in": "path",
+            "in": "query",
             "description": "Months ahead, from this month (default 6, at most 24).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32",
               "minimum": 0
             }
@@ -110025,7 +110022,8 @@
         "parameters": [
           {
             "name": "from",
-            "in": "path",
+            "in": "query",
+            "description": "From this time (inclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -110034,7 +110032,8 @@
           },
           {
             "name": "to",
-            "in": "path",
+            "in": "query",
+            "description": "Up to this time (exclusive).",
             "required": true,
             "schema": {
               "type": "string",
@@ -110298,14 +110297,11 @@
         "parameters": [
           {
             "name": "group_id",
-            "in": "path",
+            "in": "query",
             "description": "Only this planning group's schedules.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "format": "uuid"
             }
           },
@@ -111806,38 +111802,30 @@
           },
           {
             "name": "include_items",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "Include each item's outcome.",
+            "required": false,
             "schema": {
-              "type": [
-                "boolean",
-                "null"
-              ]
+              "type": "boolean"
             }
           },
           {
             "name": "page",
-            "in": "path",
+            "in": "query",
             "description": "One-based: page 1 is the first page.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           },
           {
             "name": "page_size",
-            "in": "path",
+            "in": "query",
             "description": "Items per page, clamped to `1..=MAX_PAGE_SIZE`; defaults to 100.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int64"
             }
           }
@@ -113918,9 +113906,9 @@
           },
           {
             "name": "preview",
-            "in": "path",
+            "in": "query",
             "description": "True: change nothing and answer what the change would do.",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "boolean"
             }
@@ -115043,34 +115031,28 @@
           },
           {
             "name": "key",
-            "in": "path",
+            "in": "query",
             "description": "Which object key to download — **required** for a multi-file field\n(`options.multi`, JSONB array column), since the field itself no\nlonger names a single object. Ignored for a single-file field, which\nstill has only one key to serve. Ignored entirely when `version` is\nalso present — `version` names an exact historical object on its own.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "version",
-            "in": "path",
+            "in": "query",
             "description": "M55 P2 (file versioning) — resolve to this version's object key\n(`file_version`) instead of the field's current live value.\nAny version ever recorded for this field can be downloaded, not only\n`is_current` — the version list is the read path for history; this is\nthe read path for one specific entry in it.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           },
           {
             "name": "thumbnail",
-            "in": "path",
+            "in": "query",
             "description": "Z6-T6: the file's 320 px thumbnail instead of the file (an image\nonly, once the background job has made it; 404 before that).",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "boolean"
             }
@@ -117152,7 +117134,7 @@
           },
           {
             "name": "id",
-            "in": "path",
+            "in": "query",
             "description": "The other side's record id to unlink.",
             "required": true,
             "schema": {
@@ -120278,24 +120260,20 @@
           },
           {
             "name": "code",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "The authorization code the provider sent back.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "state",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "description": "The state value this sign-in started with.",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -122227,14 +122205,11 @@
           },
           {
             "name": "key",
-            "in": "path",
+            "in": "query",
             "description": "Which file, for a multi-file field (one of the keys the record shows).",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -126685,6 +126660,8 @@
           "is_active",
           "on_target_delete",
           "data_classification",
+          "sensitivity",
+          "sensitivity_confirmed",
           "owner_layer"
         ],
         "properties": {
@@ -126763,6 +126740,14 @@
               "null"
             ],
             "description": "Developer-facing note on why this field exists / what it's used for —\nlocale-less, internal, distinct from `metadata_label`'s\nper-locale end-user-presentation `description` (D-426). `None` when\nnever set."
+          },
+          "sensitivity": {
+            "type": "string",
+            "description": "A1-T1: `public | internal | personal | financial | health | secret`."
+          },
+          "sensitivity_confirmed": {
+            "type": "boolean",
+            "description": "A1-T1: whether a builder set `sensitivity`; `false` while it is still\nthe value mapped from `data_classification`."
           },
           "sort_order": {
             "type": "integer",
@@ -128559,6 +128544,42 @@
           }
         }
       },
+      "BookBody": {
+        "type": "object",
+        "description": "A booking request.",
+        "required": [
+          "consignee"
+        ],
+        "properties": {
+          "consignee": {
+            "$ref": "#/components/schemas/Consignee"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What is inside, for customs and the label."
+          },
+          "pieces": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Pieces; the number of packages when absent.",
+            "minimum": 0
+          },
+          "weight_kg": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Total weight; the packages' weights when absent."
+          }
+        }
+      },
       "BookRequest": {
         "type": "object",
         "description": "A booking.",
@@ -128602,29 +128623,29 @@
       },
       "Booked": {
         "type": "object",
-        "description": "A booking made.",
+        "description": "A booked shipment.",
         "required": [
-          "booking_id",
-          "start",
-          "end",
-          "manage_token"
+          "shipment_id",
+          "carrier",
+          "tracking_number"
         ],
         "properties": {
-          "booking_id": {
+          "carrier": {
+            "type": "string"
+          },
+          "label_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The carrier's label, when it returned one."
+          },
+          "shipment_id": {
             "type": "string",
             "format": "uuid"
           },
-          "end": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "manage_token": {
-            "type": "string",
-            "description": "The token of the reschedule/cancel link (also in the email)."
-          },
-          "start": {
-            "type": "string",
-            "format": "date-time"
+          "tracking_number": {
+            "type": "string"
           }
         }
       },
@@ -134589,7 +134610,8 @@
         ],
         "properties": {
           "token": {
-            "type": "string"
+            "type": "string",
+            "description": "The signed token from the link."
           }
         }
       },
@@ -134693,6 +134715,48 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "Consignee": {
+        "type": "object",
+        "description": "Who receives the shipment.",
+        "required": [
+          "name",
+          "phone",
+          "line1",
+          "city",
+          "country_code"
+        ],
+        "properties": {
+          "city": {
+            "type": "string"
+          },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country_code": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2, such as `SA`."
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "line1": {
+            "type": "string",
+            "description": "Street and building."
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
           }
         }
       },
@@ -138014,6 +138078,54 @@
           }
         }
       },
+      "CustomerFlag": {
+        "type": "object",
+        "description": "One customer flag.",
+        "required": [
+          "name",
+          "value",
+          "emergency_off",
+          "on",
+          "row_version",
+          "updated_by",
+          "updated_at"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "emergency_off": {
+            "type": "boolean",
+            "description": "Switched off in an emergency: off until it is set again."
+          },
+          "name": {
+            "type": "string"
+          },
+          "on": {
+            "type": "boolean",
+            "description": "Whether `flag(name)` reads true now."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "value": {
+            "type": "boolean",
+            "description": "The value set; `on` below is what rules read."
+          }
+        }
+      },
       "CustomerTest": {
         "type": "object",
         "description": "A stored test.",
@@ -139100,6 +139212,14 @@
           "row_version"
         ],
         "properties": {
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DecisionAttachment"
+            },
+            "description": "Z10-T9: records attached as evidence, at most 10; the decider must be\nable to read each one. Stored on the decision's grant row.",
+            "maxItems": 10
+          },
           "comment": {
             "type": [
               "string",
@@ -139115,6 +139235,13 @@
           "row_version": {
             "type": "integer",
             "format": "int64"
+          },
+          "signature_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Z10-T9: the decider's signature reference, for a step that asks for a\nsignature; checked by the installed signature provider."
           }
         }
       },
@@ -139144,6 +139271,25 @@
           "confirm",
           "dismiss"
         ]
+      },
+      "DecisionAttachment": {
+        "type": "object",
+        "description": "Z10-T9: a record attached to a decision.",
+        "required": [
+          "entity",
+          "id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "The record's entity (its logical name)."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The record."
+          }
+        }
       },
       "DecisionEntry": {
         "type": "object",
@@ -160631,6 +160777,88 @@
                 "url": {
                   "type": "string",
                   "description": "Where to fetch it: `/api/v1/cooked/{kind}/{hash}`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_CustomerFlag": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One customer flag.",
+              "required": [
+                "name",
+                "value",
+                "emergency_off",
+                "on",
+                "row_version",
+                "updated_by",
+                "updated_at"
+              ],
+              "properties": {
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "emergency_off": {
+                  "type": "boolean",
+                  "description": "Switched off in an emergency: off until it is set again."
+                },
+                "name": {
+                  "type": "string"
+                },
+                "on": {
+                  "type": "boolean",
+                  "description": "Whether `flag(name)` reads true now."
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updated_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "The value set; `on` below is what rules read."
                 }
               }
             }
@@ -187117,6 +187345,31 @@
           }
         }
       },
+      "SetCustomerFlag": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Required to change a flag that exists (409 when stale)."
+          },
+          "value": {
+            "type": "boolean"
+          }
+        }
+      },
       "SetEnvVariable": {
         "type": "object",
         "required": [
@@ -190115,7 +190368,8 @@
         ],
         "properties": {
           "token": {
-            "type": "string"
+            "type": "string",
+            "description": "The signed token from the link."
           }
         }
       },
@@ -193011,6 +193265,37 @@
               "null"
             ],
             "description": "The tool call that asked for it, when an agent did."
+          }
+        }
+      },
+      "Tracked": {
+        "type": "object",
+        "description": "A shipment's status after a tracking read.",
+        "required": [
+          "shipment_id",
+          "changed"
+        ],
+        "properties": {
+          "changed": {
+            "type": "boolean",
+            "description": "Whether this read moved the shipment."
+          },
+          "last_event_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The carrier's latest update code, when it has one."
+          },
+          "shipment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

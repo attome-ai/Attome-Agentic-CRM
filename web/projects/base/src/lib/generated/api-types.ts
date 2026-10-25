@@ -2812,6 +2812,68 @@ export interface paths {
         patch: operations["update_template"];
         trace?: never;
     };
+    "/api/v1/admin/customer-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List customer flags
+         * @description List customer flags. Administrators only.
+         */
+        get: operations["list_customer_flags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/customer-flags/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set a customer flag
+         * @description Defines a customer flag or sets its value. Setting a flag clears an
+         *     emergency off. Administrators only. Audited.
+         */
+        put: operations["set_customer_flag"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/customer-flags/{name}/emergency-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch a customer flag off now
+         * @description Emergency off: the flag reads off everywhere at once, whatever its value,
+         *     until someone sets it again. Administrators only. Audited.
+         */
+        post: operations["emergency_off_customer_flag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/customer-tests": {
         parameters: {
             query?: never;
@@ -8396,7 +8458,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Makes a user a break-glass account (Q1-T7). The user must have a
+         * Add a break-glass account
+         * @description Makes a user a break-glass account (Q1-T7). The user must have a
          *     confirmed authenticator.
          */
         post: operations["add_break_glass"];
@@ -8417,7 +8480,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Removes a break-glass account (Q1-T7); refused while it is the last one
+         * Remove a break-glass account
+         * @description Removes a break-glass account (Q1-T7); refused while it is the last one
          *     and an SSO-only rule is in force.
          */
         delete: operations["remove_break_glass"];
@@ -9285,7 +9349,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Sets whether a role signs in only through single sign-on (Q1-T7). */
+        /**
+         * Set a role's sign-in policy
+         * @description Sets whether a role signs in only through single sign-on (Q1-T7).
+         *     Administrators only.
+         */
         put: operations["put_role_auth_policy"];
         post?: never;
         delete?: never;
@@ -13389,7 +13457,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The booking a manage link names. */
+        /**
+         * A booking from its manage link
+         * @description The booking a manage link names.
+         */
         get: operations["get_managed"];
         put?: never;
         post?: never;
@@ -13408,7 +13479,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Cancels the booking and its meeting. */
+        /**
+         * Cancel a booking
+         * @description Cancels the booking and its meeting.
+         */
         post: operations["cancel_booking"];
         delete?: never;
         options?: never;
@@ -13425,7 +13499,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Moves the booking to another free time with the same person. */
+        /**
+         * Reschedule a booking
+         * @description Moves the booking to another free time with the same person.
+         */
         post: operations["post_reschedule"];
         delete?: never;
         options?: never;
@@ -13440,10 +13517,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A booking page: its name and the times that can be booked. */
+        /**
+         * A booking page
+         * @description A booking page: its name and the times that can be booked.
+         */
         get: operations["get_booking_page"];
         put?: never;
-        /** Books a meeting at one of the page's free times. */
+        /**
+         * Book a meeting
+         * @description Books a meeting at one of the page's free times.
+         */
         post: operations["post_booking"];
         delete?: never;
         options?: never;
@@ -13835,7 +13918,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Joins a co-browse session with its code (J9-T2).
+         * Joins a co-browse session with its code.
          * @description The code works once, for ten minutes; any other code answers 404.
          */
         post: operations["join"];
@@ -13854,7 +13937,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Starts a co-browse session (J9-T2). */
+        /**
+         * Start a co-browse session
+         * @description Starts a co-browse session.
+         */
         post: operations["start"];
         delete?: never;
         options?: never;
@@ -13871,7 +13957,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Ends a session from the agent's side (J9-T2). */
+        /**
+         * End a co-browse session
+         * @description Ends a session from the agent's side.
+         */
         post: operations["agent_end"];
         delete?: never;
         options?: never;
@@ -13886,10 +13975,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The customer's frames after `after` (J9-T2). */
+        /**
+         * The customer's frames
+         * @description The customer's frames after `after`.
+         */
         get: operations["agent_read"];
         put?: never;
-        /** Sends an agent frame (J9-T2). */
+        /**
+         * Send an agent frame
+         * @description Sends an agent frame.
+         */
         post: operations["agent_send"];
         delete?: never;
         options?: never;
@@ -13906,7 +14001,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Ends a session from the customer's side (J9-T2). */
+        /**
+         * Leave a co-browse session
+         * @description Ends a session from the customer's side.
+         */
         post: operations["visitor_end"];
         delete?: never;
         options?: never;
@@ -13921,10 +14019,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The agent's frames after `after`, for the customer (J9-T2). */
+        /**
+         * The agent's frames
+         * @description The agent's frames after `after`, for the customer.
+         */
         get: operations["visitor_read"];
         put?: never;
-        /** Sends a customer frame (J9-T2). */
+        /**
+         * Send a customer frame
+         * @description Sends a customer frame.
+         */
         post: operations["visitor_send"];
         delete?: never;
         options?: never;
@@ -15264,6 +15368,49 @@ export interface paths {
          *     hold is open; otherwise the order is `released` for picking.
          */
         post: operations["fulfilment_order_release"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fulfilment/shipments/{id}/book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Book a shipment with its carrier
+         * @description Books a packed shipment with its carrier and stores the waybill as its
+         *     tracking number (status `booked`). Weight and pieces default to the
+         *     shipment's packages.
+         */
+        post: operations["fulfilment_shipment_book"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fulfilment/shipments/{id}/track": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read a shipment's tracking status
+         * @description Reads the latest update of the shipment's waybill from its carrier and
+         *     moves the shipment's status when the update is new.
+         */
+        post: operations["fulfilment_shipment_track"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16720,9 +16867,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The caller's own email signature (J1-T1). */
+        /**
+         * The caller's email signature
+         * @description The signature appended to the record emails the caller composes or
+         *     replies to, or none (J1-T1).
+         */
         get: operations["get_my_signature"];
-        /** Sets the caller's own email signature (J1-T1); an empty body clears it. */
+        /**
+         * Set the caller's email signature
+         * @description Sets the caller's own email signature (J1-T1); an empty body clears it.
+         *     Send the current `row_version`.
+         */
         put: operations["put_my_signature"];
         post?: never;
         delete?: never;
@@ -18371,10 +18526,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The quote a guest link shows. */
+        /**
+         * A quote from its guest link
+         * @description The quote a guest link shows.
+         */
         get: operations["get_quote"];
         put?: never;
-        /** Accepts or rejects the quote a guest link shows. */
+        /**
+         * Accept or reject a quote
+         * @description Accepts or rejects the quote a guest link shows.
+         */
         post: operations["post_decision"];
         delete?: never;
         options?: never;
@@ -19287,7 +19448,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Makes a sent quote's guest link. */
+        /**
+         * Make a quote's guest link
+         * @description Makes a sent quote's guest link.
+         */
         post: operations["post_guest_link"];
         delete?: never;
         options?: never;
@@ -20543,7 +20707,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** J4-T2: a text someone sent to the deployment's number. */
+        /**
+         * An inbound text message
+         * @description A text someone sent to the deployment's number.
+         */
         post: operations["inbound"];
         delete?: never;
         options?: never;
@@ -20579,10 +20746,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Meta's subscription check. */
+        /**
+         * Meta's subscription check
+         * @description Meta's subscription check.
+         */
         get: operations["meta_verify"];
         put?: never;
-        /** Meta's signed events: messages and comments. */
+        /**
+         * Meta's webhook events
+         * @description Meta's signed events: messages and comments.
+         */
         post: operations["meta_events"];
         delete?: never;
         options?: never;
@@ -20599,7 +20772,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Answers a social message, comment or review through its provider. */
+        /**
+         * Reply to a social message
+         * @description Answers a social message, comment or review through its provider.
+         */
         post: operations["post_reply"];
         delete?: never;
         options?: never;
@@ -21190,7 +21366,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rings the caller's own phone, then the number, and logs the call. */
+        /**
+         * Place a call
+         * @description Rings the caller's own phone, then the number, and logs the call.
+         */
         post: operations["post_call"];
         delete?: never;
         options?: never;
@@ -21207,7 +21386,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Twilio's reports on one call. */
+        /**
+         * Twilio call events
+         * @description Twilio's reports on one call.
+         */
         post: operations["post_events"];
         delete?: never;
         options?: never;
@@ -21223,7 +21405,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The contact, lead or account a number belongs to, when the caller may
+         * Who a phone number belongs to
+         * @description The contact, lead or account a number belongs to, when the caller may
          *     see it.
          */
         get: operations["get_lookup"];
@@ -21244,7 +21427,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** A PBX's call events. */
+        /**
+         * PBX call events
+         * @description A PBX's call events.
+         */
         post: operations["post_pbx_events"];
         delete?: never;
         options?: never;
@@ -21259,7 +21445,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The softphone's settings and an access token for the caller. */
+        /**
+         * Softphone settings
+         * @description The softphone's settings and an access token for the caller.
+         */
         get: operations["get_softphone"];
         put?: never;
         post?: never;
@@ -21279,7 +21468,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Twilio asks what to do with a call placed from the browser softphone:
+         * A browser softphone call
+         * @description Twilio asks what to do with a call placed from the browser softphone:
          *     dial the number of the call the softphone created (`CallRef`), never a
          *     number the browser sends.
          */
@@ -21299,7 +21489,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** A call to the deployment's Twilio number. */
+        /**
+         * An inbound Twilio call
+         * @description A call to the deployment's Twilio number.
+         */
         post: operations["post_twilio_inbound"];
         delete?: never;
         options?: never;
@@ -21316,7 +21509,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Twilio fetches what to do when the caller answers: dial the customer. */
+        /**
+         * The answered call's instructions
+         * @description Twilio fetches what to do when the caller answers: dial the customer.
+         */
         post: operations["post_twiml"];
         delete?: never;
         options?: never;
@@ -25842,6 +26038,13 @@ export interface components {
              *     never set.
              */
             purpose?: string | null;
+            /** @description A1-T1: `public | internal | personal | financial | health | secret`. */
+            sensitivity: string;
+            /**
+             * @description A1-T1: whether a builder set `sensitivity`; `false` while it is still
+             *     the value mapped from `data_classification`.
+             */
+            sensitivity_confirmed: boolean;
             /** Format: int32 */
             sort_order: number;
         };
@@ -26551,6 +26754,22 @@ export interface components {
         BlueprintRollback: {
             items: components["schemas"]["BlueprintAppliedItem"][];
         };
+        /** @description A booking request. */
+        BookBody: {
+            consignee: components["schemas"]["Consignee"];
+            /** @description What is inside, for customs and the label. */
+            description?: string | null;
+            /**
+             * Format: int32
+             * @description Pieces; the number of packages when absent.
+             */
+            pieces?: number | null;
+            /**
+             * Format: double
+             * @description Total weight; the packages' weights when absent.
+             */
+            weight_kg?: number | null;
+        };
         /** @description A booking. */
         BookRequest: {
             /** @description The challenge answer, when the deployment uses one. */
@@ -26565,16 +26784,14 @@ export interface components {
              */
             start: string;
         };
-        /** @description A booking made. */
+        /** @description A booked shipment. */
         Booked: {
+            carrier: string;
+            /** @description The carrier's label, when it returned one. */
+            label_url?: string | null;
             /** Format: uuid */
-            booking_id: string;
-            /** Format: date-time */
-            end: string;
-            /** @description The token of the reschedule/cancel link (also in the email). */
-            manage_token: string;
-            /** Format: date-time */
-            start: string;
+            shipment_id: string;
+            tracking_number: string;
         };
         BotAnalytics: {
             deflection: components["schemas"]["DeflectionStats"];
@@ -28907,6 +29124,7 @@ export interface components {
         };
         /** @description `?token=`, or the confirm form's field. */
         ConfirmQuery: {
+            /** @description The signed token from the link. */
             token: string;
         };
         /**
@@ -28943,6 +29161,18 @@ export interface components {
             accepted: boolean;
             privacy_version?: string | null;
             terms_version?: string | null;
+        };
+        /** @description Who receives the shipment. */
+        Consignee: {
+            city: string;
+            company?: string | null;
+            /** @description ISO 3166-1 alpha-2, such as `SA`. */
+            country_code: string;
+            email?: string | null;
+            /** @description Street and building. */
+            line1: string;
+            name: string;
+            phone: string;
         };
         /** @description L7-T7: how one change-feed consumer is keeping up. */
         ConsumerHealth: {
@@ -30287,6 +30517,23 @@ export interface components {
              */
             total?: number | null;
         };
+        /** @description One customer flag. */
+        CustomerFlag: {
+            description?: string | null;
+            /** @description Switched off in an emergency: off until it is set again. */
+            emergency_off: boolean;
+            name: string;
+            /** @description Whether `flag(name)` reads true now. */
+            on: boolean;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            updated_by: string;
+            /** @description The value set; `on` below is what rules read. */
+            value: boolean;
+        };
         /** @description A stored test. */
         CustomerTest: {
             /** @description A blocking test can stop a publish (Z15-T14). */
@@ -30675,6 +30922,11 @@ export interface components {
         };
         DecideBody: {
             /**
+             * @description Z10-T9: records attached as evidence, at most 10; the decider must be
+             *     able to read each one. Stored on the decision's grant row.
+             */
+            attachments?: components["schemas"]["DecisionAttachment"][];
+            /**
              * @description Optional note explaining the decision, stored on the decision's
              *     `approval_grant` row and in its audit event. Trimmed; blank
              *     is no comment; more than 2000 characters is `422 Validation`.
@@ -30684,6 +30936,11 @@ export interface components {
             decision: string;
             /** Format: int64 */
             row_version: number;
+            /**
+             * @description Z10-T9: the decider's signature reference, for a step that asks for a
+             *     signature; checked by the installed signature provider.
+             */
+            signature_ref?: string | null;
         };
         DecideResponse: {
             /**
@@ -30700,6 +30957,16 @@ export interface components {
          * @enum {string}
          */
         Decision: "confirm" | "dismiss";
+        /** @description Z10-T9: a record attached to a decision. */
+        DecisionAttachment: {
+            /** @description The record's entity (its logical name). */
+            entity: string;
+            /**
+             * Format: uuid
+             * @description The record.
+             */
+            id: string;
+        };
         /** @description M9-T4: one decision on a request. */
         DecisionEntry: {
             /** Format: uuid */
@@ -39079,6 +39346,36 @@ export interface components {
                 key: string;
                 /** @description Where to fetch it: `/api/v1/cooked/{kind}/{hash}`. */
                 url: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_CustomerFlag: {
+            items: {
+                description?: string | null;
+                /** @description Switched off in an emergency: off until it is set again. */
+                emergency_off: boolean;
+                name: string;
+                /** @description Whether `flag(name)` reads true now. */
+                on: boolean;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: date-time */
+                updated_at: string;
+                /** Format: uuid */
+                updated_by: string;
+                /** @description The value set; `on` below is what rules read. */
+                value: boolean;
             }[];
             /** Format: int64 */
             page: number;
@@ -49304,6 +49601,15 @@ export interface components {
              */
             updated_at: string;
         };
+        SetCustomerFlag: {
+            description?: string | null;
+            /**
+             * Format: int64
+             * @description Required to change a flag that exists (409 when stale).
+             */
+            row_version?: number | null;
+            value: boolean;
+        };
         SetEnvVariable: {
             /**
              * Format: int64
@@ -50450,6 +50756,7 @@ export interface components {
         };
         /** @description A link's token (`?token=`, or the page's form field). */
         StatusToken: {
+            /** @description The signed token from the link. */
             token: string;
         };
         /** @description One update. */
@@ -51504,6 +51811,16 @@ export interface components {
             outcome: string;
             /** @description The tool call that asked for it, when an agent did. */
             tool_call_id?: string | null;
+        };
+        /** @description A shipment's status after a tracking read. */
+        Tracked: {
+            /** @description Whether this read moved the shipment. */
+            changed: boolean;
+            /** @description The carrier's latest update code, when it has one. */
+            last_event_key?: string | null;
+            /** Format: uuid */
+            shipment_id: string;
+            status?: string | null;
         };
         /** @description A recording's transcript. */
         TranscriptView: {
@@ -53465,18 +53782,19 @@ export interface operations {
     };
     list_sessions: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
                  * @description Filter to one status (`active` | `paused` | `revoked` | `ended`).
                  *     Unfiltered by default — a dashboard wants to see all of them.
                  */
-                status: string | null;
+                status?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -53672,7 +53990,9 @@ export interface operations {
     get_performance: {
         parameters: {
             query: {
+                /** @description From this time (inclusive). */
                 from: string;
+                /** @description Up to this time (exclusive). */
                 to: string;
             };
             header?: never;
@@ -54142,7 +54462,9 @@ export interface operations {
     get_performance_daily: {
         parameters: {
             query: {
+                /** @description From this time (inclusive). */
                 from: string;
+                /** @description Up to this time (exclusive). */
                 to: string;
             };
             header?: never;
@@ -54302,6 +54624,7 @@ export interface operations {
     get_runs: {
         parameters: {
             query: {
+                /** @description The day, as YYYY-MM-DD. */
                 day: string;
                 /** @description `tasks`, `handoffs` or `cost`. */
                 metric: string;
@@ -54780,20 +55103,22 @@ export interface operations {
     };
     evidence: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description `actions` (default) or `generations`. */
-                kind: string | null;
+                kind?: string;
                 /** @description Only this agent object's sessions (actions). */
-                agent: string | null;
+                agent?: string;
                 /** @description Only this model (generations). */
-                model: string | null;
-                from: string | null;
-                to: string | null;
+                model?: string;
+                /** @description From this time (inclusive). */
+                from?: string;
+                /** @description Up to this time (exclusive). */
+                to?: string;
                 /** @description The previous page's `next_cursor`, verbatim. */
-                cursor: string | null;
+                cursor?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -54888,16 +55213,16 @@ export interface operations {
     };
     get_model_comparison: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description Restrict to one action id, e.g. `record.summarize`. */
-                action: string | null;
+                action?: string;
                 /** @description Restrict to one model id. */
-                model_id: string | null;
+                model_id?: string;
                 /** @description Restrict to one prompt_version. */
-                prompt_version: string | null;
+                prompt_version?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -55482,7 +55807,9 @@ export interface operations {
     get_work_share: {
         parameters: {
             query?: {
+                /** @description From this time (inclusive). */
                 from?: string;
+                /** @description Up to this time (exclusive). */
                 to?: string;
             };
             header?: never;
@@ -55583,6 +55910,7 @@ export interface operations {
     get_work_share_events: {
         parameters: {
             query: {
+                /** @description The day, as YYYY-MM-DD. */
                 day: string;
                 /** @description `agent` or `person`. */
                 by: string;
@@ -55784,19 +56112,19 @@ export interface operations {
     };
     list_keys: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
                  * @description How many trailing days of requests to count. Defaults to 7, clamped
                  *     to [1, 90].
                  */
-                days: number | null;
+                days?: number;
                 /** @description One-based — the first page is `page=1` (D-347). */
-                page: number | null;
+                page?: number;
                 /** @description Keys per page, up to the platform maximum. */
-                page_size: number | null;
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -55895,18 +56223,19 @@ export interface operations {
     };
     summary: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
                  * @description How many trailing days (inclusive of today) to aggregate over.
                  *     Defaults to 7, clamped to [1, 90].
                  */
-                days: number | null;
+                days?: number;
                 /** @description One-based — the first page is `page=1` (D-347). */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -55951,19 +56280,19 @@ export interface operations {
     };
     deprecated_usage: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
                  * @description How many trailing days to look over. Defaults to 30, clamped to
                  *     [1, 90].
                  */
-                days: number | null;
+                days?: number;
                 /** @description One-based — the first page is `page=1` (D-347). */
-                page: number | null;
+                page?: number;
                 /** @description Rows per page, up to the platform maximum. */
-                page_size: number | null;
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -55999,14 +56328,16 @@ export interface operations {
     };
     list_policies: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                action_type: string | null;
+            query?: {
+                /** @description Only this action type. */
+                action_type?: string;
                 /** @description One-based — the first page is `page=1` (D-347). */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -56560,10 +56891,9 @@ export interface operations {
     };
     list_approvals: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                action_type: string | null;
+            query?: {
+                /** @description Only this action type. */
+                action_type?: string;
                 /**
                  * @description Comma-separated status filter, in the request's own vocabulary
                  *     (`pending`, `approved`, `executing`, `rejected`, `expired`,
@@ -56572,11 +56902,14 @@ export interface operations {
                  *     operator finds an approved-but-unexecuted action and a claim whose
                  *     holder died; neither was listable before. An unknown name is `422`.
                  */
-                status: string | null;
+                status?: string;
                 /** @description One-based — the first page is `page=1` (D-347). */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -56672,12 +57005,12 @@ export interface operations {
     };
     approval_metrics: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description Days back from now, 1 to 365; default 30. */
-                days: number | null;
+                days?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -56849,16 +57182,16 @@ export interface operations {
                     "application/json": components["schemas"]["DecideResponse"];
                 };
             };
-            /** @description Missing or invalid credentials */
+            /** @description Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["UnauthorizedResponse"];
                 };
             };
-            /** @description Caller lacks the required privilege */
+            /** @description Caller lacks the required privilege, or an API-key caller on a step that asks for a step-up */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -56876,7 +57209,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Request failed validation */
+            /** @description Request failed validation, more than 10 attachments, or an attachment the caller cannot read */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -57289,19 +57622,21 @@ export interface operations {
     };
     list_archive_records: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
                  * @description `"archived" | "restored"`. Defaults to `"archived"` — same
                  *     active-first convention `legal_hold_admin::list_holds` uses.
                  */
-                status: string | null;
-                entity_logicalname: string | null;
+                status?: string;
+                /** @description Only this entity (its logical name). */
+                entity_logicalname?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -57514,21 +57849,30 @@ export interface operations {
     };
     audit_export: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_name: string | null;
-                record_id: string | null;
-                user_id: string | null;
-                user_email: string | null;
-                operation: number | null;
-                field_name: string | null;
-                organization_ref: string | null;
-                from: string | null;
-                to: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity_name?: string;
+                /** @description Only this record. */
+                record_id?: string;
+                /** @description Only this user. */
+                user_id?: string;
+                /** @description Only this user's entries, by email. */
+                user_email?: string;
+                /** @description Only this operation. */
+                operation?: number;
+                /** @description Only changes to this field. */
+                field_name?: string;
+                /** @description Only this organization's entries. */
+                organization_ref?: string;
+                /** @description From this time (inclusive). */
+                from?: string;
+                /** @description Up to this time (exclusive). */
+                to?: string;
                 /** @description `jsonl` (default) | `cef` | `csv`. */
-                format: string | null;
+                format?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -57571,22 +57915,32 @@ export interface operations {
     };
     audit_search: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_name: string | null;
-                record_id: string | null;
-                user_id: string | null;
-                user_email: string | null;
-                operation: number | null;
-                field_name: string | null;
-                date_from: string | null;
-                date_to: string | null;
-                organization_ref: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity_name?: string;
+                /** @description Only this record. */
+                record_id?: string;
+                /** @description Only this user. */
+                user_id?: string;
+                /** @description Only this user's entries, by email. */
+                user_email?: string;
+                /** @description Only this operation. */
+                operation?: number;
+                /** @description Only changes to this field. */
+                field_name?: string;
+                /** @description From this date (inclusive). */
+                date_from?: string;
+                /** @description Up to this date (inclusive). */
+                date_to?: string;
+                /** @description Only this organization's entries. */
+                organization_ref?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -57814,6 +58168,16 @@ export interface operations {
     list_rules: {
         parameters: {
             query?: {
+                /** @description One entity's rules. */
+                entity?: string;
+                /** @description `business` or a legacy kind. */
+                kind?: string;
+                /** @description Rules that apply to this staff role. */
+                role_id?: string;
+                /** @description Rules that apply to this web-portal role. */
+                portal_role_id?: string;
+                /** @description Only active (true) or inactive (false) ones. */
+                is_active?: boolean;
                 /**
                  * @description One-based (D-347): page 1 is the first page. Values below 1 are
                  *     clamped up to 1 rather than rejected, matching the legacy lists.
@@ -57826,17 +58190,7 @@ export interface operations {
                 page_size?: number;
             };
             header?: never;
-            path: {
-                /** @description One entity's rules. */
-                entity: string | null;
-                /** @description `business` or a legacy kind. */
-                kind: string | null;
-                /** @description Rules that apply to this staff role. */
-                role_id: string | null;
-                /** @description Rules that apply to this web-portal role. */
-                portal_role_id: string | null;
-                is_active: boolean | null;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -57941,14 +58295,14 @@ export interface operations {
     };
     explain_rules: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The entity's logical name. */
                 entity: string;
                 /** @description The record. */
                 id: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -59813,14 +60167,14 @@ export interface operations {
     };
     diff_config_starts: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The earlier start. */
                 a: string;
                 /** @description The later start. */
                 b: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -59906,9 +60260,7 @@ export interface operations {
     };
     list_content_pages: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /**
                  * @description Every list is scoped to one space — pages in other spaces never
                  *     appear, matching the admin UI's per-space "Pages" screen.
@@ -59918,12 +60270,16 @@ export interface operations {
                  * @description Children of this page. Omit for root-level pages. Ignored when
                  *     `search` is set (search runs across the whole tree).
                  */
-                parent_page_id: string | null;
-                search: string | null;
+                parent_page_id?: string;
+                /** @description Text the name contains. */
+                search?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -62509,6 +62865,157 @@ export interface operations {
             };
         };
     };
+    list_customer_flags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every flag (page 1 holds them all) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CustomerFlag"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_customer_flag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The flag's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCustomerFlag"];
+            };
+        };
+        responses: {
+            /** @description The flag as stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerFlag"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The flag exists and `row_version` is missing or stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An invalid name */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    emergency_off_customer_flag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The flag's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The flag, now off */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerFlag"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such flag */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_customer_tests: {
         parameters: {
             query?: {
@@ -63475,19 +63982,21 @@ export interface operations {
     };
     list_candidates: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity?: string;
                 /**
                  * @description `"open"` (default view for the steward queue), `"merged"`, or
                  *     `"dismissed"`. Omit for every status.
                  */
-                status: string | null;
+                status?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -63808,16 +64317,18 @@ export interface operations {
     };
     list_label_proposals: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity?: string;
                 /** @description `open` (the default) or `resolved`. */
-                status: string | null;
+                status?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -63862,14 +64373,16 @@ export interface operations {
     };
     list_mappings: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                target_entity: string | null;
+            query?: {
+                /** @description Only mappings or projects into this entity (its logical name). */
+                target_entity?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -64135,14 +64648,16 @@ export interface operations {
     };
     list_match_rules: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -64459,14 +64974,16 @@ export interface operations {
     };
     list_profiles: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -64723,22 +65240,25 @@ export interface operations {
     };
     list_issues: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string | null;
-                dimension: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity?: string;
+                /** @description Only this quality dimension. */
+                dimension?: string;
                 /**
                  * @description `open`, `in_progress`, `fixed`, `accepted` or `resolved`. Omit for
                  *     every status.
                  */
-                status: string | null;
+                status?: string;
                 /** @description L2-T4: only the issues this person owns. */
-                owner_id: string | null;
+                owner_id?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -64901,14 +65421,16 @@ export interface operations {
     };
     quality_rules_list: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -65115,15 +65637,16 @@ export interface operations {
     };
     list_scores: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description Filter to one entity's scores. Omit for every entity. */
-                entity: string | null;
+                entity?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -65168,9 +65691,8 @@ export interface operations {
     };
     score_history: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
+                /** @description Only this entity (its logical name). */
                 entity: string;
                 /**
                  * @description Must be one of `DIMENSIONS` — validated below rather than by the
@@ -65179,9 +65701,12 @@ export interface operations {
                  */
                 dimension: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -65226,14 +65751,16 @@ export interface operations {
     };
     quality_targets_list: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -65371,14 +65898,16 @@ export interface operations {
     };
     list_survivorship_rules: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -65522,21 +66051,21 @@ export interface operations {
     };
     dead_letter_items: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
                  * @description Only this source (`jobs`, `batch_jobs`, `flow_trigger`, `flow_run`,
                  *     `webhook`).
                  */
-                source: string | null;
+                source?: string;
                 /** @description Only this group (a `cause_group` from the groups list). */
-                group: string | null;
+                group?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
+                page?: number;
                 /** @description Rows per page. */
-                page_size: number | null;
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -66053,20 +66582,21 @@ export interface operations {
     };
     list_requests: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description `"pending" | "blocked" | "fulfilled" | "rejected"`. */
-                status: string | null;
+                status?: string;
                 /**
                  * @description `"access" | "erasure" | "portability" | "objection" | "restriction" |
                  *     "rectification"`.
                  */
-                request_type: string | null;
+                request_type?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -66495,16 +67025,20 @@ export interface operations {
     };
     list_deliveries: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                status: string | null;
-                kind: string | null;
-                recipient: string | null;
+            query?: {
+                /** @description Only this status. */
+                status?: string;
+                /** @description Only this kind. */
+                kind?: string;
+                /** @description Only deliveries to this address. */
+                recipient?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -66922,14 +67456,14 @@ export interface operations {
     };
     label_workbench: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The language, e.g. `ar-SA`. */
                 locale: string;
                 /** @description `untranslated`, `stale`, `draft` or `reviewed`; all when absent. */
-                status: string | null;
+                status?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -66974,12 +67508,12 @@ export interface operations {
     };
     export_xliff: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The language to translate into, e.g. `ar-SA`. */
                 locale: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -67125,12 +67659,13 @@ export interface operations {
     };
     delete_entity: {
         parameters: {
-            query?: never;
+            query?: {
+                hard?: boolean;
+            };
             header?: never;
             path: {
                 /** @description The entity */
                 entity_id: string;
-                hard: boolean;
             };
             cookie?: never;
         };
@@ -68718,15 +69253,18 @@ export interface operations {
     };
     list_subscriptions: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                kind: string | null;
-                is_active: boolean | null;
+            query?: {
+                /** @description Only this kind. */
+                kind?: string;
+                /** @description Only active (true) or inactive (false) ones. */
+                is_active?: boolean;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -68973,14 +69511,17 @@ export interface operations {
     };
     list_event_deliveries: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Only this status. */
+                status?: string;
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
+            };
             header?: never;
             path: {
                 id: string;
-                status: string | null;
-                /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
             };
             cookie?: never;
         };
@@ -69308,7 +69849,9 @@ export interface operations {
     governance_get_certification: {
         parameters: {
             query: {
+                /** @description Only assets of this kind. */
                 asset_kind: string;
+                /** @description Only this asset. */
                 asset_ref: string;
             };
             header?: never;
@@ -69970,7 +70513,9 @@ export interface operations {
     governance_delete_role: {
         parameters: {
             query: {
+                /** @description Only this user. */
                 user_id: string;
+                /** @description Only this role. */
                 role: string;
             };
             header?: never;
@@ -70029,6 +70574,7 @@ export interface operations {
     governance_list_policies: {
         parameters: {
             query?: {
+                /** @description Only this domain. */
                 domain?: string;
             };
             header?: never;
@@ -70169,6 +70715,7 @@ export interface operations {
     governance_delete_policy: {
         parameters: {
             query: {
+                /** @description The current `row_version`. */
                 row_version: number;
             };
             header?: never;
@@ -70390,12 +70937,12 @@ export interface operations {
     };
     list_hijri_months: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The Hijri year, 1356 to 1500. */
                 year: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -70555,7 +71102,9 @@ export interface operations {
     delete_ui_text_override: {
         parameters: {
             query: {
+                /** @description The language, such as `ar` or `en`. */
                 locale: string;
+                /** @description The text's key. */
                 key: string;
             };
             header?: never;
@@ -70993,15 +71542,16 @@ export interface operations {
     };
     list_dead_letter: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description `"fast"` (default) or `"batch"` — see `EngineJob::is_batch`. */
-                queue: string | null;
+                queue?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -71278,17 +71828,18 @@ export interface operations {
     };
     explain_knowledge: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /**
                  * @description The question or topic. Held to the same byte/term caps as `/search`:
                  *     GIN cost is roughly linear in term count, so a long paste must be
                  *     rejected before it reaches PostgreSQL.
                  */
                 q: string;
-                limit: number | null;
+                /** @description The most rows to return. */
+                limit?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -71333,15 +71884,16 @@ export interface operations {
     };
     list_gaps: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description Filter to one triage state; omit for the whole queue. */
-                status: string | null;
+                status?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -71486,9 +72038,7 @@ export interface operations {
     };
     list_holds: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
                  * @description `"active" | "released"`. Defaults to `"active"` — the common case
                  *     (an operator checking what's currently frozen), matching
@@ -71498,12 +72048,16 @@ export interface operations {
                  *     unbounded, ever-growing history of released holds is the
                  *     less-common query.
                  */
-                status: string | null;
-                entity_logicalname: string | null;
+                status?: string;
+                /** @description Only this entity (its logical name). */
+                entity_logicalname?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -72016,6 +72570,7 @@ export interface operations {
     lineage_impact: {
         parameters: {
             query: {
+                /** @description Only this entity (its logical name). */
                 entity: string;
                 /** @description The attribute; without it, the change is to the entity. */
                 attribute?: string;
@@ -72959,12 +73514,12 @@ export interface operations {
     };
     import: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description `plan` or `apply`. */
                 mode: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody: {
@@ -73078,17 +73633,17 @@ export interface operations {
     };
     list_plans: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description Newest first; default 50, max 200. */
-                limit: number | null;
+                limit?: number;
                 /**
                  * @description Filter to one status (e.g. `planned`/`queued` for "pending plans" in
                  *     the lifecycle UI). Unset lists every status, as before.
                  */
-                status: null | components["schemas"]["PlanStatus"];
+                status?: components["schemas"]["PlanStatus"];
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -74221,15 +74776,18 @@ export interface operations {
     };
     list_projects: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                target_entity: string | null;
-                status: string | null;
+            query?: {
+                /** @description Only mappings or projects into this entity (its logical name). */
+                target_entity?: string;
+                /** @description Only this status. */
+                status?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -76120,23 +76678,23 @@ export interface operations {
     };
     metric_query: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description A metric name, as `GET .../metrics/names` lists them. */
                 name: string;
                 /** @description Start (UTC, ISO-8601); default an hour ago. */
-                from: string | null;
+                from?: string;
                 /** @description End (UTC); default now. */
-                to: string | null;
+                to?: string;
                 /** @description Seconds per point, 60 to 86,400; default 60. */
-                step: number | null;
+                step?: number;
                 /**
                  * @description Only series whose labels include these (a JSON object), for example
                  *     `{"endpoint":"/api/v1/{entity}"}`.
                  */
-                labels: string | null;
+                labels?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -76269,22 +76827,25 @@ export interface operations {
     };
     list_outcomes: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description Restrict to one `kind` (`ai_suggestion`, …). Unfiltered by default. */
-                kind: string | null;
-                source_module: string | null;
-                regarding_entity: string | null;
+                kind?: string;
+                /** @description Only this module. */
+                source_module?: string;
+                /** @description Only records of this entity. */
+                regarding_entity?: string;
                 /**
                  * @description `true` — only rows still awaiting measurement; `false` — only
                  *     already-measured rows; omitted — both.
                  */
-                measured: boolean | null;
+                measured?: boolean;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -76785,17 +77346,18 @@ export interface operations {
     };
     trace: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /**
                  * @description Top-level probe name, e.g. `"entity.create"` or `"GET /api/v1/entities/{logicalname}"`
                  *     — a query param, not a path segment, since probe names routinely
                  *     contain `/` and spaces that a path segment can't carry unencoded.
                  */
                 name: string;
-                limit: number;
+                /** @description The most rows to return. */
+                limit?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -77642,14 +78204,16 @@ export interface operations {
     };
     list_relationships: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string | null;
+            query?: {
+                /** @description Only this entity (its logical name). */
+                entity?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -77906,17 +78470,18 @@ export interface operations {
     };
     list_actions: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description `"proposed" | "approved" | "executing" | "completed" | "failed" | "rejected"`. */
-                status: string | null;
+                status?: string;
                 /** @description `"partition_archive" | "entity_purge"`. */
-                action_type: string | null;
+                action_type?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -78315,14 +78880,16 @@ export interface operations {
     };
     list_clients: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                status: string | null;
+            query?: {
+                /** @description Only this status. */
+                status?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -78672,14 +79239,19 @@ export interface operations {
     };
     list_logs: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The most rows to return. */
+                limit?: number;
+                /** @description Rows to skip. */
+                offset?: number;
+                /** @description Only entries after this time. */
+                since?: string;
+                /** @description Only this request's entries. */
+                correlation_id?: string;
+            };
             header?: never;
             path: {
                 client_db_id: string;
-                limit: number;
-                offset: number;
-                since: string | null;
-                correlation_id: string | null;
             };
             cookie?: never;
         };
@@ -79643,14 +80215,14 @@ export interface operations {
     };
     list_entity_default_shares: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 entity: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -81262,15 +81834,15 @@ export interface operations {
     };
     list_record_shares: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 entity: string;
                 record_id: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -83196,11 +83768,11 @@ export interface operations {
     };
     lookup_users: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 email: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -85317,16 +85889,17 @@ export interface operations {
     };
     upload_theme_asset: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The theme */
-                id: string;
+            query: {
                 /**
                  * @description `logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or
                  *     `guidelines_pdf`.
                  */
                 kind: string;
+            };
+            header?: never;
+            path: {
+                /** @description The theme */
+                id: string;
             };
             cookie?: never;
         };
@@ -85609,12 +86182,12 @@ export interface operations {
     };
     validation_stats: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description Days of rejections to count (default 30, at most 365). */
-                days: number | null;
+                days?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -89733,13 +90306,13 @@ export interface operations {
                     "application/json": components["schemas"]["DecideResponse"];
                 };
             };
-            /** @description Missing or invalid credentials */
+            /** @description Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["UnauthorizedResponse"];
                 };
             };
             /** @description The request is flat (not plan-bearing), or the caller is not an eligible approver for its current step */
@@ -89760,7 +90333,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Request failed validation */
+            /** @description Request failed validation, more than 10 attachments, or an attachment the caller cannot read */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -89882,15 +90455,15 @@ export interface operations {
     };
     list_widget_types: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
                  * @description D-525 — include types the viewer cannot render (hidden by default so a
                  *     palette only offers renderable widgets).
                  */
-                include_unsupported: boolean;
+                include_unsupported?: boolean;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -91206,20 +91779,28 @@ export interface operations {
     };
     audit_my_activity: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                date_from: string | null;
-                date_to: string | null;
-                category: number | null;
-                operation: number | null;
-                entity_name: string | null;
-                source: number | null;
-                outcome: number | null;
+            query?: {
+                /** @description From this date (inclusive). */
+                date_from?: string;
+                /** @description Up to this date (inclusive). */
+                date_to?: string;
+                /** @description Only this category. */
+                category?: number;
+                /** @description Only this operation. */
+                operation?: number;
+                /** @description Only this entity (its logical name). */
+                entity_name?: string;
+                /** @description Only this source. */
+                source?: number;
+                /** @description Only this outcome. */
+                outcome?: number;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -91501,17 +92082,18 @@ export interface operations {
     };
     identity_link_oidc_callback: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The authorization code to exchange. `None` on an `error` redirect. */
+                code?: string;
+                /** @description The `state` the provider echoes back: the flow's single-use id. */
+                state?: string;
+                /** @description The provider's error code (`access_denied`, `consent_required`, ...). */
+                error?: string;
+            };
             header?: never;
             path: {
                 /** @description The OIDC provider's key */
                 provider: string;
-                /** @description The authorization code to exchange. `None` on an `error` redirect. */
-                code: string | null;
-                /** @description The `state` the provider echoes back: the flow's single-use id. */
-                state: string | null;
-                /** @description The provider's error code (`access_denied`, `consent_required`, ...). */
-                error: string | null;
             };
             cookie?: never;
         };
@@ -92173,21 +92755,22 @@ export interface operations {
     };
     oidc_callback: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The OIDC provider's key */
-                provider: string;
+            query?: {
                 /** @description The authorization code to exchange. `None` on an `error` redirect. */
-                code: string | null;
+                code?: string;
                 /** @description The `state` the provider echoes back — the flow's single-use id. */
-                state: string | null;
+                state?: string;
                 /**
                  * @description The provider's error code (`access_denied`, `consent_required`, …).
                  *     Logged as the reason; never returned to the client beyond the generic
                  *     error page every other failure already gets.
                  */
-                error: string | null;
+                error?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The OIDC provider's key */
+                provider: string;
             };
             cookie?: never;
         };
@@ -92457,17 +93040,18 @@ export interface operations {
     };
     oidc_step_up_callback: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The authorization code to exchange. `None` on an `error` redirect. */
+                code?: string;
+                /** @description The `state` the provider echoes back: the flow's single-use id. */
+                state?: string;
+                /** @description The provider's error code (`access_denied`, `consent_required`, ...). */
+                error?: string;
+            };
             header?: never;
             path: {
                 /** @description The OIDC provider key the step-up was started at. */
                 provider: string;
-                /** @description The authorization code to exchange. `None` on an `error` redirect. */
-                code: string | null;
-                /** @description The `state` the provider echoes back: the flow's single-use id. */
-                state: string | null;
-                /** @description The provider's error code (`access_denied`, `consent_required`, ...). */
-                error: string | null;
             };
             cookie?: never;
         };
@@ -92663,15 +93247,16 @@ export interface operations {
     };
     start_oidc_step_up: {
         parameters: {
-            query?: never;
+            query: {
+                /** @description The step-up challenge to continue at the provider. */
+                challenge_id: string;
+            };
             header?: never;
             path: {
                 /** @description The operation the challenge was started for. */
                 operation: string;
                 /** @description The configured OIDC provider key to re-authenticate at. */
                 provider: string;
-                /** @description The step-up challenge to continue at the provider. */
-                challenge_id: string;
             };
             cookie?: never;
         };
@@ -93009,6 +93594,7 @@ export interface operations {
                 as_of?: string;
                 /** @description One-based page. */
                 page?: number;
+                /** @description Rows per page. */
                 page_size?: number;
             };
             header?: never;
@@ -94328,13 +94914,14 @@ export interface operations {
     };
     get_billing_subscription: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The day to read the subscription as of (`YYYY-MM-DD`); today when absent. */
+                as_of?: string;
+            };
             header?: never;
             path: {
                 /** @description The subscription */
                 id: string;
-                /** @description The day to read the subscription as of (`YYYY-MM-DD`); today when absent. */
-                as_of: string | null;
             };
             cookie?: never;
         };
@@ -95099,15 +95686,15 @@ export interface operations {
     };
     public_brand_asset: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /**
                  * @description `logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or
                  *     `guidelines_pdf`.
                  */
                 kind: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -95141,12 +95728,12 @@ export interface operations {
     };
     my_branding: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description The app being shown, when it has its own theme. */
-                app: string | null;
+                app?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -95270,25 +95857,26 @@ export interface operations {
     };
     catalog_list_entities: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description Matches against logicalname or display name, case-insensitive substring. */
-                q: string | null;
+                q?: string;
                 /**
                  * @description `data_domain.id` (M15) — restricts to entities assigned to
                  *     this domain.
                  */
-                domain: string | null;
+                domain?: string;
                 /**
                  * @description `attribute_info.data_classification` (`0087`) — restricts
                  *     to entities with at least one attribute at this classification.
                  */
-                classification: string | null;
+                classification?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -96332,6 +96920,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The session */
                 id: string;
             };
             cookie?: never;
@@ -96375,6 +96964,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The session */
                 id: string;
             };
             cookie?: never;
@@ -96415,6 +97005,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The session */
                 id: string;
             };
             cookie?: never;
@@ -97217,10 +97808,13 @@ export interface operations {
     commission_get_statements: {
         parameters: {
             query: {
+                /** @description Only this commission period. */
                 period_id: string;
                 /** @description Only this participant's rows. */
                 participant_id?: string;
+                /** @description One-based: page 1 is the first page. */
                 page?: number;
+                /** @description Rows per page. */
                 page_size?: number;
             };
             header?: never;
@@ -97261,8 +97855,11 @@ export interface operations {
     commission_get_my_statement: {
         parameters: {
             query: {
+                /** @description Only this commission period. */
                 period_id: string;
+                /** @description One-based: page 1 is the first page. */
                 page?: number;
+                /** @description Rows per page. */
                 page_size?: number;
             };
             header?: never;
@@ -97387,6 +97984,7 @@ export interface operations {
     confirm_get: {
         parameters: {
             query: {
+                /** @description The signed token from the link. */
                 token: string;
             };
             header?: never;
@@ -97511,6 +98109,7 @@ export interface operations {
     read_preferences: {
         parameters: {
             query: {
+                /** @description The signed token from the link. */
                 token: string;
             };
             header?: never;
@@ -97652,14 +98251,14 @@ export interface operations {
     };
     deliver_page: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The content space's id. */
                 space: string;
                 /** @description The page's URL path in that space, e.g. `/pricing`. */
                 path: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -97700,14 +98299,14 @@ export interface operations {
     };
     page_html: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The content space's id. */
                 space: string;
                 /** @description The page's URL path in that space, e.g. `/pricing`. */
                 path: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -97748,14 +98347,14 @@ export interface operations {
     };
     deliver_internal_page: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The content space's id. */
                 space: string;
                 /** @description The page's URL path in that space, e.g. `/pricing`. */
                 path: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -97856,12 +98455,12 @@ export interface operations {
     };
     preview_page: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The signed token from `POST /api/v1/admin/content/pages/{id}/preview-link`. */
                 token: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -97888,12 +98487,12 @@ export interface operations {
     };
     site_robots: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The site's host name. */
                 site: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -97929,12 +98528,12 @@ export interface operations {
     };
     site_rss: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The content space (site). */
                 space: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -97961,12 +98560,12 @@ export interface operations {
     };
     site_page: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The page's URL path on the site, e.g. `/pricing`. */
                 path: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -98007,19 +98606,19 @@ export interface operations {
     };
     site_sitemap: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The site's host name. */
                 site: string;
                 /** @description The language, such as `en` or `ar`; the first stored when absent. */
-                lang: string | null;
+                lang?: string;
                 /**
                  * @description E13-T9: a part of a split sitemap (the index, part 0, names them);
                  *     0 when absent.
                  */
-                part: number | null;
+                part?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -98055,12 +98654,12 @@ export interface operations {
     };
     site_theme: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The content space (site). */
                 space: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -98094,9 +98693,7 @@ export interface operations {
     };
     view_page: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /**
                  * @description The page's custom URL, e.g. `/guide/templates` — a query parameter
                  *     rather than a path segment so this stays a single, easily-reasoned
@@ -98107,6 +98704,8 @@ export interface operations {
                  */
                 path: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -98559,12 +99158,14 @@ export interface operations {
     };
     candidates_for_record: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
+                /** @description Only this entity (its logical name). */
                 entity: string;
+                /** @description Only this record. */
                 record_id: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -99208,13 +99809,13 @@ export interface operations {
     };
     get_tree: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_name: string | null;
-                record_id: string | null;
-                folder: string | null;
+            query?: {
+                entity_name?: string;
+                record_id?: string;
+                folder?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -100197,6 +100798,137 @@ export interface operations {
             };
         };
     };
+    fulfilment_shipment_book: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The shipment */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookBody"];
+            };
+        };
+        responses: {
+            /** @description Booked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booked"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks fulfilment_order.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such shipment */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already booked or being booked, or the carrier is not set up */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing consignee field, or the carrier refused the booking */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fulfilment_shipment_track: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The shipment */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The shipment's status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tracked"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks fulfilment_order.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such shipment */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shipment is not booked with a carrier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     traverse_route: {
         parameters: {
             query?: never;
@@ -100517,8 +101249,11 @@ export interface operations {
     get_hr_availability: {
         parameters: {
             query: {
+                /** @description Only this user. */
                 user_id: string;
+                /** @description From this time (inclusive). */
                 from: string;
+                /** @description Up to this time (exclusive). */
                 to: string;
             };
             header?: never;
@@ -101165,7 +101900,9 @@ export interface operations {
     get_group_trial_balance: {
         parameters: {
             query: {
+                /** @description From this time (inclusive). */
                 from: string;
+                /** @description Up to this time (exclusive). */
                 to: string;
             };
             header?: never;
@@ -103131,8 +103868,11 @@ export interface operations {
     get_marketing_list_members_as_of: {
         parameters: {
             query: {
+                /** @description The moment to read the list as of. */
                 at: string;
+                /** @description One-based: page 1 is the first page. */
                 page?: number;
+                /** @description Rows per page. */
                 page_size?: number;
             };
             header?: never;
@@ -104558,8 +105298,11 @@ export interface operations {
     callback: {
         parameters: {
             query?: {
+                /** @description The authorization code the provider sent back. */
                 code?: string;
+                /** @description The state value this sign-in started with. */
                 state?: string;
+                /** @description The error the provider sent back, if any. */
                 error?: string;
             };
             header?: never;
@@ -104821,12 +105564,12 @@ export interface operations {
     };
     list_recent: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description How many, newest first; default 20, at most 200. */
-                limit: number | null;
+                limit?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -105118,15 +105861,16 @@ export interface operations {
     };
     metric_lineage: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
+            query?: {
                 /**
                  * @description The period to read snapshots for; defaults to the root metric's current
                  *     period.
                  */
-                period_start: string | null;
+                period_start?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
             };
             cookie?: never;
         };
@@ -105173,7 +105917,9 @@ export interface operations {
     list_snapshots: {
         parameters: {
             query?: {
+                /** @description One-based: page 1 is the first page. */
                 page?: number;
+                /** @description Rows per page. */
                 page_size?: number;
                 /**
                  * @description A dimension attribute (comma-separated for several): its members'
@@ -105482,6 +106228,7 @@ export interface operations {
             query: {
                 /** @description The record's entity, e.g. `service_ticket`. */
                 entity: string;
+                /** @description Only this record. */
                 record_id: string;
                 /**
                  * @description The channel the reply is for (`email`, `sms`, `whatsapp`, `chat`,
@@ -105656,13 +106403,16 @@ export interface operations {
     };
     list_provider: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The `next_cursor` of the previous page. */
+                cursor?: string;
+                /** @description The most rows to return. */
+                limit?: number;
+            };
             header?: never;
             path: {
                 /** @description The provider's key */
                 provider: string;
-                cursor: string | null;
-                limit: number | null;
             };
             cookie?: never;
         };
@@ -106361,9 +107111,7 @@ export interface operations {
     };
     poll_webchat_messages: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The chat session's token, from the session's first message. */
                 token: string;
                 /**
@@ -106372,8 +107120,10 @@ export interface operations {
                  *     (see the module doc); the widget is expected to pass its last-seen
                  *     `created_at` on every subsequent poll.
                  */
-                since: string | null;
+                since?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -106409,9 +107159,7 @@ export interface operations {
     };
     webchat_stream: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The chat session's token, from the session's first message. */
                 token: string;
                 /**
@@ -106420,8 +107168,10 @@ export interface operations {
                  *     (see the module doc); the widget is expected to pass its last-seen
                  *     `created_at` on every subsequent poll.
                  */
-                since: string | null;
+                since?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -106676,16 +107426,18 @@ export interface operations {
     };
     list_predictions: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
+                /** @description Only records of this entity. */
                 regarding_entity: string;
+                /** @description Only this record. */
                 regarding_id: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
+                page?: number;
                 /** @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`; defaults to 20. */
-                page_size: number | null;
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -109355,22 +110107,26 @@ export interface operations {
     };
     resource_capacity: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
+                /** @description From this time (inclusive). */
                 from: string;
+                /** @description Up to this time (exclusive). */
                 to: string;
                 /**
                  * @description Restrict to resources on this `team.id` — also the
                  *     authorization gate for a `Team`-tier caller; see this module's doc
                  *     comment.
                  */
-                team: string | null;
+                team?: string;
                 /** @description Restrict to resources holding this `resource_skill.skill` value. */
-                skill: string | null;
-                page: number;
-                page_size: number;
+                skill?: string;
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -111026,6 +111782,7 @@ export interface operations {
     get_sales_lines: {
         parameters: {
             query?: {
+                /** @description One-based: page 1 is the first page. */
                 page?: number;
                 /** @description Up to 500. */
                 page_size?: number;
@@ -112143,7 +112900,9 @@ export interface operations {
                 sku?: string;
                 /** @description The date the line is for; today when absent. */
                 on?: string;
+                /** @description One-based: page 1 is the first page. */
                 page?: number;
+                /** @description Rows per page. */
                 page_size?: number;
             };
             header?: never;
@@ -112779,14 +113538,14 @@ export interface operations {
     };
     scan_find: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The scanned value, exactly as read. */
                 value: string;
                 /** @description Search only this entity's scan-enabled fields. */
-                entity: string | null;
+                entity?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -112880,12 +113639,13 @@ export interface operations {
     };
     compare: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Comma-separated additional scenario ids to compare against `{id}`. */
+                with?: string;
+            };
             header?: never;
             path: {
                 id: string;
-                /** @description Comma-separated additional scenario ids to compare against `{id}`. */
-                with: string | null;
             };
             cookie?: never;
         };
@@ -113113,16 +113873,17 @@ export interface operations {
     };
     get_schema: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The entity's logical name */
-                logicalname: string;
+            query?: {
                 /**
                  * @description A BCP-47 tag, e.g. `"ar-AE"`. Omit to resolve straight to the
                  *     deployment default.
                  */
-                locale: string | null;
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                logicalname: string;
             };
             cookie?: never;
         };
@@ -113184,19 +113945,21 @@ export interface operations {
     };
     search: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The query. Capped — see [`MAX_QUERY_BYTES`]/[`MAX_QUERY_TERMS`]. */
                 q: string;
-                page: number;
-                page_size: number;
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
                 /**
                  * @description `human` (default) or `agent`. Selects tuning only, never the
                  *     enforcement path — see `router`.
                  */
-                audience: string | null;
+                audience?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -113263,17 +114026,18 @@ export interface operations {
     };
     knowledge_search: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /**
                  * @description The question or topic. Held to the same byte/term caps as `/search`:
                  *     GIN cost is roughly linear in term count, so a long paste must be
                  *     rejected before it reaches PostgreSQL.
                  */
                 q: string;
-                limit: number | null;
+                /** @description The most rows to return. */
+                limit?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -113318,13 +114082,14 @@ export interface operations {
     };
     related_knowledge: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The `content_page` id to find semantic neighbors for. */
                 page_id: string;
-                limit: number | null;
+                /** @description The most rows to return. */
+                limit?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -113360,14 +114125,18 @@ export interface operations {
     };
     run: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
+                /** @description Who the results are for. */
+                audience?: string;
+            };
             header?: never;
             path: {
                 /** @description Saved search id */
                 id: string;
-                page: number;
-                page_size: number;
-                audience: string | null;
             };
             cookie?: never;
         };
@@ -113413,11 +114182,12 @@ export interface operations {
     };
     suggest: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
+                /** @description The text typed so far. */
                 q: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -113888,15 +114658,15 @@ export interface operations {
     };
     lookup_status: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /**
                  * @description The `{public_id}.{secret}` bearer handed back once, at creation, by
                  *     `POST /api/v1/service-offering/{id}/create-work-request`.
                  */
                 token: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -115017,13 +115787,14 @@ export interface operations {
     };
     get_work_order_candidates: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Also answer technicians whose van lacks parts (default false). */
+                include_without_parts?: boolean;
+            };
             header?: never;
             path: {
                 /** @description The work order */
                 id: string;
-                /** @description Also answer technicians whose van lacks parts (default false). */
-                include_without_parts: boolean;
             };
             cookie?: never;
         };
@@ -115509,15 +116280,15 @@ export interface operations {
     };
     get_sidebar: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
                  * @description A BCP-47 tag, e.g. `"ar-AE"`. Omit to resolve straight to the
                  *     deployment default.
                  */
-                locale: string | null;
+                locale?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -115941,6 +116712,7 @@ export interface operations {
     get_status_confirm: {
         parameters: {
             query: {
+                /** @description The signed token from the link. */
                 token: string;
             };
             header?: never;
@@ -116036,6 +116808,7 @@ export interface operations {
     get_status_unsubscribe: {
         parameters: {
             query: {
+                /** @description The signed token from the link. */
                 token: string;
             };
             header?: never;
@@ -116090,9 +116863,7 @@ export interface operations {
     };
     download_local_object: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The object key the link was signed for. */
                 key: string;
                 /** @description When the link stops working, in seconds since 1970 (UTC). */
@@ -116100,6 +116871,8 @@ export interface operations {
                 /** @description HMAC-SHA256 of the method, key and expiry, in hex. */
                 signature: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -116126,9 +116899,7 @@ export interface operations {
     };
     upload_local_object: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The object key the link was signed for. */
                 key: string;
                 /** @description When the link stops working, in seconds since 1970 (UTC). */
@@ -116136,6 +116907,8 @@ export interface operations {
                 /** @description HMAC-SHA256 of the method, key and expiry, in hex. */
                 signature: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         /** @description The file's bytes */
@@ -116174,12 +116947,12 @@ export interface operations {
     };
     get_survey_form: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The signed token from the email. */
                 token: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -116221,12 +116994,12 @@ export interface operations {
     };
     get_survey_respond: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description The signed token from the email. */
                 token: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -116324,15 +117097,15 @@ export interface operations {
     };
     suggest_tags: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /**
                  * @description What the person has typed; matched from the start of the name,
                  *     ignoring case, Arabic diacritics and letter forms.
                  */
                 q: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -117038,11 +117811,12 @@ export interface operations {
     };
     list_available_views: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
+                /** @description Only this entity (its logical name). */
                 entity: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -118237,14 +119011,16 @@ export interface operations {
     };
     list_definitions: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                is_active: boolean | null;
+            query?: {
+                /** @description Only active (true) or inactive (false) ones. */
+                is_active?: boolean;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -118869,15 +119645,18 @@ export interface operations {
     };
     list_instances: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                status: string | null;
-                correlation_entity_id: string | null;
+            query?: {
+                /** @description Only this status. */
+                status?: string;
+                /** @description Only instances about this record. */
+                correlation_entity_id?: string;
                 /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                page_size: number | null;
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -119147,6 +119926,7 @@ export interface operations {
     workflow_instance_move_preview: {
         parameters: {
             query: {
+                /** @description The version to move the instance to. */
                 target_version_id: string;
             };
             header?: never;
@@ -119605,13 +120385,16 @@ export interface operations {
     };
     get_workforce_coverage_impact: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
+                /** @description Only this user. */
                 user_id: string;
+                /** @description From this time (inclusive). */
                 from: string;
+                /** @description Up to this time (exclusive). */
                 to: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -119656,13 +120439,14 @@ export interface operations {
     };
     get_workforce_hiring_plan: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Months ahead, from this month (default 6, at most 24). */
+                months?: number;
+            };
             header?: never;
             path: {
                 /** @description The planning group */
                 id: string;
-                /** @description Months ahead, from this month (default 6, at most 24). */
-                months: number | null;
             };
             cookie?: never;
         };
@@ -119813,12 +120597,14 @@ export interface operations {
     };
     get_workforce_my_schedule: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
+                /** @description From this time (inclusive). */
                 from: string;
+                /** @description Up to this time (exclusive). */
                 to: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -119973,6 +120759,8 @@ export interface operations {
     list_workforce_schedules: {
         parameters: {
             query?: {
+                /** @description Only this planning group's schedules. */
+                group_id?: string;
                 /**
                  * @description One-based (D-347): page 1 is the first page. Values below 1 are
                  *     clamped up to 1 rather than rejected, matching the legacy lists.
@@ -119985,10 +120773,7 @@ export interface operations {
                 page_size?: number;
             };
             header?: never;
-            path: {
-                /** @description Only this planning group's schedules. */
-                group_id: string | null;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -120862,18 +121647,20 @@ export interface operations {
     };
     get_status: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include each item's outcome. */
+                include_items?: boolean;
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Items per page, clamped to `1..=MAX_PAGE_SIZE`; defaults to 100. */
+                page_size?: number;
+            };
             header?: never;
             path: {
                 /** @description The entity's logical name */
                 entity: string;
                 /** @description The bulk operation */
                 id: string;
-                include_items: boolean | null;
-                /** @description One-based: page 1 is the first page. */
-                page: number | null;
-                /** @description Items per page, clamped to `1..=MAX_PAGE_SIZE`; defaults to 100. */
-                page_size: number | null;
             };
             cookie?: never;
         };
@@ -122094,15 +122881,16 @@ export interface operations {
     };
     change_type: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description True: change nothing and answer what the change would do. */
+                preview?: boolean;
+            };
             header?: never;
             path: {
                 /** @description The entity's logical name */
                 entity: string;
                 /** @description The record's id */
                 id: string;
-                /** @description True: change nothing and answer what the change would do. */
-                preview: boolean;
             };
             cookie?: never;
         };
@@ -122727,12 +123515,7 @@ export interface operations {
     };
     get_download_url: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity: string;
-                id: string;
-                field: string;
+            query?: {
                 /**
                  * @description Which object key to download — **required** for a multi-file field
                  *     (`options.multi`, JSONB array column), since the field itself no
@@ -122740,7 +123523,7 @@ export interface operations {
                  *     still has only one key to serve. Ignored entirely when `version` is
                  *     also present — `version` names an exact historical object on its own.
                  */
-                key: string | null;
+                key?: string;
                 /**
                  * @description M55 P2 (file versioning) — resolve to this version's object key
                  *     (`file_version`) instead of the field's current live value.
@@ -122748,12 +123531,18 @@ export interface operations {
                  *     `is_current` — the version list is the read path for history; this is
                  *     the read path for one specific entry in it.
                  */
-                version: number | null;
+                version?: number;
                 /**
                  * @description Z6-T6: the file's 320 px thumbnail instead of the file (an image
                  *     only, once the background job has made it; 404 before that).
                  */
-                thumbnail: boolean;
+                thumbnail?: boolean;
+            };
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+                field: string;
             };
             cookie?: never;
         };
@@ -123886,12 +124675,15 @@ export interface operations {
     };
     unlink_related: {
         parameters: {
-            query?: never;
+            query: {
+                /** @description The other side's record id to unlink. */
+                id: string;
+            };
             header?: never;
             path: {
                 /** @description The entity's logical name */
                 entity: string;
-                /** @description The other side's record id to unlink. */
+                /** @description The record */
                 id: string;
                 /** @description The relationship's name */
                 relationship: string;
@@ -125798,15 +126590,18 @@ export interface operations {
     };
     portal_oidc_callback: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The authorization code the provider sent back. */
+                code?: string;
+                /** @description The state value this sign-in started with. */
+                state?: string;
+            };
             header?: never;
             path: {
                 /** @description Web portal keyword */
                 keyword: string;
                 /** @description The OIDC provider key */
                 provider: string;
-                code: string | null;
-                state: string | null;
             };
             cookie?: never;
         };
@@ -126943,7 +127738,10 @@ export interface operations {
     };
     portal_download_record_file: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which file, for a multi-file field (one of the keys the record shows). */
+                key?: string;
+            };
             header?: never;
             path: {
                 /** @description Web portal keyword */
@@ -126954,8 +127752,6 @@ export interface operations {
                 id: string;
                 /** @description A file field the caller's role can read */
                 field: string;
-                /** @description Which file, for a multi-file field (one of the keys the record shows). */
-                key: string | null;
             };
             cookie?: never;
         };
