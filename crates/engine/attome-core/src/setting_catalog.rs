@@ -426,6 +426,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(null),
         ),
+        // A25-T2: the country a local phone number belongs to.
+        SettingDescriptor::new(
+            "core.default_country",
+            "The country (ISO 3166-1 alpha-2) a phone number written without its country code \
+         belongs to, such as SA: search matches `0501234567` with `+966501234567` (A25-T2).",
+            || json!({"type": "string", "pattern": "^[A-Z]{2}$"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!("SA"),
+        ),
         // F6-T14: when an order counts as stuck.
         SettingDescriptor::new(
             "fulfilment.stuck_hours",

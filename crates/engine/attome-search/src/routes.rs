@@ -43,7 +43,7 @@ use uuid::Uuid;
 use crate::access_cache::AccessMapCache;
 use crate::knowledge::{DEFAULT_KNOWLEDGE_LIMIT, KnowledgeCitation, MAX_KNOWLEDGE_LIMIT};
 use crate::legs::fuse::{build_phase_with_shape, interpret_counts};
-use crate::legs::stage1::{ExactKeyLeg, FuzzyLeg, LexicalLeg, PrefixLeg};
+use crate::legs::stage1::{ExactKeyLeg, FuzzyLeg, LexicalLeg, PhoneKeyLeg, PrefixLeg};
 use crate::legs::{LegPhase, SqlLeg};
 use crate::router::{Audience, Route};
 use crate::telemetry::GapTopic;
@@ -80,6 +80,25 @@ fn statement_timeout_ms(route: &Route) -> i64 {
 /// strategies" concrete — a leg set assembled anywhere else would be a second
 /// routing decision.
 fn legs_for(
+    route: &Route,
+    normalized: &str,
+    stemmed: &str,
+    synonyms: &[String],
+    phone: Option<&str>,
+) -> Vec<Box<dyn SqlLeg>> {
+    let mut legs = legs_for_route(route, normalized, stemmed, synonyms);
+    // A25-T2: a phone typed locally also finds its international key.
+    if let Some(phone) = phone.filter(|p| *p != normalized)
+        && legs.iter().any(|l| l.id() == "R1.exact")
+    {
+        legs.push(Box::new(PhoneKeyLeg {
+            phone_key: phone.to_owned(),
+        }));
+    }
+    legs
+}
+
+fn legs_for_route(
     route: &Route,
     normalized: &str,
     stemmed: &str,
@@ -476,7 +495,13 @@ pub async fn execute_search(
             Vec::new()
         }
     };
-    let owned_legs = legs_for(&route, &normalized, &stemmed, &synonyms);
+    let default_country = attome_core::setting_registry()
+        .get("core.default_country")
+        .map(|d| state.settings.load().resolve(d, None, None).0)
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_default();
+    let phone = crate::corpus::phone_query_key(text_for_pipeline, &default_country);
+    let owned_legs = legs_for(&route, &normalized, &stemmed, &synonyms, phone.as_deref());
     let leg_refs: Vec<&dyn SqlLeg> = owned_legs.iter().map(|l| l.as_ref()).collect();
 
     // Which of the two equivalent visibility shapes to use (TODO-053). A

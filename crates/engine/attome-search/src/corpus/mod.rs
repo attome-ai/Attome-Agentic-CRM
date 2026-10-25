@@ -37,8 +37,8 @@
 //! uniqueness reaches the metadata, this is the single place to widen.
 
 pub mod knowledge;
-pub mod record_chunks;
 pub mod memory;
+pub mod record_chunks;
 
 /// Polymorphic child entities (basic-units plan B-R1, U1): a note,
 /// communication, tag or follow is readable only by someone who can also read
@@ -108,6 +108,116 @@ pub fn index_value(attr: &AttrInfo, raw: String) -> String {
     }
 }
 
+/// A25-T2: how an attribute takes part in search.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchMode {
+    /// Matched exactly, in its normalised form (a phone, an email, an id),
+    /// as well as being text.
+    Key,
+    /// Full text.
+    Text,
+    /// Not searched.
+    Off,
+}
+
+impl SearchMode {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "key" => Some(Self::Key),
+            "text" => Some(Self::Text),
+            "off" => Some(Self::Off),
+            _ => None,
+        }
+    }
+}
+
+/// What kind of key an attribute's name says it holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum KeyKind {
+    Phone,
+    Email,
+    Id,
+}
+
+fn key_kind(name: &str) -> Option<KeyKind> {
+    let n = name.to_ascii_lowercase();
+    if n.contains("phone") || n.contains("mobile") {
+        Some(KeyKind::Phone)
+    } else if n.contains("email") {
+        Some(KeyKind::Email)
+    } else if n.contains("national_id")
+        || n.contains("id_number")
+        || n.contains("iqama")
+        || n.contains("commercial_registration")
+        || n == "cr_number"
+        || n == "code"
+        || n.ends_with("_code")
+        || n.contains("reference")
+    {
+        Some(KeyKind::Id)
+    } else {
+        None
+    }
+}
+
+/// A25-T2: an attribute's mode when no setting names it: a phone, email,
+/// identity number, code or reference is a key; every other indexable
+/// attribute is text. Pure.
+pub fn default_mode(attr: &AttrInfo) -> SearchMode {
+    if attr.field_type_int == FIELD_TYPE_TEXT && key_kind(&attr.logicalname).is_some() {
+        SearchMode::Key
+    } else {
+        SearchMode::Text
+    }
+}
+
+/// A25-T2: the exact keys a key attribute's value gives: a phone in its
+/// international form (`default_country` places a local number), an email
+/// lowercased, anything else as an identifier. Pure.
+pub fn exact_keys_for(attr_name: &str, value: &str, default_country: &str) -> Vec<String> {
+    let key = match key_kind(attr_name) {
+        Some(KeyKind::Phone) => attome_core::match_normalize::phone_key(value, default_country),
+        Some(KeyKind::Email) => attome_core::match_normalize::email_key(value),
+        _ => Some(attome_core::match_normalize::id_key(value)),
+    };
+    key.filter(|k| !k.is_empty()).into_iter().collect()
+}
+
+/// A25-T2: a query's phone form, when it is a phone number written with
+/// digits only (spaces, dashes, brackets and a leading `+` allowed), to look
+/// up beside the query itself. Pure.
+pub fn phone_query_key(query: &str, default_country: &str) -> Option<String> {
+    let q = crate::normalize_ar(query);
+    let q = q.trim();
+    let digits = q.chars().filter(char::is_ascii_digit).count();
+    let plain = q
+        .chars()
+        .all(|c| c.is_ascii_digit() || matches!(c, ' ' | '-' | '(' | ')' | '+'));
+    if !plain || !(7..=16).contains(&digits) {
+        return None;
+    }
+    attome_core::match_normalize::phone_key(q, default_country)
+}
+
+/// The search settings an entity's attributes carry (A25-T1), by attribute.
+async fn attribute_modes(
+    db: &PgPool,
+    entity: &str,
+) -> Result<std::collections::HashMap<String, SearchMode>, AppError> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT attribute_logicalname, mode FROM search_attribute_setting \
+          WHERE entity_logicalname = $1",
+    )
+    .bind(entity)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(attr, mode)| SearchMode::parse(&mode).map(|m| (attr, m)))
+        .collect())
+}
+
 /// Which attribute supplies the title, if any.
 ///
 /// The entity's declared `primary_name_attribute` first — it is the platform's
@@ -156,6 +266,18 @@ pub async fn project_record(
     entity_logicalname: &str,
     record_id: Uuid,
 ) -> Result<Option<(ProjectedRow, Option<Uuid>, Option<Uuid>)>, AppError> {
+    project_record_in(db, registry, entity_logicalname, record_id, "").await
+}
+
+/// [`project_record`] with the deployment's default country, which places a
+/// local phone number for its exact key (A25-T2).
+pub async fn project_record_in(
+    db: &PgPool,
+    registry: &EntityMetaRegistry,
+    entity_logicalname: &str,
+    record_id: Uuid,
+    default_country: &str,
+) -> Result<Option<(ProjectedRow, Option<Uuid>, Option<Uuid>)>, AppError> {
     // U1: not indexable (see `POLYMORPHIC_CHILD_ENTITIES`). `None` removes
     // whatever an earlier drain indexed for this record.
     if POLYMORPHIC_CHILD_ENTITIES.contains(&entity_logicalname) {
@@ -168,7 +290,19 @@ pub async fn project_record(
         return Ok(None);
     };
 
-    let indexable = indexable_attributes(&meta.attrs);
+    // A25-T2: each attribute's mode, from its setting or the default; an
+    // `off` attribute is not read at all.
+    let settings = attribute_modes(db, entity_logicalname).await?;
+    let mode_of = |a: &AttrInfo| {
+        settings
+            .get(&a.logicalname)
+            .copied()
+            .unwrap_or_else(|| default_mode(a))
+    };
+    let indexable: Vec<&AttrInfo> = indexable_attributes(&meta.attrs)
+        .into_iter()
+        .filter(|a| mode_of(a) != SearchMode::Off)
+        .collect();
     let title_attr = title_attribute(meta.primary_name_attribute.as_deref(), &indexable);
 
     // Identifiers are quoted through the shared helper and come from validated
@@ -237,8 +371,16 @@ pub async fn project_record(
         body
     };
 
+    let mut keys = vec![record_id.to_string()];
+    for attr in indexable.iter().filter(|a| mode_of(a) == SearchMode::Key) {
+        if let Some(value) = value_of(attr) {
+            keys.extend(exact_keys_for(&attr.logicalname, &value, default_country));
+        }
+    }
+    keys.dedup();
+
     Ok(Some((
-        project(&title, None, &body, vec![record_id.to_string()]),
+        project(&title, None, &body, keys),
         organization_ref,
         owner_ref,
     )))
@@ -279,6 +421,37 @@ mod tests {
         let indexable = indexable_attributes(&attrs);
         assert_eq!(indexable.len(), 1);
         assert_eq!(indexable[0].logicalname, "name");
+    }
+
+    #[test]
+    fn phone_attribute_becomes_exact_key() {
+        let phone = attr("mobile_phone", FIELD_TYPE_TEXT, false);
+        assert_eq!(default_mode(&phone), SearchMode::Key);
+        assert_eq!(
+            exact_keys_for("mobile_phone", "050 123 4567", "SA"),
+            vec!["+966501234567".to_owned()]
+        );
+        assert_eq!(
+            exact_keys_for("email", " Sara@Example.COM ", "SA"),
+            vec!["sara@example.com".to_owned()]
+        );
+        assert_eq!(
+            phone_query_key("0501234567", "SA").as_deref(),
+            Some("+966501234567")
+        );
+        assert_eq!(phone_query_key("invoice 0501234567", "SA"), None);
+        assert_eq!(
+            default_mode(&attr("notes", FIELD_TYPE_TEXT, false)),
+            SearchMode::Text
+        );
+    }
+
+    #[test]
+    fn secret_attribute_never_projected_even_when_selected() {
+        // A sensitive attribute is dropped before modes apply, so no setting
+        // can make it a key or text.
+        let attrs = vec![attr("national_id", FIELD_TYPE_TEXT, true)];
+        assert!(indexable_attributes(&attrs).is_empty());
     }
 
     /// U9: a rich-text field is indexed by its text content, never its

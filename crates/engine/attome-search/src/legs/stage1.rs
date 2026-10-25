@@ -56,6 +56,36 @@ impl SqlLeg for ExactKeyLeg {
     }
 }
 
+/// R1, phone form (A25-T2): a query that is a phone number written locally
+/// (`0501234567`) also looks up its international key (`+966501234567`), the
+/// form a record's phone attribute is indexed under.
+pub struct PhoneKeyLeg {
+    pub phone_key: String,
+}
+
+impl std::fmt::Debug for PhoneKeyLeg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PhoneKeyLeg").finish_non_exhaustive()
+    }
+}
+
+impl SqlLeg for PhoneKeyLeg {
+    fn id(&self) -> &'static str {
+        "R1.phone"
+    }
+    fn phase(&self) -> LegPhase {
+        LegPhase::Immediate
+    }
+    fn push_candidates(&self, qb: &mut QueryBuilder<'_, Postgres>) {
+        qb.push(
+            "SELECT t.record_id, t.entity_logicalname, 1.0::real AS score \
+             FROM search_index t WHERE t.exact_keys @> ARRAY[",
+        );
+        qb.push_bind(self.phone_key.clone());
+        qb.push("]::text[]");
+    }
+}
+
 /// R2 — prefix / typeahead.
 ///
 /// `LIKE norm || '%'` against the `text_pattern_ops` btree. The query is bound

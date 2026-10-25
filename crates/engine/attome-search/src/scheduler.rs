@@ -97,12 +97,21 @@ pub async fn drain_tick(state: &EngineState) -> Result<Option<DrainStats>, AppEr
     // that disagrees with itself about what a field is.
     let registry: Arc<attome_core::EntityMetaRegistry> =
         arc_swap::Guard::into_inner(state.entities.load());
+    // A25-T2: the country a local phone number belongs to, read once a tick.
+    let default_country: Arc<str> = attome_core::setting_registry()
+        .get("core.default_country")
+        .map(|d| state.settings.load().resolve(d, None, None).0)
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_default()
+        .into();
     let project = |entity: &str, id: uuid::Uuid| {
         let db = db.clone();
         let registry = Arc::clone(&registry);
         let entity = entity.to_owned();
-        Box::pin(async move { crate::corpus::project_record(&db, &registry, &entity, id).await })
-            as std::pin::Pin<Box<dyn std::future::Future<Output = _> + Send>>
+        let country = Arc::clone(&default_country);
+        Box::pin(async move {
+            crate::corpus::project_record_in(&db, &registry, &entity, id, &country).await
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = _> + Send>>
     };
 
     let stats = drain_once(db, &project).await?;

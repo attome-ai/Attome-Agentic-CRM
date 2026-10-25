@@ -205,6 +205,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Search by phone, email and identifier (A25-T2): an attribute named as a phone, mobile, email,
+  national id, identity number, code or reference is indexed as an exact key too (a phone in its
+  international form, an email lowercased), and a query that is a phone number written locally
+  also looks up its international form, so `0501234567` finds `+966501234567`. The new setting
+  `core.default_country` (`SA` by default) places local numbers; an attribute's search setting
+  (`key`, `text`, `off`) overrides the default.
 - Carrier booking (F6-T9): `POST /api/v1/fulfilment/shipments/{id}/book` books a packed shipment
   with Aramex (an integration system whose config names `"carrier": "aramex"`, its account fields
   and the ship-from party; the password is its credential) and stores the waybill as the tracking
