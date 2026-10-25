@@ -110,6 +110,7 @@ pub struct AdoptResponse {
 pub struct LedgerQuery {
     /// `platform`, `product`, `project` or `customer`.
     pub layer: Option<String>,
+    /// Only this scope (`platform`, or the product, project or customer name).
     pub scope: Option<String>,
     /// `planned`, `queued`, `claimed`, `applying`, `succeeded`, `failed` or
     /// `adopted`.

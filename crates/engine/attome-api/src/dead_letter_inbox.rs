@@ -163,6 +163,7 @@ pub struct InboxQuery {
     pub group: Option<String>,
     /// One-based: page 1 is the first page.
     pub page: Option<i64>,
+    /// Rows per page.
     pub page_size: Option<i64>,
 }
 

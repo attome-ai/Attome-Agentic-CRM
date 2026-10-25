@@ -133,7 +133,9 @@ async fn walk(
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct CompareQuery {
+    /// The older graph version.
     pub from: i64,
+    /// The newer graph version.
     pub to: i64,
 }
 

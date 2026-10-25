@@ -177,6 +177,7 @@ pub struct ChangesetFilter {
     pub status: Option<String>,
     /// `platform`, `product`, `project` or `customer`.
     pub layer: Option<String>,
+    /// Only this scope (`platform`, or the product, project or customer name).
     pub scope: Option<String>,
     /// The author's user id.
     pub author: Option<Uuid>,

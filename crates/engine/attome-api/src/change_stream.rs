@@ -132,6 +132,7 @@ pub struct SubscriptionPatch {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct RowVersionQuery {
+    /// The subscription's current `row_version`.
     pub row_version: i64,
 }
 
