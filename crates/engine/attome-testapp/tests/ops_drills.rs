@@ -435,3 +435,62 @@ fn self_approval_is_refused() {
         assert_eq!(state, "pending");
     });
 }
+
+#[test]
+fn non_ops_user_gets_403() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        let user = seed_user(app.db(), "ops-cluster-none").await;
+        for path in ["/api/v1/ops/cluster", "/api/v1/ops/failovers"] {
+            let (status, _) = app.request_as(&user.cookie, Method::GET, path, None).await;
+            assert_eq!(status, StatusCode::FORBIDDEN, "{path}");
+        }
+        let (status, _) = app
+            .request_as(
+                &user.cookie,
+                Method::POST,
+                "/api/v1/ops/cluster/switchover",
+                Some(json!({"reason": "planned kernel patching"})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        // The administrator sees a configured cluster that does not answer
+        // as `ha` with no leader, never an error.
+        let (status, cluster) = app.request(Method::GET, "/api/v1/ops/cluster", None).await;
+        assert_eq!(status, StatusCode::OK, "{cluster}");
+        assert_eq!(cluster["mode"], json!("ha"));
+    });
+}
+
+#[test]
+fn failovers_are_paged_one_based() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        for n in 0..2 {
+            sqlx::query(
+                "INSERT INTO ops_failover_event (id, kind, old_leader, new_leader, timeline, started_at)                  VALUES ($1, 'failover', 'db1', $2, $3, now())",
+            )
+            .bind(Uuid::now_v7())
+            .bind(format!("db-{}", Uuid::now_v7()))
+            .bind(i64::from(n))
+            .execute(app.db())
+            .await
+            .unwrap();
+        }
+        let (status, page) = app
+            .request(
+                Method::GET,
+                "/api/v1/ops/failovers?page=1&page_size=1",
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        assert_eq!(page["page"], json!(1));
+        assert_eq!(page["items"].as_array().unwrap().len(), 1);
+        assert!(page["total"].as_i64().unwrap() >= 2);
+    });
+}
