@@ -8,9 +8,11 @@
 //! (`attome_config::OpsSection`); privileges and the Operations and Auditor
 //! roles come from the `attome-ops` platform bundle.
 
+/// AB3-T7: declared disasters under two-person control.
+/// AB4-T10: the auditor pack of signed drill evidence.
+pub mod auditor_pack;
 /// AB2-T6: failovers and switchovers recorded from Patroni.
 pub mod cluster;
-/// AB3-T7: declared disasters under two-person control.
 pub mod disasters;
 /// AB4-T7: when each kind of drill is due.
 pub mod drill_schedules;
@@ -42,6 +44,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(status::openapi_fragment());
     doc.merge(drills::openapi_fragment());
     doc.merge(drill_schedules::openapi_fragment());
+    doc.merge(auditor_pack::openapi_fragment());
     doc.merge(switchover::openapi_fragment());
     doc
 }

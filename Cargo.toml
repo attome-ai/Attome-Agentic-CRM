@@ -210,6 +210,9 @@ qrcode        = { version = "0.14", default-features = false, features = ["svg"]
 quick-xml     = "0.41"
 rust_decimal  = { version = "1.36", features = ["serde-with-str"] }
 rust_xlsxwriter = "0.100"
+# AB4-T10: the auditor pack, stored entries only (rust_xlsxwriter already
+# brings this version in).
+zip = { version = "9", default-features = false }
 rustls        = { version = "0.23", default-features = false, features = ["std", "ring"] }
 scraper       = "0.27"
 serde         = { version = "1", features = ["derive"] }
