@@ -44,6 +44,9 @@ Usage:
   attome secrets generate|rotate <VAR> --env-file <path> | rewrap <domain>
                                 Fill the secrets an install generates, rotate a
                                 key ring (old key kept readable), start a rewrap
+  attome drill keygen --out <dir> | verify <file> [--public-key <file>] | readiness
+                                Recovery drill keys, signed evidence checks and
+                                readiness (exit 2 bad signature, 3 failed, 4 not ready)
   attome runbook [<Alert>]      Print an alert's runbook filled with this
                                 deployment's addresses (no name: list the alerts)
   attome status [--url <url>]...
@@ -162,6 +165,10 @@ fn main() -> ExitCode {
         ["secrets", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::secrets::run(&rest)
+        }
+        ["drill", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::drill::run(&rest)
         }
         ["runbook", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

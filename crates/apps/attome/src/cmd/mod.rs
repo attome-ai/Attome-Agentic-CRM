@@ -4,6 +4,8 @@ pub mod ai_pack;
 pub mod audit_chainer;
 pub mod bundle_offline;
 pub mod changeset_replay;
+/// AB4-T3: drill keys, evidence verification and readiness.
+pub mod drill;
 pub mod healthcheck;
 pub mod init;
 pub mod migrate;

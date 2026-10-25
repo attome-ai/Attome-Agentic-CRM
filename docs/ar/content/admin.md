@@ -34,6 +34,10 @@
 - **المهام**: قائمة المهام الفاشلة (`/api/v1/admin/jobs/dead-letter`) تحفظ المهام التي فشلت نهائيًا؛ أعِد
   تشغيلها أو احذفها بعد إصلاح السبب.
 - **النسخ الاحتياطي**: `attome backup now` و`attome backup drill` و`attome restore <archive|latest>`.
+- **التمارين**: `attome drill keygen --out <dir>` يكتب زوج مفاتيح توقيع التمارين (ضع النصف العام في
+  `ops.drill_public_keys`)، و`attome drill verify <report.json>` يتحقق من توقيع تقرير التمرين، و
+  `attome drill readiness` يشغّل فحوص الجاهزية مع فحوص التمرين نفسه (رمز الخروج 2: توقيع غير صالح،
+  3: فشل التمرين، 4: غير جاهز).
 
 ## البريد الإلكتروني
 

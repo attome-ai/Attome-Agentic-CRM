@@ -43,6 +43,10 @@ every key.
   replay or discard them once the cause is fixed.
 - **Backups**: `attome backup now`, `attome backup drill`, and `attome restore <archive|latest>`
   (see [backup](../backup.md)).
+- **Drills**: `attome drill keygen --out <dir>` writes the drill signing key pair (put the public half in
+  `ops.drill_public_keys`), `attome drill verify <report.json>` checks a drill report's signature, and
+  `attome drill readiness` runs the preflight checks plus the drill's own (exit 2: bad signature,
+  3: the drill failed, 4: not ready).
 
 ## Email
 

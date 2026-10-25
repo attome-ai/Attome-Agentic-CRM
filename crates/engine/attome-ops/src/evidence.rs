@@ -16,7 +16,8 @@ use std::path::Path;
 
 use base64::Engine;
 use chrono::{DateTime, Utc};
-use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, Verifier};
+pub use ed25519_dalek::{SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
@@ -180,6 +181,48 @@ pub fn write_signed(
     bytes.push(b'\n');
     std::fs::write(path, &bytes).map_err(|e| OpsError::Internal(e.to_string()))?;
     Ok(hex::encode(Sha256::digest(&bytes)))
+}
+
+/// AB4-T3: a signing key file's contents: the 32-byte seed in base64, one
+/// line. Pure.
+pub fn encode_signing_key(key: &SigningKey) -> String {
+    format!(
+        "{}
+",
+        base64::engine::general_purpose::STANDARD.encode(key.to_bytes())
+    )
+}
+
+/// The public half of `key` in the base64 form `config.ops.drill_public_keys`
+/// and `--public-key` files take. Pure.
+pub fn public_key_base64(key: &SigningKey) -> String {
+    base64::engine::general_purpose::STANDARD.encode(key.verifying_key().as_bytes())
+}
+
+/// A signing key from a key file's contents ([`encode_signing_key`]). Pure.
+pub fn decode_signing_key(text: &str) -> Result<SigningKey, OpsError> {
+    let seed: [u8; 32] = base64::engine::general_purpose::STANDARD
+        .decode(text.trim())
+        .ok()
+        .and_then(|b| b.try_into().ok())
+        .ok_or_else(|| OpsError::Validation("a drill signing key is 32 bytes of base64".into()))?;
+    Ok(SigningKey::from_bytes(&seed))
+}
+
+/// Reads the signing key file at `path`.
+pub fn read_signing_key(path: &Path) -> Result<SigningKey, OpsError> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| OpsError::Validation(format!("{}: {e}", path.display())))?;
+    decode_signing_key(&text)
+}
+
+/// Reads a signed evidence file ([`write_signed`]).
+pub fn read_signed(path: &Path) -> Result<SignedEvidence, OpsError> {
+    let bytes = std::fs::read(path)
+        .map_err(|e| OpsError::Validation(format!("{}: {e}", path.display())))?;
+    serde_json::from_slice(&bytes).map_err(|e| {
+        OpsError::Validation(format!("{} is not attome-evidence/v1: {e}", path.display()))
+    })
 }
 
 #[cfg(test)]

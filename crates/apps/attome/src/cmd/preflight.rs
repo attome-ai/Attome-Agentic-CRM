@@ -60,6 +60,9 @@ pub fn advice(check: &str) -> &'static str {
         (_, "config.file") => {
             "Write the configuration with `attome init`, or point CONFIG_FILE at it."
         }
+        (_, "config.load") => {
+            "The configuration file did not load: fix the error named above, or write a fresh one with `attome init`."
+        }
         (_, "config.validate") => {
             "Fix the setting named above in the configuration file; `attome init --force` writes a fresh one."
         }
@@ -87,10 +90,12 @@ pub fn advice(check: &str) -> &'static str {
     }
 }
 
-struct CheckResult {
-    name: String,
-    ok: bool,
-    detail: String,
+/// One preflight check's outcome.
+#[derive(Debug, Clone)]
+pub struct CheckResult {
+    pub name: String,
+    pub ok: bool,
+    pub detail: String,
 }
 
 fn pass(name: impl Into<String>, detail: impl Into<String>) -> CheckResult {
@@ -111,6 +116,20 @@ fn fail(name: impl Into<String>, detail: impl Into<String>) -> CheckResult {
 
 #[tokio::main]
 pub async fn run() -> ExitCode {
+    let results = collect(AppConfig::config_file_path()).await;
+    print_report(&results);
+    if results.iter().all(|r| r.ok) {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
+}
+
+/// Every preflight check against the configuration at `config_path`, in
+/// order. A check that makes the rest meaningless (no file, a config that
+/// does not load or validate) ends the list there. `attome drill readiness`
+/// (AB4-T3) runs these too.
+pub async fn collect(config_path: String) -> Vec<CheckResult> {
     let mut results: Vec<CheckResult> = Vec::new();
 
     // The config file itself, before anything tries to parse it. Docker
@@ -121,7 +140,6 @@ pub async fn run() -> ExitCode {
     // operator's local filesystem (and that guard was CI; it is gone). A deployment whose `CONFIG_FILE` is a
     // directory is the failure mode this binary exists to catch first
     // (F-017).
-    let config_path = AppConfig::config_file_path();
     match std::fs::metadata(&config_path) {
         // `metadata` follows symlinks, so a Kubernetes/Docker secret mount
         // (a symlink farm pointing at `..data/`) passes, as it should.
@@ -138,21 +156,18 @@ pub async fn run() -> ExitCode {
                      file (from config.production.example.json) before starting"
                 ),
             ));
-            print_report(&results);
-            return ExitCode::FAILURE;
+            return results;
         }
         Ok(_) => {
             results.push(fail(
                 "config.file",
                 format!("{config_path} is not a regular file"),
             ));
-            print_report(&results);
-            return ExitCode::FAILURE;
+            return results;
         }
         Err(e) => {
             results.push(fail("config.file", format!("{config_path}: {e}")));
-            print_report(&results);
-            return ExitCode::FAILURE;
+            return results;
         }
     }
 
@@ -164,11 +179,11 @@ pub async fn run() -> ExitCode {
         check_secret_files(&mut results, &text);
     }
 
-    let config = match AppConfig::from_file() {
+    let config = match AppConfig::from_path(config_path.clone()) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("preflight: FAILED to load config: {e}");
-            return ExitCode::FAILURE;
+            results.push(fail("config.load", e.to_string()));
+            return results;
         }
     };
 
@@ -179,8 +194,7 @@ pub async fn run() -> ExitCode {
     // a confusing "unreachable" instead of the real problem).
     if let Err(e) = config.validate() {
         results.push(fail("config.validate", e.to_string()));
-        print_report(&results);
-        return ExitCode::FAILURE;
+        return results;
     }
     results.push(pass(
         "config.validate",
@@ -193,8 +207,7 @@ pub async fn run() -> ExitCode {
     // because an N-1 binary must still boot on an N config during a rollback.
     if let Err(e) = attome::boot::report_ignored_config_keys(&config, true) {
         results.push(fail("config.unknown_keys", e));
-        print_report(&results);
-        return ExitCode::FAILURE;
+        return results;
     }
     results.push(pass("config.unknown_keys", "no unknown configuration keys"));
 
@@ -423,12 +436,7 @@ pub async fn run() -> ExitCode {
         }
     }
 
-    print_report(&results);
-    if results.iter().all(|r| r.ok) {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::FAILURE
-    }
+    results
 }
 
 /// Renders `attome_audit::anchor::probe_append_only`'s verdict as a check row.
@@ -728,6 +736,7 @@ mod tests {
     fn every_known_check_has_specific_advice() {
         for check in [
             "config.file",
+            "config.load",
             "config.validate",
             "config.unknown_keys",
             "postgres",
