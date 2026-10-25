@@ -25,5 +25,6 @@ impl EngineModel for OpsModel {
             .merge(crate::upgrades::routes())
             .merge(crate::disasters::routes())
             .merge(crate::status::routes())
+            .merge(crate::drills::routes())
     }
 }

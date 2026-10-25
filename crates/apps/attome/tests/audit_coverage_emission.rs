@@ -321,6 +321,9 @@ const UNDRIVABLE: &[(&str, &str)] = &[
     ),
 ];
 
+/// AB4-T6: the seed of the drill key the fixture trusts.
+const DRILL_KEY_SEED: [u8; 32] = [7; 32];
+
 fn test_config() -> AppConfig {
     let json = format!(
         r#"{{
@@ -401,6 +404,10 @@ fn test_config() -> AppConfig {
     // M14-T1 — an inbound hook's secret is sealed under this ring; creating
     // one refuses without it.
     config.integration.credential_encryption_key = KeyRing::single("34".repeat(32));
+    // AB4-T6 — drill evidence is accepted only under a configured key.
+    config.ops.drill_public_keys = vec![attome_ops::evidence::public_key_base64(
+        &attome_ops::evidence::SigningKey::from_bytes(&DRILL_KEY_SEED),
+    )];
     // C4 — the chat confirm driver executes an AI-surface action, which
     // `gate::admissible` refuses while the AI switch is off (it is fixed at
     // process start, A-18), so this process starts with it on.
@@ -3967,6 +3974,37 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                     None,
                 ),
                 1,
+            )
+        }
+        // AB4-T6: evidence signed by the key the fixture config trusts.
+        "POST /api/v1/ops/drills/evidence" => {
+            let key = attome_ops::evidence::SigningKey::from_bytes(&DRILL_KEY_SEED);
+            let at = chrono::Utc::now();
+            let mut report = attome_ops::evidence::Evidence {
+                schema: attome_ops::evidence::SCHEMA.into(),
+                kind: attome_ops::evidence::EvidenceKind::Restore,
+                drill_id: Uuid::now_v7(),
+                started_at: at,
+                finished_at: at,
+                platform_version: "2.0.0".into(),
+                image_digest: None,
+                deployment_id: None,
+                checks: Vec::new(),
+                rpo_seconds: None,
+                rto_seconds: Some(30.0),
+                data_size_bytes: None,
+                restore_ok: true,
+                provenance_ok: true,
+                overall_ok: false,
+                extra: serde_json::Map::new(),
+            };
+            report.compute_overall();
+            let signed = attome_ops::evidence::sign(&report, &key).expect("sign drill evidence");
+            request(
+                "POST",
+                "/api/v1/ops/drills/evidence",
+                t,
+                Some(serde_json::to_value(&signed).expect("signed evidence json")),
             )
         }
         // AB8-T6: the admin token holds a fresh step-up.

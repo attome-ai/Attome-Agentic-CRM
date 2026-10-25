@@ -12,6 +12,8 @@
 pub mod cluster;
 /// AB3-T7: declared disasters under two-person control.
 pub mod disasters;
+/// AB4-T6: drill evidence stored in the deployment.
+pub mod drills;
 pub mod error;
 /// AB4-T2: the signed `attome-evidence/v1` record every drill writes.
 pub mod evidence;
@@ -34,5 +36,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = upgrades::openapi_fragment();
     doc.merge(disasters::openapi_fragment());
     doc.merge(status::openapi_fragment());
+    doc.merge(drills::openapi_fragment());
     doc
 }
