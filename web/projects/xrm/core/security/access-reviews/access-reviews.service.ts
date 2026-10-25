@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '@attome/base';
+import type { ApiComponents } from '@attome/base';
 
 /** One access review campaign (`GET /api/v1/admin/security/access-reviews`). */
 export interface AccessReviewCampaign {
@@ -15,19 +16,8 @@ export interface AccessReviewCampaign {
   created_at: string;
 }
 
-/** One access to keep or revoke. */
-export interface AccessReviewItem {
-  id: string;
-  subject_user_id: string;
-  grant_id: string;
-  reviewer_user_id?: string | null;
-  decision?: string | null;
-  decided_by?: string | null;
-  decided_at?: string | null;
-  revoked_at?: string | null;
-  /** Q11-T1: why the reviewer kept or revoked it. */
-  decision_reason?: string | null;
-}
+/** One access to keep or revoke (the generated `AccessReviewItem` schema). */
+export type AccessReviewItem = ApiComponents['schemas']['AccessReviewItem'];
 
 export type AccessReviewDecision = 'keep' | 'revoke';
 

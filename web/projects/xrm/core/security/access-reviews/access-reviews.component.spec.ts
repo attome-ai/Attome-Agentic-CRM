@@ -18,8 +18,8 @@ const CAMPAIGN: AccessReviewCampaign = {
 };
 
 const ITEMS: AccessReviewItem[] = [
-  { id: 'i1', subject_user_id: 'u1', grant_id: 'g1', reviewer_user_id: 'me' },
-  { id: 'i2', subject_user_id: 'u2', grant_id: 'g2', reviewer_user_id: 'someone-else' },
+  { id: 'i1', approval_request_id: 'a1', subject_user_id: 'u1', grant_id: 'g1', reviewer_user_id: 'me' },
+  { id: 'i2', approval_request_id: 'a2', subject_user_id: 'u2', grant_id: 'g2', reviewer_user_id: 'someone-else' },
 ];
 
 describe('AccessReviewsComponent', () => {

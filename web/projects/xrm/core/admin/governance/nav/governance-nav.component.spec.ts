@@ -5,7 +5,7 @@ import { LangService } from '@attome/base';
 import { GovernanceNavComponent } from './governance-nav.component';
 
 describe('GovernanceNavComponent', () => {
-  it('links the four governance screens under /xrm/admin', async () => {
+  it('links the six governance screens under /xrm/admin', async () => {
     await TestBed.configureTestingModule({
       imports: [GovernanceNavComponent],
       providers: [
@@ -22,6 +22,8 @@ describe('GovernanceNavComponent', () => {
       '/xrm/admin/data/catalog',
       '/xrm/admin/changes',
       '/xrm/admin/state-models',
+      '/xrm/admin/lineage',
+      '/xrm/admin/master-data',
     ]);
   });
 });
