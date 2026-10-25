@@ -109,6 +109,9 @@ struct StoredValue {
     updated_at: DateTime<Utc>,
 }
 
+/// List environment variables
+///
+/// List environment variables. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/env-variables",
@@ -166,6 +169,9 @@ async fn list_variables(
     }))
 }
 
+/// Set an environment variable
+///
+/// Set an environment variable. Administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/env-variables/{name}",
@@ -281,6 +287,9 @@ async fn set_variable(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Clear an environment variable
+///
+/// Clear an environment variable. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/env-variables/{name}",
@@ -337,6 +346,9 @@ async fn clear_variable(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// An environment variable's history
+///
+/// An environment variable's history. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/env-variables/{name}/history",

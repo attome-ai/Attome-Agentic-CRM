@@ -197,6 +197,9 @@ fn entity_meta_from_row(r: EntityRow) -> EntityMeta {
 
 // ── Entity handlers ───────────────────────────────────────────────────────────
 
+/// List entities
+///
+/// List entities. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/entities",
@@ -253,6 +256,9 @@ pub(super) async fn list_entities(
 const RESERVED_ENTITY_NAMES: &[&str] =
     &["composite", "query", "search", "graph", "schema", "openapi"];
 
+/// Create an entity
+///
+/// Create an entity. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/entities",
@@ -431,6 +437,9 @@ pub(super) async fn create_entity(
     ))
 }
 
+/// One entity
+///
+/// One entity. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/entities/{entity_id}",
@@ -506,6 +515,9 @@ pub(super) async fn get_entity(
     }))
 }
 
+/// Update an entity
+///
+/// Update an entity. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/entities/{entity_id}",
@@ -876,6 +888,9 @@ struct EntityDeletePending {
     approval_request_id: Uuid,
 }
 
+/// Delete an entity
+///
+/// Delete an entity. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/entities/{entity_id}",

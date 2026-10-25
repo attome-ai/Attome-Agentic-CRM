@@ -77,6 +77,9 @@ pub struct StatsQuery {
     pub days: Option<u32>,
 }
 
+/// Validation statistics
+///
+/// Validation statistics. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/validation/stats",

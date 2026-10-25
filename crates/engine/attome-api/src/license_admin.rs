@@ -49,6 +49,9 @@ struct UsageResponse {
     contract_reference: Option<String>,
 }
 
+/// Usage
+///
+/// Usage. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/usage",
@@ -234,6 +237,9 @@ pub(crate) async fn narrow_by_runtime_configuration(
     }
 }
 
+/// Modules
+///
+/// Modules. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/license/modules",
@@ -266,6 +272,9 @@ async fn get_module_configuration(
     }))
 }
 
+/// Turn modules on or off
+///
+/// Turn modules on or off. Administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/license/modules",

@@ -133,6 +133,9 @@ struct ListMappingsQuery {
     page_size: Option<i64>,
 }
 
+/// Create a data mapping
+///
+/// Create a data mapping. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/data/mappings",
@@ -213,6 +216,9 @@ async fn create_mapping(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
+/// List data mappings
+///
+/// List data mappings. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/data/mappings",
@@ -266,6 +272,9 @@ async fn list_mappings(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// One data mapping
+///
+/// One data mapping. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/data/mappings/{id}",
@@ -295,6 +304,9 @@ async fn get_mapping(
     Ok(Json(row.ok_or(AppError::NotFound)?))
 }
 
+/// Replace a data mapping
+///
+/// Replace a data mapping. Administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/data/mappings/{id}",
@@ -396,6 +408,9 @@ async fn update_mapping(
     Ok(Json(row))
 }
 
+/// Delete a data mapping
+///
+/// Delete a data mapping. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/data/mappings/{id}",

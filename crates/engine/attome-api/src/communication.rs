@@ -176,6 +176,9 @@ async fn fetch_parent(
     })
 }
 
+/// Send a message on a record
+///
+/// Send a message on a record. Needs update access to the entity's records. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/communications",
@@ -260,6 +263,9 @@ async fn compose(
     Ok((StatusCode::CREATED, Json(outcome)))
 }
 
+/// Reply to a message on a record
+///
+/// Reply to a message on a record. Needs update access to the entity's records. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/communications/{comm_id}/reply",

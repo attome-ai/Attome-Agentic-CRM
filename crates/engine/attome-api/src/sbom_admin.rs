@@ -42,6 +42,9 @@ fn release_bom() -> Value {
     })
 }
 
+/// Software bill of materials
+///
+/// Software bill of materials. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/sbom",

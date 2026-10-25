@@ -395,6 +395,9 @@ const VIEW_SELECT: &str = "SELECT v.id, v.name, v.icon, v.entity_logical_name, e
      JOIN entity_info e ON e.id = v.entity_logical_name \
      JOIN sql_query q ON q.id = v.sql_query_ref";
 
+/// List views
+///
+/// List views. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/views",
@@ -524,6 +527,9 @@ async fn list_available_views(
     ))
 }
 
+/// One view
+///
+/// One view. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/views/{id}",
@@ -553,6 +559,9 @@ async fn get_view(
     Ok(Json(row))
 }
 
+/// Create a view
+///
+/// Create a view. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/views",
@@ -801,6 +810,9 @@ fn view_patch_op(before: &ViewDetail, after: &ViewDetail) -> Result<RecordedOp, 
     }
 }
 
+/// Update a view
+///
+/// Update a view. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/views/{id}",
@@ -859,6 +871,9 @@ async fn update_view(
     Ok(Json(row))
 }
 
+/// Delete a view
+///
+/// Delete a view. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/views/{id}",
@@ -976,6 +991,9 @@ async fn require_query_access(
     Ok(())
 }
 
+/// Create a personal view
+///
+/// Create a personal view. Any signed-in user.
 #[utoipa::path(
     post,
     path = "/api/v1/views",
@@ -1032,6 +1050,9 @@ async fn create_personal_view(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
+/// Update a personal view
+///
+/// Update a personal view. Any signed-in user.
 #[utoipa::path(
     patch,
     path = "/api/v1/views/{id}",
@@ -1112,6 +1133,9 @@ async fn update_personal_view(
     Ok(Json(row))
 }
 
+/// Delete a personal view
+///
+/// Delete a personal view. Any signed-in user.
 #[utoipa::path(
     delete,
     path = "/api/v1/views/{id}",
@@ -1157,6 +1181,9 @@ struct ShareProbeRow {
     name: String,
 }
 
+/// Share a personal view
+///
+/// Share a personal view. Any signed-in user. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/views/{id}/share",

@@ -40,6 +40,9 @@ pub struct IndexAdvice {
     pub proposals: Vec<IndexProposalView>,
 }
 
+/// Index proposals for an entity
+///
+/// Index proposals for an entity. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/entities/{entity_id}/index-proposals",

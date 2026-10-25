@@ -117,6 +117,9 @@ struct RuleFilter {
     is_active: Option<bool>,
 }
 
+/// List business rules
+///
+/// List business rules. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/business-rules",
@@ -179,6 +182,9 @@ async fn list_rules(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// One business rule
+///
+/// One business rule. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/business-rules/{id}",
@@ -204,6 +210,9 @@ async fn get_rule(
 
 // ── Create / update / delete ────────────────────────────────────────────────
 
+/// Create a business rule
+///
+/// Create a business rule. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/business-rules",
@@ -279,6 +288,9 @@ async fn create_rule(
     Ok((StatusCode::CREATED, Json(rule)).into_response())
 }
 
+/// Update a business rule
+///
+/// Update a business rule. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/business-rules/{id}",
@@ -349,6 +361,9 @@ async fn update_rule(
     Ok(Json(rule))
 }
 
+/// Delete a business rule
+///
+/// Delete a business rule. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/business-rules/{id}",
@@ -413,6 +428,9 @@ struct ValidateResponse {
     warnings: Vec<RuleEditorWarning>,
 }
 
+/// Validate a business rule
+///
+/// Validate a business rule. Administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/business-rules/validate",
@@ -540,6 +558,9 @@ fn outcome_label(o: &ConditionOutcome) -> &'static str {
     }
 }
 
+/// Test a business rule
+///
+/// Test a business rule. Administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/business-rules/{id}/test",
@@ -923,6 +944,9 @@ fn test_business(
 
 // ── Publish ─────────────────────────────────────────────────────────────────
 
+/// Publish a business rule
+///
+/// Publish a business rule. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/business-rules/{id}/publish",

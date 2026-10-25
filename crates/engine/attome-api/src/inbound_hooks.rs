@@ -318,6 +318,9 @@ async fn audit(
     .map(|_| ())
 }
 
+/// List inbound hooks
+///
+/// List inbound hooks. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/inbound-hooks",
@@ -357,6 +360,9 @@ async fn list_hooks(
     )))
 }
 
+/// Create an inbound hook
+///
+/// Create an inbound hook. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/inbound-hooks",
@@ -430,6 +436,9 @@ async fn create_hook(
     Ok((StatusCode::CREATED, Json(view)))
 }
 
+/// Update an inbound hook
+///
+/// Update an inbound hook. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/inbound-hooks/{id}",
@@ -537,6 +546,9 @@ async fn update_hook(
     Ok(Json(view))
 }
 
+/// Delete an inbound hook
+///
+/// Delete an inbound hook. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/inbound-hooks/{id}",
@@ -777,6 +789,9 @@ async fn run_handler(
     }
 }
 
+/// Receive an inbound hook
+///
+/// Receive an inbound hook.
 #[utoipa::path(
     post,
     path = "/api/v1/hooks/{name}",

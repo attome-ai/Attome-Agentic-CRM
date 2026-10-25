@@ -100,6 +100,9 @@ fn entity_name(state: &EngineState, entity_id: &str) -> Option<String> {
         .map(|m| m.logicalname.clone())
 }
 
+/// Stage processes of an entity
+///
+/// Stage processes of an entity. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/stage-processes/for/{entity}",
@@ -192,6 +195,9 @@ pub fn assemble(
         .collect()
 }
 
+/// Stage process metrics
+///
+/// Stage process metrics. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/stage-processes/{id}/metrics",

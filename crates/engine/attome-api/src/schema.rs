@@ -228,6 +228,9 @@ pub(crate) fn not_modified(if_none_match: Option<&str>, etag: &str) -> bool {
     })
 }
 
+/// An entity's form schema
+///
+/// An entity's form schema. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/schema/{logicalname}",

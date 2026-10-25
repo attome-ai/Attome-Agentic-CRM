@@ -74,6 +74,9 @@ fn default_hours() -> Value {
 const CALENDAR_SELECT: &str = "SELECT id, name, description, tz, working_days, hours, is_default, is_active, \
      owner_layer FROM calendar";
 
+/// List calendars
+///
+/// List calendars. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/calendars",
@@ -113,6 +116,9 @@ async fn list_calendars(
     Ok(Json(PaginatedResponse::new(rows, total, page, page_size)))
 }
 
+/// One calendar
+///
+/// One calendar. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/calendars/{id}",
@@ -141,6 +147,9 @@ async fn get_calendar(
     Ok(Json(row))
 }
 
+/// Create a calendar
+///
+/// Create a calendar. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/calendars",
@@ -293,6 +302,9 @@ fn calendar_op(op: Op, row: &CalendarDetail) -> Result<RecordedOp, AppError> {
     )
 }
 
+/// Update a calendar
+///
+/// Update a calendar. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/calendars/{id}",
@@ -336,6 +348,9 @@ async fn update_calendar(
     Ok(Json(row))
 }
 
+/// Delete a calendar
+///
+/// Delete a calendar. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/calendars/{id}",
@@ -580,6 +595,9 @@ const MAX_RECURRING_YEARS: u16 = 30;
 const HOLIDAY_SELECT: &str =
     "SELECT id, calendar_id, name, holiday_date, owner_layer FROM calendar_holiday";
 
+/// A calendar's holidays
+///
+/// A calendar's holidays. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/calendars/{id}/holidays",
@@ -610,6 +628,9 @@ async fn list_holidays(
     ))
 }
 
+/// Add a holiday
+///
+/// Add a holiday. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/calendars/{id}/holidays",
@@ -920,6 +941,9 @@ async fn holiday_op(
     )
 }
 
+/// Remove a holiday
+///
+/// Remove a holiday. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/calendars/{id}/holidays/{holiday_id}",
@@ -1030,6 +1054,9 @@ fn normalized_ranges(date: NaiveDate, ranges: &Value) -> Result<Value, AppError>
 const EXCEPTION_SELECT: &str = "SELECT id, calendar_id, name, exception_date, ranges, owner_layer \
      FROM calendar_exception";
 
+/// A calendar's exceptions
+///
+/// A calendar's exceptions. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/calendars/{id}/exceptions",
@@ -1058,6 +1085,9 @@ async fn list_exceptions(
     Ok(Json(rows))
 }
 
+/// Add a calendar exception
+///
+/// Add a calendar exception. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/calendars/{id}/exceptions",
@@ -1229,6 +1259,9 @@ async fn exception_op(
     )
 }
 
+/// Remove a calendar exception
+///
+/// Remove a calendar exception. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/calendars/{id}/exceptions/{exception_id}",

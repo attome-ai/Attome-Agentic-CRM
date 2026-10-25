@@ -114,6 +114,9 @@ pub(super) struct DevToolsAvailable {
 /// the scaffold buttons entirely against anything other than a local dev
 /// backend, rather than show buttons that then 403.
 #[cfg(debug_assertions)]
+/// Available developer tools
+///
+/// Available developer tools. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/dev-tools/available",

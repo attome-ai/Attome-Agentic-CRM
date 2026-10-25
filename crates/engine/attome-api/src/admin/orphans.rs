@@ -86,6 +86,9 @@ fn counts(
         .collect()
 }
 
+/// Orphaned lookup values
+///
+/// Orphaned lookup values. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/entities/{entity_id}/orphans",
@@ -136,6 +139,9 @@ pub(super) async fn list_orphans(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Start an orphan scan
+///
+/// Start an orphan scan. Administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/data-step-runs/orphan-scans",

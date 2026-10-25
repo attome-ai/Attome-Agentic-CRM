@@ -54,6 +54,9 @@ struct ViewRow {
     seo_description: Option<String>,
 }
 
+/// View a published page
+///
+/// View a published page.
 #[utoipa::path(
     get,
     path = "/api/v1/content/view",
@@ -144,6 +147,9 @@ struct VoteAck {
 
 const VOTE_LIMIT_PER_MINUTE: i32 = 5;
 
+/// Rate a page
+///
+/// Rate a page.
 #[utoipa::path(
     post,
     path = "/api/v1/content/vote",

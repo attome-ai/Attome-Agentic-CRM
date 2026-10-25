@@ -270,6 +270,9 @@ pub fn filter_document(doc: &Value, readable: impl Fn(&str) -> bool) -> Value {
     out
 }
 
+/// OpenAPI document of this deployment's entities
+///
+/// OpenAPI document of this deployment's entities. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/openapi/deployment.json",

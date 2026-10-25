@@ -37,6 +37,9 @@ const INTAKE_PER_ADDRESS_PER_MINUTE: i32 = 5;
 /// G2-T1: anonymous requests one offering takes a minute, from everyone.
 const INTAKE_PER_OFFERING_PER_MINUTE: i32 = 60;
 
+/// Service portal offerings
+///
+/// Service portal offerings.
 #[utoipa::path(
     get,
     path = "/api/v1/service-portal/offerings",
@@ -70,6 +73,9 @@ struct StatusQuery {
     token: String,
 }
 
+/// Service portal status
+///
+/// Service portal status.
 #[utoipa::path(
     get,
     path = "/api/v1/service-portal/status",

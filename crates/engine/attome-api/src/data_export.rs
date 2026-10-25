@@ -435,6 +435,9 @@ async fn count_matching(
     q.fetch_one(db).await.map_err(AppError::internal)
 }
 
+/// Start a data export
+///
+/// Start a data export. Needs read access to the entity's records.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/export",
@@ -574,6 +577,9 @@ async fn enqueue_export(
     ))
 }
 
+/// A data export's status
+///
+/// A data export's status. Needs read access to the entity's records.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/export/{id}",

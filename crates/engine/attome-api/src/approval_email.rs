@@ -416,6 +416,9 @@ async fn resolve_link(
     Ok((row, request))
 }
 
+/// Open an emailed approval link
+///
+/// Open an emailed approval link.
 #[utoipa::path(
     post,
     path = "/api/v1/approvals/email-link",
@@ -466,6 +469,9 @@ async fn read_link(
     }))
 }
 
+/// Decide through an emailed link
+///
+/// Decide through an emailed link. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/approvals/email-link/decide",

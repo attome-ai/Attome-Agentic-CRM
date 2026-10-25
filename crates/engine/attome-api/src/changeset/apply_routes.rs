@@ -271,6 +271,9 @@ pub async fn do_apply(
 
 // ── Handlers ────────────────────────────────────────────────────────────────
 
+/// Plan changesets
+///
+/// Plan changesets. Needs the metadata rollout privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/metadata/changesets/plan",
@@ -314,6 +317,9 @@ async fn plan_changesets(
     Ok(Json(planned.plan))
 }
 
+/// Apply changesets
+///
+/// Apply changesets. Needs the metadata rollout privilege.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/metadata/changesets/apply",
@@ -371,6 +377,9 @@ async fn apply_changesets(
     Ok((StatusCode::ACCEPTED, Json(accepted)))
 }
 
+/// Adopt changesets
+///
+/// Adopt changesets. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/metadata/changesets/adopt",
@@ -412,6 +421,9 @@ async fn adopt_changesets(
     Ok(Json(AdoptResponse { changesets }))
 }
 
+/// Changeset ledger
+///
+/// Changeset ledger. Needs the metadata rollout privilege.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/metadata/changesets/ledger",
@@ -470,6 +482,9 @@ async fn list_ledger(
     )))
 }
 
+/// One changeset apply
+///
+/// One changeset apply. Needs the metadata rollout privilege.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/metadata/changesets/ledger/{apply_id}",

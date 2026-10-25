@@ -64,6 +64,9 @@ struct ApiGroupOut {
     parts: Vec<StatOut>,
 }
 
+/// Profiler statistics
+///
+/// Profiler statistics. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/profiler/stats",
@@ -139,6 +142,9 @@ impl From<attome_profiler::TraceSample> for TraceSampleOut {
     }
 }
 
+/// Profiler trace
+///
+/// Profiler trace. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/profiler/trace",

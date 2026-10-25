@@ -222,6 +222,9 @@ fn validate_mutation(body: &mut SidebarMutation) -> Result<(), AppError> {
     Ok(())
 }
 
+/// List sidebar items
+///
+/// List sidebar items. Needs the sidebar management privilege.
 #[utoipa::path(
     get,
     path = "/api/v1/sidebar/admin",
@@ -383,6 +386,9 @@ async fn sidebar_op(
     )
 }
 
+/// Privileges for sidebar items
+///
+/// Privileges for sidebar items. Needs the sidebar management privilege.
 #[utoipa::path(
     get,
     path = "/api/v1/sidebar/admin/privileges",
@@ -485,6 +491,9 @@ async fn ensure_parent(db: &attome_db::DbPool, parent_ref: Option<Uuid>) -> Resu
     Ok(())
 }
 
+/// Create a sidebar item
+///
+/// Create a sidebar item. Needs the sidebar management privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sidebar/admin",
@@ -659,6 +668,9 @@ pub(crate) async fn deactivate_sidebar_item_in_tx(
     read_sidebar_item_in_tx(tx, id).await
 }
 
+/// Update a sidebar item
+///
+/// Update a sidebar item. Needs the sidebar management privilege. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/sidebar/admin/{id}",
@@ -745,6 +757,9 @@ struct SidebarDelete {
     row_version: i64,
 }
 
+/// Delete a sidebar item
+///
+/// Delete a sidebar item. Needs the sidebar management privilege. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/sidebar/admin/{id}",

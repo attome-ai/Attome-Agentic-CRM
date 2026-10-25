@@ -83,6 +83,9 @@ struct ProfileEnqueueResponse {
     status: String,
 }
 
+/// Start a data profile
+///
+/// Start a data profile. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/data/profile",
@@ -195,6 +198,9 @@ struct ListProfilesQuery {
     page_size: Option<i64>,
 }
 
+/// List data profiles
+///
+/// List data profiles. Needs metadata.read.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/data/profile",
@@ -267,6 +273,9 @@ async fn list_profiles(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// One data profile
+///
+/// One data profile. Needs metadata.read.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/data/profile/{id}",

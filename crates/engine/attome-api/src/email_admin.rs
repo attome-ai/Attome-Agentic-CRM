@@ -79,6 +79,9 @@ impl From<attome_email::delivery::EmailDeliveryRow> for DeliverySummary {
     }
 }
 
+/// List email deliveries
+///
+/// List email deliveries. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/email/deliveries",
@@ -131,6 +134,9 @@ async fn list_deliveries(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// One email delivery
+///
+/// One email delivery. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/email/deliveries/{id}",
@@ -161,6 +167,9 @@ struct ResendResult {
     new_delivery_id: Uuid,
 }
 
+/// Resend an email
+///
+/// Resend an email. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/email/deliveries/{id}/resend",
@@ -394,6 +403,9 @@ impl From<attome_email::suppression::SuppressionRow> for SuppressionSummary {
     }
 }
 
+/// List email suppressions
+///
+/// List email suppressions. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/email/suppressions",
@@ -435,6 +447,9 @@ struct AddSuppressionBody {
     detail: Option<String>,
 }
 
+/// Suppress an address
+///
+/// Suppress an address. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/email/suppressions",
@@ -484,6 +499,9 @@ async fn add_suppression(
     Ok(StatusCode::CREATED)
 }
 
+/// Lift a suppression
+///
+/// Lift a suppression. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/email/suppressions/{id}",

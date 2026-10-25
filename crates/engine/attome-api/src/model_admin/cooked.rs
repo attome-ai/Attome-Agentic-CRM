@@ -71,6 +71,9 @@ async fn ensure_loaded(state: &EngineState) -> Result<(), AppError> {
     super::ensure_cooked(state).await
 }
 
+/// Cooked metadata of a kind
+///
+/// Cooked metadata of a kind. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/cooked/{kind}",
@@ -108,6 +111,9 @@ async fn list_cooked(
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
 
+/// One cooked artefact
+///
+/// One cooked artefact. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/cooked/{kind}/{hash}",

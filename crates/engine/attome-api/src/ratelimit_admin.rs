@@ -13,6 +13,9 @@ use axum::{
     routing::{delete, get},
 };
 
+/// Rate-limit bans
+///
+/// Rate-limit bans. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/rate-limits/bans",
@@ -34,6 +37,9 @@ async fn bans(
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
 
+/// Lift a rate-limit ban
+///
+/// Lift a rate-limit ban. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/rate-limits/bans/{bucket}",

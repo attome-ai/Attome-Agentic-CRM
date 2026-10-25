@@ -271,6 +271,9 @@ impl ActivityQuery {
     }
 }
 
+/// My audit activity
+///
+/// My audit activity. Any signed-in user.
 #[utoipa::path(
     get,
     operation_id = "audit_my_activity",

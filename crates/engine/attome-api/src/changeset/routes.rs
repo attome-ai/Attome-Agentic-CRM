@@ -311,6 +311,9 @@ async fn author_label(state: &EngineState, user_id: Uuid) -> Result<String, AppE
     Ok(label.flatten().unwrap_or_else(|| format!("user:{user_id}")))
 }
 
+/// Open a changeset
+///
+/// Open a changeset. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/changesets",
@@ -433,6 +436,9 @@ const LIST_FILTER: &str = "($1::text IS NULL OR status = $1) \
      AND ($3::text IS NULL OR scope = $3) \
      AND ($4::uuid IS NULL OR author_ref = $4)";
 
+/// List changesets
+///
+/// List changesets. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/changesets",
@@ -513,6 +519,9 @@ async fn load(state: &EngineState, id: Uuid) -> Result<ChangesetRow, AppError> {
     close::seal_if_automatic(state, row).await
 }
 
+/// One changeset
+///
+/// One changeset. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/changesets/{id}",
@@ -565,6 +574,9 @@ async fn get_changeset(
     }))
 }
 
+/// Close a changeset
+///
+/// Close a changeset. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/changesets/{id}/close",
@@ -603,6 +615,9 @@ async fn close_changeset(
     }))
 }
 
+/// Abandon a changeset
+///
+/// Abandon a changeset. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/changesets/{id}/abandon",
@@ -633,6 +648,9 @@ async fn abandon_changeset(
     Ok(Json(ChangesetSummary::from(&row)))
 }
 
+/// Export a changeset
+///
+/// Export a changeset. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/changesets/{id}/export",

@@ -142,6 +142,9 @@ async fn pending_approvals(state: &EngineState) -> Result<i64, AppError> {
     .map_err(AppError::internal)
 }
 
+/// Metadata rollout status
+///
+/// Metadata rollout status. Needs the metadata rollout privilege.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/metadata/rollout/status",

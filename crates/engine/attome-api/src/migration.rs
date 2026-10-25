@@ -146,6 +146,9 @@ async fn validate_mapping_ref(
     Ok(())
 }
 
+/// Create a migration project
+///
+/// Create a migration project. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/migration-projects",
@@ -217,6 +220,9 @@ async fn create_project(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
+/// List migration projects
+///
+/// List migration projects. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/migration-projects",
@@ -275,6 +281,9 @@ async fn list_projects(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// One migration project
+///
+/// One migration project. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/migration-projects/{id}",
@@ -299,6 +308,9 @@ async fn get_project(
     Ok(Json(row))
 }
 
+/// Replace a migration project
+///
+/// Replace a migration project. Administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/migration-projects/{id}",
@@ -381,6 +393,9 @@ async fn update_project(
     Ok(Json(row))
 }
 
+/// Delete a migration project
+///
+/// Delete a migration project. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/migration-projects/{id}",
@@ -587,6 +602,9 @@ async fn fetch_run_detail(
     }))
 }
 
+/// Start a migration run
+///
+/// Start a migration run. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/migration-projects/{project_id}/runs",
@@ -672,6 +690,9 @@ async fn create_run(
     Ok((StatusCode::CREATED, Json(detail)))
 }
 
+/// A migration project's runs
+///
+/// A migration project's runs. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/migration-projects/{project_id}/runs",
@@ -717,6 +738,9 @@ async fn list_runs(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// One migration run
+///
+/// One migration run. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/migration-projects/{project_id}/runs/{run_id}",
@@ -815,6 +839,9 @@ async fn download_run_errors(
         .into_response())
 }
 
+/// Roll back a migration run
+///
+/// Roll back a migration run. Administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/migration-projects/{project_id}/runs/{run_id}/rollback",

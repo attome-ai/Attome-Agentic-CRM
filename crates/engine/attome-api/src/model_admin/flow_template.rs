@@ -41,6 +41,9 @@ pub(crate) struct InstantiateResponse {
     pub issues: Vec<IssueView>,
 }
 
+/// Create a flow from a template
+///
+/// Create a flow from a template. Administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/model/flow_template/{id}/instantiate",

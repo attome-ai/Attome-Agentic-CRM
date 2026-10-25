@@ -269,6 +269,9 @@ fn field_is_sensitive(state: &EngineState, entity: &str, field: &str) -> bool {
 
 // ── Reads ───────────────────────────────────────────────────────────────────
 
+/// List release reports
+///
+/// List release reports. Needs the metadata rollout privilege.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/metadata/release-reports",
@@ -322,6 +325,9 @@ pub(super) async fn list_reports(
     Ok(Json(PaginatedResponse::new(rows, total, page, page_size)))
 }
 
+/// Release report summary
+///
+/// Release report summary. Needs the metadata rollout privilege.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/metadata/release-reports/summary",
@@ -359,6 +365,9 @@ pub(super) async fn report_summary(
     }))
 }
 
+/// One release report
+///
+/// One release report. Needs the metadata rollout privilege.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/metadata/release-reports/{report_id}",
@@ -388,6 +397,9 @@ pub(super) async fn get_report(
     report.map(Json).ok_or(AppError::NotFound)
 }
 
+/// A release report's items
+///
+/// A release report's items. Needs the metadata rollout privilege.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/metadata/release-reports/{report_id}/items",

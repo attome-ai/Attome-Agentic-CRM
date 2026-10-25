@@ -229,6 +229,9 @@ pub async fn limit_warning_check(
     Ok(notified)
 }
 
+/// Limits
+///
+/// Limits.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/limits",
@@ -255,6 +258,9 @@ async fn list_limits(
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
 
+/// My limits
+///
+/// My limits. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/limits/me",

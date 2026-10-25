@@ -191,6 +191,9 @@ pub fn build_document(
     })
 }
 
+/// AsyncAPI document of the change feed
+///
+/// AsyncAPI document of the change feed. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/asyncapi.json",

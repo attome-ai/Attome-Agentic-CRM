@@ -126,6 +126,9 @@ pub async fn sample_all(state: &EngineState) -> Result<u64, AppError> {
     Ok(inserted)
 }
 
+/// An entity's table health
+///
+/// An entity's table health. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/entities/{entity_id}/health",
@@ -153,6 +156,9 @@ async fn get_entity_health(
     Ok(Json(health_of(&state, &entity).await?))
 }
 
+/// Table health
+///
+/// Table health. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/table-health",

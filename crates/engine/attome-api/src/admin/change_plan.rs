@@ -58,6 +58,9 @@ fn class_name(class: ChangeClass) -> &'static str {
     }
 }
 
+/// Plan a schema change
+///
+/// Plan a schema change. Administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/entities/{entity_id}/change-plan",

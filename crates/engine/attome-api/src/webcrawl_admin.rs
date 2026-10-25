@@ -38,6 +38,9 @@ fn require_enabled(state: &EngineState) -> Result<(), AppError> {
 
 // ── Targets ─────────────────────────────────────────────────────────────────
 
+/// List crawl targets
+///
+/// List crawl targets. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/webcrawl/targets",
@@ -83,6 +86,9 @@ async fn list_targets(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Add a crawl target
+///
+/// Add a crawl target. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/webcrawl/targets",
@@ -271,6 +277,9 @@ async fn create_target(
     Ok((status_code, Json(row)))
 }
 
+/// Recrawl a target
+///
+/// Recrawl a target. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/webcrawl/targets/{id}/recrawl",
@@ -330,6 +339,9 @@ async fn recrawl_target(
     Ok(Json(row))
 }
 
+/// Delete a crawl target
+///
+/// Delete a crawl target. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/webcrawl/targets/{id}",
@@ -376,6 +388,9 @@ async fn delete_target(
 
 // ── Pages ───────────────────────────────────────────────────────────────────
 
+/// A target's pages
+///
+/// A target's pages. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/webcrawl/targets/{id}/pages",
@@ -407,6 +422,9 @@ async fn list_target_pages(
     Ok(Json(items))
 }
 
+/// Select a target's pages
+///
+/// Select a target's pages. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/webcrawl/targets/{id}/pages/selection",
@@ -547,6 +565,9 @@ async fn ensure_data_source_for_target(
     }
 }
 
+/// Import crawled pages
+///
+/// Import crawled pages. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/webcrawl/targets/{id}/import",

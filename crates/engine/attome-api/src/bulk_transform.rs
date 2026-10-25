@@ -186,6 +186,9 @@ struct DryRunResponse {
     will_require_approval: bool,
 }
 
+/// Dry-run a bulk transform
+///
+/// Dry-run a bulk transform. Needs update access to the entity's records.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/bulk-transform/dry-run",
@@ -235,6 +238,9 @@ struct BulkTransformApprovalPending {
     approval_request_id: Uuid,
 }
 
+/// Start a bulk transform
+///
+/// Start a bulk transform. Needs update access to the entity's records.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/bulk-transform",
@@ -428,6 +434,9 @@ struct BulkTransformStatus {
     errors: Value,
 }
 
+/// A bulk transform's progress
+///
+/// A bulk transform's progress. Needs update access to the entity's records.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/bulk-transform/{id}",

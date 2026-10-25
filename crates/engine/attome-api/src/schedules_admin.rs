@@ -224,6 +224,9 @@ async fn platform_items(state: &EngineState) -> Result<Vec<ScheduleItem>, AppErr
         .collect())
 }
 
+/// List schedules
+///
+/// List schedules. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/schedules",
@@ -360,6 +363,9 @@ async fn set_paused(
     })
 }
 
+/// Pause a schedule
+///
+/// Pause a schedule. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/schedules/{kind}/{id}/pause",
@@ -386,6 +392,9 @@ async fn pause(
         .map(Json)
 }
 
+/// Resume a schedule
+///
+/// Resume a schedule. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/schedules/{kind}/{id}/resume",

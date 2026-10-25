@@ -67,6 +67,9 @@ struct CatalogEntitySummary {
     domain_ref: Option<Uuid>,
 }
 
+/// Entity catalogue
+///
+/// Entity catalogue. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/catalog/entities",
@@ -234,6 +237,9 @@ struct GlossaryTermRow {
     status: Option<String>,
 }
 
+/// One entity in the catalogue
+///
+/// One entity in the catalogue. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/catalog/entities/{logicalname}",

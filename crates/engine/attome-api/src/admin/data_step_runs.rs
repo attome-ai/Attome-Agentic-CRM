@@ -160,6 +160,9 @@ async fn transition(
     load(state, id).await
 }
 
+/// A data step run
+///
+/// A data step run. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/data-step-runs/{id}",
@@ -181,6 +184,9 @@ pub(super) async fn get_data_step_run(
     load(&state, id).await.map(Json)
 }
 
+/// Pause a data step run
+///
+/// Pause a data step run. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/data-step-runs/{id}/pause",
@@ -217,6 +223,9 @@ pub(super) async fn pause_data_step_run(
     .map(Json)
 }
 
+/// Resume a data step run
+///
+/// Resume a data step run. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/data-step-runs/{id}/resume",
@@ -253,6 +262,9 @@ pub(super) async fn resume_data_step_run(
     .map(Json)
 }
 
+/// Cancel a data step run
+///
+/// Cancel a data step run. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/data-step-runs/{id}/cancel",

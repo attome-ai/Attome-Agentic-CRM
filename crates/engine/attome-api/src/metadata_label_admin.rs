@@ -188,6 +188,9 @@ async fn resolve_entity_logicalname(
     .ok_or(AppError::NotFound)
 }
 
+/// An entity's labels
+///
+/// An entity's labels. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/entities/{entity_id}/labels",
@@ -225,6 +228,9 @@ async fn list_labels(
     Ok(Json(rows))
 }
 
+/// Add a label
+///
+/// Add a label. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/entities/{entity_id}/labels",
@@ -266,6 +272,9 @@ async fn create_label(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
+/// Update a label
+///
+/// Update a label. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/entities/{entity_id}/labels/{label_id}",
@@ -397,6 +406,9 @@ async fn update_label(
     Ok(Json(row))
 }
 
+/// Delete a label
+///
+/// Delete a label. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/entities/{entity_id}/labels/{label_id}",

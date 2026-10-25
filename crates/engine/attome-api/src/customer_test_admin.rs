@@ -85,6 +85,9 @@ pub struct CustomerTestRunAll {
     pub results: Vec<CustomerTestRunResult>,
 }
 
+/// List customer tests
+///
+/// List customer tests. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/customer-tests",
@@ -112,6 +115,9 @@ async fn list_tests(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Create a customer test
+///
+/// Create a customer test. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/customer-tests",
@@ -150,6 +156,9 @@ async fn create_test(
     Ok((StatusCode::CREATED, Json(test)))
 }
 
+/// One customer test
+///
+/// One customer test. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/customer-tests/{id}",
@@ -172,6 +181,9 @@ async fn get_test(
     Ok(Json(store::get_test(&state.base.db, id).await?))
 }
 
+/// Update a customer test
+///
+/// Update a customer test. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/customer-tests/{id}",
@@ -214,6 +226,9 @@ async fn update_test(
     Ok(Json(test))
 }
 
+/// Delete a customer test
+///
+/// Delete a customer test. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/customer-tests/{id}",
@@ -253,6 +268,9 @@ async fn delete_test(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// A customer test's runs
+///
+/// A customer test's runs. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/customer-tests/{id}/runs",
@@ -319,6 +337,9 @@ async fn run_one(
     })
 }
 
+/// Run a customer test
+///
+/// Run a customer test. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/customer-tests/{id}/run",
@@ -350,6 +371,9 @@ async fn run_test(
     ))
 }
 
+/// Run every customer test
+///
+/// Run every customer test. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/customer-tests/run-all",
@@ -380,6 +404,9 @@ async fn run_all(
     }))
 }
 
+/// Export customer tests
+///
+/// Export customer tests. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/customer-tests/export",
@@ -399,6 +426,9 @@ async fn export_tests(
     Ok(Json(store::export_tests(&state.base.db).await?))
 }
 
+/// Import customer tests
+///
+/// Import customer tests. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/customer-tests/import",

@@ -1248,6 +1248,9 @@ struct RecordCandidatesQuery {
     record_id: Uuid,
 }
 
+/// Likely duplicates of a record
+///
+/// Likely duplicates of a record. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/data/duplicates/for-record",

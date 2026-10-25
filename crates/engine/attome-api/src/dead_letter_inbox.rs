@@ -166,6 +166,9 @@ pub struct InboxQuery {
     pub page_size: Option<i64>,
 }
 
+/// Dead letters by group
+///
+/// Dead letters by group. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/dead-letters/groups",
@@ -203,6 +206,9 @@ async fn list_groups(
     }))
 }
 
+/// List dead letters
+///
+/// List dead letters. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/dead-letters",
@@ -295,6 +301,9 @@ impl From<ReplayOutcome> for ReplayItemResult {
     }
 }
 
+/// Replay a dead letter
+///
+/// Replay a dead letter. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/dead-letters/{source}/{id}/replay",
@@ -344,6 +353,9 @@ fn checked_reason(reason: &str) -> Result<&str, AppError> {
     Ok(reason)
 }
 
+/// Discard a dead letter
+///
+/// Discard a dead letter. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/dead-letters/{source}/{id}/discard",
@@ -409,6 +421,9 @@ pub struct GroupReplayPayload {
     pub rate_per_minute: u32,
 }
 
+/// Replay a dead-letter group
+///
+/// Replay a dead-letter group. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/dead-letters/groups/replay",

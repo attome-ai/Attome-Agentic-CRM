@@ -119,6 +119,9 @@ fn validate_body(body: &AppBody) -> Result<(), AppError> {
 const APP_SELECT: &str = "SELECT id, name, icon, sidebar_root_ref, default_dashboard_ref, \
      entities, roles, display_order, is_active, row_version, owner_layer FROM app";
 
+/// List apps
+///
+/// List apps. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/apps",
@@ -160,6 +163,9 @@ async fn list_apps(
     Ok(Json(PaginatedResponse::new(rows, total, page, page_size)))
 }
 
+/// One app
+///
+/// One app. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/apps/{id}",
@@ -188,6 +194,9 @@ async fn get_app(
     Ok(Json(row))
 }
 
+/// Create an app
+///
+/// Create an app. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/apps",
@@ -361,6 +370,9 @@ fn app_op(op: Op, row: &AppDetail) -> Result<RecordedOp, AppError> {
     )
 }
 
+/// Update an app
+///
+/// Update an app. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/apps/{id}",
@@ -407,6 +419,9 @@ async fn update_app(
     Ok(Json(row))
 }
 
+/// Delete an app
+///
+/// Delete an app. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/apps/{id}",
@@ -498,6 +513,9 @@ fn visible_to(
         .any(|r| ctx_privileges.contains(r))
 }
 
+/// My apps
+///
+/// My apps. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/apps",

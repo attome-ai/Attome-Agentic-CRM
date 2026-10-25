@@ -154,6 +154,9 @@ fn validate_targets(class: &SloClass, profile: &str, body: &SloTargetBody) -> Re
     Ok(())
 }
 
+/// Service level objectives
+///
+/// Service level objectives. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/slo",
@@ -214,6 +217,9 @@ async fn get_overview(
     }))
 }
 
+/// Set an SLO target
+///
+/// Set an SLO target. Administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/slo/targets/{class_id}",
@@ -300,6 +306,9 @@ async fn set_target(
     Ok(Json(saved))
 }
 
+/// Remove an SLO target
+///
+/// Remove an SLO target. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/slo/targets/{class_id}",
@@ -541,6 +550,9 @@ pub async fn burn_check(
     Ok(notified)
 }
 
+/// List SLO reports
+///
+/// List SLO reports. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/slo/reports",
@@ -589,6 +601,9 @@ fn parse_period(period: &str) -> Result<NaiveDate, AppError> {
         .ok_or_else(|| AppError::Validation(format!("{period} is not a month (YYYY-MM)")))
 }
 
+/// One SLO report
+///
+/// One SLO report. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/slo/reports/{period}",

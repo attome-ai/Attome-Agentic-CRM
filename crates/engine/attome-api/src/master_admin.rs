@@ -237,6 +237,9 @@ async fn live_golden(state: &EngineState, entity: &str, golden: Uuid) -> Result<
     }
 }
 
+/// Pin a golden-record value
+///
+/// Pin a golden-record value. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/master/{entity}/{id}/pins",
@@ -314,6 +317,9 @@ async fn pin(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Unpin a golden-record value
+///
+/// Unpin a golden-record value. Any signed-in user. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/master/{entity}/{id}/pins/{attribute}",
@@ -367,6 +373,9 @@ async fn unpin(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Release a held contribution
+///
+/// Release a held contribution. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/master/{entity}/contributions/{cid}/release",
@@ -408,6 +417,9 @@ async fn release(
     }))
 }
 
+/// Reject a held contribution
+///
+/// Reject a held contribution. Any signed-in user. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/master/{entity}/contributions/{cid}/reject",
@@ -456,6 +468,9 @@ async fn reject(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Detach a contribution
+///
+/// Detach a contribution. Any signed-in user. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/master/{entity}/contributions/{cid}/detach",
@@ -500,6 +515,9 @@ async fn detach(
     }))
 }
 
+/// Certify a golden record
+///
+/// Certify a golden record. Any signed-in user. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/master/{entity}/{id}/certify",
@@ -561,6 +579,9 @@ async fn certify(
     }))
 }
 
+/// Held contributions
+///
+/// Held contributions. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/master/held",
@@ -671,6 +692,9 @@ async fn readable_master(
     Ok(())
 }
 
+/// Cross-references of an entity
+///
+/// Cross-references of an entity. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/master/{entity}/xref",
@@ -713,6 +737,9 @@ async fn xref_lookup(
     Ok(Json(XrefGolden { golden_id, status }))
 }
 
+/// A golden record's cross-references
+///
+/// A golden record's cross-references. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/master/{entity}/{id}/xref",
@@ -761,6 +788,9 @@ async fn xref_list(
     )))
 }
 
+/// A golden record as of a time
+///
+/// A golden record as of a time.
 #[utoipa::path(
     get,
     path = "/api/v1/master/{entity}/{id}/as-of",
@@ -801,6 +831,9 @@ async fn as_of(
     }))
 }
 
+/// A golden record's provenance
+///
+/// A golden record's provenance.
 #[utoipa::path(
     get,
     path = "/api/v1/master/{entity}/{id}/provenance",

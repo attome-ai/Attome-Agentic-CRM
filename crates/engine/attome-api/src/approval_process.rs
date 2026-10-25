@@ -174,6 +174,9 @@ fn check_body(state: &EngineState, body: &ApprovalProcessBody) -> Result<(), App
     Ok(())
 }
 
+/// List approval processes
+///
+/// List approval processes. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/approval-processes",
@@ -215,6 +218,9 @@ async fn list_processes(
     )))
 }
 
+/// Create an approval process
+///
+/// Create an approval process. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/approval-processes",
@@ -278,6 +284,9 @@ async fn create_process(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
+/// One approval process
+///
+/// One approval process. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/approval-processes/{id}",
@@ -311,6 +320,9 @@ async fn load(state: &EngineState, id: Uuid) -> Result<ApprovalProcess, AppError
     .ok_or(AppError::NotFound)
 }
 
+/// Update an approval process
+///
+/// Update an approval process. Administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/approval-processes/{id}",
@@ -387,6 +399,9 @@ async fn update_process(
     Ok(Json(row))
 }
 
+/// Delete an approval process
+///
+/// Delete an approval process. Administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/approval-processes/{id}",
@@ -466,6 +481,9 @@ pub fn admits(entry_condition: Option<&str>, record: &Value) -> bool {
     }
 }
 
+/// Submit a record for approval
+///
+/// Submit a record for approval. Any signed-in user. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/approval-processes/{id}/submit",
@@ -663,6 +681,9 @@ impl attome_db::BeforeCommit<attome_approval::ApprovalRequest> for RecallAudit<'
     }
 }
 
+/// Recall an approval request
+///
+/// Recall an approval request. Any signed-in user. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/approval-processes/requests/{request_id}/recall",
@@ -866,6 +887,9 @@ async fn may_read_record(
     .is_ok()
 }
 
+/// One of my approval requests
+///
+/// One of my approval requests. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/approvals/{id}",
@@ -944,6 +968,9 @@ async fn get_request(
     }))
 }
 
+/// Approvals regarding a record
+///
+/// Approvals regarding a record. Any signed-in user.
 #[utoipa::path(
     get,
     path = "/api/v1/approvals/regarding/{entity}/{record_id}",

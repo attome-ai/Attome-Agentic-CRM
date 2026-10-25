@@ -58,6 +58,9 @@ struct DeadLetterJobSummary {
     done_at: Option<DateTime<Utc>>,
 }
 
+/// Dead-lettered jobs
+///
+/// Dead-lettered jobs. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/jobs/dead-letter",
@@ -176,6 +179,9 @@ struct ReplayResult {
     replayed: bool,
 }
 
+/// Replay a dead-lettered job
+///
+/// Replay a dead-lettered job. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/jobs/{id}/replay",

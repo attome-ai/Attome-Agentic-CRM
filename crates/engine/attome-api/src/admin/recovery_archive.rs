@@ -150,6 +150,9 @@ fn value_readable(
     )
 }
 
+/// List archived values
+///
+/// List archived values. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/metadata/recovery-archive",

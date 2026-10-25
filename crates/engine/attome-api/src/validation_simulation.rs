@@ -277,6 +277,9 @@ pub struct CleanupItem {
     pub found_at: DateTime<Utc>,
 }
 
+/// Simulate a business rule
+///
+/// Simulate a business rule. Administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/business-rules/{id}/simulate",
@@ -301,6 +304,9 @@ pub(crate) async fn simulate_rule(
     simulate(&state, id).await.map(Json)
 }
 
+/// Business rule clean-up
+///
+/// Business rule clean-up. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/business-rules/{id}/cleanup",
@@ -496,6 +502,9 @@ pub async fn run_scenario_simulation(
     .map_err(AppError::internal)
 }
 
+/// Run a scenario simulation
+///
+/// Run a scenario simulation. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/scenarios/{id}/simulations",
@@ -529,6 +538,9 @@ pub(crate) async fn run_scenario(
     Ok((StatusCode::CREATED, Json(stored)))
 }
 
+/// A scenario's simulations
+///
+/// A scenario's simulations. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/scenarios/{id}/simulations",

@@ -34,6 +34,9 @@ pub struct DdlLogEntry {
     pub outcome: String,
 }
 
+/// An entity's DDL log
+///
+/// An entity's DDL log. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/entities/{entity_id}/ddl-log",

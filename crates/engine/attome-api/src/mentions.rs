@@ -185,6 +185,9 @@ pub async fn notify_mentions(
     Ok(outcome)
 }
 
+/// Mention people on a record
+///
+/// Mention people on a record. Needs read access to the entity's records. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/mentions",
