@@ -70,6 +70,9 @@ const ADDED: &[(&str, LanguageVersion)] = &[
     ("workdays_between", LanguageVersion::V2),
     ("is_working", LanguageVersion::V2),
     ("to_zone", LanguageVersion::V2),
+    // A11-T2: the value before this write, and whether the write changes it.
+    ("prev", LanguageVersion::V2),
+    ("changed", LanguageVersion::V2),
 ];
 
 /// The version a function needs.

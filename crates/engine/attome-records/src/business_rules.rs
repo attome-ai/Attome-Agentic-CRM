@@ -254,6 +254,9 @@ pub(crate) struct WritePipeline<'a> {
     /// rejection log.
     channel: &'static str,
     user: Option<Uuid>,
+    /// A11-T2: the stored row on an update, which a value expression's
+    /// `prev(field)` and `changed(field)` read.
+    previous: Option<Map<String, Value>>,
 }
 
 /// What step 1 decided: the rules whose `set_value` policies fire.
@@ -323,7 +326,13 @@ impl<'a> WritePipeline<'a> {
             overridden: Vec::new(),
             channel: "system",
             user: None,
+            previous: None,
         }
+    }
+
+    /// A11-T2: the row as stored before this update.
+    pub(crate) fn set_previous(&mut self, stored: &Map<String, Value>) {
+        self.previous = Some(stored.clone());
     }
 
     async fn outcome(&mut self, index: usize, record: &Map<String, Value>) -> ConditionOutcome {
@@ -519,6 +528,12 @@ impl<'a> WritePipeline<'a> {
                     transient: false,
                 })?;
                 let ctx = condition_context(self.attrs, record, self.now);
+                let ctx = match &self.previous {
+                    Some(before) => {
+                        ctx.with_previous_from(&condition_context(self.attrs, before, self.now))
+                    }
+                    None => ctx,
+                };
                 compiled
                     .eval(&ctx)
                     .map(|v| crate::rule_engine::json_from_rules_value(&v))

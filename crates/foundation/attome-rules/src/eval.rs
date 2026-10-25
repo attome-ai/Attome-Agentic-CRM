@@ -533,6 +533,31 @@ impl Evaluator<'_> {
                 let v = self.eval_only(args, 1, name, trace)?;
                 Ok(Value::Bool(v[0].is_null()))
             }
+            // A11-T2.
+            "prev" | "changed" => {
+                if args.len() != 1 {
+                    return Err(arity_err(name, "1", args.len()));
+                }
+                let Expr::FieldRef(r) = &args[0] else {
+                    return Err(RulesError::Eval(format!(
+                        "{name} takes a field of this record"
+                    )));
+                };
+                let before = self
+                    .ctx
+                    .previous()
+                    .and_then(|fields| fields.get(&r.base))
+                    .cloned()
+                    .unwrap_or(Value::Null);
+                if name == "prev" {
+                    return Ok(before);
+                }
+                let now = self.eval(&args[0], trace)?;
+                Ok(Value::Bool(match self.ctx.previous() {
+                    Some(_) => !values_equal(&now, &before),
+                    None => !now.is_null(),
+                }))
+            }
             // Z11-T2 (V2): text and number functions.
             "normalize_ar" => {
                 let v = self.eval_only(args, 1, name, trace)?;
@@ -1428,6 +1453,41 @@ mod tests {
 
     fn run(src: &str) -> Result<Value, RulesError> {
         run_with(src, &ctx())
+    }
+
+    #[test]
+    fn prev_changed() {
+        let before: std::collections::HashMap<String, Value> = [
+            ("amount".to_owned(), Value::Number(40.0)),
+            ("name".to_owned(), Value::Text("Ada".to_owned())),
+        ]
+        .into_iter()
+        .collect();
+        let update = ctx().with_previous(before);
+        assert_eq!(
+            run_with("prev(amount)", &update).unwrap(),
+            Value::Number(40.0)
+        );
+        assert_eq!(
+            run_with("changed(amount)", &update).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            run_with("changed(name)", &update).unwrap(),
+            Value::Bool(false)
+        );
+        assert_eq!(
+            run_with("amount - prev(amount)", &update).unwrap(),
+            Value::Number(2.0)
+        );
+        // A create has no previous row: nothing before, and a set field changed.
+        assert_eq!(run("prev(amount)").unwrap(), Value::Null);
+        assert_eq!(run("changed(amount)").unwrap(), Value::Bool(true));
+        assert!(
+            crate::compile("prev(customer.tier) == \"gold\"", &schema()).is_err(),
+            "prev takes a field of this record"
+        );
+        assert!(crate::compile("changed(amount)", &schema()).is_ok());
     }
 
     #[test]

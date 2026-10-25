@@ -2971,6 +2971,10 @@ pub async fn update_one_as(
         // there is no record to judge.
         rules = None;
     }
+    // A11-T2: value expressions can compare with the stored row.
+    if let (Some(pipeline), Some(before)) = (rules.as_mut(), stored.as_ref()) {
+        pipeline.set_previous(before);
+    }
     let effective_owned;
     let rule_ctx_source: &serde_json::Map<String, Value> = match &stored {
         Some(stored) => {

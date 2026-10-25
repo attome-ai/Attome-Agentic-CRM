@@ -145,6 +145,9 @@ pub struct Context {
     calendar: Option<std::sync::Arc<attome_calendar::BusinessCalendar>>,
     /// Z11-T7: loaded path values, by joined path.
     paths: HashMap<String, Value>,
+    /// A11-T2: the record's fields before this write (an update only), which
+    /// `prev(field)` reads and `changed(field)` compares with.
+    previous: Option<HashMap<String, Value>>,
 }
 
 impl Context {
@@ -157,7 +160,29 @@ impl Context {
             rates: None,
             calendar: None,
             paths: HashMap::new(),
+            previous: None,
         }
+    }
+
+    /// A11-T2: the record as it was before this write. Without it (a
+    /// create), `prev(field)` is null and `changed(field)` is whether the
+    /// field has a value.
+    #[must_use]
+    pub fn with_previous(mut self, fields: HashMap<String, Value>) -> Self {
+        self.previous = Some(fields);
+        self
+    }
+
+    /// A11-T2: [`Context::with_previous`] from another context's fields: the
+    /// stored row, built the same way as this one.
+    #[must_use]
+    pub fn with_previous_from(self, before: &Context) -> Self {
+        let fields = before.fields.clone();
+        self.with_previous(fields)
+    }
+
+    pub(crate) fn previous(&self) -> Option<&HashMap<String, Value>> {
+        self.previous.as_ref()
     }
 
     /// Z11-T5: the rates `convert` uses. `rates` gives, per currency, the
@@ -277,6 +302,7 @@ impl Context {
             rates: self.rates.clone(),
             calendar: self.calendar.clone(),
             paths: HashMap::new(),
+            previous: None,
         }
     }
 

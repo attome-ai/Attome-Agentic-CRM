@@ -399,6 +399,20 @@ fn typecheck_call(
             arity(name, args.len(), 1, 1)?;
             Ok(Type::Bool)
         }
+        // A11-T2: a field of this record before the write, and whether the
+        // write changes it.
+        "prev" | "changed" => {
+            arity(name, args.len(), 1, 1)?;
+            if matches!(&args[0], Expr::FieldRef(r) if r.hop.is_none()) {
+                Ok(if name == "prev" {
+                    arg_types[0].clone()
+                } else {
+                    Type::Bool
+                })
+            } else {
+                Err(type_err(format!("{name} takes a field of this record")))
+            }
+        }
         // Z11-T2 (V2).
         "normalize_ar" => {
             arity(name, args.len(), 1, 1)?;

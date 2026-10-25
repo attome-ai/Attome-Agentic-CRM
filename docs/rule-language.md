@@ -40,10 +40,15 @@ is an unknown function. V2 accepts every V1 expression unchanged.
 | `workdays_between(a, b)` | The working days after `a` up to and including `b` (negative when `b` is earlier). |
 | `is_working(date)` | Whether the date is a working day of the calendar. |
 | `to_zone(date, zone)` | The same instant, with an IANA zone checked (`rules.context.unknown_timezone` otherwise). |
+| `prev(field)` | The field's value before this write: the stored value on an update, null on a create. The argument is a field of this record. |
+| `changed(field)` | Whether this write changes the field: on an update, whether it differs from the stored value; on a create, whether it has a value. |
 
 The working-day functions count on the business calendar the caller puts in the context; without
 one they fail with `rules.calendar.missing` (never counting calendar days instead), and a calendar
 with no working days in reach fails with `rules.calendar.no_working_time`.
+
+`prev` and `changed` read the stored row when the caller puts it on the context (business-rule
+values on an update do); elsewhere every write counts as a create.
 
 Text results respect the string-length budget and number results must be finite, as for every
 function.
