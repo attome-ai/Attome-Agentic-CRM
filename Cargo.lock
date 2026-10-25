@@ -2260,6 +2260,7 @@ dependencies = [
  "attome-metric",
  "attome-model",
  "attome-modules",
+ "attome-ops",
  "attome-records",
  "attome-sales",
  "attome-security",

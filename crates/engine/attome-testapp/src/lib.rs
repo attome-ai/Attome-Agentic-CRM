@@ -253,6 +253,8 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         .register(attome_billing::BillingModel)
         .register(attome_einvoice::EinvoiceModel)
         .register(attome_document::engine::DocumentModel)
+        // AB4-T6: the ops engine's routes (drill evidence, schedules).
+        .register(attome_ops::OpsModel)
         .build()
         .await
         .expect("build the engine system");
