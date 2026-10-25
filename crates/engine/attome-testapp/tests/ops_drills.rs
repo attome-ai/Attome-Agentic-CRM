@@ -27,6 +27,9 @@ async fn app() -> Option<TestApp> {
         TestApp::start_with(|config| {
             config.ops.drill_public_keys =
                 vec![evidence::public_key_base64(&SigningKey::from_bytes(&SEED))];
+            // AB2-T8: a Patroni node is named (nothing listens there; no
+            // test here lets a switchover run).
+            config.ops.patroni_api_urls = vec!["http://127.0.0.1:9".into()];
         })
         .await
     })
@@ -315,5 +318,120 @@ fn the_auditor_pack_is_bounded_to_400_days() {
             )
             .await;
         assert_eq!(status, StatusCode::OK);
+    });
+}
+
+/// The Operations role a switchover waits on, with one member who is not
+/// the administrator.
+async fn operations_role(app: &TestApp) {
+    let existing: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM role WHERE name = 'Operations' AND is_deleted = false LIMIT 1",
+    )
+    .fetch_optional(app.db())
+    .await
+    .unwrap();
+    if existing.is_some() {
+        return;
+    }
+    let role = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO role (id, name, description, owner_layer)          VALUES ($1, 'Operations', 'ops approvers', 'project')",
+    )
+    .bind(role)
+    .execute(app.db())
+    .await
+    .unwrap();
+    let member = seed_user(app.db(), "operations").await;
+    sqlx::query("INSERT INTO user_account_mm_role (id, user_ref, role_ref) VALUES ($1, $2, $3)")
+        .bind(Uuid::now_v7())
+        .bind(member.id)
+        .bind(role)
+        .execute(app.db())
+        .await
+        .unwrap();
+}
+
+#[test]
+fn request_creates_pending_approval_and_no_patroni_call() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        let (status, _) = app
+            .request(
+                Method::POST,
+                "/api/v1/ops/cluster/switchover",
+                Some(json!({"reason": "too short"})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+
+        operations_role(&app).await;
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/ops/cluster/switchover",
+                Some(json!({"candidate": "db2", "reason": "planned kernel patching"})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::ACCEPTED, "{body}");
+        let approval = Uuid::parse_str(body["approval_id"].as_str().unwrap()).unwrap();
+        let (action, state): (String, String) =
+            sqlx::query_as("SELECT action_type, status::text FROM approval_request WHERE id = $1")
+                .bind(approval)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(action, "ops.switchover");
+        assert_eq!(state, "pending");
+        let switched: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM ops_failover_event WHERE kind = 'switchover'")
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(switched, 0, "nothing moves before a second person approves");
+    });
+}
+
+#[test]
+fn self_approval_is_refused() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        operations_role(&app).await;
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/ops/cluster/switchover",
+                Some(json!({"reason": "planned failover rehearsal"})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::ACCEPTED, "{body}");
+        let approval = body["approval_id"].as_str().unwrap().to_owned();
+        let version: i64 =
+            sqlx::query_scalar("SELECT row_version FROM approval_request WHERE id = $1")
+                .bind(Uuid::parse_str(&approval).unwrap())
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/approvals/{approval}/decide"),
+                Some(json!({"decision": "approve", "row_version": version})),
+            )
+            .await;
+        assert!(
+            !status.is_success(),
+            "the requester decided their own switchover: {status}"
+        );
+        let state: String =
+            sqlx::query_scalar("SELECT status::text FROM approval_request WHERE id = $1")
+                .bind(Uuid::parse_str(&approval).unwrap())
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(state, "pending");
     });
 }
