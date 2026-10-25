@@ -3982,6 +3982,25 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 1,
             )
         }
+        // AB3-T1: a target migration 0268 seeds.
+        "PATCH /api/v1/ops/recovery-targets/{id}" => {
+            let (id, version): (Uuid, i64) = sqlx::query_as(
+                "SELECT id, row_version FROM ops_recovery_target \
+                  WHERE profile = 'solo' AND scenario = 'bad_change'",
+            )
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("the seeded recovery target");
+            with_if_match(
+                request(
+                    "PATCH",
+                    &format!("/api/v1/ops/recovery-targets/{id}"),
+                    t,
+                    Some(json!({"rpo_seconds": 600})),
+                ),
+                version,
+            )
+        }
         // AB4-T7: the restore schedule migration 0267 seeds.
         "PATCH /api/v1/ops/drill-schedules/{id}" => {
             let (id, version): (Uuid, i64) = sqlx::query_as(

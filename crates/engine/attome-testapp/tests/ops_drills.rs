@@ -527,3 +527,95 @@ fn freshness_turns_fresh_after_a_passing_upload() {
         assert_eq!(page["items"].as_array().unwrap().len(), 7);
     });
 }
+
+async fn target(app: &TestApp, profile: &str, scenario: &str) -> Value {
+    let (status, page) = app
+        .request(
+            Method::GET,
+            &format!("/api/v1/ops/recovery-targets?profile={profile}"),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    page["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["scenario"] == json!(scenario))
+        .cloned()
+        .expect("migration 0268 seeds every profile and scenario")
+}
+
+#[test]
+fn seeded_targets_are_not_proven_without_evidence() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        // No test here uploads failover evidence.
+        let ha = target(&app, "ha", "node_loss").await;
+        assert_eq!(ha["evidence_kind"], json!("failover"));
+        assert_eq!(ha["rpo_seconds"], json!(0));
+        assert_eq!(ha["proven"], json!(false));
+        let (status, _) = app
+            .request(
+                Method::GET,
+                "/api/v1/ops/recovery-targets?profile=huge",
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    });
+}
+
+#[test]
+fn fresh_recovery_evidence_within_target_marks_proven_and_over_target_does_not() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        // RPO 60 s and RTO 120 s, within solo corruption's 300 s / 3600 s.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/ops/drills/evidence",
+                Some(report(
+                    EvidenceKind::Recovery,
+                    &SigningKey::from_bytes(&SEED),
+                )),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        let corruption = target(&app, "solo", "corruption").await;
+        assert_eq!(corruption["proven"], json!(true), "{corruption}");
+        assert!(corruption["proven_on"].is_string());
+
+        // Tighten team ransomware below the measured 60 s: no longer proven.
+        let ransomware = target(&app, "team", "ransomware").await;
+        let id = ransomware["id"].as_str().unwrap();
+        let (status, _) = app
+            .request(
+                Method::PATCH,
+                &format!("/api/v1/ops/recovery-targets/{id}"),
+                Some(json!({"rpo_seconds": 10})),
+            )
+            .await;
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "If-Match is required"
+        );
+        let if_match = format!("\"{}\"", ransomware["row_version"].as_i64().unwrap());
+        let (status, changed) = app
+            .request_with(
+                Method::PATCH,
+                &format!("/api/v1/ops/recovery-targets/{id}"),
+                &[("if-match", if_match.as_str())],
+                Some(json!({"rpo_seconds": 10})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{changed}");
+        assert_eq!(changed["rpo_seconds"], json!(10));
+        assert_eq!(changed["proven"], json!(false));
+    });
+}

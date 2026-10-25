@@ -24,6 +24,8 @@ pub mod evidence;
 /// AB4-T9: how fresh each kind of drill is.
 pub mod freshness;
 pub mod model;
+/// AB3-T1: recovery targets per profile and scenario, with their proof.
+pub mod recovery_targets;
 /// AB2-T7: the cluster's status and failover history routes.
 pub mod status;
 /// AB2-T8: planned switchover under two-person control.
@@ -48,6 +50,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(drill_schedules::openapi_fragment());
     doc.merge(auditor_pack::openapi_fragment());
     doc.merge(freshness::openapi_fragment());
+    doc.merge(recovery_targets::openapi_fragment());
     doc.merge(switchover::openapi_fragment());
     doc
 }

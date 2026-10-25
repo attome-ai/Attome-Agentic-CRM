@@ -4,7 +4,7 @@
 
 use serde::Deserialize;
 
-#[derive(Clone, Debug, Default, Deserialize, schemars::JsonSchema)]
+#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct OpsSection {
     /// The Patroni REST API of each database node (`http://db1:8008`), for
@@ -14,6 +14,20 @@ pub struct OpsSection {
     pub drill_signing_key_path: Option<String>,
     /// Public keys (base64) a drill report's signature is checked against.
     pub drill_public_keys: Vec<String>,
+    /// AB3-T1: the deployment profile recovery targets are read for: `solo`,
+    /// `team`, `ha` or `scale`.
+    pub profile: String,
+}
+
+impl Default for OpsSection {
+    fn default() -> Self {
+        Self {
+            patroni_api_urls: Vec::new(),
+            drill_signing_key_path: None,
+            drill_public_keys: Vec::new(),
+            profile: "solo".to_owned(),
+        }
+    }
 }
 
 impl OpsSection {
@@ -38,6 +52,12 @@ impl OpsSection {
             return Err((
                 "ops.drill_signing_key_path".into(),
                 "a file path, or leave it out".into(),
+            ));
+        }
+        if !["solo", "team", "ha", "scale"].contains(&self.profile.as_str()) {
+            return Err((
+                "ops.profile".into(),
+                "one of solo, team, ha or scale".into(),
             ));
         }
         Ok(())

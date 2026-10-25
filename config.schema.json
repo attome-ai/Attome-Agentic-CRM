@@ -2464,6 +2464,11 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "profile": {
+          "default": "solo",
+          "description": "AB3-T1: the deployment profile recovery targets are read for: `solo`,\n`team`, `ha` or `scale`.",
+          "type": "string"
         }
       },
       "type": "object"
