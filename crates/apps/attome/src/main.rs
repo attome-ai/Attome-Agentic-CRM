@@ -55,6 +55,9 @@ Usage:
   attome status-page --url <server> --out <dir>
                                 Write a server's public status page as static
                                 HTML and JSON into a directory
+  attome storage migrate --from <config.json> --to <config.json> [--state <file>]
+                                Copy every file to another storage backend,
+                                verify each, and resume where a stop left off
   attome upgrade --plan <nodes.json>
                                 Upgrade nodes one at a time, watching each
                                 and rolling back the first that gets worse
@@ -175,6 +178,10 @@ fn main() -> ExitCode {
         ["sla", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::sla_report::run(&rest)
+        }
+        ["storage", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::storage_migrate::run(&rest)
         }
         ["status-page", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

@@ -150,7 +150,14 @@ impl AppConfig {
     ///   2. `APP_ENV=debug`  → `config.debug.json`
     ///   3. default          → `config.json`
     pub fn from_file() -> Result<Self, ConfigError> {
-        let path = Self::config_file_path();
+        Self::from_path(Self::config_file_path())
+    }
+
+    /// Load from the JSON file at `path`, with the same placeholder expansion
+    /// and checks as [`Self::from_file`] (Z6-T5: `attome storage migrate`
+    /// reads two deployments' files).
+    pub fn from_path(path: String) -> Result<Self, ConfigError> {
+        dotenvy::dotenv().ok();
 
         // A bind mount whose host-side file is missing makes Docker create a
         // *directory* at the target path — `docker-compose.yml`'s

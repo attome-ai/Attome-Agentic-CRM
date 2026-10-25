@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- `attome storage migrate --from <config.json> --to <config.json>` (Z6-T5) copies every file to
+  another storage backend, 100 a batch and 8 at a time, checks each copy's size and SHA-256 by reading
+  it back, records progress in a state file so a rerun resumes, refuses a target outside
+  `deployment.data_region`, never deletes a source file, and ends with the config change to make.
 - Embedded dashboards (P8-T1): an administrator lets named `https://` sites frame a dashboard
   (`POST /api/v1/admin/dashboards/{id}/embeds`; `DELETE /api/v1/admin/dashboard-embeds/{id}` stops it,
   both configuration audit events). The host site's server asks for a viewer token

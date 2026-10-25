@@ -116,4 +116,6 @@ pub use health::{
     ClamAvHealth, StorageHealth, clamav_health_check, health_check, public_endpoint_health_check,
 };
 pub use local::{LOCAL_LINK_PATH, verify_local_link};
+/// The object store API engines and tools use with a [`StorageClient`].
+pub use object_store;
 pub use presign::{presign_download, presign_upload};

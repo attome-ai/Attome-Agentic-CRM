@@ -19,6 +19,7 @@ pub mod sla_report;
 pub mod sovereignty;
 pub mod status;
 pub mod status_page;
+pub mod storage_migrate;
 /// U8-T1: rolling upgrade with a canary and automatic stop.
 pub mod upgrade;
 pub mod verify_audit_chain;
