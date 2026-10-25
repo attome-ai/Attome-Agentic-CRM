@@ -1194,6 +1194,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-records-bulk-quiet",
         // Q12-T1: the twelve administration-area privileges.
         "attome-security-admin-areas",
+        // U12-T1: the company wall flag and the privilege that lifts it.
+        "attome-security-company-walls",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

@@ -1,0 +1,38 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "privileges": [
+    {
+      "key": "security.cross_company",
+      "name": "See Records Across Companies",
+      "description": "Lifts company walls: the holder sees records of every company, not only their own."
+    }
+  ],
+  "entities": [],
+  "attribute_patches": [
+    {
+      "entity": "organization",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Company Wall",
+        "field_type": "bool",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "is_company_wall",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    }
+  ]
+}

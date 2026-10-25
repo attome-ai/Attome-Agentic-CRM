@@ -710,6 +710,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Company walls (U12-T1, platform changeset 0072): an organisation marked `is_company_wall` is a
+  company, and a person whose organisations all sit inside walls sees only records whose
+  `organization_ref` is inside their companies: `Global` depth is capped to `BusinessUnit` and the
+  business-unit set becomes the companies' organisations. Holding `security.cross_company` (or
+  `system.admin`) lifts the wall; shares and ownership still cross it. Sign-in now runs one more query
+  (Q9-T1's role rules), so the `sign_in` request budget is 11.
 - Vendor risk assessments (R14-T1, vendor-supplier pack `0004`): vendors get a risk tier and rating,
   questionnaires are published surveys with scoring rules (bool, choice, multi-choice, number and
   rating questions; unanswered questions earn nothing), and the daily GRC sweep opens an assessment

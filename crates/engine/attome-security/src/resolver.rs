@@ -49,10 +49,20 @@ pub(crate) async fn resolve_record_level_context(
 ) -> Result<RecordLevelContext, AppError> {
     let team_ids = crate::db::resolve_team_ids(db, user_id).await?;
     let role_ids = crate::db::resolve_role_ids(db, user_id).await?;
-    let accessible_org_ids = if crate::db::any_role_uses_business_unit_scope(db, user_id).await? {
-        crate::db::resolve_accessible_org_ids(db, user_id).await?
+    let business_units = if crate::db::any_role_uses_business_unit_scope(db, user_id).await? {
+        Some(crate::db::resolve_accessible_org_ids(db, user_id).await?)
     } else {
-        Vec::new()
+        None
+    };
+    // U12-T1: a person confined to their companies filters on the
+    // companies' organisations (their own business units inside them, when
+    // a role already scopes them that way).
+    let accessible_org_ids = match crate::company_walls::confinement(db, user_id).await? {
+        Some(companies) => {
+            let company = crate::company_walls::company_org_ids(db, &companies).await?;
+            crate::company_walls::walled_org_ids(business_units.as_deref(), &company)
+        }
+        None => business_units.unwrap_or_default(),
     };
     let position_hierarchy_enabled =
         crate::db::resolve_position_hierarchy_enabled(db, user_id).await?;

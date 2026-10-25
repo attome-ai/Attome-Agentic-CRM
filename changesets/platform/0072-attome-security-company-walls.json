@@ -1,0 +1,76 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:36e704bf9d0495dd260f1542694ed7b02e3c66cc6e5b5bd7f9671b955f336477",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-security-company-walls.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "c9554d1a-0827-7d7f-b90b-f6e339a11d72",
+  "layer": "platform",
+  "name": "attome-security-company-walls",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Lifts company walls: the holder sees records of every company, not only their own.",
+          "key": "security.cross_company",
+          "name": "See Records Across Companies"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "security.cross_company"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Company Wall",
+          "field_type": "bool",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_company_wall",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "organization",
+        "field": "is_company_wall"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جدار الشركة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "organization.is_company_wall",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 72,
+  "title": "Platform definitions: attome-security-company-walls"
+}

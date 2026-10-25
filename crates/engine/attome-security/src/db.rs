@@ -625,7 +625,7 @@ impl RecordAction {
 /// so string composition here carries none of the interpolation risk
 /// guidelines §4 warns against — every actual value is still bound
 /// positionally by the query that wraps this constant.
-const HELD_ROLES_CTE: &str = r#"
+pub(crate) const HELD_ROLES_CTE: &str = r#"
     WITH held_roles AS (
         SELECT r.id AS role_id
         FROM role r
@@ -688,9 +688,16 @@ pub async fn resolve_entity_access_level(
     );
     let privilege_key = format!("{entity_name}.{}", action.as_str());
 
+    // U12-T1: the same statement answers whether the caller is confined to
+    // their companies (`crate::company_walls`), so a wall costs no extra
+    // round trip on the request path. `WITH RECURSIVE` covers the walk up
+    // the organisation tree; `held_roles` itself does not recurse.
+    let held_roles = HELD_ROLES_CTE.replacen("WITH held_roles", "WITH RECURSIVE held_roles", 1);
+    let walls = crate::company_walls::confined_ctes("$5", "$6");
     let sql = format!(
         r#"
-            {HELD_ROLES_CTE},
+            {held_roles},
+            {walls},
             role_depth AS (
                 SELECT COALESCE(
                     CASE $4::text
@@ -714,29 +721,40 @@ pub async fn resolve_entity_access_level(
                   AND p.is_active = true AND p.key = $3
                 WHERE up.user_ref = $1 AND up.is_active = true
             )
-            SELECT MAX(depth) FROM (
-                SELECT depth FROM role_depth
-                UNION ALL
-                SELECT depth FROM direct_depth
-            ) combined
+            SELECT
+                (SELECT MAX(depth) FROM (
+                    SELECT depth FROM role_depth
+                    UNION ALL
+                    SELECT depth FROM direct_depth
+                ) combined),
+                (SELECT confined FROM wall_confined)
             "#
     );
-    let max_level: Option<i16> = tokio::time::timeout(
+    let (max_level, confined): (Option<i16>, Option<bool>) = tokio::time::timeout(
         QUERY_TIMEOUT,
-        sqlx::query_scalar(&sql)
+        sqlx::query_as(&sql)
             .bind(user_id)
             .bind(entity_ref)
             .bind(&privilege_key)
             .bind(action.as_str())
+            .bind(crate::company_walls::CROSS_COMPANY)
+            .bind(crate::company_walls::MAX_DEPTH)
             .fetch_one(db),
     )
     .await
     .map_err(|_| AppError::internal("entity-access-level resolution query timed out"))?
     .map_err(AppError::internal)?;
 
-    Ok(max_level
+    let level = max_level
         .map(AccessLevel::from_i16)
-        .unwrap_or(AccessLevel::None))
+        .unwrap_or(AccessLevel::None);
+    // U12-T1: a person confined to their companies never reads, changes or
+    // deletes at `Global` depth; the `BusinessUnit` filter then compares the
+    // record's organisation with the companies' organisations.
+    Ok(crate::company_walls::wall_level(
+        level,
+        confined.unwrap_or(false),
+    ))
 }
 
 /// D-371 (amends D-357 ruling 2): resolves whether `user_id`'s held roles

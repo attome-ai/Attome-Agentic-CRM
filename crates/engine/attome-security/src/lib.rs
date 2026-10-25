@@ -4,6 +4,8 @@ pub mod api_keys;
 /// T2-T2: the caller's own role names.
 pub mod my_roles;
 pub mod cache;
+/// U12-T1 — company walls in the record filter.
+pub mod company_walls;
 pub mod conditions;
 pub mod context;
 pub mod db;
