@@ -87,6 +87,47 @@ pub struct FeatureFlagPolicy {
     /// one already in.
     #[serde(default)]
     pub percentage: Option<u8>,
+    /// T6-T1: team id -> override, checked after the user's own and before
+    /// the privileges'. A person in several teams gets `true` if any says so.
+    #[serde(default)]
+    pub team_overrides: HashMap<String, bool>,
+    /// T6-T1: organisation (unit) id -> override, matched against the units
+    /// the person reaches (`SecurityContext::accessible_org_ids`), after
+    /// teams. A person resolved without units is never matched.
+    #[serde(default)]
+    pub unit_overrides: HashMap<String, bool>,
+    /// T6-T1: who answers for the flag (a name, an email or a user id).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
+    /// T6-T1: when the flag should be gone; listed by the expiry report from
+    /// the day after. It changes nothing by itself.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_on: Option<chrono::NaiveDate>,
+    /// T6-T1: changes to the deployment value and rollout that take effect at
+    /// a time. The latest one whose time has come replaces `deployment` and
+    /// `percentage`; overrides stay as stored.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub schedule: Vec<ScheduledChange>,
+}
+
+/// T6-T1: one scheduled change of a flag.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct ScheduledChange {
+    pub at: chrono::DateTime<chrono::Utc>,
+    pub deployment: bool,
+    #[serde(default)]
+    pub percentage: Option<u8>,
+}
+
+/// The most scheduled changes one flag holds.
+pub const MAX_SCHEDULED_CHANGES: usize = 20;
+
+/// T6-T1: a flag past its expiry date, for the expiry report.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct ExpiredFlag {
+    pub key: String,
+    pub owner: Option<String>,
+    pub expires_on: chrono::NaiveDate,
 }
 
 impl FeatureFlagPolicy {
@@ -114,6 +155,31 @@ impl FeatureFlagPolicy {
         {
             return Err(format!("percentage must be <= 100, got {pct}"));
         }
+        if self.schedule.len() > MAX_SCHEDULED_CHANGES {
+            return Err(format!(
+                "a flag holds at most {MAX_SCHEDULED_CHANGES} scheduled changes"
+            ));
+        }
+        if let Some(change) = self
+            .schedule
+            .iter()
+            .find(|c| c.percentage.is_some_and(|p| p > 100))
+        {
+            return Err(format!(
+                "the change scheduled at {} has a percentage above 100",
+                change.at
+            ));
+        }
+        for key in self.team_overrides.keys().chain(self.unit_overrides.keys()) {
+            if Uuid::parse_str(key).is_err() {
+                return Err(format!(
+                    "team or unit override key {key:?} is not a valid UUID"
+                ));
+            }
+        }
+        if self.owner.as_ref().is_some_and(|o| o.chars().count() > 200) {
+            return Err("owner is at most 200 characters".to_owned());
+        }
         for key in self.user_overrides.keys() {
             if Uuid::parse_str(key).is_err() {
                 return Err(format!("user_overrides key {key:?} is not a valid UUID"));
@@ -124,6 +190,40 @@ impl FeatureFlagPolicy {
         }
         Ok(())
     }
+}
+
+impl FeatureFlagPolicy {
+    /// T6-T1: the deployment value and rollout in force at `now`: the latest
+    /// scheduled change whose time has come, else the stored ones. Pure.
+    pub fn base_at(&self, now: chrono::DateTime<chrono::Utc>) -> (bool, Option<u8>) {
+        self.schedule
+            .iter()
+            .filter(|c| c.at <= now)
+            .max_by_key(|c| c.at)
+            .map_or((self.deployment, self.percentage), |c| {
+                (c.deployment, c.percentage)
+            })
+    }
+}
+
+/// T6-T1: the flags past their expiry date on `today`, by key. Pure over
+/// the settings snapshot.
+pub fn expired_flags(snapshot: &SettingsSnapshot, today: chrono::NaiveDate) -> Vec<ExpiredFlag> {
+    let mut out: Vec<ExpiredFlag> = flag_registry()
+        .iter()
+        .filter_map(|flag| {
+            let policy =
+                FeatureFlagPolicy::from_settings(snapshot, &flag.setting_key(), flag.default);
+            let expires_on = policy.expires_on.filter(|d| *d < today)?;
+            Some(ExpiredFlag {
+                key: flag.key.to_owned(),
+                owner: policy.owner,
+                expires_on,
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| a.key.cmp(&b.key));
+    out
 }
 
 /// Deterministic, stable-across-restarts-and-nodes bucket for `(flag_key,
@@ -146,8 +246,31 @@ fn rollout_bucket(flag_key: &str, user_id: Uuid) -> u8 {
 /// never be bypassed by calling this directly with a licensed-looking
 /// context.
 fn evaluate_policy(flag_key: &str, policy: &FeatureFlagPolicy, ctx: &SecurityContext) -> bool {
+    evaluate_policy_at(flag_key, policy, ctx, chrono::Utc::now())
+}
+
+/// [`evaluate_policy`] at `now` (T6-T1: scheduled changes), in order: the
+/// person, their teams, their units, their privileges, then the deployment
+/// value and rollout in force.
+fn evaluate_policy_at(
+    flag_key: &str,
+    policy: &FeatureFlagPolicy,
+    ctx: &SecurityContext,
+    now: chrono::DateTime<chrono::Utc>,
+) -> bool {
     if let Some(v) = policy.user_overrides.get(&ctx.user_id.to_string()) {
         return *v;
+    }
+    let any_of = |overrides: &HashMap<String, bool>, ids: &[Uuid]| {
+        ids.iter()
+            .filter_map(|id| overrides.get(&id.to_string()).copied())
+            .fold(None, |acc: Option<bool>, v| Some(acc.unwrap_or(false) || v))
+    };
+    if let Some(v) = any_of(&policy.team_overrides, &ctx.team_ids) {
+        return v;
+    }
+    if let Some(v) = any_of(&policy.unit_overrides, &ctx.accessible_org_ids) {
+        return v;
     }
 
     let role_match = policy
@@ -160,13 +283,41 @@ fn evaluate_policy(flag_key: &str, policy: &FeatureFlagPolicy, ctx: &SecurityCon
         return v;
     }
 
-    if !policy.deployment {
+    let (deployment, percentage) = policy.base_at(now);
+    if !deployment {
         return false;
     }
-    match policy.percentage {
+    match percentage {
         Some(pct) => rollout_bucket(flag_key, ctx.user_id) < pct.min(100),
         None => true,
     }
+}
+
+/// T6-T1: whether every flag `flag` requires is on for `ctx` (recursively;
+/// the catalogue's `requires` graph is acyclic). A required flag whose
+/// module is off counts as off. Pure over the snapshot and module set.
+fn requirements_met(
+    flag: &FeatureFlag,
+    snapshot: &SettingsSnapshot,
+    modules: &attome_modules::ModuleSet,
+    ctx: &SecurityContext,
+    now: chrono::DateTime<chrono::Utc>,
+    depth: usize,
+) -> bool {
+    if depth > 16 {
+        return false;
+    }
+    let registry = flag_registry();
+    flag.requires.iter().all(|key| {
+        let Some(required) = registry.get(key) else {
+            return false;
+        };
+        let policy =
+            FeatureFlagPolicy::from_settings(snapshot, &required.setting_key(), required.default);
+        modules.has(required.module)
+            && evaluate_policy_at(required.key, &policy, ctx, now)
+            && requirements_met(required, snapshot, modules, ctx, now, depth + 1)
+    })
 }
 
 /// Write-time dependency check (M95 checklist item 3): a flag's stored
@@ -205,7 +356,8 @@ pub fn validate_flag_dependencies(
 /// E13-T1: a policy's value for the deployment as a whole: on only when
 /// switched on for everyone, with no partial percentage rollout.
 fn deployment_value(policy: &FeatureFlagPolicy) -> bool {
-    policy.deployment && policy.percentage.is_none_or(|p| p >= 100)
+    let (deployment, percentage) = policy.base_at(chrono::Utc::now());
+    deployment && percentage.is_none_or(|p| p >= 100)
 }
 
 /// Borrowed accessor returned by `EngineState::feature_flags()` — a thin
@@ -253,7 +405,11 @@ impl<'a> FeatureFlags<'a> {
 
         let snapshot = self.state.settings.load();
         let policy = FeatureFlagPolicy::from_settings(&snapshot, &flag.setting_key(), flag.default);
-        let value = evaluate_policy(flag.key, &policy, ctx);
+        let now = chrono::Utc::now();
+        // T6-T1: the module (above), then the flags it depends on, then
+        // targeting.
+        let value = requirements_met(flag, &snapshot, &self.state.modules.load(), ctx, now, 0)
+            && evaluate_policy_at(flag.key, &policy, ctx, now);
 
         self.state.feature_flags.insert(cache_key, value).await;
         value
@@ -331,6 +487,83 @@ mod tests {
             row_version: 0,
             updated_at: chrono::Utc::now(),
         }])
+    }
+
+    /// T6-T1: teams and units come after the person and before privileges.
+    #[test]
+    fn feature_flag_targets_teams_and_units() {
+        let team = Uuid::now_v7();
+        let unit = Uuid::now_v7();
+        let policy = FeatureFlagPolicy {
+            deployment: false,
+            team_overrides: HashMap::from([(team.to_string(), true)]),
+            unit_overrides: HashMap::from([(unit.to_string(), true)]),
+            role_overrides: HashMap::from([("beta.tester".to_owned(), false)]),
+            ..Default::default()
+        };
+        let mut in_team = ctx(Uuid::now_v7(), &["beta.tester"]);
+        in_team.team_ids = vec![team];
+        assert!(evaluate_policy("core.beta_ui", &policy, &in_team));
+        let mut in_unit = ctx(Uuid::now_v7(), &[]);
+        in_unit.accessible_org_ids = vec![unit];
+        assert!(evaluate_policy("core.beta_ui", &policy, &in_unit));
+        assert!(!evaluate_policy(
+            "core.beta_ui",
+            &policy,
+            &ctx(Uuid::now_v7(), &["beta.tester"])
+        ));
+        let bad = FeatureFlagPolicy {
+            team_overrides: HashMap::from([("not-a-uuid".to_owned(), true)]),
+            ..Default::default()
+        };
+        assert!(bad.validate().is_err());
+    }
+
+    /// T6-T1: the latest scheduled change whose time has come wins.
+    #[test]
+    fn feature_flag_schedule_takes_effect_at_its_time() {
+        let t = |h: i64| {
+            chrono::DateTime::<chrono::Utc>::from_timestamp(1_800_000_000 + h * 3600, 0).unwrap()
+        };
+        let change = |h: i64, deployment: bool, percentage: Option<u8>| ScheduledChange {
+            at: t(h),
+            deployment,
+            percentage,
+        };
+        let policy = FeatureFlagPolicy {
+            deployment: false,
+            schedule: vec![change(10, true, Some(20)), change(20, true, None)],
+            ..Default::default()
+        };
+        assert_eq!(policy.base_at(t(5)), (false, None));
+        assert_eq!(policy.base_at(t(15)), (true, Some(20)));
+        assert_eq!(policy.base_at(t(25)), (true, None));
+        let user = ctx(Uuid::now_v7(), &[]);
+        assert!(!evaluate_policy_at("core.beta_ui", &policy, &user, t(5)));
+        assert!(evaluate_policy_at("core.beta_ui", &policy, &user, t(25)));
+        let too_many = FeatureFlagPolicy {
+            schedule: (0..21).map(|h| change(h, true, None)).collect(),
+            ..Default::default()
+        };
+        assert!(too_many.validate().is_err());
+    }
+
+    /// T6-T1: the expiry report lists flags from the day after their date.
+    #[test]
+    fn feature_flag_expiry_report() {
+        let flag = flag_registry().get("core.beta_ui").unwrap();
+        let day = |d: u32| chrono::NaiveDate::from_ymd_opt(2026, 11, d).unwrap();
+        let policy = FeatureFlagPolicy {
+            owner: Some("platform team".into()),
+            expires_on: Some(day(10)),
+            ..Default::default()
+        };
+        let snapshot = snapshot_with(&flag.setting_key(), &policy);
+        assert!(expired_flags(&snapshot, day(10)).is_empty());
+        let report = expired_flags(&snapshot, day(11));
+        assert_eq!(report.len(), 1);
+        assert_eq!(report[0].key, "core.beta_ui");
+        assert_eq!(report[0].owner.as_deref(), Some("platform team"));
     }
 
     /// E13-T1: a job with no user sees only the deployment-wide value.

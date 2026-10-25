@@ -207,7 +207,8 @@ pub use feature_flag_descriptor::{
     FeatureFlag, FeatureFlagRegistry, registry as feature_flag_registry,
 };
 pub use feature_flag_store::{
-    FeatureFlagPolicy, FeatureFlags, feature_flag_cache_key, validate_flag_dependencies,
+    ExpiredFlag, FeatureFlagPolicy, FeatureFlags, ScheduledChange, expired_flags,
+    feature_flag_cache_key, validate_flag_dependencies,
 };
 pub use field_type::{ALL_FIELD_TYPES, FORMULA_RESULT_TYPES, FieldType};
 pub use filter::{

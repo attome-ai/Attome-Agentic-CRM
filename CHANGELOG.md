@@ -710,6 +710,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Feature flag targeting (T6-T1): a flag's policy gains team and unit overrides (after the person's own,
+  before privileges), an owner, an expiry date and scheduled changes to its deployment value and rollout
+  (the latest whose time has come applies, with no job to run); a flag is on only when every flag it
+  requires is on for the same person. `GET /api/v1/admin/features/expired` lists flags past their date.
 - Environment variables in flows (A30-T2): a flow condition's expression reads `env.<name>`: the value
   this deployment set, else the definition's default (`attome_core::env_vars`). Secrets are never
   readable by rules. Publishing a flow that reads a variable that is not defined, is a secret, or is

@@ -14,7 +14,8 @@
 use std::collections::HashMap;
 
 use attome_core::{
-    EngineState, FeatureFlagPolicy, SettingScope, feature_flag_registry, validate_flag_dependencies,
+    EngineState, ExpiredFlag, FeatureFlagPolicy, SettingScope, expired_flags,
+    feature_flag_registry, validate_flag_dependencies,
 };
 use attome_modules::MODULE_MAP;
 use attome_server::authz::{Admin, Authorized, SelfService};
@@ -101,8 +102,9 @@ async fn list_features(
     Ok(Json(FeatureFlagListResponse { items }))
 }
 
-/// Sets a flag's stored policy value (deployment default, user/role
-/// overrides, rollout percentage). Rejects an unknown key (404) and rejects
+/// Sets a flag's stored policy value (deployment default, user, team, unit
+/// and role overrides, rollout percentage, owner, expiry and scheduled
+/// changes). Rejects an unknown key (404) and rejects
 /// turning `deployment` on while a `requires` prerequisite is not itself
 /// enabled deployment-wide (422, M95 checklist item 3).
 #[utoipa::path(
@@ -163,6 +165,36 @@ async fn put_feature_flag(
     Ok(Json(view_for(&state, &key).ok_or(AppError::NotFound)?))
 }
 
+#[derive(Serialize, ToSchema)]
+struct ExpiredFlagsResponse {
+    items: Vec<ExpiredFlag>,
+}
+
+/// Feature flags past their expiry date
+///
+/// T6-T1: every flag whose `expires_on` has passed, with its owner, so it
+/// can be removed or given a new date.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/features/expired",
+    tag = "admin",
+    responses(
+        (status = 200, description = "The flags past their expiry date, by key", body = ExpiredFlagsResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn expired_features(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Json<ExpiredFlagsResponse> {
+    let snapshot = state.settings.load();
+    Json(ExpiredFlagsResponse {
+        items: expired_flags(&snapshot, chrono::Utc::now().date_naive()),
+    })
+}
+
 /// Every registered flag, evaluated for the calling user — what `/api/v1/features`
 /// gives Angular's `FeatureService` so the UI and the API agree on what's on.
 #[utoipa::path(
@@ -186,12 +218,18 @@ async fn get_effective_features(
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/features", get(list_features))
+        .route("/api/v1/admin/features/expired", get(expired_features))
         .route("/api/v1/admin/features/{key}", put(put_feature_flag))
         .route("/api/v1/features", get(get_effective_features))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_features, put_feature_flag, get_effective_features))]
+#[openapi(paths(
+    list_features,
+    put_feature_flag,
+    expired_features,
+    get_effective_features
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
