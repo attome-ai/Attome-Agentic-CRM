@@ -37767,10 +37767,7 @@ export interface components {
             /** @description An administrator with no phishing-resistant factor (a passkey). */
             admin_missing_phishing_resistant: boolean;
             email?: string | null;
-            /**
-             * @description `totp`, `recovery` (unused recovery codes left); `passkey` when
-             *     passkeys exist.
-             */
+            /** @description `totp`, `recovery` (unused recovery codes left) and `passkey`. */
             factors: string[];
             is_admin: boolean;
             /** @description The names of the account's roles. */
@@ -43569,10 +43566,7 @@ export interface components {
                 /** @description An administrator with no phishing-resistant factor (a passkey). */
                 admin_missing_phishing_resistant: boolean;
                 email?: string | null;
-                /**
-                 * @description `totp`, `recovery` (unused recovery codes left); `passkey` when
-                 *     passkeys exist.
-                 */
+                /** @description `totp`, `recovery` (unused recovery codes left) and `passkey`. */
                 factors: string[];
                 is_admin: boolean;
                 /** @description The names of the account's roles. */

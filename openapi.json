@@ -159199,7 +159199,7 @@
             "items": {
               "type": "string"
             },
-            "description": "`totp`, `recovery` (unused recovery codes left); `passkey` when\npasskeys exist."
+            "description": "`totp`, `recovery` (unused recovery codes left) and `passkey`."
           },
           "is_admin": {
             "type": "boolean"
@@ -174515,7 +174515,7 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "`totp`, `recovery` (unused recovery codes left); `passkey` when\npasskeys exist."
+                  "description": "`totp`, `recovery` (unused recovery codes left) and `passkey`."
                 },
                 "is_admin": {
                   "type": "boolean"
@@ -207021,6 +207021,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
@@ -207073,6 +207074,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": []
+  }
 }
