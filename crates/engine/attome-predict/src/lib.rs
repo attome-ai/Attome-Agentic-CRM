@@ -37,6 +37,8 @@ pub mod admin;
 pub mod causal;
 pub mod features;
 pub mod model;
+/// O1-T1: generic model definitions compiled through the secured compiler.
+pub mod model_def;
 pub mod predictions;
 pub mod score;
 pub mod train;

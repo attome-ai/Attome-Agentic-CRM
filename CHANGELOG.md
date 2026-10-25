@@ -710,6 +710,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Prediction model definitions (O1-T1): `attome_predict::model_def` describes a model by entity, target
+  attribute, features (attributes, lookup paths, date parts, rollups over child records) and algorithm,
+  checks it against the metadata (a target the algorithm can predict, real attributes, lookups and
+  dates), compiles the features into QuerySpecs so the secured compiler applies the reader's security,
+  and refuses to train below the model's minimum rows (200 by default, never below 50).
 - Rolling upgrade (U8-T1): `attome upgrade --plan <nodes.json>` measures the fleet's error rate and
   mean latency from each node's `/metrics`, then upgrades the nodes one at a time (the first is the
   canary), watching each for `watch_secs` (300 by default); a node whose error rate rises more than
