@@ -402,6 +402,24 @@ impl ApprovalPlan {
         }
         start..end
     }
+
+    /// Z10-T3: the steps of `step`'s stage that still run — its group (or
+    /// just itself) minus the `skipped` indices.
+    pub fn active_stage(&self, step: usize, skipped: &[i32]) -> Vec<usize> {
+        self.stage_of(step)
+            .filter(|i| !is_skipped(*i, skipped))
+            .collect()
+    }
+
+    /// Z10-T3: the first step at or after `from` that is not skipped, or
+    /// `None` when every remaining step is.
+    pub fn next_active(&self, from: usize, skipped: &[i32]) -> Option<usize> {
+        (from..self.steps.len()).find(|i| !is_skipped(*i, skipped))
+    }
+}
+
+fn is_skipped(step: usize, skipped: &[i32]) -> bool {
+    i32::try_from(step).is_ok_and(|s| skipped.contains(&s))
 }
 
 /// One step of an [`ApprovalPlan`]. Parallel = a step with `mode: all`;
@@ -638,6 +656,9 @@ pub struct ApprovalRequest {
     pub parent_request_id: Option<Uuid>,
     /// Z10-T4: when the requester recalled it.
     pub recalled_at: Option<DateTime<Utc>>,
+    /// Z10-T3: plan steps that do not run for this request (their
+    /// condition was false at submit). Never waited on.
+    pub skipped_steps: Vec<i32>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -661,6 +682,7 @@ struct ApprovalRequestRow {
     regarding_id: Option<Uuid>,
     parent_request_id: Option<Uuid>,
     recalled_at: Option<DateTime<Utc>>,
+    skipped_steps: Vec<i32>,
 }
 
 impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
@@ -692,13 +714,15 @@ impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
             regarding_id: row.regarding_id,
             parent_request_id: row.parent_request_id,
             recalled_at: row.recalled_at,
+            skipped_steps: row.skipped_steps,
         })
     }
 }
 
 const REQUEST_COLUMNS: &str = "id, action_type, payload, requested_by, requested_at, status, \
      required_approvals, row_version, expires_at, executed_at, plan, step, step_started_at, \
-     escalated_at, policy_id, regarding_entity, regarding_id, parent_request_id, recalled_at";
+     escalated_at, policy_id, regarding_entity, regarding_id, parent_request_id, recalled_at, \
+     skipped_steps";
 
 /// Enqueues a new pending approval request instead of the caller executing
 /// its mutation inline. `required_approvals` lets a future N-of-M policy
@@ -896,7 +920,54 @@ pub async fn submit_with_plan_regarding_in_tx(
     policy_id: Option<Uuid>,
     regarding: Option<(&str, Uuid)>,
 ) -> Result<ApprovalRequest, AppError> {
+    submit_with_plan_skipping_in_tx(
+        tx,
+        action_type,
+        payload,
+        requested_by,
+        plan,
+        backstop_ttl,
+        policy_id,
+        regarding,
+        &[],
+    )
+    .await
+}
+
+/// Z10-T3: [`submit_with_plan_regarding_in_tx`] for a plan some of whose
+/// steps do not run for this request. `skipped_steps` are plan step indices;
+/// the request starts at the first step not in it. When every step is
+/// skipped the request is inserted already `approved`, with one grant by
+/// [`POLICY_ACTOR_ID`] recording that the policy, not a person, decided it.
+#[allow(clippy::too_many_arguments)]
+pub async fn submit_with_plan_skipping_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    action_type: &str,
+    payload: Value,
+    requested_by: Uuid,
+    plan: ApprovalPlan,
+    backstop_ttl: Duration,
+    policy_id: Option<Uuid>,
+    regarding: Option<(&str, Uuid)>,
+    skipped_steps: &[i32],
+) -> Result<ApprovalRequest, AppError> {
     plan.validate()?;
+    let mut skipped: Vec<i32> = skipped_steps.to_vec();
+    skipped.sort_unstable();
+    skipped.dedup();
+    if skipped
+        .iter()
+        .any(|s| !usize::try_from(*s).is_ok_and(|i| i < plan.steps.len()))
+    {
+        return Err(AppError::Validation(
+            "skipped_steps names a step the plan does not have".to_string(),
+        ));
+    }
+    let first = plan.next_active(0, &skipped);
+    let (status, step) = match first {
+        Some(i) => ("pending", i32::try_from(i).map_err(AppError::internal)?),
+        None => ("approved", 0),
+    };
     let id = Uuid::now_v7();
     // BAP-16: same checked arithmetic as `submit_regarding_with` — a backstop TTL
     // that overflows `DateTime` (a plan whose steps each carry a legal but
@@ -912,8 +983,9 @@ pub async fn submit_with_plan_regarding_in_tx(
     let row: ApprovalRequestRow = sqlx::query_as(&format!(
         "INSERT INTO approval_request \
              (id, action_type, payload, requested_by, status, required_approvals, row_version, \
-              expires_at, plan, step, step_started_at, policy_id, regarding_entity, regarding_id) \
-         VALUES ($1, $2, $3, $4, 'pending', 1, 0, $5, $6, 0, NOW(), $7, $8, $9) \
+              expires_at, plan, step, step_started_at, policy_id, regarding_entity, regarding_id, \
+              skipped_steps) \
+         VALUES ($1, $2, $3, $4, $10, 1, 0, $5, $6, $11, NOW(), $7, $8, $9, $12) \
          RETURNING {REQUEST_COLUMNS}"
     ))
     .bind(id)
@@ -925,9 +997,26 @@ pub async fn submit_with_plan_regarding_in_tx(
     .bind(policy_id)
     .bind(regarding_entity)
     .bind(regarding_id)
+    .bind(status)
+    .bind(step)
+    .bind(&skipped)
     .fetch_one(&mut **tx)
     .await
     .map_err(AppError::internal)?;
+    if first.is_none() {
+        sqlx::query(
+            "INSERT INTO approval_grant \
+                 (id, request_id, approver_id, decision, decided_at, step, decided_by, on_behalf_of, \
+                  comment) \
+             VALUES ($1, $2, $3, 'approved', NOW(), 0, $3, NULL, 'every step was skipped')",
+        )
+        .bind(Uuid::now_v7())
+        .bind(id)
+        .bind(POLICY_ACTOR_ID)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
     row.try_into()
 }
 
@@ -1339,6 +1428,92 @@ pub async fn decide_step_with(
     comment: Option<&str>,
     hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
 ) -> Result<ApprovalRequest, AppError> {
+    decide_in_stage(
+        pool,
+        request_id,
+        None,
+        decider_id,
+        on_behalf_of,
+        allowed_decider_ids,
+        step_population,
+        &[],
+        decision,
+        expected_row_version,
+        comment,
+        hook,
+    )
+    .await
+}
+
+/// Z10-T3: [`decide_step_with`] for a request whose current stage is a
+/// parallel group. `step_index` is the plan step the decider is deciding —
+/// it must be a non-skipped step of the current stage, else `Conflict` —
+/// and `step_population` its resolved population. `sibling_populations`
+/// gives `(step, population)` for the stage's other steps; an `all` step
+/// without an entry never counts as satisfied, so the stage fails closed
+/// rather than closing early. A stage closes once every non-skipped step in
+/// it has its required approvals; a reject on any of its steps rejects the
+/// request.
+#[allow(clippy::too_many_arguments)]
+pub async fn decide_stage_step_with(
+    pool: &PgPool,
+    request_id: Uuid,
+    step_index: i32,
+    decider_id: Uuid,
+    on_behalf_of: Option<Uuid>,
+    allowed_decider_ids: &[Uuid],
+    step_population: usize,
+    sibling_populations: &[(i32, usize)],
+    decision: Decision,
+    expected_row_version: i64,
+    comment: Option<&str>,
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+) -> Result<ApprovalRequest, AppError> {
+    decide_in_stage(
+        pool,
+        request_id,
+        Some(step_index),
+        decider_id,
+        on_behalf_of,
+        allowed_decider_ids,
+        step_population,
+        sibling_populations,
+        decision,
+        expected_row_version,
+        comment,
+        hook,
+    )
+    .await
+}
+
+/// How many approvals a stage step other than the one being decided needs,
+/// or `None` when that cannot be known (an `all` step with no population).
+fn sibling_required(step: &ApprovalStep, population: Option<usize>) -> Option<i32> {
+    match population {
+        Some(p) => step.required_count(p).ok(),
+        None => match step.mode {
+            StepMode::Any => Some(1),
+            StepMode::NofM => step.threshold.filter(|n| *n >= 1),
+            StepMode::All => None,
+        },
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn decide_in_stage(
+    pool: &PgPool,
+    request_id: Uuid,
+    step_index: Option<i32>,
+    decider_id: Uuid,
+    on_behalf_of: Option<Uuid>,
+    allowed_decider_ids: &[Uuid],
+    step_population: usize,
+    sibling_populations: &[(i32, usize)],
+    decision: Decision,
+    expected_row_version: i64,
+    comment: Option<&str>,
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+) -> Result<ApprovalRequest, AppError> {
     let comment = normalize_decision_comment(comment)?;
     let mut tx = attome_db::tx::begin(pool).await?;
 
@@ -1393,10 +1568,23 @@ pub async fn decide_step_with(
     let plan = current.plan.clone().ok_or_else(|| {
         AppError::internal("decide_step called on an approval request with no plan")
     })?;
-    let step_index = usize::try_from(current.step).map_err(AppError::internal)?;
-    let step = plan.steps.get(step_index).ok_or_else(|| {
-        AppError::internal("approval request step index out of range for its own plan")
-    })?;
+    let current_index = usize::try_from(current.step).map_err(AppError::internal)?;
+    if current_index >= plan.steps.len() {
+        return Err(AppError::internal(
+            "approval request step index out of range for its own plan",
+        ));
+    }
+    // Z10-T3: the steps awaiting decisions now — the current stage minus the
+    // skipped ones. The decided step must be one of them.
+    let active = plan.active_stage(current_index, &current.skipped_steps);
+    let decided_step = step_index.unwrap_or(current.step);
+    let decided_index = usize::try_from(decided_step)
+        .ok()
+        .filter(|i| active.contains(i))
+        .ok_or(AppError::Conflict(
+            "that step is not awaiting decisions on this approval request",
+        ))?;
+    let step = &plan.steps[decided_index];
 
     // Separation-of-duties, widened for delegation (D-421): neither the
     // person who actually clicked nor whoever they clicked *for* may be the
@@ -1422,7 +1610,7 @@ pub async fn decide_step_with(
     )
     .bind(request_id)
     .bind(decider_id)
-    .bind(current.step)
+    .bind(decided_step)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -1456,7 +1644,7 @@ pub async fn decide_step_with(
                AND COALESCE(on_behalf_of, approver_id) = $3)",
     )
     .bind(request_id)
-    .bind(current.step)
+    .bind(decided_step)
     .bind(slot)
     .fetch_one(&mut *tx)
     .await
@@ -1480,7 +1668,7 @@ pub async fn decide_step_with(
     .bind(request_id)
     .bind(decider_id)
     .bind(decision.as_str())
-    .bind(current.step)
+    .bind(decided_step)
     .bind(decider_id)
     .bind(on_behalf_of)
     .bind(comment.as_deref())
@@ -1498,23 +1686,48 @@ pub async fn decide_step_with(
         Decision::Approve => {
             // BAP-5: count principal slots, not identities — the same
             // `COALESCE(on_behalf_of, approver_id)` key the refusal above
-            // uses, so the count and the guard can never disagree.
-            let approvals: i64 = sqlx::query_scalar(
-                "SELECT COUNT(DISTINCT COALESCE(on_behalf_of, approver_id)) \
+            // uses, so the count and the guard can never disagree. Z10-T3:
+            // counted per step of the active stage at once.
+            let active_steps: Vec<i32> = active
+                .iter()
+                .map(|i| i32::try_from(*i).map_err(AppError::internal))
+                .collect::<Result<_, _>>()?;
+            let counts: Vec<(i32, i64)> = sqlx::query_as(
+                "SELECT step, COUNT(DISTINCT COALESCE(on_behalf_of, approver_id)) \
                    FROM approval_grant \
-                 WHERE request_id = $1 AND step = $2 AND decision = 'approved'",
+                 WHERE request_id = $1 AND step = ANY($2) AND decision = 'approved' \
+                 GROUP BY step",
             )
             .bind(request_id)
-            .bind(current.step)
-            .fetch_one(&mut *tx)
+            .bind(&active_steps)
+            .fetch_all(&mut *tx)
             .await
             .map_err(AppError::internal)?;
+            let approvals_on = |s: i32| {
+                counts
+                    .iter()
+                    .find(|(step, _)| *step == s)
+                    .map_or(0, |(_, n)| *n)
+            };
             let required = step.required_count(step_population)?;
-            if approvals >= i64::from(required) {
-                if step_index + 1 < plan.steps.len() {
+            let mut stage_closed = approvals_on(decided_step) >= i64::from(required);
+            for (&index, &s) in active.iter().zip(&active_steps) {
+                if !stage_closed || s == decided_step {
+                    continue;
+                }
+                let population = sibling_populations
+                    .iter()
+                    .find(|(step, _)| *step == s)
+                    .map(|(_, p)| *p);
+                stage_closed = sibling_required(&plan.steps[index], population)
+                    .is_some_and(|n| approvals_on(s) >= i64::from(n));
+            }
+            let next = plan.next_active(plan.stage_of(current_index).end, &current.skipped_steps);
+            if stage_closed {
+                if let Some(next) = next {
                     (
                         ApprovalStatus::Pending,
-                        current.step + 1,
+                        i32::try_from(next).map_err(AppError::internal)?,
                         Some(Utc::now()),
                         true,
                     )
@@ -2491,10 +2704,13 @@ pub async fn apply_step_timeout_at(
                 )
             }
             OnTimeout::AutoApprove => {
-                if step_index + 1 < plan.steps.len() {
+                // Z10-T3: the whole stage is decided by policy; the request
+                // moves to the first non-skipped step after it.
+                let next = plan.next_active(plan.stage_of(step_index).end, &current.skipped_steps);
+                if let Some(next) = next {
                     (
                         ApprovalStatus::Pending,
-                        current.step + 1,
+                        i32::try_from(next).map_err(AppError::internal)?,
                         Some(now),
                         None,
                         Some(Decision::Approve),
@@ -2519,20 +2735,29 @@ pub async fn apply_step_timeout_at(
         };
 
     if let Some(decision) = record_decision {
-        sqlx::query(
-            "INSERT INTO approval_grant \
-                 (id, request_id, approver_id, decision, decided_at, step, decided_by, on_behalf_of) \
-             VALUES ($1, $2, $3, $4, NOW(), $5, $6, NULL)",
-        )
-        .bind(Uuid::now_v7())
-        .bind(request_id)
-        .bind(POLICY_ACTOR_ID)
-        .bind(decision.as_str())
-        .bind(current.step)
-        .bind(POLICY_ACTOR_ID)
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
+        // Z10-T3: an auto-approve decides every running step of the stage;
+        // an auto-reject needs only the one grant that closes the request.
+        let decided: Vec<usize> = match decision {
+            Decision::Approve => plan.active_stage(step_index, &current.skipped_steps),
+            Decision::Reject => vec![step_index],
+        };
+        for index in decided {
+            sqlx::query(
+                "INSERT INTO approval_grant \
+                     (id, request_id, approver_id, decision, decided_at, step, decided_by, \
+                      on_behalf_of) \
+                 VALUES ($1, $2, $3, $4, NOW(), $5, $6, NULL)",
+            )
+            .bind(Uuid::now_v7())
+            .bind(request_id)
+            .bind(POLICY_ACTOR_ID)
+            .bind(decision.as_str())
+            .bind(i32::try_from(index).map_err(AppError::internal)?)
+            .bind(POLICY_ACTOR_ID)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+        }
     }
 
     // BAP-6a: the CAS this transition was missing. The `FOR UPDATE` above
@@ -2748,6 +2973,24 @@ mod tests {
         assert_eq!(plan.stage_of(1), 1..3);
         assert_eq!(plan.stage_of(2), 1..3);
         assert_eq!(plan.stage_of(3), 3..4);
+    }
+
+    #[test]
+    fn active_stage_and_next_active_leave_skipped_steps_out() {
+        let plan = ApprovalPlan {
+            steps: vec![
+                grouped(None),
+                grouped(Some(1)),
+                grouped(Some(1)),
+                grouped(None),
+            ],
+        };
+        assert_eq!(plan.active_stage(1, &[2]), vec![1]);
+        assert_eq!(plan.active_stage(2, &[]), vec![1, 2]);
+        assert_eq!(plan.next_active(0, &[0]), Some(1));
+        assert_eq!(plan.next_active(3, &[]), Some(3));
+        assert_eq!(plan.next_active(0, &[0, 1, 2, 3]), None);
+        assert_eq!(plan.next_active(4, &[]), None);
     }
 
     #[test]

@@ -31,8 +31,8 @@
 
 use attome_approval::{
     ApprovalPlan, ApprovalStatus, ApprovalStep, Decision, OnTimeout, POLICY_ACTOR_ID, StepMode,
-    TimeoutOutcome, apply_step_timeout_with, decide_step, get, list_due_step_timeouts,
-    submit_with_plan,
+    TimeoutOutcome, apply_step_timeout_with, decide_stage_step_with, decide_step, get,
+    list_due_step_timeouts, submit_with_plan, submit_with_plan_skipping_in_tx,
 };
 use attome_testkit::migrated_pool_or_skip;
 use attome_types::AppError;
@@ -963,4 +963,170 @@ async fn an_out_of_range_sla_does_not_stop_other_timeouts_firing() {
         "the well-formed due step still fires"
     );
     assert!(!due.contains(&bad.id), "the out-of-range row is skipped");
+}
+
+// ── Z10-T3: skipped steps and parallel groups ──────────────────────────────
+
+fn any_step(group: Option<u16>) -> ApprovalStep {
+    let mut step = ApprovalStep {
+        mode: StepMode::Any,
+        threshold: None,
+        approvers: vec!["user:a".to_string()],
+        sla_minutes: Some(60),
+        on_timeout: OnTimeout::Escalate,
+        extras: Default::default(),
+    };
+    step.extras.group = group;
+    step
+}
+
+async fn submit_skipping(
+    pool: &PgPool,
+    requested_by: Uuid,
+    plan: ApprovalPlan,
+    skipped: &[i32],
+) -> attome_approval::ApprovalRequest {
+    let mut tx = attome_db::tx::begin(pool).await.expect("begin");
+    let request = submit_with_plan_skipping_in_tx(
+        &mut tx,
+        "test.z10_t3",
+        json!({}),
+        requested_by,
+        plan,
+        Duration::hours(1),
+        None,
+        None,
+        skipped,
+    )
+    .await
+    .expect("submit_with_plan_skipping_in_tx");
+    tx.commit().await.expect("commit");
+    request
+}
+
+async fn decide_branch(
+    pool: &PgPool,
+    request: &attome_approval::ApprovalRequest,
+    step: i32,
+    decider: Uuid,
+    siblings: &[(i32, usize)],
+    decision: Decision,
+) -> Result<attome_approval::ApprovalRequest, AppError> {
+    decide_stage_step_with(
+        pool,
+        request.id,
+        step,
+        decider,
+        None,
+        &[decider],
+        1,
+        siblings,
+        decision,
+        request.row_version,
+        None,
+        &attome_db::NoHook,
+    )
+    .await
+}
+
+/// A skipped first step is never waited on: the request starts at the
+/// second step, and a decision aimed at the skipped one is refused.
+#[tokio::test]
+async fn skipped_first_step_starts_at_second() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let plan = ApprovalPlan {
+        steps: vec![any_step(None), any_step(None)],
+    };
+    let request = submit_skipping(&pool, Uuid::now_v7(), plan, &[0]).await;
+    assert_eq!(request.status, ApprovalStatus::Pending);
+    assert_eq!(
+        request.step, 1,
+        "the skipped step 0 is never the current step"
+    );
+    assert_eq!(request.skipped_steps, vec![0]);
+
+    let a = Uuid::now_v7();
+    let refused = decide_branch(&pool, &request, 0, a, &[], Decision::Approve).await;
+    assert!(
+        matches!(refused, Err(AppError::Conflict(_))),
+        "a skipped step takes no decision, got {refused:?}"
+    );
+    let approved = decide_branch(&pool, &request, 1, a, &[], Decision::Approve)
+        .await
+        .expect("the second step decides");
+    assert_eq!(approved.status, ApprovalStatus::Approved);
+}
+
+/// A plan whose every step is skipped is approved at submit, by policy.
+#[tokio::test]
+async fn all_steps_skipped_is_auto_approved() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let plan = ApprovalPlan {
+        steps: vec![any_step(None), any_step(None)],
+    };
+    let request = submit_skipping(&pool, Uuid::now_v7(), plan, &[0, 1]).await;
+    assert_eq!(request.status, ApprovalStatus::Approved);
+    let rows = grants(&pool, request.id).await;
+    assert_eq!(rows.len(), 1, "one policy grant records the auto-approval");
+    assert_eq!(rows[0].approver_id, POLICY_ACTOR_ID);
+    assert_eq!(rows[0].decided_by, Some(POLICY_ACTOR_ID));
+    assert_eq!(rows[0].decision, "approved");
+    assert!(get(&pool, request.id).await.is_ok());
+}
+
+/// A two-branch group advances only once both branches have approved.
+#[tokio::test]
+async fn parallel_group_waits_for_both_branches() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let plan = ApprovalPlan {
+        steps: vec![any_step(Some(1)), any_step(Some(1)), any_step(None)],
+    };
+    let request = submit_skipping(&pool, Uuid::now_v7(), plan, &[]).await;
+    assert_eq!(request.step, 0);
+
+    let a = Uuid::now_v7();
+    let b = Uuid::now_v7();
+    let after_a = decide_branch(&pool, &request, 0, a, &[(1, 1)], Decision::Approve)
+        .await
+        .expect("branch 0 approves");
+    assert_eq!(after_a.status, ApprovalStatus::Pending);
+    assert_eq!(after_a.step, 0, "one branch alone does not close the group");
+
+    let after_b = decide_branch(&pool, &after_a, 1, b, &[(0, 1)], Decision::Approve)
+        .await
+        .expect("branch 1 approves");
+    assert_eq!(after_b.status, ApprovalStatus::Pending);
+    assert_eq!(
+        after_b.step, 2,
+        "both branches approved: the request moves on"
+    );
+    let steps: Vec<i32> = grants(&pool, request.id)
+        .await
+        .iter()
+        .map(|g| g.step)
+        .collect();
+    assert_eq!(
+        steps,
+        vec![0, 1],
+        "each branch's grant sits on its own step"
+    );
+}
+
+/// A reject on any branch of a group rejects the whole request.
+#[tokio::test]
+async fn reject_in_parallel_branch_rejects_request() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let plan = ApprovalPlan {
+        steps: vec![any_step(Some(1)), any_step(Some(1))],
+    };
+    let request = submit_skipping(&pool, Uuid::now_v7(), plan, &[]).await;
+    let a = Uuid::now_v7();
+    let b = Uuid::now_v7();
+    let after_a = decide_branch(&pool, &request, 0, a, &[(1, 1)], Decision::Approve)
+        .await
+        .expect("branch 0 approves");
+    let rejected = decide_branch(&pool, &after_a, 1, b, &[(0, 1)], Decision::Reject)
+        .await
+        .expect("branch 1 rejects");
+    assert_eq!(rejected.status, ApprovalStatus::Rejected);
 }
