@@ -22,6 +22,8 @@ pub mod routing;
 pub mod sourcing;
 /// F6-T3: confirmed orders split into fulfilment orders.
 pub mod split;
+/// F6-T10: shipment status following the carrier, applied once.
+pub mod tracking;
 
 pub use model::FulfilmentModel;
 

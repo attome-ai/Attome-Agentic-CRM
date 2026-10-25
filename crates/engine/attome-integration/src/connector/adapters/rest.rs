@@ -334,7 +334,7 @@ impl Connector for RestAdapter {
 
     fn webhook<'a>(
         &'a self,
-        _system: &'a IntegrationSystem,
+        system: &'a IntegrationSystem,
         _credential: Option<&'a Credential>,
         body: &'a [u8],
     ) -> BoxFuture<'a, Vec<WebhookEvent>> {
@@ -347,8 +347,20 @@ impl Connector for RestAdapter {
             let payload: Value = serde_json::from_slice(body).map_err(|e| {
                 AppError::Validation(format!("webhook body was not valid JSON: {e}"))
             })?;
+            // F6-T10: a carrier system's call is a pushed tracking event,
+            // applied to its shipments by the fulfilment tracking job.
+            let carrier = system
+                .config
+                .as_deref()
+                .and_then(|c| serde_json::from_str::<Value>(c).ok())
+                .is_some_and(|c| c.get("carrier").and_then(Value::as_str).is_some());
+            let event_type = if carrier {
+                crate::carrier::PUSH_EVENT
+            } else {
+                "webhook.received"
+            };
             Ok(vec![WebhookEvent {
-                event_type: "webhook.received".to_string(),
+                event_type: event_type.to_string(),
                 payload,
             }])
         })

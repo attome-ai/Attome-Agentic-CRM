@@ -2,6 +2,8 @@
 pub mod calendar_sync;
 /// F6-T9: Aramex shipment booking and tracking.
 pub mod carrier_aramex;
+/// F6-T10: SMSA Express shipment booking and tracking.
+pub mod carrier_smsa;
 /// K4-T3: DocuSign envelopes and Connect status messages.
 pub mod docusign;
 /// S12-T2: what the ERP connectors exchange with Attome.

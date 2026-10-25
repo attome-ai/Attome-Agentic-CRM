@@ -219,6 +219,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(15 * 60),
     );
+    // F6-T10: booked shipments tracked with their carriers.
+    crate::jobs::spawn_fulfilment_tracking_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(30 * 60),
+    );
     // E13-T9: sitemaps of changed sites hourly; the SEO audit nightly.
     crate::jobs::spawn_content_sitemap_scheduler(db.clone(), std::time::Duration::from_secs(3_600));
     crate::jobs::spawn_content_seo_audit_scheduler(

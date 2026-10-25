@@ -2977,6 +2977,8 @@ const DEDUP_KEY_CONTENT_SITEMAP: &str = "content-sitemap";
 const DEDUP_KEY_FULFILMENT_SPLIT: &str = "fulfilment-split";
 /// F6-T14: late and stuck fulfilment orders (a registered job type).
 const DEDUP_KEY_FULFILMENT_EXCEPTIONS: &str = "fulfilment-exceptions";
+/// F6-T10: the carrier tracking poll (a registered job type).
+const DEDUP_KEY_FULFILMENT_TRACKING: &str = "fulfilment-tracking";
 /// O1-T2: the weekly drift check of active prediction models.
 const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
@@ -3263,6 +3265,10 @@ pub const PREDICT_DRIFT: attome_jobs::JobType =
 /// F6-T14: late and stuck fulfilment orders raised as exceptions.
 pub const FULFILMENT_EXCEPTIONS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::exceptions::JOB, 1);
+
+/// F6-T10: booked shipments' status read from their carriers.
+pub const FULFILMENT_TRACKING: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_fulfilment::tracking::JOB, 1);
 
 /// E13-T9: the stored sitemaps of sites whose pages changed, rebuilt.
 pub const CONTENT_SITEMAP: attome_jobs::JobType =
@@ -4194,6 +4200,28 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            FULFILMENT_TRACKING,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if state
+                    .modules
+                    .load()
+                    .require(attome_modules::MODULE_FULFILMENT)
+                    .is_err()
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let moved = attome_fulfilment::tracking::poll(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if moved > 0 {
+                    tracing::info!(moved, "fulfilment shipments tracked");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             FULFILMENT_SPLIT,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if state
@@ -4769,6 +4797,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == FULFILMENT_EXCEPTIONS.name => {
             DEDUP_KEY_FULFILMENT_EXCEPTIONS
+        }
+        EngineJob::Registered(job) if job.name == FULFILMENT_TRACKING.name => {
+            DEDUP_KEY_FULFILMENT_TRACKING
         }
         EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
@@ -5784,6 +5815,21 @@ pub fn spawn_fulfilment_exceptions_scheduler(db: DbPool, interval: std::time::Du
             "fulfilment exceptions",
         ),
         Err(error) => tracing::error!(%error, "fulfilment exceptions: not scheduled"),
+    }
+}
+
+/// F6-T10: every 30 minutes, booked shipments' status from their carriers.
+pub fn spawn_fulfilment_tracking_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(FULFILMENT_TRACKING.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_FULFILMENT_TRACKING,
+            "fulfilment tracking",
+        ),
+        Err(error) => tracing::error!(%error, "fulfilment tracking: not scheduled"),
     }
 }
 

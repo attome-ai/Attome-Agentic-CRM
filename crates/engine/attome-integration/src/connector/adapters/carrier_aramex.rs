@@ -8,7 +8,7 @@
 //! `ID` (the air waybill, our tracking number) and `ShipmentLabel.LabelURL`.
 //!
 //! Tracking: `POST {base}/Tracking/Service_1_0.svc/json/TrackShipments` for
-//! one waybill with `GetLastTrackingUpdateOnly`. Each update has an
+//! one or more waybills with `GetLastTrackingUpdateOnly`. Each update has an
 //! `UpdateCode` (`SH…`), a description and a `/Date(ms)/` time; the code
 //! maps onto the shipment's status.
 
@@ -210,11 +210,11 @@ pub fn parse_create(status: u16, body: &str) -> BookAnswer {
     }
 }
 
-/// The tracking request for one waybill. Pure.
-pub fn track_body(info: &Value, tracking_number: &str) -> Value {
+/// The tracking request for one or more waybills. Pure.
+pub fn track_body(info: &Value, tracking_numbers: &[String]) -> Value {
     json!({
         "ClientInfo": info,
-        "Shipments": [tracking_number],
+        "Shipments": tracking_numbers,
         "GetLastTrackingUpdateOnly": true,
     })
 }

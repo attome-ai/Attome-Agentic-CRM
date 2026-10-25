@@ -8,7 +8,8 @@
 //!   in the answer.
 //! - `POST /api/v1/fulfilment/shipments/{id}/track`: reads the waybill's
 //!   latest update and moves the shipment's status, `last_event_key` and
-//!   `last_event_at` (and `delivered_on`) when it is new.
+//!   `last_event_at` (and `delivered_on`) when it is new, through
+//!   [`crate::tracking::apply`] (F6-T10), the path the 30-minute poll takes.
 //!
 //! The carrier is called outside any transaction. A booking first claims the
 //! shipment (`last_event_key = 'booking'`, stale after five minutes), so a
@@ -349,7 +350,9 @@ pub(crate) async fn track(
             changed: false,
         }));
     };
-    if last_key.as_deref() == Some(update.code.as_str()) {
+    // F6-T10: the one apply-once path the poll uses too.
+    let changed = crate::tracking::apply(&state, id, &carrier, &update, Some(ctx.user_id)).await?;
+    if !changed {
         return Ok(Json(Tracked {
             shipment_id: id,
             status,
@@ -357,39 +360,6 @@ pub(crate) async fn track(
             changed: false,
         }));
     }
-    let at = update
-        .at_ms
-        .and_then(chrono::DateTime::from_timestamp_millis)
-        .unwrap_or_else(chrono::Utc::now);
-    let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    sqlx::query(
-        "UPDATE shipment SET status = $2, last_event_key = $3, last_event_at = $4, \
-                delivered_on = CASE WHEN $2 = 'delivered' THEN $4 ELSE delivered_on END, \
-                modified_at = now(), row_version = row_version + 1 \
-          WHERE id = $1",
-    )
-    .bind(id)
-    .bind(update.status)
-    .bind(&update.code)
-    .bind(at)
-    .execute(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
-    change_feed::emit_tx(&mut tx, "shipment", id, ChangeOperation::Update).await?;
-    write_business_event_in_tx(
-        &mut tx,
-        &audit_service(&state),
-        BusinessEvent::new(
-            "shipment",
-            id,
-            AuditOperation::Update,
-            "fulfilment.shipment_tracked",
-            ctx.user_id,
-        )
-        .comment(format!("{carrier} {}: {}", update.code, update.status)),
-    )
-    .await?;
-    attome_db::tx::commit(tx).await?;
     Ok(Json(Tracked {
         shipment_id: id,
         status: Some(update.status.to_owned()),

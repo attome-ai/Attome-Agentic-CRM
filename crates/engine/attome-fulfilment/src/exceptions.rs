@@ -33,6 +33,9 @@ pub fn suggested_action(kind: &str) -> &'static str {
     match kind {
         "late" => "Tell the customer the new date and expedite the order.",
         "stuck" => "Assign the order to the warehouse lead to move it on.",
+        "failed_delivery" => {
+            "Call the customer to confirm the address and a time, then rebook with the carrier."
+        }
         _ => "Look at the order and resolve the exception.",
     }
 }
