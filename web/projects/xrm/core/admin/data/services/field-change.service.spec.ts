@@ -132,7 +132,8 @@ describe('FieldChangeService', () => {
 
   it('knows the defined conversions', () => {
     expect(conversionTargets('text')).toContain('number');
-    expect(conversionTargets('date')).toEqual(['text']);
+    expect(conversionTargets('date')).toEqual(['text', 'date_time']);
+    expect(conversionTargets('date_time')).toEqual(['text', 'date']);
     expect(conversionTargets('lookup')).toEqual([]);
   });
 });
