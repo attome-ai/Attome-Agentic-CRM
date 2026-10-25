@@ -710,6 +710,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Breach register intake and deadlines (R5-T2): `attome_compliance::breach::create_from_case` turns a
+  security case into a `privacy_breach` (regulator deadline from `core.country`, 72 hours for every
+  country pack so far; the case links it), and every open breach with a deadline and no regulator notice
+  gets two timers, a warning a day before and one at the deadline, which raise the
+  `privacy_breach_deadline` operations alert while a notice is due or late.
 - Security detections (Q22-T1, migration 0247): every five minutes the `security_detections` job reads
   new security events and opens one `security_case` per detection: password spray (Q20's own
   detections), impossible travel (two countries within two hours, through `auth.geoip_database`), mass

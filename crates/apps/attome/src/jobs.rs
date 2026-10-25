@@ -1494,6 +1494,11 @@ async fn dispatch_platform_job(
                     )
                     .await
                     .map_err(|e| e.to_string())
+                } else if timer.kind == attome_compliance::breach::TIMER_KIND {
+                    // R5-T2: a breach's regulator notice is near or late.
+                    attome_compliance::breach::fire(&db, &timer, chrono::Utc::now())
+                        .await
+                        .map_err(|e| e.to_string())
                 } else if timer.kind == attome_service::escalation::TIMER_KIND {
                     // G8-T1: one step of a service escalation rule.
                     attome_service::escalation::fire(
@@ -4113,9 +4118,18 @@ pub fn register_job_types() {
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SECURITY_DETECTIONS,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
-                let run = attome_audit::detections::run(&state.base.db, chrono::Utc::now())
+                let now = chrono::Utc::now();
+                let run = attome_audit::detections::run(&state.base.db, now)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                // R5-T2: open breaches (from these cases or entered by hand)
+                // get their regulator-deadline timers.
+                let timed = attome_compliance::breach::schedule_due(&state.base.db, now)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if timed > 0 {
+                    tracing::info!(timed, "privacy breaches: deadline timers set");
+                }
                 if run.cases_opened > 0 {
                     tracing::warn!(
                         events = run.events,
