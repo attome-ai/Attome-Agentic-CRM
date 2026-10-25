@@ -11,4 +11,13 @@ export const OPS_ROUTES: Routes = [
     path: 'cluster',
     loadComponent: () => import('./cluster/cluster-status.component').then(m => m.ClusterStatusComponent),
   },
+  // AB4-T11: recovery drills, their schedules and the auditor pack.
+  {
+    path: 'drills',
+    loadComponent: () => import('./drills/drill-history.component').then(m => m.DrillHistoryComponent),
+  },
+  {
+    path: 'drills/:id',
+    loadComponent: () => import('./drills/drill-detail.component').then(m => m.DrillDetailComponent),
+  },
 ];
