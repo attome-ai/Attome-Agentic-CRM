@@ -153,6 +153,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   synchronous standby and last failover; `ops.propose_switchover` (`ops.cluster.switchover`) only
   creates the switchover approval request. A second person in the Operations role approves it, never
   an agent, and only then does the server ask Patroni to move the leader.
+- Recovery drills (with the ops module, `ops.read`, reads only): `ops.drill_freshness` says whether each
+  drill kind is fresh, stale, failed or never run, with the checks the last run failed;
+  `ops.drill_evidence` reads one drill's numbers and check results. No tool uploads or changes evidence.
 - Secrets (administrators, reads only): `secrets.list` names every configured secret with the
   features that use it, whether it is set and how many days its active key has been in use. It never
   returns a value or a key id, and there is no tool that writes or rotates a secret.

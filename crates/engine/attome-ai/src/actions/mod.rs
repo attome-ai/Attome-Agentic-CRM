@@ -61,6 +61,8 @@ pub mod model_edit;
 pub mod nl_query;
 /// AB2-T12: the cluster's status and a switchover proposal.
 pub mod ops_cluster;
+/// AB4-T12: drill freshness and one drill's evidence, read only.
+pub mod ops_drills;
 pub mod ops_slo;
 /// L6-T8: profile.summary, profile.explain.
 pub mod profile;
@@ -140,6 +142,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(search_records::descriptor());
     all.push(system_status::descriptor());
     all.extend(ops_cluster::descriptors());
+    all.extend(ops_drills::descriptors());
     all.push(ops_slo::descriptor());
     all.extend(approvals::descriptors());
     all.extend(calendar::descriptors());
@@ -226,6 +229,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(system_status::SystemStatus));
     all.extend(ops_cluster::executors());
+    all.extend(ops_drills::executors());
     all.push(Box::new(ops_slo::OpsSloHealth));
     all.extend(approvals::executors());
     all.extend(calendar::executors());

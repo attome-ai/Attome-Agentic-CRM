@@ -323,16 +323,27 @@ async fn get_drill(
     _ctx: Authorized<Privilege<OpsRead>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<SignedEvidence>, AppError> {
-    let stored: serde_json::Value =
+    drill_evidence(&state.base.db, id)
+        .await?
+        .map(Json)
+        .ok_or(AppError::NotFound)
+}
+
+/// One drill's signed evidence, as uploaded (the route, and AB4-T12's
+/// `ops.drill_evidence` agent action).
+pub async fn drill_evidence(
+    db: &attome_db::DbPool,
+    id: Uuid,
+) -> Result<Option<SignedEvidence>, AppError> {
+    let stored: Option<serde_json::Value> =
         sqlx::query_scalar("SELECT evidence FROM ops_drill_run WHERE id = $1")
             .bind(id)
-            .fetch_optional(&state.base.db)
+            .fetch_optional(db)
             .await
-            .map_err(AppError::internal)?
-            .ok_or(AppError::NotFound)?;
-    serde_json::from_value(stored)
-        .map(Json)
-        .map_err(AppError::internal)
+            .map_err(AppError::internal)?;
+    stored
+        .map(|v| serde_json::from_value(v).map_err(AppError::internal))
+        .transpose()
 }
 
 pub(crate) fn routes() -> Router<EngineState> {
