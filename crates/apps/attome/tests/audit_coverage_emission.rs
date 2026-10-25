@@ -135,6 +135,10 @@ const UNDRIVABLE: &[(&str, &str)] = &[
         "needs the sales pack's opportunity and team entities, which this harness does not install",
     ),
     (
+        "POST /api/v1/record-templates/from-record",
+        "needs a record of an entity with settable fields; the draft is written by the same          model_edit::edit and write_security_event path as POST /api/v1/admin/model/{kind}/{id}/commands,          whose driver audits the same Configuration event",
+    ),
+    (
         "PUT /api/v1/admin/env-variables/{name}",
         "needs a published environment_variable definition; attome-api's model_admin.rs environment_variable_values_are_set_per_deployment defines, publishes and sets one, and the clear driver below audits the same Configuration path",
     ),

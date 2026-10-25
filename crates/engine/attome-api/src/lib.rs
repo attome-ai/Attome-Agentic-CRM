@@ -67,6 +67,8 @@ mod customer_test_admin;
 mod env_variable_admin;
 /// T6-T2: customer flags.
 mod customer_flags_admin;
+/// B8-T2: creating and filling records from record templates.
+mod record_template_routes;
 /// A20-T2: agent-drafted label translations for review.
 pub mod label_drafts;
 /// AA9-T6 — the limits registry, its values and use.

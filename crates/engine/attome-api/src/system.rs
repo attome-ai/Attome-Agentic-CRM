@@ -188,6 +188,8 @@ impl EngineSystem {
             // A30-T1: environment variable values.
             .merge(crate::env_variable_admin::routes())
             .merge(crate::customer_flags_admin::routes())
+            // B8-T2: record templates in use.
+            .merge(crate::record_template_routes::routes())
             // Z15-T13: customer tests.
             .merge(crate::customer_test_admin::routes())
             .merge(crate::business_rule_admin::routes())

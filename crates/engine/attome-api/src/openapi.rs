@@ -51,6 +51,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::sbom_admin::openapi_fragment(), "core"),
         (crate::env_variable_admin::openapi_fragment(), "core"),
         (crate::customer_flags_admin::openapi_fragment(), "core"),
+        (crate::record_template_routes::openapi_fragment(), "core"),
         (crate::customer_test_admin::openapi_fragment(), "core"),
         (crate::metadata_label_admin::openapi_fragment(), "core"),
         (crate::bundle::routes::openapi_fragment(), "core"),
