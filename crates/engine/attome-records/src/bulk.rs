@@ -561,11 +561,14 @@ fn decode_worker_record(raw: Value) -> Result<BulkRecordEnvelope, AppError> {
     })
 }
 
+/// Start a bulk operation
+///
+/// Queues many creates, updates or deletes of one entity as a durable job and returns it. Each item runs through the same checks as a single write; a retried job resumes at the first item not yet committed.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/bulk",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BulkRequestBody,
     responses(
         (status = 201, description = "Success", body = BulkOperationResponse),
@@ -871,13 +874,16 @@ async fn enqueue_inner(
     Ok(response_body)
 }
 
+/// A bulk operation's progress
+///
+/// The status and item counts of a bulk operation the caller started.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/bulk/{id}",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The bulk operation"),
         BulkStatusQuery,
     ),
     responses(
@@ -2261,11 +2267,14 @@ async fn dry_run_one(
     result
 }
 
+/// Stage an import
+///
+/// Stores rows to import into an entity for review; nothing is written to the entity until the import is approved.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/staged-import",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BulkRequestBody,
     responses(
         (status = 201, description = "Success", body = StagedImportResponse),
@@ -2501,6 +2510,8 @@ fn extract_row_version(row: Option<&Value>) -> Option<i64> {
         .and_then(Value::as_i64)
 }
 
+/// Approve a staged import
+///
 /// D-100: approving a staged import is enqueued, not run on the request
 /// thread. The original synchronous handler ran one full transaction per
 /// record inline in the HTTP response path with no size bound beyond the
@@ -2515,8 +2526,8 @@ fn extract_row_version(row: Option<&Value>) -> Option<i64> {
     path = "/api/v1/{entity}/staged-import/{id}/approve",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The staged import"),
     ),
     responses(
         (status = 201, description = "Success", body = StagedImportResponse),

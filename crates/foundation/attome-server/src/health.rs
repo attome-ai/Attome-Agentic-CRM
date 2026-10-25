@@ -316,6 +316,8 @@ fn ready_response(verdict: ReadyVerdict) -> (StatusCode, Json<Value>) {
 //   - the probe verdict is memoised per node for `READY_VERDICT_TTL` (see
 //     that constant for the TTL and failure semantics). The drain check runs
 //     ahead of the cache and is never memoised.
+/// Readiness probe
+///
 /// Readiness probe — returns 503 unless DB, Redis, the metadata registry
 /// pre-warm (`registry_ready`, Plan 1.2), and the applied schema version
 /// (P-migration-governance) are all confirmed. Load balancer / Kubernetes

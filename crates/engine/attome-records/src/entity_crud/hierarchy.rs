@@ -167,6 +167,8 @@ pub struct HierarchyQuery {
     pub field: Option<String>,
 }
 
+/// A record's ancestors
+///
 /// P-api-contract Phase 4(b): returns `attome_types::PaginatedResponse<T>`
 /// instead of a bare `{"items": [...]}` — a genuine breaking response-shape
 /// change for any existing client (see DECISIONS.md and the CHANGELOG
@@ -184,8 +186,8 @@ pub struct HierarchyQuery {
     path = "/api/v1/{entity}/{id}/ancestors",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         HierarchyQuery,
     ),
     responses(
@@ -260,6 +262,8 @@ pub(super) async fn list_ancestors(
     )))
 }
 
+/// A record's descendants
+///
 /// See `list_ancestors`'s doc comment (P-api-contract Phase 4(b)) — same
 /// "page 1 of 1, everything returned" reasoning applies here.
 #[utoipa::path(
@@ -267,8 +271,8 @@ pub(super) async fn list_ancestors(
     path = "/api/v1/{entity}/{id}/descendants",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         HierarchyQuery,
     ),
     responses(
@@ -382,6 +386,8 @@ pub fn move_refusal(
     }
 }
 
+/// Preview a move
+///
 /// A17-T4: what moving a record under `parent` would do, without moving
 /// anything: how many records go with it (the record and its descendants),
 /// and whether the move would be refused for a cycle or the depth cap.
@@ -389,7 +395,7 @@ pub fn move_refusal(
     get,
     path = "/api/v1/{entity}/{id}/move-preview",
     tag = "entity",
-    params(("entity" = String, Path), ("id" = Uuid, Path), MovePreviewQuery),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record"), MovePreviewQuery),
     responses(
         (status = 200, description = "What the move would do", body = MovePreview),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

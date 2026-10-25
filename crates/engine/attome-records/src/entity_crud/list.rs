@@ -115,11 +115,14 @@ pub fn parse_sort(sort: Option<&str>) -> (String, String) {
     }
 }
 
+/// List records
+///
+/// A keyset-paged list of an entity's records the caller may read, with `select`, `filter[field][op]` and `sort`, through the entity's default view with record scope and field masking applied.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}",
     tag = "entity",
-    params(("entity" = String, Path), ListParams),
+    params(("entity" = String, Path, description = "The entity's logical name"), ListParams),
     responses(
         (status = 200, description = "One page of records; next_cursor continues it", body = CursorPage<serde_json::Value>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

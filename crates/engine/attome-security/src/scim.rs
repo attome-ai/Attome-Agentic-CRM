@@ -597,6 +597,8 @@ fn list_response(resources: Vec<Value>, total: i64, start: i64) -> Value {
     })
 }
 
+/// SCIM: list users
+///
 /// Lists users (SCIM).
 #[utoipa::path(
     get,
@@ -663,13 +665,15 @@ async fn list_users(
     .into_response())
 }
 
+/// SCIM: read a user
+///
 /// Reads a user (SCIM).
 #[utoipa::path(
     get,
     path = "/scim/v2/Users/{id}",
     tag = "integration",
     operation_id = "scim_get_user",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The SCIM resource id")),
     responses(
         (status = 200, description = "A SCIM User", body = Object),
         (status = 401, description = "Bad or revoked token"),
@@ -811,6 +815,8 @@ async fn write_user(
     Ok((user_id, created))
 }
 
+/// SCIM: create a user
+///
 /// Creates a user (SCIM).
 #[utoipa::path(
     post,
@@ -841,13 +847,15 @@ async fn create_user(
     Ok((StatusCode::CREATED, scim_json(user_json(&row))).into_response())
 }
 
+/// SCIM: replace a user
+///
 /// Replaces a user (SCIM).
 #[utoipa::path(
     put,
     path = "/scim/v2/Users/{id}",
     tag = "integration",
     operation_id = "scim_replace_user",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The SCIM resource id")),
     request_body(content = Object, description = "A SCIM User"),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, AuditOperation::Update)])))),
     responses(
@@ -888,13 +896,15 @@ fn user_doc_of(row: &UserRow) -> UserDoc {
     }
 }
 
+/// SCIM: patch a user
+///
 /// Patches a user (SCIM): `active` false deactivates the account.
 #[utoipa::path(
     patch,
     path = "/scim/v2/Users/{id}",
     tag = "integration",
     operation_id = "scim_patch_user",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The SCIM resource id")),
     request_body(content = Object, description = "A SCIM PatchOp"),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, AuditOperation::Update)])))),
     responses(
@@ -927,13 +937,15 @@ async fn patch_user(
     Ok(scim_json(user_json(&row)).into_response())
 }
 
+/// SCIM: deactivate a user
+///
 /// Deactivates a user (SCIM DELETE): the account stays, inactive.
 #[utoipa::path(
     delete,
     path = "/scim/v2/Users/{id}",
     tag = "integration",
     operation_id = "scim_delete_user",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The SCIM resource id")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, AuditOperation::AccountDisabled)])))),
     responses(
         (status = 204, description = "Deactivated"),
@@ -1086,6 +1098,8 @@ async fn change_members(
     Ok(())
 }
 
+/// SCIM: list groups
+///
 /// Lists groups (SCIM).
 #[utoipa::path(
     get,
@@ -1140,6 +1154,8 @@ async fn list_groups(
     Ok(scim_json(list_response(resources, total, start)).into_response())
 }
 
+/// SCIM: create a group
+///
 /// Creates a group (SCIM): a team.
 #[utoipa::path(
     post,
@@ -1225,13 +1241,15 @@ async fn create_group(
     Ok((StatusCode::CREATED, scim_json(doc)).into_response())
 }
 
+/// SCIM: read a group
+///
 /// Reads a group (SCIM).
 #[utoipa::path(
     get,
     path = "/scim/v2/Groups/{id}",
     tag = "integration",
     operation_id = "scim_get_group",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The SCIM resource id")),
     responses(
         (status = 200, description = "A SCIM Group", body = Object),
         (status = 401, description = "Bad or revoked token"),
@@ -1248,13 +1266,15 @@ async fn get_group(
     Ok(scim_json(group_json(&state, id).await.map_err(from_app)?).into_response())
 }
 
+/// SCIM: patch a group
+///
 /// Patches a group (SCIM): its name and members.
 #[utoipa::path(
     patch,
     path = "/scim/v2/Groups/{id}",
     tag = "integration",
     operation_id = "scim_patch_group",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The SCIM resource id")),
     request_body(content = Object, description = "A SCIM PatchOp"),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Access, AuditOperation::Update)])))),
     responses(
@@ -1302,13 +1322,15 @@ async fn patch_group(
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
+/// SCIM: delete a group
+///
 /// Deletes a group (SCIM): the team is removed and its members leave it.
 #[utoipa::path(
     delete,
     path = "/scim/v2/Groups/{id}",
     tag = "integration",
     operation_id = "scim_delete_group",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The SCIM resource id")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Access, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Deleted"),
@@ -1389,6 +1411,8 @@ pub struct ScimTokenSummary {
     pub last_used_at: Option<DateTime<Utc>>,
 }
 
+/// Issue a SCIM token
+///
 /// Issues a SCIM token for an identity provider.
 #[utoipa::path(
     post,
@@ -1462,6 +1486,8 @@ async fn issue_token(
     ))
 }
 
+/// List SCIM tokens
+///
 /// Lists SCIM tokens (never their secrets).
 #[utoipa::path(
     get,
@@ -1490,13 +1516,15 @@ async fn list_tokens(
     Ok(Json(PaginatedResponse::new(items, total, 1, 200)))
 }
 
+/// Revoke a SCIM token
+///
 /// Revokes a SCIM token.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/scim/tokens/{id}",
     tag = "admin",
     operation_id = "scim_revoke_token",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The SCIM token")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Credential, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Revoked"),

@@ -139,13 +139,16 @@ async fn reachable(
     Ok((entity_id, entity_name))
 }
 
+/// A record's shares
+///
+/// The people, teams and roles a record is shared with, for a caller who may share it.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/shares",
     tag = "entity",
     operation_id = "list_record_shares_for_record",
     description = "The record's shares, newest first (Q14-T1). Needs `{entity}.share` and read access to the record.",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     responses(
         (status = 200, description = "The record's shares (page 1 holds them all)", body = PaginatedResponse<RecordShare>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -194,13 +197,16 @@ pub(super) async fn list_shares(
     )))
 }
 
+/// Share a record
+///
+/// Shares a record the caller can reach, never giving more than the caller holds: a view share needs read access, an action share update access. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/shares",
     tag = "entity",
     operation_id = "share_record",
     description = "Shares the record with a user or a team (Q14-T1). Needs `{entity}.share`; a `view` share needs read access to the record and an `action` share update access, so nobody gives more than they hold.",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     request_body = ShareRecordBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Grant)])))),
     responses(
@@ -275,13 +281,16 @@ pub(super) async fn share_record(
     ))
 }
 
+/// Remove a record share
+///
+/// Ends a share on a record, for a caller who may share it. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/{entity}/{id}/shares/{share_id}",
     tag = "entity",
     operation_id = "unshare_record",
     description = "Removes a share from the record (Q14-T1). Needs `{entity}.share` and the access the share gives; a deny row and the creator's own share are left to administrators.",
-    params(("entity" = String, Path), ("id" = Uuid, Path), ("share_id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record"), ("share_id" = Uuid, Path, description = "The record share")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "The share is gone"),

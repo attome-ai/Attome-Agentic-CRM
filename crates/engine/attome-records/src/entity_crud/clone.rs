@@ -529,6 +529,8 @@ async fn copy_children(
     Ok(out)
 }
 
+/// Clone a record
+///
 /// B7-T2: copies a record: the new record starts with the source's values
 /// (less system, numbered, file, formula and engine-owned fields), with
 /// `overrides` applied, through the ordinary create. `preview` creates
@@ -538,7 +540,7 @@ async fn copy_children(
     path = "/api/v1/{entity}/{id}/clone",
     tag = "entity",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Create)])))),
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     request_body = CloneRequest,
     responses(
         (status = 201, description = "The copy was created", body = CloneResult),
@@ -565,6 +567,8 @@ pub(super) async fn clone_record_route(
     Ok((status, Json(result)))
 }
 
+/// A record's child records
+///
 /// B7-T3: a record's child records by relationship (entity and lookup
 /// field), counted, in entities the caller can read: what a clone can take
 /// with it through `children`.
@@ -572,7 +576,7 @@ pub(super) async fn clone_record_route(
     get,
     path = "/api/v1/{entity}/{id}/children",
     tag = "entity",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     responses(
         (status = 200, description = "Child records by relationship", body = attome_types::PaginatedResponse<super::recycle_bin::DependentCount>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -599,6 +603,8 @@ pub(super) async fn record_children(
     )))
 }
 
+/// Clone several records
+///
 /// B7-T2: copies up to 50 records, each as a single clone with the same
 /// `overrides` would; the ones that could not be copied are listed.
 #[utoipa::path(
@@ -606,7 +612,7 @@ pub(super) async fn record_children(
     path = "/api/v1/{entity}/clone",
     tag = "entity",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Create)])))),
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BulkCloneRequest,
     responses(
         (status = 200, description = "The copies made, and the records that could not be copied", body = BulkCloneResult),
@@ -625,6 +631,8 @@ pub(super) async fn bulk_clone_route(
     Ok(Json(bulk_clone(&state, &ctx, &entity, &request).await?))
 }
 
+/// Undo a clone
+///
 /// B7-T2: removes what a clone made, while none of it has changed: each
 /// record in the clone's `undo` list must still be live at its version. The
 /// records go to the recycle bin as one delete operation.
@@ -633,7 +641,7 @@ pub(super) async fn bulk_clone_route(
     path = "/api/v1/{entity}/{id}/clone/undo",
     tag = "entity",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::SoftDelete)])))),
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     request_body = CloneUndoRequest,
     responses(
         (status = 200, description = "The copies are in the recycle bin", body = CloneUndoResult),

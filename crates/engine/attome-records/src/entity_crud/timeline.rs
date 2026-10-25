@@ -1026,14 +1026,17 @@ async fn fetch_linked_decisions(
 
 // ── Route ────────────────────────────────────────────────────────────────────
 
+/// A record's timeline
+///
+/// One record's activity feed: changes, communications, notes, tasks and the rest, for a caller who may read the record.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/timeline",
     tag = "entity",
     operation_id = "get_record_timeline",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         TimelineQuery,
     ),
     responses(
@@ -1110,6 +1113,8 @@ pub fn timeline_csv(entries: &[TimelineEntry]) -> String {
     out
 }
 
+/// Export a record's timeline
+///
 /// B1-T4: the record's timeline, filtered by kind, as a CSV file: the same
 /// entries, under the same permissions, as the timeline itself, newest
 /// first, up to 2000.
@@ -1118,8 +1123,8 @@ pub fn timeline_csv(entries: &[TimelineEntry]) -> String {
     path = "/api/v1/{entity}/{id}/timeline/export",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         TimelineExportQuery,
     ),
     responses(

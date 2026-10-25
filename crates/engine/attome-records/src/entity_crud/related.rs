@@ -101,6 +101,8 @@ async fn require_other_side_access(
 
 // ── GET /api/v1/{entity}/{id}/related/{relationship} ───────────────────────
 
+/// A record's related records
+///
 /// `GET /api/v1/{entity}/{id}/related/{relationship}` — every live record on
 /// the relationship's other side currently linked (through a live join row)
 /// to the anchor record, paginated. Both endpoints' `is_active` and the
@@ -113,9 +115,9 @@ async fn require_other_side_access(
     path = "/api/v1/{entity}/{id}/related/{relationship}",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("relationship" = String, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("relationship" = String, Path, description = "The relationship's name"),
         OnePageQuery,
     ),
     responses(
@@ -317,9 +319,9 @@ pub(super) struct LinkBody {
     path = "/api/v1/{entity}/{id}/related/{relationship}",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("relationship" = String, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("relationship" = String, Path, description = "The relationship's name"),
     ),
     request_body = LinkBody,
     responses(
@@ -480,6 +482,8 @@ pub(super) struct UnlinkQuery {
     id: Uuid,
 }
 
+/// Unlink related records
+///
 /// `DELETE /api/v1/{entity}/{id}/related/{relationship}?id=...` — unlinks
 /// `?id=` from the anchor record (soft-deletes the join row: `is_active =
 /// false`). A query parameter, not a JSON body: `DELETE` requests
@@ -498,9 +502,9 @@ pub(super) struct UnlinkQuery {
     path = "/api/v1/{entity}/{id}/related/{relationship}",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("relationship" = String, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("relationship" = String, Path, description = "The relationship's name"),
         UnlinkQuery,
     ),
     responses(

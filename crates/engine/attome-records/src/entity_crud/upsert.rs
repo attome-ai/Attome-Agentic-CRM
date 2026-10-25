@@ -78,7 +78,7 @@ pub(super) struct UpsertQuery {
     post,
     path = "/api/v1/{entity}/upsert",
     tag = "entity",
-    params(("entity" = String, Path), UpsertQuery, super::response::SelectParam),
+    params(("entity" = String, Path, description = "The entity's logical name"), UpsertQuery, super::response::SelectParam),
     responses(
         (status = 201, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

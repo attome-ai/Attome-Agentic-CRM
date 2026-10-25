@@ -17,12 +17,14 @@ use serde_json::Value;
 
 use super::resolve::resolve_entity;
 
+/// Defaults for a new record
+///
 /// A28-T2: the defaults a new record of the entity starts with, by field.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/new",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     responses(
         (status = 200, description = "Each defaulted field and its starting value", body = HashMap<String, serde_json::Value>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

@@ -734,14 +734,17 @@ pub async fn record_history(
     Ok(CursorPage::new(items, next_cursor))
 }
 
+/// A record's change history
+///
+/// The audited changes to a record that the caller may read.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/history",
     tag = "entity",
     operation_id = "get_record_history",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         RecordHistoryQuery,
     ),
     responses(
@@ -937,6 +940,8 @@ pub async fn restore_from_history(
     .await
 }
 
+/// Restore earlier values
+///
 /// B2-T2: puts back the values one change (`audit_id`) or one change set
 /// (`group_id`, an import, run or agent session) replaced on this record,
 /// through the ordinary update: `If-Match` is required and validation, rules
@@ -945,7 +950,7 @@ pub async fn restore_from_history(
     post,
     path = "/api/v1/{entity}/{id}/history/restore",
     tag = "entity",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     request_body = HistoryRestoreRequest,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -1217,6 +1222,8 @@ pub async fn search_history(
 
 const SEARCH_CURSOR_TAG: &str = "hsearch";
 
+/// Search change history
+///
 /// B2-T4: finds the changes to one field of an entity whose old and new
 /// values meet the conditions, in a period, newest first, among the live
 /// records the caller can read. Sensitive and encrypted values are never

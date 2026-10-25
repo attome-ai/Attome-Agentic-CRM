@@ -138,13 +138,16 @@ async fn id_for(state: &EngineState, entity_input: &str, keyspec: &str) -> Resul
     resolve_key(state, &entity_name, &attrs, is_append_only, &pairs).await
 }
 
+/// Read a record by business key
+///
+/// Reads the one record whose unique business key matches `keyspec` (`attr=value` pairs joined by `,`), exactly as reading it by id.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/key/{keyspec}",
     tag = "entity",
     operation_id = "get_record_by_key",
     params(
-        ("entity" = String, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
         ("keyspec" = String, Path, description = "attr=value pairs joined by `,`, naming a unique key"),
         super::response::SelectParam,
         super::expand::ExpandParam,
@@ -179,13 +182,16 @@ pub(super) async fn get_by_key(
     .await
 }
 
+/// Update a record by business key
+///
+/// Updates the one record whose unique business key matches `keyspec`, exactly as updating it by id (If-Match row version included).
 #[utoipa::path(
     patch,
     path = "/api/v1/{entity}/key/{keyspec}",
     tag = "entity",
     operation_id = "update_record_by_key",
     params(
-        ("entity" = String, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
         ("keyspec" = String, Path, description = "attr=value pairs joined by `,`, naming a unique key"),
     ),
     responses(

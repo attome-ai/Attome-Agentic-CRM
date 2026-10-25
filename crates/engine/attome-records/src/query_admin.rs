@@ -1046,6 +1046,9 @@ async fn write_entity_mappings(
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
+/// List stored queries
+///
+/// Every stored query. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/queries",
@@ -1132,7 +1135,7 @@ struct QueryDependency {
     path = "/api/v1/admin/queries/dependencies/{relation}",
     tag = "admin",
     params(
-        ("relation" = String, Path),
+        ("relation" = String, Path, description = "The table or view"),
         OnePageQuery,
     ),
     responses(
@@ -1208,6 +1211,8 @@ struct QueryPublishPending {
     approval_request_id: Uuid,
 }
 
+/// Describe a query's columns
+///
 /// Describes the output shape of an unsaved SELECT without fetching rows.
 /// The same readonly identity and publish-time lint used for stored queries
 /// keep this preview from becoming a bypass around query containment.
@@ -1473,11 +1478,14 @@ async fn do_create_query_recorded(
     ))
 }
 
+/// One stored query
+///
+/// A stored query's definition. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/queries/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The stored query")),
     responses(
         (status = 200, description = "Success", body = QueryDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1515,7 +1523,7 @@ async fn get_query(
     patch,
     path = "/api/v1/admin/queries/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The stored query")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "Success"),
@@ -1713,11 +1721,14 @@ async fn do_update_query_recorded(
     })
 }
 
+/// Delete a stored query
+///
+/// Retires a stored query. Administrators only; audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/queries/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The stored query")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),

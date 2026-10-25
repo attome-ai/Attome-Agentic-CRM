@@ -163,13 +163,15 @@ pub async fn deleted_records(
     ))
 }
 
+/// Deleted records
+///
 /// A18-T7: the entity's deleted records the caller may see, newest
 /// deletion first. Restore one with `POST /api/v1/{entity}/{id}/restore`.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/deleted",
     tag = "entity",
-    params(("entity" = String, Path), OnePageQuery),
+    params(("entity" = String, Path, description = "The entity's logical name"), OnePageQuery),
     responses(
         (status = 200, description = "A page of deleted records", body = PaginatedResponse<DeletedRecord>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -311,6 +313,8 @@ pub async fn delete_impact(
     Ok(impact)
 }
 
+/// Preview a delete
+///
 /// A18-T4: what deleting these records would cascade to, be blocked by or
 /// leave pointing at them, and whether a reason is required; nothing is
 /// changed.
@@ -318,7 +322,7 @@ pub async fn delete_impact(
     post,
     path = "/api/v1/{entity}/delete-impact",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = DeleteImpactRequest,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::DryRun,
@@ -376,6 +380,8 @@ pub struct BinSettingBody {
 const BIN_SETTING_COLUMNS: &str = "entity, require_reason, retention_days, alert_threshold, \
      hard_delete_needs_approval, updated_at, row_version";
 
+/// Recycle bin rules
+///
 /// A18-T7: every entity that has its own bin rules.
 #[utoipa::path(
     get,
@@ -403,12 +409,14 @@ pub(super) async fn list_bin_settings(
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
 
+/// Set an entity's bin rules
+///
 /// A18-T7: sets an entity's bin rules.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/bin-settings/{entity}",
     tag = "admin",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BinSettingBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -693,6 +701,8 @@ async fn deleted_parent(
     Ok(None)
 }
 
+/// Restore deleted records
+///
 /// A18-T7: restores up to 500 deleted records, each checked as a single
 /// restore would be; the ones that could not come back are listed.
 #[utoipa::path(
@@ -719,13 +729,15 @@ pub(super) async fn restore_selection(
     ))
 }
 
+/// Undo a delete operation
+///
 /// A18-T7: undoes one delete operation: every record its ledger rows still
 /// hold in the bin (at most 500), restored as [`restore_selection`] would.
 #[utoipa::path(
     post,
     path = "/api/v1/bin/operations/{operation_id}/restore",
     tag = "entity",
-    params(("operation_id" = String, Path)),
+    params(("operation_id" = String, Path, description = "The delete operation")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Restore)])))),
     responses(
         (status = 200, description = "How many came back, and which could not", body = BinRestoreResult),

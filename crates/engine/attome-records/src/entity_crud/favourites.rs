@@ -819,6 +819,8 @@ pub(super) async fn delete_my_list(
 
 // ── Routes: team lists ──────────────────────────────────────────────────────
 
+/// Create a team favourites list
+///
 /// B9-T2: creates a list shared with a team the caller belongs to.
 #[utoipa::path(
     post,
@@ -856,6 +858,8 @@ pub(super) async fn create_team_list(
     Ok((StatusCode::CREATED, Json(reread(&state, &ctx, id).await?)))
 }
 
+/// Update a team favourites list
+///
 /// B9-T2: renames a team list and replaces its items, in order.
 #[utoipa::path(
     put,
@@ -897,6 +901,8 @@ pub(super) async fn replace_team_list(
     Ok(Json(reread(&state, &ctx, id).await?))
 }
 
+/// Delete a team favourites list
+///
 /// B9-T2: deletes a team list.
 #[utoipa::path(
     delete,

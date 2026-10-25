@@ -390,6 +390,8 @@ pub async fn feed(
     ))
 }
 
+/// My feed
+///
 /// C3-T1: the caller's feed — posts and changes to the records they follow,
 /// newest first, each only if they may read it.
 #[utoipa::path(

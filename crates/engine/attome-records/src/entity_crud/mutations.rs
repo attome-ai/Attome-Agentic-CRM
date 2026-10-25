@@ -182,13 +182,16 @@ pub async fn field_changes_from_obj(
 
 // â”€â”€ GET /api/v1/{entity}/{id} â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+/// Read a record
+///
+/// One record the caller may read, with the fields they may see and its row version.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         super::response::SelectParam,
         super::expand::ExpandParam,
     ),
@@ -475,11 +478,14 @@ async fn read_record_for(
 
 // â”€â”€ POST /api/v1/{entity} â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+/// Create a record
+///
+/// Creates a record after the entity's validation, rules and duplicate checks; the caller needs the entity's create privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}",
     tag = "entity",
-    params(("entity" = String, Path), super::response::SelectParam),
+    params(("entity" = String, Path, description = "The entity's logical name"), super::response::SelectParam),
     responses(
         (status = 201, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -631,12 +637,14 @@ pub async fn validate_create(
     }
 }
 
+/// Check a record without saving
+///
 /// `POST /api/v1/{entity}/validate` (A3-T3): checks a record without saving it.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/validate",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     responses(
         (status = 200, description = "Whether the create would succeed, why not, and its warnings; nothing is written", body = CreateCheck),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1350,13 +1358,16 @@ pub(crate) async fn sync_file_field_documents(
     Ok(())
 }
 
+/// Update a record
+///
+/// Changes the fields sent, after validation and rules. Needs `If-Match` with the record's row version; a stale version is 409. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/{entity}/{id}",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
     ),
     responses(
         (status = 200, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`. With `If-Match-Merge: attributes` over a stale version whose changes touched none of the attributes sent, the update is applied at the current version and `merged_over` lists the attributes others changed (`merged_hidden` counts those the caller cannot read)", body = EntityRecordResponse),
@@ -1623,13 +1634,16 @@ pub async fn delete_record_for(
     Ok(())
 }
 
+/// Delete a record
+///
+/// Moves a record to the recycle bin (a soft delete), following the entity's delete policy; it can be restored. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/{entity}/{id}",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         ("If-Match" = Option<String>, Header,
          description = "Optional row_version for optimistic concurrency (DATA-7). \
                         Omitted, the delete is unguarded as before; supplied and stale, \
@@ -1680,6 +1694,8 @@ pub(super) async fn delete_record(
 /// entity's bin setting asks for one.
 pub const ACTION_RECORD_HARD_DELETE: &str = "record.hard_delete";
 
+/// Delete a record for good
+///
 /// Permanently removes a record. This is intentionally separate from the
 /// conventional DELETE route, whose public contract is a reversible
 /// deactivation. A physical delete is refused while *any* record still points
@@ -1690,8 +1706,8 @@ pub const ACTION_RECORD_HARD_DELETE: &str = "record.hard_delete";
     path = "/api/v1/{entity}/{id}/hard-delete",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         ("If-Match" = Option<String>, Header,
          description = "Optional row_version for optimistic concurrency (DATA-7). \
                         Omitted, the delete is unguarded as before; supplied and stale, \
@@ -2080,13 +2096,16 @@ pub async fn restore_record_for(
     Ok(response)
 }
 
+/// Restore a deleted record
+///
+/// Brings a soft-deleted record back from the recycle bin, with the same checks as a write. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/restore",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         ("If-Match" = Option<String>, Header,
          description = "Optional row_version for optimistic concurrency (DATA-7). \
                         Omitted, the restore is unguarded as before; supplied and stale, \

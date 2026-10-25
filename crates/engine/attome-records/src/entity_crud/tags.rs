@@ -708,12 +708,14 @@ pub async fn tagged_records(
 
 // ── Routes ──────────────────────────────────────────────────────────────────
 
+/// A record's tags
+///
 /// B4-T1: the tags on a record the caller may see.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/tags",
     tag = "entity",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     responses(
         (status = 200, description = "The record's tags", body = PaginatedResponse<TagView>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -731,6 +733,8 @@ pub(super) async fn list_record_tags(
     Ok(Json(page_of(tags)))
 }
 
+/// Tag a record
+///
 /// B4-T1: puts a tag on a record (an existing one, or one found or created
 /// by name).
 #[utoipa::path(
@@ -738,7 +742,7 @@ pub(super) async fn list_record_tags(
     path = "/api/v1/{entity}/{id}/tags",
     tag = "entity",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     request_body = AddTag,
     responses(
         (status = 200, description = "The record's tags after the change", body = PaginatedResponse<TagView>),
@@ -759,13 +763,15 @@ pub(super) async fn add_record_tag(
     Ok(Json(page_of(tags)))
 }
 
+/// Untag a record
+///
 /// B4-T1: takes a tag off a record.
 #[utoipa::path(
     delete,
     path = "/api/v1/{entity}/{id}/tags/{tag_id}",
     tag = "entity",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
-    params(("entity" = String, Path), ("id" = Uuid, Path), ("tag_id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record"), ("tag_id" = Uuid, Path, description = "The tag")),
     responses(
         (status = 200, description = "The record's tags after the change", body = PaginatedResponse<TagView>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -878,6 +884,8 @@ pub async fn bulk_tag(
     Ok(result)
 }
 
+/// Tag many records
+///
 /// B4-T4: adds a tag to, or takes one off, up to 500 selected records. Each
 /// record is checked as a single change would be; the ones that could not
 /// change are listed with a reason.
@@ -886,7 +894,7 @@ pub async fn bulk_tag(
     path = "/api/v1/{entity}/tags/bulk",
     tag = "entity",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BulkTagRequest,
     responses(
         (status = 200, description = "How many records changed, and which could not", body = BulkTagResult),
@@ -905,6 +913,8 @@ pub(super) async fn bulk_tag_records(
     Ok(Json(bulk_tag(&state, &ctx, &entity, &body).await?))
 }
 
+/// Suggest tags
+///
 /// B4-T2: tags starting with what was typed, most used first.
 #[utoipa::path(
     get,
@@ -926,12 +936,14 @@ pub(super) async fn suggest_tags(
     Ok(Json(page_of(found)))
 }
 
+/// Records with a tag
+///
 /// B4-T4: every record carrying a tag that the caller may read.
 #[utoipa::path(
     get,
     path = "/api/v1/tags/{tag_id}/records",
     tag = "entity",
-    params(("tag_id" = Uuid, Path)),
+    params(("tag_id" = Uuid, Path, description = "The tag")),
     responses(
         (status = 200, description = "Records carrying the tag", body = PaginatedResponse<TaggedRecord>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -948,6 +960,8 @@ pub(super) async fn list_tagged_records(
     Ok(Json(page_of(records)))
 }
 
+/// List tag groups
+///
 /// B4-T2: tag groups.
 #[utoipa::path(
     get,
@@ -974,6 +988,8 @@ pub(super) async fn list_tag_groups(
     Ok(Json(page_of(groups)))
 }
 
+/// Create a tag group
+///
 /// B4-T2: creates a tag group with its create policy. Administrators only.
 #[utoipa::path(
     post,
@@ -1043,13 +1059,15 @@ fn page_of<T>(items: Vec<T>) -> PaginatedResponse<T> {
     PaginatedResponse::new(items, total, 1, total.max(1))
 }
 
+/// Merge a tag
+///
 /// B4-T3: merges a shared tag into another; its links move over and its
 /// name keeps finding the other tag. Administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/tags/{tag_id}/merge",
     tag = "admin",
-    params(("tag_id" = Uuid, Path)),
+    params(("tag_id" = Uuid, Path, description = "The tag")),
     request_body = MergeTag,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -1073,12 +1091,14 @@ pub(super) async fn merge_tag_route(
     ))
 }
 
+/// Undo a tag merge
+///
 /// B4-T3: undoes a tag merge. Administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/tags/{tag_id}/unmerge",
     tag = "admin",
-    params(("tag_id" = Uuid, Path)),
+    params(("tag_id" = Uuid, Path, description = "The tag")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "The merge is undone", body = TagMergeResult),

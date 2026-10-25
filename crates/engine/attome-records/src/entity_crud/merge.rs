@@ -122,6 +122,8 @@ impl MergeResponse {
 
 // â”€â”€ POST /api/v1/{entity}/{id}/merge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+/// Merge a duplicate into a record
+///
 /// F028 â€” merges `duplicate_id`'s record into the canonical record at `id`:
 /// unions data (the canonical record's own value always wins on conflict; a
 /// null/absent canonical field is filled from the duplicate's value),
@@ -139,8 +141,8 @@ impl MergeResponse {
     path = "/api/v1/{entity}/{id}/merge",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         ("If-Match" = Option<String>, Header,
          description = "Optional row_version for optimistic concurrency on the canonical \
                         record (C-07/DATA-7). Omitted, the merge checks the canonical's own \
@@ -1348,13 +1350,15 @@ pub async fn undo_merge(
 
 // ── A15-T7: the preview and undo routes ─────────────────────────────────────
 
+/// Preview a merge
+///
 /// `POST /api/v1/{entity}/{id}/merge/preview` — what merging `duplicate_id`
 /// into the record at `id` would do (see [`merge_preview`]); writes nothing.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/merge/preview",
     tag = "entity",
-    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record")),
     responses(
         (status = 200, description = "What the merge would move, start and produce", body = MergePreview),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1394,6 +1398,8 @@ pub(super) async fn merge_preview_route(
     ))
 }
 
+/// Undo a merge
+///
 /// `POST /api/v1/{entity}/merges/{merge_id}/undo` — undoes a merge as one
 /// unit (see [`undo_merge`]). Needs `{entity}.update` and `{entity}.delete`
 /// (it rewrites the survivor and brings the merged records back) and access
@@ -1403,8 +1409,8 @@ pub(super) async fn merge_preview_route(
     path = "/api/v1/{entity}/merges/{merge_id}/undo",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("merge_id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("merge_id" = Uuid, Path, description = "The merge"),
         ("If-Match" = Option<String>, Header, description = "The survivor's row_version"),
     ),
     responses(

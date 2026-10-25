@@ -667,12 +667,14 @@ pub async fn plan_bulk_edit(
     })
 }
 
+/// Edit many records
+///
 /// B5-T1: changes the same attributes on many records.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/bulk-edit",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BulkEditRequest,
     responses(
         (status = 202, description = "The edit is planned and running as a bulk update", body = BulkEditSubmitted),
@@ -785,13 +787,15 @@ pub async fn submit_bulk_edit(
     ))
 }
 
+/// Preview a bulk edit
+///
 /// B5-T2: what a bulk edit would change, without changing anything: the
 /// counts and the first 20 records before and after.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/bulk-edit/preview",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BulkEditRequest,
     responses(
         (status = 200, description = "What the edit would change", body = BulkEditPreview),
@@ -821,6 +825,8 @@ async fn bulk_edit_preview(
     }))
 }
 
+/// Undo a bulk edit
+///
 /// B5-T3: puts a bulk edit back. The undo list goes in as a bulk update
 /// carrying each record's post-edit row version, so a record changed since
 /// the edit is reported as a conflict and left as it is; every record still
@@ -829,7 +835,7 @@ async fn bulk_edit_preview(
     post,
     path = "/api/v1/{entity}/bulk-edit/undo",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name")),
     request_body = BulkEditUndoRequest,
     responses(
         (status = 202, description = "The undo is running as a bulk update", body = BulkEditSubmitted),

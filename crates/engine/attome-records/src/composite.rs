@@ -236,6 +236,9 @@ fn error_parts(error: AppError) -> (u16, Value) {
     (status, json!({ "status": status }))
 }
 
+/// Run several record operations
+///
+/// Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. One result per operation.
 #[utoipa::path(
     post,
     path = "/api/v1/composite",

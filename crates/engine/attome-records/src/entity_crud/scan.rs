@@ -176,6 +176,8 @@ pub async fn find_scanned(
 
 // ── Routes ──────────────────────────────────────────────────────────────────
 
+/// Find records by a scanned code
+///
 /// B16-T5: the records a scanned code points at.
 #[utoipa::path(
     get,
