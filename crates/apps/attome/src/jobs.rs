@@ -1730,6 +1730,13 @@ async fn dispatch_platform_job(
             if flushed > 0 {
                 tracing::info!(flushed, "api usage rollup: run complete");
             }
+            // S8-T4: the per-version counters ride the same nightly run.
+            let versions =
+                attome_server::api_version_usage::flush(&db, &attome_state.base.redis_coordination)
+                    .await?;
+            if versions > 0 {
+                tracing::info!(versions, "api version usage rollup: run complete");
+            }
         }
         // M18 Data Catalog Phase 1 (D-466) — see this variant's doc comment
         // in attome_jobs::job. Composes the query-kind and workflow-kind

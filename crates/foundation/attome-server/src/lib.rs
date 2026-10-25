@@ -1,5 +1,7 @@
 pub mod alerts;
 pub mod api_usage;
+/// S8-T4: calls per API version and route, per API key and S2S client.
+pub mod api_version_usage;
 pub mod apikey_touch;
 pub mod app;
 pub mod authz;

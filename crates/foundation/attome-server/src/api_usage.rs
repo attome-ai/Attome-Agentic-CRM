@@ -154,17 +154,24 @@ pub async fn flush(db: &DbPool, redis: &Store) -> Result<usize, AppError> {
     let mut rows = 0;
     // At most two claims: a leftover staging hash, then the pending one.
     for _ in 0..2 {
-        let claimed = claim(redis).await?;
+        let claimed = claim_keys(redis, HASH_KEY, STAGING_KEY).await?;
         if claimed.is_empty() {
             break;
         }
         rows += upsert(db, claimed).await?;
-        release(redis).await?;
+        release_key(redis, STAGING_KEY).await?;
     }
     Ok(rows)
 }
 
-async fn claim(store: &Store) -> Result<Vec<(String, String)>, AppError> {
+/// Claims a buffer: moves `pending` onto `staging` unless a staging hash
+/// is already waiting, then reads the staging hash. Shared with
+/// [`crate::api_version_usage`] (S8-T4).
+pub(crate) async fn claim_keys(
+    store: &Store,
+    pending: &str,
+    staging: &str,
+) -> Result<Vec<(String, String)>, AppError> {
     let redis = match store {
         Store::Redis(pool) => pool,
         // The in-process form of CLAIM_SCRIPT: move the pending hash onto the
@@ -173,16 +180,16 @@ async fn claim(store: &Store) -> Result<Vec<(String, String)>, AppError> {
         Store::Memory(memory) => {
             return memory
                 .transaction(|ks| {
-                    if !ks.exists(STAGING_KEY) {
-                        if !ks.exists(HASH_KEY) {
+                    if !ks.exists(staging) {
+                        if !ks.exists(pending) {
                             return Ok(Vec::new());
                         }
-                        for (field, value) in ks.hgetall(HASH_KEY)? {
-                            ks.hset(STAGING_KEY, &field, &value)?;
+                        for (field, value) in ks.hgetall(pending)? {
+                            ks.hset(staging, &field, &value)?;
                         }
-                        ks.del(HASH_KEY);
+                        ks.del(pending);
                     }
-                    Ok(ks.hgetall(STAGING_KEY)?.into_iter().collect())
+                    Ok(ks.hgetall(staging)?.into_iter().collect())
                 })
                 .map_err(|_: attome_cache::memory::WrongType| {
                     AppError::internal("api_usage: buffer key holds a non-hash value")
@@ -193,7 +200,7 @@ async fn claim(store: &Store) -> Result<Vec<(String, String)>, AppError> {
         CLAIM_TIMEOUT,
         redis.eval(
             CLAIM_SCRIPT,
-            vec![HASH_KEY.to_owned(), STAGING_KEY.to_owned()],
+            vec![pending.to_owned(), staging.to_owned()],
             Vec::<String>::new(),
         ),
     )
@@ -206,8 +213,9 @@ async fn claim(store: &Store) -> Result<Vec<(String, String)>, AppError> {
         .collect())
 }
 
-async fn release(redis: &Store) -> Result<(), AppError> {
-    tokio::time::timeout(CLAIM_TIMEOUT, redis.del(STAGING_KEY))
+/// Deletes a claimed staging hash once its counts are stored.
+pub(crate) async fn release_key(redis: &Store, staging: &str) -> Result<(), AppError> {
+    tokio::time::timeout(CLAIM_TIMEOUT, redis.del(staging))
         .await
         .map_err(|_| AppError::internal("api_usage: releasing the staging buffer timed out"))??;
     Ok(())

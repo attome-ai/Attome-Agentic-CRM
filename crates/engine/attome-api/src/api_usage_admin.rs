@@ -293,9 +293,96 @@ async fn set_quota(
     }))
 }
 
+#[derive(Deserialize, IntoParams)]
+struct VersionUsageQuery {
+    /// How many trailing days to look over. Defaults to 30, clamped to
+    /// [1, 90].
+    days: Option<i64>,
+    /// One-based — the first page is `page=1` (D-347).
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+/// S8-T4: one caller still calling a deprecated version or route.
+#[derive(sqlx::FromRow, Serialize, ToSchema)]
+struct DeprecatedUsageRow {
+    /// `api_key` or `s2s_client`.
+    caller_kind: String,
+    caller_id: Uuid,
+    /// The key's or client's name; absent when it was deleted.
+    caller_name: Option<String>,
+    api_version: String,
+    route_template: String,
+    request_count: i64,
+    /// The last day it called (counts are kept by day).
+    last_called_on: chrono::NaiveDate,
+}
+
+/// Callers of deprecated API versions and routes
+///
+/// S8-T4: every API key and S2S client that called a deprecated API
+/// version or route in the window, per version and route, with its calls
+/// and the last day it called, most recent first. Counted by day by the
+/// nightly usage rollup.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/api-versions/usage",
+    tag = "admin",
+    params(VersionUsageQuery),
+    responses(
+        (status = 200, description = "Callers of deprecated versions and routes", body = PaginatedResponse<DeprecatedUsageRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn deprecated_usage(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(q): Query<VersionUsageQuery>,
+) -> Result<Json<PaginatedResponse<DeprecatedUsageRow>>, AppError> {
+    let days = q.days.unwrap_or(30).clamp(1, MAX_WINDOW_DAYS);
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+    } = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
+    let rows: Vec<DeprecatedUsageRow> = sqlx::query_as(
+        "SELECT u.caller_kind, u.caller_id, COALESCE(k.name, c.name) AS caller_name, \
+                u.api_version, u.route_template, SUM(u.request_count)::bigint AS request_count, \
+                MAX(u.usage_date) AS last_called_on \
+         FROM api_version_usage u \
+         LEFT JOIN api_key k ON u.caller_kind = 'api_key' AND k.id = u.caller_id \
+         LEFT JOIN s2s_client c ON u.caller_kind = 's2s_client' AND c.id = u.caller_id \
+         WHERE u.deprecated AND u.usage_date >= (CURRENT_DATE - $1::int) \
+         GROUP BY u.caller_kind, u.caller_id, k.name, c.name, u.api_version, u.route_template \
+         ORDER BY last_called_on DESC, request_count DESC \
+         OFFSET $2 LIMIT $3",
+    )
+    .bind(days)
+    .bind(offset)
+    .bind(page_size)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM ( \
+            SELECT 1 FROM api_version_usage \
+            WHERE deprecated AND usage_date >= (CURRENT_DATE - $1::int) \
+            GROUP BY caller_kind, caller_id, api_version, route_template \
+         ) grouped",
+    )
+    .bind(days)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(rows, total, page, page_size)))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/api-usage/summary", get(summary))
+        .route("/api/v1/admin/api-versions/usage", get(deprecated_usage))
         .route("/api/v1/admin/api-keys", get(list_keys))
         .route("/api/v1/admin/api-keys/{id}/quota", put(set_quota))
 }
@@ -305,7 +392,7 @@ pub fn routes() -> Router<EngineState> {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(summary, list_keys, set_quota))]
+#[openapi(paths(summary, list_keys, set_quota, deprecated_usage))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

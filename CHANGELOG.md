@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Who still calls deprecated API versions (S8-T4): every API key and S2S client call is counted by
+  day, API version and route (a nightly rollup into `api_version_usage`, migration 0251), and
+  `GET /api/v1/admin/api-versions/usage` lists the callers of a deprecated version or route with their
+  calls and the last day they called.
 - Job queues at a glance (Z7-T6): `GET /api/v1/admin/jobs/lanes` gives each queue's waiting,
   running, retrying and dead-lettered jobs, the age of its oldest waiting job and its failure rate over
   the last hour; the failed-jobs screen shows them above the dead letters (Arabic and English).

@@ -88,6 +88,11 @@ fn find(path: &str) -> Option<&'static DeprecatedPath> {
     find_in(DEPRECATED_PATHS, path)
 }
 
+/// S8-T4: whether a request path is in [`DEPRECATED_PATHS`].
+pub fn is_deprecated_path(path: &str) -> bool {
+    find(path).is_some()
+}
+
 /// Applies `DEPRECATED_PATHS` to the assembled OpenAPI document: for every
 /// entry whose `path` has a matching `PathItem`, every HTTP-method operation
 /// actually present on it (there is normally exactly one) gets

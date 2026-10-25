@@ -108,6 +108,37 @@ pub async fn api_version(State(state): State<AppState>, mut req: Request, next: 
         deprecation::apply_version_headers(entry, response.headers_mut());
         return response;
     }
+    // S8-T4: count an API key's or S2S client's call by version and route;
+    // a browser always gets the current version, so it is not counted.
+    let caller = if browser {
+        None
+    } else if let Some(key) = req.extensions().get::<ApiKeyIdentity>() {
+        Some(crate::api_version_usage::Caller::ApiKey(key.0))
+    } else {
+        req.extensions()
+            .get::<S2sClientRef>()
+            .map(|client| crate::api_version_usage::Caller::S2sClient(client.0))
+    };
+    let route = req
+        .extensions()
+        .get::<axum::extract::MatchedPath>()
+        .map(|path| path.as_str().to_owned());
+    if let (Some(caller), Some(route)) = (caller, route) {
+        let deprecated = matches!(notice, deprecation::VersionNotice::Deprecated(_))
+            || deprecation::is_deprecated_path(req.uri().path());
+        if let Err(error) = crate::api_version_usage::record(
+            &state.redis_coordination,
+            chrono::Utc::now().date_naive(),
+            caller,
+            version,
+            &route,
+            deprecated,
+        )
+        .await
+        {
+            tracing::warn!(%error, "api version usage: record failed");
+        }
+    }
     req.extensions_mut().insert(ApiVersion(version));
     // S8-T2: an older caller's request is rewritten up to the current
     // version, and its response back down, for the operations an adapter
