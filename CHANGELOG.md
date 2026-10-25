@@ -710,6 +710,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Data profiling guide (L6-T10): `docs/data-profiling.md` describes the one-scan profile and its
+  sampling, statistics, shapes and Arabic measures, masking of sensitive attributes, personal-data label
+  proposals, drift, schedules, file profiles of staged imports and the agent tools.
 - Data lineage guide (L5-T10): `docs/lineage.md` describes the graph (nodes, edge kinds and
   confidences, versions and history), the impact report that stops a breaking field change, the walk,
   compare and clean-up routes, hand-documented links, the OpenLineage export and the agent tools.
