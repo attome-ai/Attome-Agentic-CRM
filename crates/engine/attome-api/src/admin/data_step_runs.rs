@@ -259,11 +259,11 @@ pub(super) async fn resume_data_step_run(
     tag = "admin",
     params(("id" = Uuid, Path)),
     responses(
-        (status = 200, description = "Stopped: an orphan scan is abandoned, a field run is failed for its abandon route", body = DataStepRunStatus),
+        (status = 200, description = "Stopped: an orphan scan is abandoned, a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route", body = DataStepRunStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks system.admin", body = ErrorResponse),
         (status = 404, description = "No such run", body = ErrorResponse),
-        (status = 409, description = "`run_finished`: the run already ended", body = ErrorResponse),
+        (status = 409, description = "`run_finished`: the run already ended, or a retype already swapped", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::Update)])))),
@@ -274,6 +274,11 @@ pub(super) async fn cancel_data_step_run(
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataStepRunStatus>, AppError> {
     let run = load(&state, id).await?;
+    // Y12-T7: a retype is stopped and undone in one step.
+    if run.kind == "retype" {
+        super::attribute::cancel_retype_run(&state, ctx.user_id, id).await?;
+        return load(&state, id).await.map(Json);
+    }
     let (to, error) = if run.kind == "orphan_scan" {
         ("abandoned", None)
     } else {

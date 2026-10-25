@@ -3134,6 +3134,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- Cancelling a running retype (`POST /api/v1/admin/data-step-runs/{id}/cancel`, Y12-T7) now undoes it
+  at once: the shadow column, trigger and archive rows go and the column keeps its old type and values.
+  A retype whose swap already committed is refused (409); go back with a reverse retype.
 - A survey's response entity stores `submitted_at` as `date_time` (a moment), not `date`.
 - Every `date` field the platform and the packs ship is now `date_time` (Y2-T2), so their columns stay
   `TIMESTAMPTZ` and nothing that writes a moment into them changes; `date` (a `DATE` day, only

@@ -2529,6 +2529,69 @@ pub(super) async fn abandon_field_run(
         .map(Json)
 }
 
+/// Y12-T7: cancels a retype that has not swapped yet, in one step: the run
+/// stops (`failed`, as a cancel always marks a field run), then the abandon
+/// path drops its shadow column and sync trigger and removes its archive
+/// rows, leaving the column with its old type and values and the
+/// attribute's type unchanged (it changes only at the swap). A run whose
+/// swap already committed is refused: the new type stands, and going back
+/// is a reverse retype.
+pub(super) async fn cancel_retype_run(
+    state: &EngineState,
+    user_id: Uuid,
+    run_id: Uuid,
+) -> Result<(), AppError> {
+    use attome_metadata::provision::field_change as fc;
+    let found: Option<(String, Value)> = sqlx::query_as(
+        "SELECT entity_logicalname, spec FROM data_step_run WHERE id = $1 AND kind = 'retype'",
+    )
+    .bind(run_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (entity, spec) = found.ok_or(AppError::NotFound)?;
+    let id = |key: &str| {
+        spec.get(key)
+            .and_then(Value::as_str)
+            .and_then(|s| Uuid::parse_str(s).ok())
+    };
+    let (Some(entity_id), Some(attr_id)) = (id("entity_id"), id("attribute_id")) else {
+        return Err(AppError::internal("retype run without its field"));
+    };
+    let suffix = spec
+        .get("suffix")
+        .and_then(Value::as_str)
+        .ok_or_else(|| AppError::internal("retype run without a shadow suffix"))?;
+    let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    let pending = fc::column_exists(&mut conn, &entity, &fc::retype_shadow_column(suffix)).await?;
+    drop(conn);
+    if !pending {
+        return Err(AppError::Conflict(
+            "retype already swapped: the new type stands; go back with a reverse retype",
+        ));
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
+    if !fc::set_run_status(
+        &mut tx,
+        run_id,
+        &["queued", "claimed", "running", "paused", "failed"],
+        "failed",
+        Some("cancelled by an administrator"),
+    )
+    .await?
+    {
+        return Err(AppError::Conflict("run_finished: the run already ended"));
+    }
+    attome_db::tx::commit(tx).await?;
+    let out = do_abandon_field_run(state, user_id, entity_id, attr_id, run_id).await?;
+    if out.conversion_completed {
+        return Err(AppError::Conflict(
+            "retype already swapped: the new type stands; go back with a reverse retype",
+        ));
+    }
+    Ok(())
+}
+
 /// Whether a run's spec names this field (`entity_id` + `attribute_id`).
 fn run_names_field(spec: &Value, entity_id: Uuid, attr_id: Uuid) -> bool {
     let id = |key: &str| {
