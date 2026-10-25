@@ -706,6 +706,44 @@ async fn provision_survey(state: &EngineState, id: Uuid, doc: &Value) -> Result<
     crate::changeset::boot::apply_pack_document(state, &document).await
 }
 
+/// A6-T1: the dependency's rules, as one changeset in its own scope: a rule
+/// per controlling value and a default, and the rules of values the last
+/// published version had and this one dropped, switched off. The same
+/// content gives the same changeset id and keeps its sequence number.
+async fn provision_dependency(state: &EngineState, id: Uuid, doc: &Value) -> Result<(), AppError> {
+    use attome_model::kinds::dependency;
+    let db = &state.base.db;
+    let previous = match attome_model::store::read_published(db, id).await {
+        Ok(version) => dependency::controlling_values(&version.doc),
+        Err(AppError::NotFound) => Vec::new(),
+        Err(other) => return Err(other),
+    };
+    let now = dependency::controlling_values(doc);
+    let retired: Vec<String> = previous.into_iter().filter(|c| !now.contains(c)).collect();
+    let change = dependency::changeset_id(id, doc, &retired);
+    let earlier: Option<i32> =
+        sqlx::query_scalar("SELECT seq FROM changeset_apply WHERE changeset_id = $1 LIMIT 1")
+            .bind(change)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    let seq = match earlier {
+        Some(seq) => seq,
+        None => {
+            let last: Option<i32> = sqlx::query_scalar(
+                "SELECT max(seq) FROM changeset_apply WHERE layer = 'project' AND scope = $1",
+            )
+            .bind(dependency::scope_of(id))
+            .fetch_one(db)
+            .await
+            .map_err(AppError::internal)?;
+            last.unwrap_or(0) + 1
+        }
+    };
+    let document = dependency::changeset_for(id, doc, &retired, seq);
+    crate::changeset::boot::apply_pack_document(state, &document).await
+}
+
 /// Publishes an object's open draft once it passes the publish checks, and
 /// refreshes the cooked metadata.
 #[utoipa::path(
@@ -756,6 +794,12 @@ async fn publish(
             attome_metadata::provision::stage_process::ensure_columns(&state.base.db, entity)
                 .await?;
         }
+    }
+    // A6-T1: a dependency's allowed-values rules are written through the
+    // changeset ledger before it goes live.
+    if kind.name() == attome_model::kinds::DEPENDENCY {
+        let draft = attome_model::store::read(&state.base.db, id, None).await?;
+        provision_dependency(&state, id, &draft.doc).await?;
     }
     // G14-T1: a survey's response entity is provisioned through the
     // changeset ledger before the survey goes live.

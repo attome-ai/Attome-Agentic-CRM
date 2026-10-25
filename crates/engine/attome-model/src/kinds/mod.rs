@@ -4,6 +4,7 @@
 pub mod agent;
 pub mod business_event;
 pub mod component;
+pub mod dependency;
 pub mod environment_variable;
 pub mod eval_suite;
 pub mod flow_template;
@@ -22,6 +23,7 @@ pub mod tour;
 pub use agent::{AGENT, AgentKind};
 pub use business_event::{BUSINESS_EVENT, BusinessEventKind};
 pub use component::{COMPONENT, ComponentKind};
+pub use dependency::{DEPENDENCY, DependencyKind};
 pub use environment_variable::{ENVIRONMENT_VARIABLE, EnvironmentVariableKind};
 pub use eval_suite::{EVAL_SUITE, EvalSuiteKind};
 pub use flow_template::{FLOW_TEMPLATE, FlowTemplateKind};

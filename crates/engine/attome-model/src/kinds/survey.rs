@@ -427,7 +427,7 @@ pub fn changeset_for(survey: Uuid, doc: &Value, seq: i32) -> Value {
         ("regarding_entity", "About Entity", "text", None),
         ("regarding_id", "About Record", "text", None),
         ("respondent_email", "Respondent Email", "text", None),
-        ("submitted_at", "Submitted", "date", None),
+        ("submitted_at", "Submitted", "date_time", None),
     ] {
         push(
             "add_field",

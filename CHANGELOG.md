@@ -205,6 +205,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Dependent values (A6-T1): a `dependency` metadata object says which values a dependent attribute
+  may take for each value of a controlling one (the cities of a region), with an optional default.
+  Publishing it writes one allowed-values business rule per value through the changeset ledger, so
+  the server refuses a city outside the chosen region and the form offers only the allowed ones;
+  a value dropped on a later publish has its rule switched off.
 - Record forms check fields as you type (A3-T7): a field's pattern, its A2-T2 format and a number's
   range are checked in the browser with the server's own rules (Arabic digits normalised the same
   way), and each failure shows under its field in English or Arabic; a 422 from the server still
@@ -3093,6 +3098,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- A survey's response entity stores `submitted_at` as `date_time` (a moment), not `date`.
 - Every `date` field the platform and the packs ship is now `date_time` (Y2-T2), so their columns stay
   `TIMESTAMPTZ` and nothing that writes a moment into them changes; `date` (a `DATE` day, only
   `YYYY-MM-DD`) is for fields builders add. A field can change between `date` and `date_time` (a moment

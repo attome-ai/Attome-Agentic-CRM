@@ -44,6 +44,7 @@
               "model.agent.describe", "model.agent.edit", "model.agent.list", "model.attribute.describe",
               "model.business_event.describe", "model.business_event.edit", "model.business_event.list",
               "model.component.describe", "model.component.edit", "model.component.list",
+              "model.dependency.describe", "model.dependency.edit", "model.dependency.list",
               "model.entity.describe", "model.environment_variable.describe",
               "model.environment_variable.edit", "model.environment_variable.list",
               "model.eval_suite.describe", "model.eval_suite.edit", "model.eval_suite.list",
