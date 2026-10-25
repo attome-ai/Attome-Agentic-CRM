@@ -3,6 +3,7 @@ import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ApiError } from '@attome/base';
 
 import { DeadLetterJobItem, JobsAdminService } from '../../../services/jobs-admin.service';
+import { JobLanesComponent } from '../../../lanes/job-lanes.component';
 
 /**
  * P-job-queue-hardening (D-165) / ENTERPRISE-AUDIT-2026-07-24 findings
@@ -17,7 +18,7 @@ import { DeadLetterJobItem, JobsAdminService } from '../../../services/jobs-admi
   selector:   'xrm-failed-jobs-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [DatePipe, NgTemplateOutlet],
+  imports:    [DatePipe, NgTemplateOutlet, JobLanesComponent],
   styleUrls:  ['../../../../../styles/admin-page.css', './failed-jobs-list.component.css'],
   templateUrl: './failed-jobs-list.component.html',
 })

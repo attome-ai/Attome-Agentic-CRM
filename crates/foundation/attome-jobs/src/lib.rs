@@ -508,6 +508,52 @@ pub async fn oldest_pending_age_seconds(
     .await
 }
 
+/// Z7-T6: one queue at a glance, for the admin jobs screen.
+#[derive(Debug, Clone, Copy, PartialEq, Default, sqlx::FromRow)]
+pub struct LaneStats {
+    pub pending: i64,
+    pub running: i64,
+    /// `Failed` with attempts left: waiting out a retry backoff.
+    pub retrying: i64,
+    pub dead_letters: i64,
+    /// Seconds since the oldest pending row was due; `None` when none is.
+    pub oldest_pending_age_secs: Option<f64>,
+    /// Rows that finished in the last hour, and rows that failed an attempt
+    /// (or for good) in it.
+    pub done_last_hour: i64,
+    pub failed_last_hour: i64,
+}
+
+/// Z7-T6: the share of the last hour's outcomes that failed, `None` with
+/// none. Pure.
+pub fn failure_rate(done: i64, failed: i64) -> Option<f64> {
+    let total = done + failed;
+    (total > 0).then(|| failed as f64 / total as f64)
+}
+
+/// Z7-T6: [`LaneStats`] for one queue in one scan (the admin screen, not a
+/// hot path).
+pub async fn lane_stats(pool: &attome_db::DbPool, batch: bool) -> Result<LaneStats, sqlx::Error> {
+    let namespace = if batch { NAMESPACE_BATCH } else { NAMESPACE };
+    sqlx::query_as(attome_db::tagged_sql!(
+        "jobs.queue",
+        "SELECT COUNT(*) FILTER (WHERE status = 'Pending') AS pending, \
+         COUNT(*) FILTER (WHERE status = 'Running') AS running, \
+         COUNT(*) FILTER (WHERE status = 'Failed' AND attempts < max_attempts) AS retrying, \
+         COUNT(*) FILTER (WHERE status = 'Killed') AS dead_letters, \
+         EXTRACT(EPOCH FROM (now() - MIN(run_at) FILTER (WHERE status = 'Pending')))::float8 \
+         AS oldest_pending_age_secs, \
+         COUNT(*) FILTER (WHERE status = 'Done' AND done_at > now() - interval '1 hour') \
+         AS done_last_hour, \
+         COUNT(*) FILTER (WHERE status IN ('Failed', 'Killed') \
+         AND COALESCE(done_at, lock_at) > now() - interval '1 hour') AS failed_last_hour \
+         FROM apalis.jobs WHERE job_type = $1"
+    ))
+    .bind(namespace)
+    .fetch_one(pool)
+    .await
+}
+
 /// Count of dead-lettered rows in one queue — apalis's own terminal state
 /// for a job that exhausted `max_attempts` (`status = 'Killed'`, confirmed
 /// against apalis-sql 0.7.4's `calculate_status`; distinct from `'Failed'`,
@@ -1092,5 +1138,17 @@ mod tests {
             attempts_within_window, 3,
             "a 60s outage must consume exactly 3 of the 25-attempt budget, not all 25"
         );
+    }
+}
+
+#[cfg(test)]
+mod lane_tests {
+    use super::failure_rate;
+
+    #[test]
+    fn failure_rate_is_failed_over_finished() {
+        assert_eq!(failure_rate(0, 0), None);
+        assert_eq!(failure_rate(3, 1), Some(0.25));
+        assert_eq!(failure_rate(0, 2), Some(1.0));
     }
 }

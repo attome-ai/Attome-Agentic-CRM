@@ -113,6 +113,64 @@ async fn list_dead_letter(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Z7-T6: one queue at a glance.
+#[derive(Serialize, ToSchema)]
+struct JobLane {
+    /// `fast` or `batch`.
+    queue: &'static str,
+    pending: i64,
+    running: i64,
+    /// Waiting out a retry backoff.
+    retrying: i64,
+    dead_letters: i64,
+    /// Seconds since the oldest pending job was due; absent when none is.
+    oldest_pending_age_secs: Option<f64>,
+    done_last_hour: i64,
+    failed_last_hour: i64,
+    /// Failed over failed plus done in the last hour, 0 to 1; absent when
+    /// nothing finished.
+    failure_rate_last_hour: Option<f64>,
+}
+
+/// The job queues
+///
+/// Z7-T6: each queue's depth, running jobs, retries, dead letters, the age
+/// of its oldest waiting job and its failure rate over the last hour.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/jobs/lanes",
+    tag = "admin",
+    responses(
+        (status = 200, description = "Both queues, fast first", body = PaginatedResponse<JobLane>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn lanes(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<PaginatedResponse<JobLane>>, AppError> {
+    let mut items = Vec::with_capacity(2);
+    for (queue, batch) in [("fast", false), ("batch", true)] {
+        let s = attome_jobs::lane_stats(&state.base.db, batch)
+            .await
+            .map_err(AppError::internal)?;
+        items.push(JobLane {
+            queue,
+            pending: s.pending,
+            running: s.running,
+            retrying: s.retrying,
+            dead_letters: s.dead_letters,
+            oldest_pending_age_secs: s.oldest_pending_age_secs,
+            done_last_hour: s.done_last_hour,
+            failed_last_hour: s.failed_last_hour,
+            failure_rate_last_hour: attome_jobs::failure_rate(s.done_last_hour, s.failed_last_hour),
+        });
+    }
+    Ok(Json(PaginatedResponse::new(items, 2, 1, 2)))
+}
+
 #[derive(Serialize, ToSchema)]
 struct ReplayResult {
     replayed: bool,
@@ -564,6 +622,7 @@ async fn cancel_batch(
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/jobs/dead-letter", get(list_dead_letter))
+        .route("/api/v1/admin/jobs/lanes", get(lanes))
         .route("/api/v1/admin/jobs/{id}/replay", post(replay))
         .route("/api/v1/admin/jobs/{id}", delete(discard))
         .route("/api/v1/jobs", get(my_batches))
@@ -579,6 +638,7 @@ pub fn routes() -> Router<EngineState> {
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(
     list_dead_letter,
+    lanes,
     replay,
     discard,
     my_batches,

@@ -199,6 +199,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Job queues at a glance (Z7-T6): `GET /api/v1/admin/jobs/lanes` gives each queue's waiting,
+  running, retrying and dead-lettered jobs, the age of its oldest waiting job and its failure rate over
+  the last hour; the failed-jobs screen shows them above the dead letters (Arabic and English).
 - `attome storage migrate --from <config.json> --to <config.json>` (Z6-T5) copies every file to
   another storage backend, 100 a batch and 8 at a time, checks each copy's size and SHA-256 by reading
   it back, records progress in a state file so a rerun resumes, refuses a target outside
