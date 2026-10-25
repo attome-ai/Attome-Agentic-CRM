@@ -118,6 +118,8 @@ const BASELINE: &[&str] = &[
     "business_rule_admin",
     "business_rule_hooks",
     "calendar_admin",
+    // Z12-T8: iCal holiday feeds, beside the calendar admin they extend.
+    "calendar_feed",
     "capability_probe",
     "catalog_admin",
     // L7-T3: change-stream subscriptions read by S2S identities.
@@ -192,6 +194,8 @@ const BASELINE: &[&str] = &[
     "relationship_admin",
     "reminder_access",
     "rule_admin",
+    // A11-T4: business-rule test cases, run by the rule publish here.
+    "rule_test_cases",
     // AC7-T11: the bill of materials embedded by this crate's build.rs and
     // the packs in this crate's changeset ledger.
     "sbom_admin",
