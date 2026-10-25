@@ -59,6 +59,7 @@ struct ListScoresQuery {
     /// Filter to one entity's scores. Omit for every entity.
     entity: Option<String>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,
@@ -144,6 +145,7 @@ struct ScoreHistoryQuery {
     /// masked-internal 500 from a constraint violation.
     dimension: String,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,
@@ -249,6 +251,7 @@ struct ListIssuesQuery {
     /// L2-T4: only the issues this person owns.
     owner_id: Option<Uuid>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,
@@ -662,6 +665,7 @@ struct ListRulesQuery {
     /// Only this entity (its logical name).
     entity: Option<String>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,

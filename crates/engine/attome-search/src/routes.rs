@@ -195,6 +195,7 @@ pub struct SearchParams {
     pub q: String,
     /// One-based: page 1 is the first page.
     #[serde(default = "default_page")]
+    #[param(minimum = 1)]
     pub page: i64,
     /// Rows per page.
     #[serde(default = "default_page_size")]
@@ -1055,6 +1056,7 @@ struct GapQuery {
     /// Filter to one triage state; omit for the whole queue.
     status: Option<String>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,

@@ -384,6 +384,7 @@ pub struct AsOfQuery {
     /// The moment to read the list as of.
     pub at: DateTime<Utc>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Rows per page.
     pub page_size: Option<i64>,

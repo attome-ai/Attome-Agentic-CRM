@@ -206,6 +206,7 @@ pub struct AgeingQuery {
     /// The day the ageing is taken on (default today).
     pub as_of: Option<NaiveDate>,
     /// One-based page.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Rows per page.
     pub page_size: Option<i64>,

@@ -93,6 +93,7 @@ pub struct CapacityParams {
     pub skill: Option<String>,
     /// One-based: page 1 is the first page.
     #[serde(default = "default_page")]
+    #[param(minimum = 1)]
     pub page: i64,
     /// Rows per page.
     #[serde(default = "default_page_size")]

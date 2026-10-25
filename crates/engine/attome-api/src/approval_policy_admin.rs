@@ -142,6 +142,7 @@ struct ListQuery {
     /// Only this action type.
     action_type: Option<String>,
     /// One-based — the first page is `page=1` (D-347).
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,

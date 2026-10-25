@@ -50,6 +50,7 @@ struct DeliveryQuery {
     /// Only deliveries to this address.
     recipient: Option<String>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,

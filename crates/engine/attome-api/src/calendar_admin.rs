@@ -1739,6 +1739,7 @@ async fn season_op(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/calendars/{id}/holiday-rules",
+    operation_id = "create_calendar_rule",
     tag = "admin",
     params(("id" = Uuid, Path, description = "The calendar")),
     request_body = HolidayRuleDef,
@@ -1787,6 +1788,7 @@ async fn create_rule(
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/calendars/{id}/holiday-rules/{rule_id}",
+    operation_id = "delete_calendar_rule",
     tag = "admin",
     params(("id" = Uuid, Path, description = "The calendar"), ("rule_id" = Uuid, Path, description = "The rule")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
@@ -1832,6 +1834,7 @@ async fn delete_rule(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/calendars/{id}/seasons",
+    operation_id = "create_calendar_season",
     tag = "admin",
     params(("id" = Uuid, Path, description = "The calendar")),
     request_body = SeasonDef,
@@ -1879,6 +1882,7 @@ async fn create_season(
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/calendars/{id}/seasons/{season_id}",
+    operation_id = "delete_calendar_season",
     tag = "admin",
     params(("id" = Uuid, Path, description = "The calendar"), ("season_id" = Uuid, Path, description = "The season")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
@@ -1985,6 +1989,7 @@ fn expected_starts(
 #[utoipa::path(
     post,
     path = "/api/v1/calendar-sightings",
+    operation_id = "confirm_calendar_sighting",
     tag = "admin",
     request_body = SightingBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
@@ -2087,6 +2092,7 @@ async fn confirm_sighting(
 #[utoipa::path(
     get,
     path = "/api/v1/calendar-sightings",
+    operation_id = "list_calendar_sightings",
     tag = "admin",
     params(SightingQuery),
     responses(
@@ -2173,6 +2179,7 @@ fn check_subject_type(subject_type: &str) -> Result<(), AppError> {
 #[utoipa::path(
     get,
     path = "/api/v1/calendar-assignments/{subject_type}/{subject_id}",
+    operation_id = "get_calendar_assignment",
     tag = "admin",
     params(("subject_type" = String, Path, description = "`user` or `team`"), ("subject_id" = Uuid, Path, description = "The user or team")),
     responses(
@@ -2210,6 +2217,7 @@ async fn get_assignment(
 #[utoipa::path(
     put,
     path = "/api/v1/calendar-assignments/{subject_type}/{subject_id}",
+    operation_id = "put_calendar_assignment",
     tag = "admin",
     params(("subject_type" = String, Path, description = "`user` or `team`"), ("subject_id" = Uuid, Path, description = "The user or team")),
     request_body = AssignmentBody,
@@ -2297,6 +2305,7 @@ async fn put_assignment(
 #[utoipa::path(
     delete,
     path = "/api/v1/calendar-assignments/{subject_type}/{subject_id}",
+    operation_id = "delete_calendar_assignment",
     tag = "admin",
     params(("subject_type" = String, Path, description = "`user` or `team`"), ("subject_id" = Uuid, Path, description = "The user or team")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),

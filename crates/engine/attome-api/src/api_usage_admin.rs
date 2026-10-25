@@ -49,6 +49,7 @@ struct SummaryQuery {
     /// Defaults to 7, clamped to [1, 90].
     days: Option<i64>,
     /// One-based — the first page is `page=1` (D-347).
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,
@@ -135,6 +136,7 @@ struct KeysQuery {
     /// to [1, 90].
     days: Option<i64>,
     /// One-based — the first page is `page=1` (D-347).
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Keys per page, up to the platform maximum.
     page_size: Option<i64>,
@@ -305,6 +307,7 @@ struct VersionUsageQuery {
     /// [1, 90].
     days: Option<i64>,
     /// One-based — the first page is `page=1` (D-347).
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page, up to the platform maximum.
     page_size: Option<i64>,

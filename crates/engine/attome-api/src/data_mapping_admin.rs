@@ -131,6 +131,7 @@ struct ListMappingsQuery {
     /// Only mappings or projects into this entity (its logical name).
     target_entity: Option<String>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,

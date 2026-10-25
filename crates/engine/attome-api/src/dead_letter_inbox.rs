@@ -163,6 +163,7 @@ pub struct InboxQuery {
     /// Only this group (a `cause_group` from the groups list).
     pub group: Option<String>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Rows per page.
     pub page_size: Option<i64>,

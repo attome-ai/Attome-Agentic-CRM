@@ -68,6 +68,7 @@ struct InstanceListQuery {
     /// Only instances about this record.
     correlation_entity_id: Option<Uuid>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,

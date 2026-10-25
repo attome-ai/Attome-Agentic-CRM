@@ -1574,6 +1574,7 @@ struct ListQuery {
     /// holder died; neither was listable before. An unknown name is `422`.
     status: Option<String>,
     /// One-based — the first page is `page=1` (D-347).
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,
@@ -1817,7 +1818,7 @@ struct DecideResponse {
     responses(
         (status = 200, description = "Success", body = DecideResponse),
         (status = 409, description = "Stale row_version, or the request is already decided, expired, or being decided", body = ErrorResponse),
-        (status = 401, description = "Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes", body = attome_types::UnauthorizedResponse),
+        (status = 401, description = "Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege, or an API-key caller on a step that asks for a step-up", body = ErrorResponse),
         (status = 422, description = "Request failed validation, more than 10 attachments, or an attachment the caller cannot read", body = ErrorResponse),
     ),
@@ -2251,7 +2252,7 @@ async fn do_decide(
     responses(
         (status = 200, description = "Success", body = DecideResponse),
         (status = 409, description = "Stale row_version, or the request is already decided, expired, or being decided", body = ErrorResponse),
-        (status = 401, description = "Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes", body = attome_types::UnauthorizedResponse),
+        (status = 401, description = "Missing or invalid credentials, or `reauth_required` when the step asks for a step-up (`approval_decision`) and the session has none within 5 minutes", body = ErrorResponse),
         (status = 403, description = "The request is flat (not plan-bearing), or the caller is not an eligible approver for its current step", body = ErrorResponse),
         (status = 422, description = "Request failed validation, more than 10 attachments, or an attachment the caller cannot read", body = ErrorResponse),
     ),

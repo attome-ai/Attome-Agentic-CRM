@@ -368,6 +368,7 @@ struct BulkStatusQuery {
     include_items: Option<bool>,
     /// One-based: page 1 is the first page.
     #[serde(default)]
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Items per page, clamped to `1..=MAX_PAGE_SIZE`; defaults to 100.
     #[serde(default)]

@@ -302,6 +302,7 @@ pub struct SalesOpportunityLine {
 #[into_params(parameter_in = Query)]
 pub struct LinesQuery {
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Up to 500.
     pub page_size: Option<i64>,

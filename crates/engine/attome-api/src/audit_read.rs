@@ -262,6 +262,7 @@ struct ActivityQuery {
     /// Only this outcome.
     outcome: Option<i32>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,

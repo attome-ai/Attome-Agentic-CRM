@@ -101,6 +101,10 @@ async fn require_portal(conn: &mut sqlx::PgConnection, id: Uuid) -> Result<(), A
     provision::load_portal(conn, id).await.map(|_| ())
 }
 
+/// A portal's account policy
+///
+/// The account policy of one web portal: who may sign up, with which role,
+/// and how its accounts sign in (D-588). Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/webportals/{id}/auth-policy",
@@ -125,6 +129,11 @@ async fn get_auth_policy(
     Ok(Json(policy::load(&mut conn, id).await?))
 }
 
+/// Set a portal's account policy
+///
+/// Replaces the account policy of one web portal: who may sign up, with
+/// which role, and how its accounts sign in (D-588). Administrators only.
+/// Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/webportals/{id}/auth-policy",

@@ -270,6 +270,7 @@ async fn resolve(
 #[utoipa::path(
     post,
     path = "/api/v1/record-templates/{id}/create",
+    operation_id = "create_from_record_template",
     tag = "entity",
     params(("id" = Uuid, Path, description = "The published template")),
     request_body = CreateFromTemplate,
@@ -388,6 +389,7 @@ async fn record_patch(
 #[utoipa::path(
     post,
     path = "/api/v1/record-templates/{id}/apply",
+    operation_id = "apply_record_template",
     tag = "entity",
     params(("id" = Uuid, Path, description = "The published template")),
     request_body = ApplyTemplate,
@@ -499,6 +501,7 @@ async fn apply_template(
 #[utoipa::path(
     post,
     path = "/api/v1/record-templates/from-record",
+    operation_id = "save_record_as_template",
     tag = "admin",
     request_body = SaveAsTemplate,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Create)])))),

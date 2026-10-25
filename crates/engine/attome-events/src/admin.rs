@@ -258,6 +258,7 @@ struct SubscriptionListQuery {
     /// Only active (true) or inactive (false) ones.
     is_active: Option<bool>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,
@@ -309,6 +310,7 @@ struct DeliveryListQuery {
     /// Only this status.
     status: Option<String>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     page: Option<i64>,
     /// Rows per page.
     page_size: Option<i64>,

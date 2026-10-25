@@ -47,6 +47,7 @@ pub struct MyStatementQuery {
     /// Only this commission period.
     pub period_id: Uuid,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Rows per page.
     pub page_size: Option<i64>,
@@ -60,6 +61,7 @@ pub struct StatementQuery {
     /// Only this participant's rows.
     pub participant_id: Option<Uuid>,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Rows per page.
     pub page_size: Option<i64>,

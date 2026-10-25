@@ -59,6 +59,7 @@ use crate::routes::{SearchResponse, parse_audience, validate_paging, validate_qu
 pub struct RunSavedSearchParams {
     /// One-based: page 1 is the first page.
     #[serde(default = "one")]
+    #[param(minimum = 1)]
     pub page: i64,
     /// Rows per page.
     #[serde(default = "twenty_five")]

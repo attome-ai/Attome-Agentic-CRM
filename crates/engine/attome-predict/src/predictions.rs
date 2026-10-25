@@ -50,6 +50,7 @@ pub struct PredictionListQuery {
     /// Only this record.
     pub regarding_id: Uuid,
     /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Rows per page, clamped to `1..=MAX_PAGE_SIZE`; defaults to 20.
     pub page_size: Option<i64>,
