@@ -21,6 +21,8 @@ impl EngineModel for FulfilmentModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        Router::new().merge(crate::hold::routes())
+        Router::new()
+            .merge(crate::hold::routes())
+            .merge(crate::backorder::routes())
     }
 }

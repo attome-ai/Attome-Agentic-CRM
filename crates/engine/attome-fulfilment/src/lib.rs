@@ -6,6 +6,8 @@
 
 /// F6-T5: available-to-promise dates.
 pub mod atp;
+/// F6-T7: backorders and partial shipments.
+pub mod backorder;
 /// F6-T6: holds that stop a release, and releasing.
 pub mod hold;
 pub mod model;
@@ -22,5 +24,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 38;
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    hold::openapi_fragment()
+    let mut doc = hold::openapi_fragment();
+    doc.merge(backorder::openapi_fragment());
+    doc
 }

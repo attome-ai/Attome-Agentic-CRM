@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Backorders (F6-T7): a fulfilment order's `ship_policy` decides whether short lines wait for the
+  rest (`ship_complete`) or ship what is there and backorder the remainder (`ship_as_available`).
+  `POST /api/v1/fulfilment/backorders/allocate` gives arrived stock of a product at a location to
+  the waiting lines, highest priority and oldest order first, under one lock per product and location.
 - Fulfilment agent tools (F6-T16): `fulfilment.status.read` (an order's fulfilment orders, lines and
   open holds), `fulfilment.hold.explain` (what each open hold means and who clears it) and
   `fulfilment.sourcing.propose` (the fewest-shipments plan from enabled locations and the stock seam).
