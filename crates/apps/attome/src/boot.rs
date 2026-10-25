@@ -1807,6 +1807,8 @@ pub fn register_engines(
         .register_workflow_starter(attome_workflow::instance_admin::PublishedWorkflowStarter)
         // E8-T4: a journey's exit and goal conditions, before every node.
         .register_workflow_kind_guard(attome_marketing::journey::guard::JourneyGuard)
+        // Y7-T5: raise a business event about the run's record.
+        .register_workflow_step_handler(attome_api::business_event::RaiseEventStep)
         // E8-T7: the journey control and action steps.
         .register_workflow_step_handler(attome_marketing::journey::control_step::WaitCalendar)
         .register_workflow_step_handler(attome_marketing::journey::control_step::Engagement)

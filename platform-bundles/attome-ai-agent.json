@@ -42,6 +42,7 @@
               "master.xref", "mcp.call.consequential", "mcp.call.read", "mcp.call.reversible", "mcp.tools",
               "meeting.brief", "meeting.confirm_notes", "meeting.notes", "memory.forget", "memory.remember",
               "model.agent.describe", "model.agent.edit", "model.agent.list", "model.attribute.describe",
+              "model.business_event.describe", "model.business_event.edit", "model.business_event.list",
               "model.component.describe", "model.component.edit", "model.component.list",
               "model.entity.describe", "model.environment_variable.describe",
               "model.environment_variable.edit", "model.environment_variable.list",

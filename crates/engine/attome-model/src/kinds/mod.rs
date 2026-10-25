@@ -2,6 +2,7 @@
 //! adapters, rules, flows, ...) live in the engine that owns them.
 
 pub mod agent;
+pub mod business_event;
 pub mod component;
 pub mod environment_variable;
 pub mod eval_suite;
@@ -19,6 +20,7 @@ pub mod survey;
 pub mod tour;
 
 pub use agent::{AGENT, AgentKind};
+pub use business_event::{BUSINESS_EVENT, BusinessEventKind};
 pub use component::{COMPONENT, ComponentKind};
 pub use environment_variable::{ENVIRONMENT_VARIABLE, EnvironmentVariableKind};
 pub use eval_suite::{EVAL_SUITE, EvalSuiteKind};

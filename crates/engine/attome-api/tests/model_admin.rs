@@ -290,6 +290,7 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
             [
                 "agent",
                 "attribute",
+                "business_event",
                 "component",
                 "entity",
                 "environment_variable",
@@ -869,6 +870,102 @@ fn environment_variable_values_are_set_per_deployment() {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    });
+}
+
+/// Y7-T5: a published business event is raised in the caller's transaction
+/// and lands in the change feed under its name; a payload that does not fit
+/// the definition is refused and writes nothing.
+#[test]
+fn a_business_event_is_raised_into_the_change_feed() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (admin_id, cookie) = seed_admin(&db).await;
+        let app = full_app(system);
+        let name = format!("shipped_{}", &Uuid::now_v7().simple().to_string()[..12]);
+        let id = Uuid::now_v7();
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/business_event/{id}/commands"),
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": name,
+                    "commands": [
+                        { "op": "set", "path": "/entity", "value": "user_account" },
+                        { "op": "set", "path": "/attributes", "value": {
+                            "carrier": { "type": "text", "required": true },
+                            "weight_kg": { "type": "number" }
+                        } }
+                    ]
+                }),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/business_event/{id}/publish"),
+                &cookie,
+                serde_json::json!({}),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        let count = || async {
+            sqlx::query_scalar::<_, i64>(
+                "SELECT count(*) FROM entity_change_event WHERE event_name = $1 AND record_id = $2",
+            )
+            .bind(&name)
+            .bind(admin_id)
+            .fetch_one(&db)
+            .await
+            .expect("count events")
+        };
+
+        let mut tx = db.begin().await.expect("begin");
+        let refused = attome_api::business_event::raise_event(
+            &mut tx,
+            &name,
+            admin_id,
+            &serde_json::json!({ "weight_kg": "heavy" }),
+        )
+        .await;
+        assert!(
+            matches!(refused, Err(attome_types::AppError::Validation(_))),
+            "{refused:?}"
+        );
+        tx.rollback().await.expect("rollback");
+        assert_eq!(count().await, 0);
+
+        let mut tx = db.begin().await.expect("begin");
+        attome_api::business_event::raise_event(
+            &mut tx,
+            &name,
+            admin_id,
+            &serde_json::json!({ "carrier": "Aramex", "weight_kg": 2.5 }),
+        )
+        .await
+        .expect("raise");
+        tx.commit().await.expect("commit");
+        assert_eq!(count().await, 1);
+        let after: serde_json::Value = sqlx::query_scalar(
+            "SELECT after FROM entity_change_event WHERE event_name = $1 AND record_id = $2",
+        )
+        .bind(&name)
+        .bind(admin_id)
+        .fetch_one(&db)
+        .await
+        .expect("the event row");
+        assert_eq!(after["carrier"], "Aramex");
     });
 }
 

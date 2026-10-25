@@ -34,6 +34,9 @@ pub mod bulk_transform;
 /// hash, export, plan). `pub` because the routes, the apply job, and
 /// `crates/bundle-tool` consume its types.
 pub mod bundle;
+/// Y7-T5: raising builder-defined business events, and the `events.raise`
+/// flow step.
+pub mod business_event;
 /// D-404 / M83 Phase 1: `/api/v1/admin/calendars*` CRUD + the
 /// `reconcile_calendar`/`retire_calendar` service reconcile API `bundle`
 /// calls. `pub` for that same reason `view_admin` is.

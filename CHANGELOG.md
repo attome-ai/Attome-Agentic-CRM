@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Business events (Y7-T5): builders define a named event about one entity's records with typed
+  attributes (the `business_event` metadata kind); flows raise it with the `events.raise` step and
+  code with `attome_api::business_event::raise_event`, which checks the payload and writes it to the
+  change feed in the caller's transaction under the event's name.
 - Record emails can be sent later and carry a signature (J1-T1): compose and reply on a record take
   an optional `send_at` (email only, up to 90 days ahead; the send job waits until then, committed
   with the message), and each user's own signature (`GET`/`PUT /api/v1/me/email-signature`,
