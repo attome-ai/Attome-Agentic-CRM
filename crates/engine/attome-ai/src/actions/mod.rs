@@ -63,6 +63,8 @@ pub mod nl_query;
 pub mod ops_cluster;
 /// AB4-T12: drill freshness and one drill's evidence, read only.
 pub mod ops_drills;
+/// AB3-T11: recovery readiness and the live recovery point, read only.
+pub mod ops_recovery;
 pub mod ops_slo;
 /// AB8-T9: the latest platform upgrade, read only.
 pub mod ops_upgrade;
@@ -145,6 +147,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(system_status::descriptor());
     all.extend(ops_cluster::descriptors());
     all.extend(ops_drills::descriptors());
+    all.extend(ops_recovery::descriptors());
     all.push(ops_slo::descriptor());
     all.push(ops_upgrade::descriptor());
     all.extend(approvals::descriptors());
@@ -233,6 +236,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(system_status::SystemStatus));
     all.extend(ops_cluster::executors());
     all.extend(ops_drills::executors());
+    all.extend(ops_recovery::executors());
     all.push(Box::new(ops_slo::OpsSloHealth));
     all.push(Box::new(ops_upgrade::OpsUpgradeStatus));
     all.extend(approvals::executors());

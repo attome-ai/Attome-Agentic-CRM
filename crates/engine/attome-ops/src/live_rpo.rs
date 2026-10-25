@@ -191,6 +191,22 @@ pub async fn run(state: &EngineState) -> Result<usize, AppError> {
     Ok(fresh.len())
 }
 
+/// The values the last minute's run measured, or a fresh measure when
+/// they are older than two minutes (the route, and AB3-T11's `ops.live_rpo`
+/// agent action).
+pub async fn current(state: &EngineState) -> Result<Vec<RpoSource>, AppError> {
+    let cached = LATEST
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .as_ref()
+        .filter(|(at, _)| at.elapsed() < REUSE)
+        .map(|(_, sources)| sources.clone());
+    match cached {
+        Some(items) => Ok(items),
+        None => measure(state).await,
+    }
+}
+
 /// Live recovery point
 ///
 /// AB3-T2: each source's live recovery point in seconds, this profile's
@@ -211,16 +227,7 @@ async fn get_rpo(
     State(state): State<EngineState>,
     _ctx: Authorized<Privilege<OpsRead>>,
 ) -> Result<Json<PaginatedResponse<RpoSource>>, AppError> {
-    let cached = LATEST
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .as_ref()
-        .filter(|(at, _)| at.elapsed() < REUSE)
-        .map(|(_, sources)| sources.clone());
-    let items = match cached {
-        Some(items) => items,
-        None => measure(&state).await?,
-    };
+    let items = current(&state).await?;
     let n = i64::try_from(items.len()).unwrap_or(i64::MAX);
     Ok(Json(PaginatedResponse::new(items, n, 1, n.max(1))))
 }
