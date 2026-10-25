@@ -39,6 +39,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::model_health::openapi_fragment(), "core"),
         (crate::table_health::openapi_fragment(), "core"),
         (crate::deployment_openapi::openapi_fragment(), "core"),
+        (crate::asyncapi::openapi_fragment(), "core"),
         (crate::live::openapi_fragment(), "core"),
         (crate::calendar_admin::openapi_fragment(), "core"),
         (crate::app_admin::openapi_fragment(), "core"),

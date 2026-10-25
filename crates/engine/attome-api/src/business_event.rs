@@ -21,6 +21,22 @@ use attome_types::AppError;
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
+/// Every published definition, from the cooked registry (Y7-T7's AsyncAPI
+/// document lists them).
+pub fn definitions() -> Vec<Value> {
+    let cooked = crate::model_admin::cooked();
+    let snapshot = cooked.snapshot();
+    let prefix = format!("{}:", BUSINESS_EVENT.0);
+    snapshot
+        .manifest
+        .artefacts
+        .keys()
+        .filter(|key| key.starts_with(&prefix))
+        .filter_map(|key| cooked.get::<Value>(BUSINESS_EVENT.0, key))
+        .map(|doc| (*doc).clone())
+        .collect()
+}
+
 /// The published definition named `name`, from the cooked registry.
 pub fn definition(name: &str) -> Option<Value> {
     let cooked = crate::model_admin::cooked();

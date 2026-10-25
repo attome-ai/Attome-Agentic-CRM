@@ -102,6 +102,9 @@ const BASELINE: &[&str] = &[
     "approval_metrics",
     "approval_policy_admin",
     "approval_process",
+    // Y7-T7: the AsyncAPI document reads every engine's live registry and
+    // the published business events at once, like deployment_openapi.
+    "asyncapi",
     "audit_read",
     // A4-T5: the gap report reads the autonumber sequence tables directly;
     // attome-metadata has no route or admin-guard dependency to host it.
@@ -109,6 +112,9 @@ const BASELINE: &[&str] = &[
     "bootstrap_admin",
     "bulk_transform",
     "bundle",
+    // Y7-T5: business events are a model kind, whose cooked definitions only
+    // the model admin here holds; raising one checks against them.
+    "business_event",
     "business_rule_admin",
     "business_rule_hooks",
     "calendar_admin",

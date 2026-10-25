@@ -205,6 +205,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- AsyncAPI document (Y7-T7): `GET /api/v1/asyncapi.json` describes the change feed for the entities
+  the caller may read, one channel per entity (created, updated, deleted, restored) and one per
+  published business event, with payloads typed from the attributes.
 - Email from a record (J1-T2): the Communications section has a New email composer with a reply
   template picker, the record's own files to attach, and an optional time to send later. Compose and
   reply take `attachments` (the record's file keys, at most 10 and 10 MiB together); a key that is not

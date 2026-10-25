@@ -34,6 +34,8 @@ pub mod bulk_transform;
 /// hash, export, plan). `pub` because the routes, the apply job, and
 /// `crates/bundle-tool` consume its types.
 pub mod bundle;
+/// Y7-T7: the change feed's AsyncAPI document.
+pub mod asyncapi;
 /// Y7-T5: raising builder-defined business events, and the `events.raise`
 /// flow step.
 pub mod business_event;

@@ -24,8 +24,9 @@ type Cached = (Arc<EntityMetaRegistry>, Arc<Value>);
 
 static CACHE: Mutex<Option<Cached>> = Mutex::new(None);
 
-/// The JSON schema of one attribute's value.
-fn attribute_schema(attr: &AttrInfo) -> Value {
+/// The JSON schema of one attribute's value. `pub(crate)` for the AsyncAPI
+/// document (Y7-T7), which types the same values.
+pub(crate) fn attribute_schema(attr: &AttrInfo) -> Value {
     let storage = attr.storage_type();
     let multi = attr
         .options
@@ -355,7 +356,7 @@ mod tests {
         );
         let props = &doc["components"]["schemas"]["deal"]["properties"];
         assert_eq!(props["amount"]["type"], "number");
-        assert_eq!(props["closed"]["format"], "date-time");
+        assert_eq!(props["closed"]["format"], "date");
         assert_eq!(
             doc["components"]["schemas"]["deal_input"]["required"],
             json!(["amount"])
