@@ -111,6 +111,32 @@ describe('FileUploadService', () => {
     req.flush(null, { status: 204, statusText: 'No Content' });
   });
 
+  it('opens a multipart upload on the field and reads its received parts', () => {
+    service.startMultipart('contact', 'rec-1', 'resume', {
+      filename: 'big.mp4', content_type: 'video/mp4', declared_size_bytes: 20_000_000,
+    }).subscribe();
+    const start = httpMock.expectOne(`${API}/api/v1/contact/rec-1/files/resume/multipart`);
+    expect(start.request.method).toBe('POST');
+    start.flush({ session_id: 's1', part_size: 8_388_608, part_count: 3 });
+
+    let received: number[] = [];
+    service.multipartStatus('s1').subscribe(s => (received = s.received));
+    const status = httpMock.expectOne(`${API}/api/v1/files/uploads/s1`);
+    expect(status.request.method).toBe('GET');
+    status.flush({ session_id: 's1', status: 'open', part_size: 8_388_608, part_count: 3, received: [1, 2] });
+    expect(received).toEqual([1, 2]);
+
+    service.partUrl('s1', 3).subscribe();
+    const part = httpMock.expectOne(`${API}/api/v1/files/uploads/s1/parts/3`);
+    expect(part.request.method).toBe('PUT');
+    part.flush({ part: 3, upload_url: 'http://storage/x.parts/00003', expires_in_secs: 3600 });
+
+    service.completeMultipart('s1').subscribe();
+    const complete = httpMock.expectOne(`${API}/api/v1/files/uploads/s1/complete`);
+    expect(complete.request.method).toBe('POST');
+    complete.flush({ session_id: 's1', size: 20_000_000, checksum_sha256: 'a'.repeat(64) });
+  });
+
   it('PUTs directly to the presigned storage URL, bypassing the configured apiUrl and credentials', () => {
     const file = new File(['hello'], 'cv.pdf', { type: 'application/pdf' });
     service.putToStorage('http://storage.example/quarantine/key?sig=abc', file).subscribe();

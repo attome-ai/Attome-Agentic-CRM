@@ -36,6 +36,35 @@ export interface SessionStatusResponse {
   final_key: string | null;
 }
 
+// Z6-T2 / AB7-T6: a multipart upload (crates/engine/attome-document/src/
+// multipart_routes.rs). The status lists the parts that arrived, so a client
+// interrupted mid-way sends only the missing ones.
+export interface MultipartStarted {
+  session_id: string;
+  part_size:  number;
+  part_count: number;
+}
+
+export interface PartUpload {
+  part:            number;
+  upload_url:      string;
+  expires_in_secs: number;
+}
+
+export interface MultipartStatus {
+  session_id: string;
+  status:     'open' | 'assembled' | 'aborted' | string;
+  part_size:  number;
+  part_count: number;
+  received:   number[];
+}
+
+export interface MultipartAssembled {
+  session_id:      string;
+  size:            number;
+  checksum_sha256: string;
+}
+
 export interface DownloadUrlResponse {
   download_url: string;
   expires_in_secs: number;
@@ -86,6 +115,43 @@ export class FileUploadService {
   putToStorage(uploadUrl: string, file: File): Observable<HttpEvent<unknown>> {
     return this.http.request('PUT', uploadUrl, {
       body: file,
+      reportProgress: true,
+      observe: 'events',
+    });
+  }
+
+  // ── Multipart uploads (Z6-T2, AB7-T6) ────────────────────────────────────
+
+  startMultipart(
+    entityName: string,
+    recordId:   string,
+    fieldName:  string,
+    req:        UploadSessionRequest,
+  ): Observable<MultipartStarted> {
+    return this.api.post<MultipartStarted>(
+      `/api/v1/${entityName}/${recordId}/files/${fieldName}/multipart`,
+      req,
+    );
+  }
+
+  /** A presigned PUT for part `n` (1-based). */
+  partUrl(sessionId: string, n: number): Observable<PartUpload> {
+    return this.api.put<PartUpload>(`/api/v1/files/uploads/${sessionId}/parts/${n}`, {});
+  }
+
+  /** The upload's state and the parts that arrived — ask before resuming. */
+  multipartStatus(sessionId: string): Observable<MultipartStatus> {
+    return this.api.get<MultipartStatus>(`/api/v1/files/uploads/${sessionId}`);
+  }
+
+  completeMultipart(sessionId: string): Observable<MultipartAssembled> {
+    return this.api.post<MultipartAssembled>(`/api/v1/files/uploads/${sessionId}/complete`, {});
+  }
+
+  /** Same uncredentialed presigned PUT as {@link putToStorage}, for one part. */
+  putPart(uploadUrl: string, part: Blob): Observable<HttpEvent<unknown>> {
+    return this.http.request('PUT', uploadUrl, {
+      body: part,
       reportProgress: true,
       observe: 'events',
     });
