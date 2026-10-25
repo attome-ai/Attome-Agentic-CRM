@@ -95,3 +95,55 @@ public Azure cloud, as it refuses AWS S3.
 
 Every cloud backend uses the same bounds: 10 s to connect, 30 s per attempt, at most 10 retries
 within 180 s. Local disk has no network to wait on.
+
+## Encryption at rest
+
+S3, Azure and GCS encrypt what they store themselves; turn that on in the bucket or account.
+Local disk does not, so the server can encrypt files before they reach it:
+
+```json
+"storage": {
+  "backend": "local",
+  "encryption_key": "${ATTOME_STORAGE_ENCRYPTION_KEY}"
+}
+```
+
+- `storage.encryption_key` is a key ring like the other `*_encryption_key` settings: one 64-hex-char
+  key (`openssl rand -hex 32`), or `{"keys": {"k1": "…", "k2": "…"}, "active_key_id": "k2"}`. Set,
+  every file written to local disk is encrypted; empty, none is.
+- Each file gets its own random AES-256-GCM key, sealed under the ring's active key and kept in the
+  file's first 334 bytes. The file is encrypted in 1 MiB pieces, so a download or a byte range reads
+  only the pieces it needs and never holds the whole file in memory. A file that was altered, cut
+  short or given another file's header does not open.
+- **Rotation:** add a new key, make it active, and keep the old one in the ring. New files use the
+  new key; old files still name the old one and keep opening. Removing a key from the ring makes the
+  files sealed under it unreadable.
+- Files written before encryption was turned on read back as they are; they stay unencrypted until
+  they are written again (or copied with `attome storage migrate` to an encrypting target).
+- `storage.encrypt_client_side: true` encrypts on S3, Azure and GCS too. Signed download links then
+  hand out ciphertext, so use it only when downloads go through the server.
+- A listing of the store reports stored sizes (with the header and the 16 bytes per piece); a file's
+  own size is the plaintext size.
+
+## Moving to another backend
+
+`attome storage migrate` copies every file from the current backend to a new one:
+
+```
+attome storage migrate --from config.json --to config.new.json [--state storage-migrate.state]
+```
+
+`config.new.json` is a copy of the deployment's config with the new `storage` section. The command:
+
+1. lists every file of the source and copies 100 at a time, 8 at once;
+2. reads each copy back from the target and checks its size and SHA-256 against the source;
+3. appends each verified file to the state file, so running it again after a stop continues where
+   it left off and copies only files that are new or failed;
+4. refuses a target outside `deployment.data_region` (an S3 bucket in another region, or Azure or
+   GCS, which name no region to check);
+5. never deletes a source file.
+
+Each side's encryption applies: an encrypted local folder is read as plaintext, and a target with
+`encryption_key` set encrypts what it receives. To switch over: run it while the server runs, stop
+the server, run it once more to copy what arrived meanwhile, put the new `storage` section in the
+deployment's config and start the server. Delete the old files only after checking the new backend.
