@@ -8,6 +8,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Automatic certificates (Z5-T7): with `app.tls.enabled` and `app.tls.acme.enabled` (off by
+  default) the server obtains and renews its own certificate over ACME (TLS-ALPN-01 on its HTTPS
+  port; Let's Encrypt production unless `directory_url` says otherwise) for `domains`, keeping the
+  account and certificate in `cache_dir` so a restart does not order again. Every certificate's
+  expiry, file or ACME, is logged at boot and on renewal and exported as
+  `tls_certificate_expiry_seconds`.
 - Inherited listening socket (AB7-T3): `attome serve` takes its listening socket from the process
   that started it when `ATTOME_LISTEN_FD` (Unix, a file descriptor) or
   `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from

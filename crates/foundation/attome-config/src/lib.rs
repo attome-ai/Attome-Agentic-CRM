@@ -54,20 +54,20 @@ pub mod secret;
 pub mod secret_inventory;
 
 pub use config::{
-    AiEnablement, AiSurface, AnchorStoreSection, ApiKeyPepper, AppConfig, AppSection, AuthSection,
-    AzureStorageSettings, BackupSection, CacheBackend, CacheRole, CacheRoleOverride, CacheRoles,
-    CacheSection, CaptchaConfig, CaptchaProvider, CatalogueModel, ChangesetLayer, ChangesetMode,
-    ChangesetsSection, ConfigError, DataLabel, DatabasePoolSize, DatabasePools, DatabaseSection,
-    DocgenSection, EinvoiceSection, EmailDomainCheck, EmailFeedback, EmailProviders,
-    EmailRateLimits, EmailSection, EmailStreamRates, EventsSection, FleetSection,
+    AcmeSection, AiEnablement, AiSurface, AnchorStoreSection, ApiKeyPepper, AppConfig, AppSection,
+    AuthSection, AzureStorageSettings, BackupSection, CacheBackend, CacheRole, CacheRoleOverride,
+    CacheRoles, CacheSection, CaptchaConfig, CaptchaProvider, CatalogueModel, ChangesetLayer,
+    ChangesetMode, ChangesetsSection, ConfigError, DataLabel, DatabasePoolSize, DatabasePools,
+    DatabaseSection, DocgenSection, EinvoiceSection, EmailDomainCheck, EmailFeedback,
+    EmailProviders, EmailRateLimits, EmailSection, EmailStreamRates, EventsSection, FleetSection,
     GcsStorageSettings, GoogleAiSection, InferenceEndpoint, InferenceSection, IntegrationSection,
-    KdfSection, LocalStorageSettings, MetadataSection, ModelCapability, ModelPrice,
-    NotificationSection, ObservabilitySection, OidcProviderConfig, OidcSection, OpsSection,
-    PortalSection, RateLimitSection, ReleaseReportSection, RuntimeDbCredentials, S2SSection,
-    S2sSeededClient, S2sSeededPermission, S3Target, SendGridSettings, SendingDomain, SesSettings,
-    ShedPermits, ShedSection, SpendSection, StatementClassOverrides, StatementClassTimeouts,
-    StorageBackend, StorageSection, TlsSection, TranslationSection, WebchatSection,
-    WebcrawlSection, cidr_contains, config_json_schema, endpoint_is_in_deployment,
+    KdfSection, LETS_ENCRYPT_DIRECTORY, LocalStorageSettings, MetadataSection, ModelCapability,
+    ModelPrice, NotificationSection, ObservabilitySection, OidcProviderConfig, OidcSection,
+    OpsSection, PortalSection, RateLimitSection, ReleaseReportSection, RuntimeDbCredentials,
+    S2SSection, S2sSeededClient, S2sSeededPermission, S3Target, SendGridSettings, SendingDomain,
+    SesSettings, ShedPermits, ShedSection, SpendSection, StatementClassOverrides,
+    StatementClassTimeouts, StorageBackend, StorageSection, TlsSection, TranslationSection,
+    WebchatSection, WebcrawlSection, cidr_contains, config_json_schema, endpoint_is_in_deployment,
 };
 pub use env::{APP_ENV_VAR, DEBUG_APP_ENV, app_env, is_debug_app_env, is_debug_env};
 pub use keyring::{BARE_STRING_KEY_ID, KeyRing};

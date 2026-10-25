@@ -2596,8 +2596,49 @@ pub(crate) const IPV6_BUCKET_PREFIX_MAX: u8 = 128;
 /// minimum version is one the server speaks. Checked at boot, so a typo in a
 /// path is a refusal to start naming the field, not a failed handshake.
 pub(crate) fn validate_tls(tls: &super::TlsSection) -> Result<(), ConfigError> {
+    let invalid = |field: &str, reason: &str| ConfigError::Invalid {
+        field: field.into(),
+        reason: reason.into(),
+    };
+    if tls.acme.enabled && !tls.enabled {
+        return Err(invalid(
+            "app.tls.acme.enabled",
+            "needs app.tls.enabled = true: the certificate is served by the built-in TLS edge",
+        ));
+    }
     if !tls.enabled {
         return Ok(());
+    }
+    // Z5-T7: with ACME the certificate is obtained, not read from files.
+    if tls.acme.enabled {
+        if tls.acme.domains.iter().all(|d| d.trim().is_empty()) {
+            return Err(invalid(
+                "app.tls.acme.domains",
+                "must name at least one public DNS name when app.tls.acme.enabled = true",
+            ));
+        }
+        if tls.acme.contact_email.trim().is_empty() || !tls.acme.contact_email.contains('@') {
+            return Err(invalid(
+                "app.tls.acme.contact_email",
+                "must be an email address when app.tls.acme.enabled = true",
+            ));
+        }
+        if !tls.acme.directory_url.trim().starts_with("https://") {
+            return Err(invalid(
+                "app.tls.acme.directory_url",
+                "must be an https:// ACME directory",
+            ));
+        }
+        if tls.acme.cache_dir.trim().is_empty() {
+            return Err(invalid("app.tls.acme.cache_dir", "must be set"));
+        }
+        return match tls.min_version.as_deref().map(str::trim) {
+            None | Some("1.2") | Some("1.3") => Ok(()),
+            Some(other) => Err(ConfigError::Invalid {
+                field: "app.tls.min_version".into(),
+                reason: format!("must be \"1.2\" or \"1.3\", got {other:?}"),
+            }),
+        };
     }
     for (field, path) in [
         ("app.tls.cert_path", &tls.cert_path),

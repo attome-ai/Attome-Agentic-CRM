@@ -32,6 +32,7 @@ fn section() -> TlsSection {
         cert_path: fixture("cert.pem"),
         key_path: fixture("key.pem"),
         min_version: None,
+        acme: Default::default(),
     }
 }
 

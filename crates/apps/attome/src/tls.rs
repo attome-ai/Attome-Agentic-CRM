@@ -12,6 +12,14 @@
 //! `ArcSwap`, re-read from the files every twelve hours and on SIGHUP (Unix),
 //! so a renewed certificate is picked up without a restart; a reload that
 //! fails keeps the configuration in use and logs why.
+//!
+//! Z5-T7: with `app.tls.acme.enabled` the certificate comes from an ACME
+//! server instead (`rustls-acme` on the `ring` provider): the server answers
+//! the TLS-ALPN-01 challenge on its own port (ALPN `acme-tls/1`), keeps the
+//! account and certificate in `cache_dir` so a restart does not order again,
+//! and renews in the background. Every certificate's expiry is logged at
+//! `info` when it is loaded and when it is renewed, and exported as the gauge
+//! `tls_certificate_expiry_seconds` (the Unix time it expires).
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -68,6 +76,7 @@ pub fn server_config(tls: &TlsSection) -> Result<Arc<ServerConfig>, TlsError> {
             reason: "no certificate in the file".into(),
         });
     }
+    record_expiry(&certs[0], "file");
     let key = PrivateKeyDer::from_pem_file(key_path).map_err(|e| TlsError::Key {
         path: key_path.to_owned(),
         reason: e.to_string(),
@@ -107,8 +116,14 @@ impl TlsListener {
     /// Starts accepting on `tcp` with the configuration `tls` describes, and
     /// the periodic (and, on Unix, SIGHUP) reload of its files.
     pub fn start(tcp: TcpListener, tls: &TlsSection) -> Result<Self, TlsError> {
-        let current = Arc::new(ArcSwap::new(server_config(tls)?));
-        spawn_reload(current.clone(), tls.clone());
+        let current = if tls.acme.enabled {
+            // Z5-T7: the ACME resolver swaps the certificate itself.
+            Arc::new(ArcSwap::new(acme::start(tls)?))
+        } else {
+            let current = Arc::new(ArcSwap::new(server_config(tls)?));
+            spawn_reload(current.clone(), tls.clone());
+            current
+        };
         let local_addr = tcp
             .local_addr()
             .map_err(|e| TlsError::Config(e.to_string()))?;
@@ -130,6 +145,12 @@ impl TlsListener {
                 tokio::spawn(async move {
                     match tokio::time::timeout(HANDSHAKE_TIMEOUT, acceptor.accept(stream)).await {
                         Ok(Ok(tls)) => {
+                            // Z5-T7: a TLS-ALPN-01 validation ends at the
+                            // handshake; it is never served.
+                            if tls.get_ref().1.alpn_protocol() == Some(acme::ALPN) {
+                                tracing::info!(%peer, "tls: answered an ACME TLS-ALPN-01 validation");
+                                return;
+                            }
                             let _ = sender.send((tls, peer)).await;
                         }
                         Ok(Err(e)) => tracing::debug!(%peer, error = %e, "tls: handshake failed"),
@@ -202,4 +223,171 @@ fn spawn_reload(current: Arc<ArcSwap<ServerConfig>>, tls: TlsSection) {
             }
         }
     });
+}
+
+/// Z5-T7: logs `der`'s expiry at `info` and sets the
+/// `tls_certificate_expiry_seconds` gauge to it (Unix seconds). A
+/// certificate that does not parse is logged and leaves the gauge alone.
+pub fn record_expiry(der: &[u8], source: &'static str) {
+    match certificate_expiry(der) {
+        Some(expires) => {
+            let left_days = (expires - chrono::Utc::now().timestamp()) / 86_400;
+            tracing::info!(source, expires, left_days, "tls: certificate expiry");
+            metrics::gauge!("tls_certificate_expiry_seconds").set(expires as f64);
+        }
+        None => tracing::warn!(source, "tls: the certificate's expiry could not be read"),
+    }
+}
+
+/// The Unix time `der` (a DER certificate) stops being valid.
+pub fn certificate_expiry(der: &[u8]) -> Option<i64> {
+    x509_parser::parse_x509_certificate(der)
+        .ok()
+        .map(|(_, cert)| cert.validity().not_after.timestamp())
+}
+
+mod acme {
+    //! Z5-T7: the ACME half of the edge.
+
+    use std::sync::Arc;
+
+    use attome_config::TlsSection;
+    use futures_util::StreamExt;
+    use rustls::ServerConfig;
+    use rustls::pki_types::CertificateDer;
+    use rustls::pki_types::pem::PemObject;
+    use rustls_acme::caches::DirCache;
+    use rustls_acme::{AccountCache, AcmeConfig, CertCache, EventOk};
+
+    use super::TlsError;
+
+    /// The ALPN protocol of a TLS-ALPN-01 validation.
+    pub(super) const ALPN: &[u8] = rustls_acme::acme::ACME_TLS_ALPN_NAME;
+
+    /// The directory cache, recording each certificate's expiry as it is
+    /// loaded (a restart) or stored (an order or renewal).
+    struct ExpiryCache(DirCache<String>);
+
+    fn record_pem(pem: &[u8]) {
+        match CertificateDer::pem_slice_iter(pem).next() {
+            Some(Ok(cert)) => super::record_expiry(&cert, "acme"),
+            _ => tracing::warn!("tls: the ACME certificate holds no readable certificate"),
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl CertCache for ExpiryCache {
+        type EC = std::io::Error;
+
+        async fn load_cert(
+            &self,
+            domains: &[String],
+            directory_url: &str,
+        ) -> Result<Option<Vec<u8>>, Self::EC> {
+            let cert = self.0.load_cert(domains, directory_url).await?;
+            if let Some(pem) = &cert {
+                record_pem(pem);
+            }
+            Ok(cert)
+        }
+
+        async fn store_cert(
+            &self,
+            domains: &[String],
+            directory_url: &str,
+            cert: &[u8],
+        ) -> Result<(), Self::EC> {
+            record_pem(cert);
+            self.0.store_cert(domains, directory_url, cert).await
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl AccountCache for ExpiryCache {
+        type EA = std::io::Error;
+
+        async fn load_account(
+            &self,
+            contact: &[String],
+            directory_url: &str,
+        ) -> Result<Option<Vec<u8>>, Self::EA> {
+            self.0.load_account(contact, directory_url).await
+        }
+
+        async fn store_account(
+            &self,
+            contact: &[String],
+            directory_url: &str,
+            account: &[u8],
+        ) -> Result<(), Self::EA> {
+            self.0.store_account(contact, directory_url, account).await
+        }
+    }
+
+    /// The server configuration whose certificate the ACME state keeps
+    /// current, and the task that orders and renews it.
+    pub(super) fn start(tls: &TlsSection) -> Result<Arc<ServerConfig>, TlsError> {
+        let acme = &tls.acme;
+        let provider = Arc::new(rustls::crypto::ring::default_provider());
+        let domains: Vec<String> = acme
+            .domains
+            .iter()
+            .map(|d| d.trim().to_owned())
+            .filter(|d| !d.is_empty())
+            .collect();
+        let mut state = AcmeConfig::new_with_provider(domains.clone(), provider.clone())
+            .contact_push(format!("mailto:{}", acme.contact_email.trim()))
+            .directory(acme.directory_url.trim())
+            .cache(ExpiryCache(DirCache::new(acme.cache_dir.trim().to_owned())))
+            .state();
+        let versions: &[&'static rustls::SupportedProtocolVersion] = if tls.tls13_only() {
+            &[&rustls::version::TLS13]
+        } else {
+            &[&rustls::version::TLS13, &rustls::version::TLS12]
+        };
+        let mut config = ServerConfig::builder_with_provider(provider)
+            .with_protocol_versions(versions)
+            .map_err(|e| TlsError::Config(e.to_string()))?
+            .with_no_client_auth()
+            .with_cert_resolver(state.resolver());
+        config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), ALPN.to_vec()];
+        tracing::info!(?domains, directory = %acme.directory_url, "tls: certificates over ACME (TLS-ALPN-01)");
+        // Process-lifetime supervision (guidelines §10): the state orders,
+        // renews and swaps the certificate for as long as the server runs.
+        tokio::spawn(async move {
+            while let Some(event) = state.next().await {
+                match event {
+                    Ok(EventOk::DeployedNewCert) => tracing::info!("tls: ACME certificate renewed"),
+                    Ok(ok) => tracing::info!(event = ?ok, "tls: ACME"),
+                    Err(error) => {
+                        tracing::warn!(%error, "tls: ACME order or renewal failed; retrying")
+                    }
+                }
+            }
+        });
+        Ok(Arc::new(config))
+    }
+}
+
+#[cfg(test)]
+mod expiry_tests {
+    use super::certificate_expiry;
+
+    #[test]
+    fn the_fixture_certificate_expiry_is_read() {
+        let pem = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/tls/cert.pem"
+        ))
+        .expect("the tls_edge fixture");
+        use rustls::pki_types::CertificateDer;
+        use rustls::pki_types::pem::PemObject;
+        let der = CertificateDer::pem_slice_iter(&pem)
+            .next()
+            .unwrap()
+            .unwrap();
+        let expires = certificate_expiry(&der).expect("a parsable certificate");
+        assert!(expires > 1_600_000_000, "{expires}");
+        assert_eq!(certificate_expiry(b"not a certificate"), None);
+    }
 }

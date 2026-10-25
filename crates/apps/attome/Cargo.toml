@@ -18,6 +18,11 @@ name = "attome"
 path = "src/main.rs"
 
 [dependencies]
+# Z5-T7: ACME certificates, and certificate expiry for logs and the gauge.
+async-trait.workspace = true
+rustls-acme.workspace = true
+x509-parser.workspace = true
+metrics.workspace = true
 apalis.workspace                = true
 arc-swap.workspace              = true
 attome-ai.workspace             = true

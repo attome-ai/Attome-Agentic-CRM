@@ -394,6 +394,37 @@ fn validate_checks_the_tls_files() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// Z5-T7: ACME is off by default; on, it needs TLS on, a domain, a contact
+/// address and an https directory, and no certificate files.
+#[test]
+fn acme_config_requires_domains() {
+    let mut config = minimal_valid_config();
+    assert!(!config.app.tls.acme.enabled);
+    assert_eq!(
+        config.app.tls.acme.directory_url,
+        crate::config::LETS_ENCRYPT_DIRECTORY
+    );
+    config.app.tls.acme.enabled = true;
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("app.tls.acme.enabled"), "{err}");
+
+    config.app.tls.enabled = true;
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("app.tls.acme.domains"), "{err}");
+
+    config.app.tls.acme.domains = vec!["crm.example.com".into()];
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("app.tls.acme.contact_email"), "{err}");
+
+    config.app.tls.acme.contact_email = "ops@example.com".into();
+    config
+        .validate()
+        .expect("ACME needs no cert_path or key_path");
+    config.app.tls.acme.directory_url = "http://acme.example/directory".into();
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("app.tls.acme.directory_url"), "{err}");
+}
+
 #[test]
 fn storage_backend_defaults_to_s3_and_parses_by_name() {
     use crate::config::StorageBackend;

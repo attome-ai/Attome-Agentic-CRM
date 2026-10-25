@@ -237,6 +237,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 url           = "2"
 utoipa        = { version = "5", features = ["macros", "uuid", "chrono"] }
 uuid          = { version = "1", features = ["v4", "v5", "v7", "serde"] }
+# Z5-T7: ACME certificates over TLS-ALPN-01 on the ring provider (no aws-lc-rs).
+rustls-acme   = { version = "0.15", default-features = false, features = ["ring", "tokio", "tls12", "webpki-roots"] }
+x509-parser   = "0.18"
 # Z4-T6: passkeys; pure Rust (RustCrypto), no OpenSSL.
 webauthn_rp   = { version = "0.3", default-features = false, features = ["serde_relaxed", "serializable_server_state"] }
 # Windows only: run `attome serve` as a Windows service (roadmap U1-T1).

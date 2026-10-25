@@ -1,5 +1,38 @@
 {
   "$defs": {
+    "AcmeSection": {
+      "description": "Z5-T7: `app.tls.acme`. The server answers the ACME server's TLS-ALPN-01\nchallenge on its own HTTPS port, so it must be reachable on port 443 under\neach name in `domains`.",
+      "properties": {
+        "cache_dir": {
+          "default": "acme",
+          "description": "Where the account key and certificate are kept, so a restart does\nnot order again.",
+          "type": "string"
+        },
+        "contact_email": {
+          "default": "",
+          "description": "The address the certificate authority writes to about expiry.",
+          "type": "string"
+        },
+        "directory_url": {
+          "default": "https://acme-v02.api.letsencrypt.org/directory",
+          "description": "The ACME directory; Let's Encrypt production by default.",
+          "type": "string"
+        },
+        "domains": {
+          "default": [],
+          "description": "The public DNS names the certificate covers.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
     "AiEnablement": {
       "description": "Which AI surfaces are enabled. Every field defaults to **off**: a\ndeployment that upgrades into a build containing AI code gets no AI\nbehaviour, no model traffic, and no GPU expectation until someone turns it\non deliberately. This is the same ships-dark posture `idempotency` and\n`approval` already use, and it is the correct default for a subsystem whose\nfailure modes include \"said something wrong to a customer\".\n`Default` is derived rather than hand-written specifically so that adding a\nnew surface field cannot accidentally default it to `true` — the derive\ngives every `bool` `false`, which is the ships-dark answer, and there is no\nhand-maintained list to forget to update.",
       "properties": {
@@ -3425,6 +3458,10 @@
     "TlsSection": {
       "description": "Z5-T6: `app.tls`. Off by default: the server speaks plain HTTP, as behind\na TLS-terminating proxy.",
       "properties": {
+        "acme": {
+          "$ref": "#/$defs/AcmeSection",
+          "description": "Z5-T7: obtain and renew the certificate over ACME instead of reading\n`cert_path` and `key_path`. Off by default."
+        },
         "cert_path": {
           "default": "",
           "description": "The PEM certificate chain, leaf first.",

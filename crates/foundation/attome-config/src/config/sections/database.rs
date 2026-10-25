@@ -142,6 +142,55 @@ pub struct TlsSection {
     /// The oldest TLS version accepted: `"1.2"` (the default) or `"1.3"`.
     #[serde(default)]
     pub min_version: Option<String>,
+    /// Z5-T7: obtain and renew the certificate over ACME instead of reading
+    /// `cert_path` and `key_path`. Off by default.
+    #[serde(default)]
+    pub acme: AcmeSection,
+}
+
+/// Z5-T7: `app.tls.acme`. The server answers the ACME server's TLS-ALPN-01
+/// challenge on its own HTTPS port, so it must be reachable on port 443 under
+/// each name in `domains`.
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
+pub struct AcmeSection {
+    #[serde(default)]
+    pub enabled: bool,
+    /// The public DNS names the certificate covers.
+    #[serde(default)]
+    pub domains: Vec<String>,
+    /// The address the certificate authority writes to about expiry.
+    #[serde(default)]
+    pub contact_email: String,
+    /// The ACME directory; Let's Encrypt production by default.
+    #[serde(default = "default_acme_directory_url")]
+    pub directory_url: String,
+    /// Where the account key and certificate are kept, so a restart does
+    /// not order again.
+    #[serde(default = "default_acme_cache_dir")]
+    pub cache_dir: String,
+}
+
+/// Let's Encrypt's production directory.
+pub const LETS_ENCRYPT_DIRECTORY: &str = "https://acme-v02.api.letsencrypt.org/directory";
+
+fn default_acme_directory_url() -> String {
+    LETS_ENCRYPT_DIRECTORY.to_owned()
+}
+
+fn default_acme_cache_dir() -> String {
+    "acme".to_owned()
+}
+
+impl Default for AcmeSection {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            domains: Vec::new(),
+            contact_email: String::new(),
+            directory_url: default_acme_directory_url(),
+            cache_dir: default_acme_cache_dir(),
+        }
+    }
 }
 
 impl TlsSection {

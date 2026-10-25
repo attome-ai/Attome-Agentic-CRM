@@ -33,6 +33,11 @@ Required.
 | `app.server_host` | string | `"0.0.0.0"` |  |  |
 | `app.shutdown_drain_delay_secs` | integer | `10` |  | S1 (BSV-F13 / BSV-D11) — how many seconds a draining node keeps answering `/health/ready` with 503 **before** it signals its HTTP listeners to stop accepting connections. |
 | `app.time_zone` | string, optional | `null` |  | A4-T1: the deployment's time zone, an IANA name such as `Asia/Riyadh`. Dates in autonumber formats and their yearly, monthly and daily resets follow it. Unset (or unknown): UTC. |
+| `app.tls.acme.cache_dir` | string | `"acme"` |  | Where the account key and certificate are kept, so a restart does not order again. |
+| `app.tls.acme.contact_email` | string | `""` |  | The address the certificate authority writes to about expiry. |
+| `app.tls.acme.directory_url` | string | `"https://acme-v02.api.letsencrypt.org/directory"` |  | The ACME directory; Let's Encrypt production by default. |
+| `app.tls.acme.domains` | array of string | `[]` |  | The public DNS names the certificate covers. |
+| `app.tls.acme.enabled` | boolean | `false` |  |  |
 | `app.tls.cert_path` | string | `""` |  | The PEM certificate chain, leaf first. |
 | `app.tls.enabled` | boolean | `false` |  | Serve HTTPS on `app.port` from the certificate and key below. |
 | `app.tls.key_path` | string | `""` |  | The PEM private key (PKCS#8, PKCS#1 or SEC1). |

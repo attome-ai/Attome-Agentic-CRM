@@ -33,7 +33,7 @@ pub use sections::auth::{
 };
 pub use sections::backup::BackupSection;
 pub use sections::cache::{CacheBackend, CacheRole, CacheRoleOverride, CacheRoles, CacheSection};
-pub use sections::database::TlsSection;
+pub use sections::database::{AcmeSection, LETS_ENCRYPT_DIRECTORY, TlsSection};
 pub use sections::database::{
     AppSection, DatabasePoolSize, DatabasePools, DatabaseSection, RuntimeDbCredentials,
     StatementClassOverrides, StatementClassTimeouts,

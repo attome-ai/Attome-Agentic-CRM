@@ -2,6 +2,19 @@
   "_readme": "Copy to config.debug.json (used when APP_ENV=debug) or config.json (default). Both are gitignored — never commit real secrets. ${VAR} placeholders are expanded from the environment/.env at load (see crates/base/attome-config/src/config/loader.rs). Values below match the standard dev stack: Postgres 18 @5555, DragonflyDB @6379, RustFS @9000. There are exactly two supported deployment profiles: THIS file/config.debug.json ('development') and config.production.example.json ('production', see AppConfig::validate_production_profile) — both are plain config-file-sourced secrets now; D-549 removed HashiCorp Vault (D-331's 'Vault-mandatory production' ruling) entirely, so rotating any secret is a config edit plus a restart on either profile. Config-surface reduction (item 23): pure internal tuning that no deployment ever varied (poll intervals, batch sizes, token TTLs, the upload-pipeline's quarantine prefix/content-type allowlist, dead HTTP-server knobs this axum-based stack never read) was removed from this schema entirely and now lives as Rust constants next to whatever consumes it — see document/DECISIONS.md's entry for the full list.",
   "app": {
     "port": 7865,
+    "_tls_comment": "Z5-T6/Z5-T7: off by default (plain HTTP behind a terminating proxy). enabled serves HTTPS from cert_path/key_path, or, with acme.enabled, from a certificate the server obtains and renews over ACME (TLS-ALPN-01 on this port, which must be reachable as 443 under each domain). The account and certificate are kept in acme.cache_dir.",
+    "tls": {
+      "enabled": false,
+      "cert_path": "",
+      "key_path": "",
+      "acme": {
+        "enabled": false,
+        "domains": [],
+        "contact_email": "",
+        "directory_url": "https://acme-v02.api.letsencrypt.org/directory",
+        "cache_dir": "acme"
+      }
+    },
     "server_host": "0.0.0.0",
     "frontend_host": "localhost",
     "frontend_port": 4199,
