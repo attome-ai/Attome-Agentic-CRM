@@ -115,6 +115,15 @@ interface CheckedOptions {
 
 const isBlank = (v: unknown) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 
+/** `pattern` anchored at both ends, as the server matches it; `null` when it does not compile. */
+function anchoredPattern(pattern: string): RegExp | null {
+  try {
+    return new RegExp(`^(?:${pattern.replace(/^\^/, '').replace(/\$$/, '')})$`, 'u');
+  } catch {
+    return null;
+  }
+}
+
 /** The validators for one field: required, then its pattern, format or range. */
 export function fieldValidators(field: FieldSchema): ValidatorFn[] {
   const validators: ValidatorFn[] = [];
@@ -122,15 +131,11 @@ export function fieldValidators(field: FieldSchema): ValidatorFn[] {
   const opts = (field.options ?? {}) as unknown as CheckedOptions;
   if (field.field_type === 'text') {
     const pattern = opts.pattern?.trim();
-    if (pattern) {
-      let re: RegExp | null = null;
-      try { re = new RegExp(`^(?:${pattern.replace(/^\^/, '').replace(/\$$/, '')})$`, 'u'); } catch { re = null; }
-      if (re) {
-        const anchored = re;
-        validators.push((c: AbstractControl): ValidationErrors | null =>
-          isBlank(c.value) || anchored.test(westernDigits(String(c.value).trim()))
-            ? null : { pattern: { description: opts.mask_description ?? pattern } });
-      }
+    const anchored = pattern ? anchoredPattern(pattern) : null;
+    if (pattern && anchored) {
+      validators.push((c: AbstractControl): ValidationErrors | null =>
+        isBlank(c.value) || anchored.test(westernDigits(String(c.value).trim()))
+          ? null : { pattern: { description: opts.mask_description ?? pattern } });
     }
     const format = opts.format;
     if (format && (FIELD_FORMATS as readonly string[]).includes(format)) {
