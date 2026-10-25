@@ -283,6 +283,18 @@ async fn create_page(
 
 // ── Get / update / delete ──────────────────────────────────────────────────
 
+/// E13-T8: one live page, for the engine functions that need it.
+pub(crate) async fn load_page(db: &attome_db::DbPool, id: Uuid) -> Result<PageDetail, AppError> {
+    let sql =
+        format!("SELECT {PAGE_COLUMNS} FROM content_page WHERE id = $1 AND is_deleted = FALSE");
+    sqlx::query_as::<_, PageDetail>(&sql)
+        .bind(id)
+        .fetch_optional(db)
+        .await
+        .map_err(AppError::internal)?
+        .ok_or(AppError::NotFound)
+}
+
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/pages/{id}",
@@ -296,32 +308,12 @@ async fn create_page(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// E13-T8: one live page, for the engine functions that need it.
-pub(crate) async fn load_page(db: &attome_db::DbPool, id: Uuid) -> Result<PageDetail, AppError> {
-    let sql =
-        format!("SELECT {PAGE_COLUMNS} FROM content_page WHERE id = $1 AND is_deleted = FALSE");
-    sqlx::query_as::<_, PageDetail>(&sql)
-        .bind(id)
-        .fetch_optional(db)
-        .await
-        .map_err(AppError::internal)?
-        .ok_or(AppError::NotFound)
-}
-
 async fn get_page(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PageDetail>, AppError> {
-    let sql =
-        format!("SELECT {PAGE_COLUMNS} FROM content_page WHERE id = $1 AND is_deleted = FALSE");
-    let row = sqlx::query_as::<_, PageDetail>(&sql)
-        .bind(id)
-        .fetch_optional(&state.base.db)
-        .await
-        .map_err(AppError::internal)?
-        .ok_or(AppError::NotFound)?;
-    Ok(Json(row))
+    Ok(Json(load_page(&state.base.db, id).await?))
 }
 
 #[utoipa::path(

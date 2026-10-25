@@ -244,7 +244,9 @@ fn rollout_bucket(flag_key: &str, user_id: Uuid) -> u8 {
 /// easily unit-tested. Does **not** perform the license check; callers use
 /// [`is_on`] (or replicate its license-first ordering) so the invariant can
 /// never be bypassed by calling this directly with a licensed-looking
-/// context.
+/// context. Production code reads the clock once per request and calls
+/// [`evaluate_policy_at`]; tests use this.
+#[cfg(test)]
 fn evaluate_policy(flag_key: &str, policy: &FeatureFlagPolicy, ctx: &SecurityContext) -> bool {
     evaluate_policy_at(flag_key, policy, ctx, chrono::Utc::now())
 }
