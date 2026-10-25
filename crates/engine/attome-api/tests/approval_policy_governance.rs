@@ -660,6 +660,70 @@ fn policy_crud_round_trips() {
     })
 }
 
+/// Z10-T5: a plan or condition change is a new policy version with its own
+/// snapshot; a name or switch change is not.
+#[test]
+fn policy_update_writes_new_version() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (admin_id, admin_cookie) = seed_user(&system, true).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+
+        let policy_id = create_single_approver_policy(&app, &db, &admin_cookie, admin_id).await;
+        let versions = |db: sqlx::PgPool| async move {
+            sqlx::query_scalar::<_, i32>(
+                "SELECT version FROM approval_policy_version WHERE policy_id = $1 ORDER BY version",
+            )
+            .bind(policy_id)
+            .fetch_all(&db)
+            .await
+            .unwrap()
+        };
+        assert_eq!(versions(db.clone()).await, vec![1]);
+
+        let resp = app
+            .clone()
+            .oneshot(json_request(
+                "PUT",
+                format!("/api/v1/admin/approval-policies/{policy_id}"),
+                &admin_cookie,
+                serde_json::json!({ "name": "renamed", "row_version": 0 }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            versions(db.clone()).await,
+            vec![1],
+            "a rename is not a version"
+        );
+
+        let resp = app
+            .clone()
+            .oneshot(json_request(
+                "PUT",
+                format!("/api/v1/admin/approval-policies/{policy_id}"),
+                &admin_cookie,
+                serde_json::json!({ "condition": "true", "row_version": 1 }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(versions(db.clone()).await, vec![1, 2]);
+        let (current, condition): (i32, Option<String>) = sqlx::query_as(
+            "SELECT p.current_version, v.condition FROM approval_policy p              JOIN approval_policy_version v ON v.policy_id = p.id AND v.version = p.current_version              WHERE p.id = $1",
+        )
+        .bind(policy_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(current, 2);
+        assert_eq!(condition.as_deref(), Some("true"));
+        cleanup_role_grant_policy(&db).await;
+    })
+}
+
 // ── Dashboard 10/10 Phase 6 prerequisites (D-551): the non-admin decide
 // route, and team:/position:manager_of_requester approver token resolution.
 

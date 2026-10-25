@@ -205,15 +205,22 @@ async fn gate_inner(
 
     let request = if let Some(policy) = policy {
         let backstop_ttl = plan_backstop_ttl(&policy.plan);
-        attome_approval::submit_with_plan_regarding_with(
+        // Z10-T5: steps whose condition is false for this payload are
+        // skipped, and the request records the policy version it ran under.
+        let skipped = skipped_steps(&policy.plan, &payload);
+        attome_approval::submit_with_plan_skipping_with(
             &state.base.db,
             action_type,
             payload,
             requester,
             policy.plan,
             backstop_ttl,
-            Some(policy.id),
+            attome_approval::PolicyRef {
+                id: Some(policy.id),
+                version: Some(policy.version),
+            },
             regarding,
+            &skipped,
             &submitted,
         )
         .await?
@@ -294,6 +301,8 @@ pub struct ResolvedPolicy {
     pub id: Uuid,
     pub plan: ApprovalPlan,
     pub condition: Option<String>,
+    /// Z10-T5: the policy's `current_version`.
+    pub version: i32,
 }
 
 impl std::fmt::Debug for ResolvedPolicy {
@@ -322,9 +331,10 @@ pub async fn find_matching_policy(
         id: Uuid,
         plan: Value,
         condition: Option<String>,
+        current_version: i32,
     }
     let row: Option<Row> = sqlx::query_as(
-        "SELECT id, plan, condition FROM approval_policy \
+        "SELECT id, plan, condition, current_version FROM approval_policy \
          WHERE action_type = $1 AND is_active AND NOT is_deleted",
     )
     .bind(action_type)
@@ -340,7 +350,25 @@ pub async fn find_matching_policy(
         id: row.id,
         plan,
         condition: row.condition,
+        version: row.current_version,
     }))
+}
+
+/// Z10-T5: the plan steps a request with this `payload` skips — those whose
+/// `skip_unless` evaluates cleanly to false. A condition that fails to
+/// compile or evaluate keeps its step ([`condition_permits`] fails closed).
+pub fn skipped_steps(plan: &ApprovalPlan, payload: &Value) -> Vec<i32> {
+    plan.steps
+        .iter()
+        .enumerate()
+        .filter(|(_, step)| {
+            step.extras
+                .skip_unless
+                .as_deref()
+                .is_some_and(|condition| !condition_permits(Some(condition), payload))
+        })
+        .filter_map(|(i, _)| i32::try_from(i).ok())
+        .collect()
 }
 
 /// Builds a `attome_rules` `Schema`/`Context` pair from `payload`'s top-level
@@ -1084,6 +1112,45 @@ mod condition_permits_tests {
             Some("kind == \"erasure\" and urgent"),
             &serde_json::json!({ "kind": "erasure", "urgent": false })
         ));
+    }
+}
+
+#[cfg(test)]
+mod skipped_steps_tests {
+    use super::*;
+
+    fn plan(conditions: &[Option<&str>]) -> ApprovalPlan {
+        let steps = conditions
+            .iter()
+            .map(|c| {
+                let mut step: attome_approval::ApprovalStep =
+                    serde_json::from_value(serde_json::json!({
+                        "mode": "any", "approvers": ["user:a"], "sla_minutes": 60,
+                    }))
+                    .unwrap();
+                step.extras.skip_unless = c.map(str::to_owned);
+                step
+            })
+            .collect();
+        ApprovalPlan { steps }
+    }
+
+    #[test]
+    fn skip_unless_false_skips_step() {
+        let payload = serde_json::json!({ "amount": 500.0 });
+        let p = plan(&[None, Some("amount > 10000"), Some("amount > 100")]);
+        assert_eq!(skipped_steps(&p, &payload), vec![1]);
+    }
+
+    #[test]
+    fn broken_skip_condition_keeps_step() {
+        let payload = serde_json::json!({ "amount": 500.0 });
+        let p = plan(&[
+            Some("missing_field > 1"),
+            Some("amount >>> 1"),
+            Some("amount"),
+        ]);
+        assert!(skipped_steps(&p, &payload).is_empty());
     }
 }
 

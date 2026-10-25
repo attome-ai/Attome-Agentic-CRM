@@ -994,7 +994,7 @@ async fn submit_skipping(
         requested_by,
         plan,
         Duration::hours(1),
-        None,
+        attome_approval::PolicyRef::default(),
         None,
         skipped,
     )

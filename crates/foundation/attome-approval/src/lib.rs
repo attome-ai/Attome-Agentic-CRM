@@ -659,6 +659,8 @@ pub struct ApprovalRequest {
     /// Z10-T3: plan steps that do not run for this request (their
     /// condition was false at submit). Never waited on.
     pub skipped_steps: Vec<i32>,
+    /// Z10-T5: the version of the policy that supplied `plan`.
+    pub policy_version: Option<i32>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -683,6 +685,7 @@ struct ApprovalRequestRow {
     parent_request_id: Option<Uuid>,
     recalled_at: Option<DateTime<Utc>>,
     skipped_steps: Vec<i32>,
+    policy_version: Option<i32>,
 }
 
 impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
@@ -715,6 +718,7 @@ impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
             parent_request_id: row.parent_request_id,
             recalled_at: row.recalled_at,
             skipped_steps: row.skipped_steps,
+            policy_version: row.policy_version,
         })
     }
 }
@@ -722,7 +726,7 @@ impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
 const REQUEST_COLUMNS: &str = "id, action_type, payload, requested_by, requested_at, status, \
      required_approvals, row_version, expires_at, executed_at, plan, step, step_started_at, \
      escalated_at, policy_id, regarding_entity, regarding_id, parent_request_id, recalled_at, \
-     skipped_steps";
+     skipped_steps, policy_version";
 
 /// Enqueues a new pending approval request instead of the caller executing
 /// its mutation inline. `required_approvals` lets a future N-of-M policy
@@ -878,16 +882,59 @@ pub async fn submit_with_plan_regarding_with(
     regarding: Option<(&str, Uuid)>,
     hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
 ) -> Result<ApprovalRequest, AppError> {
+    submit_with_plan_skipping_with(
+        pool,
+        action_type,
+        payload,
+        requested_by,
+        plan,
+        backstop_ttl,
+        PolicyRef {
+            id: policy_id,
+            version: None,
+        },
+        regarding,
+        &[],
+        hook,
+    )
+    .await
+}
+
+/// Z10-T5: the policy a plan came from: its id and the version saved when
+/// the request was submitted. Both opaque to this crate.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PolicyRef {
+    pub id: Option<Uuid>,
+    pub version: Option<i32>,
+}
+
+/// Z10-T5: [`submit_with_plan_regarding_with`] for a plan whose policy has a
+/// version and some of whose steps are skipped for this request (see
+/// [`submit_with_plan_skipping_in_tx`]).
+#[allow(clippy::too_many_arguments)]
+pub async fn submit_with_plan_skipping_with(
+    pool: &PgPool,
+    action_type: &str,
+    payload: Value,
+    requested_by: Uuid,
+    plan: ApprovalPlan,
+    backstop_ttl: Duration,
+    policy: PolicyRef,
+    regarding: Option<(&str, Uuid)>,
+    skipped_steps: &[i32],
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+) -> Result<ApprovalRequest, AppError> {
     let mut tx = attome_db::tx::begin(pool).await?;
-    let request = submit_with_plan_regarding_in_tx(
+    let request = submit_with_plan_skipping_in_tx(
         &mut tx,
         action_type,
         payload,
         requested_by,
         plan,
         backstop_ttl,
-        policy_id,
+        policy,
         regarding,
+        skipped_steps,
     )
     .await?;
     hook.before_commit(&mut tx, &request).await?;
@@ -927,7 +974,10 @@ pub async fn submit_with_plan_regarding_in_tx(
         requested_by,
         plan,
         backstop_ttl,
-        policy_id,
+        PolicyRef {
+            id: policy_id,
+            version: None,
+        },
         regarding,
         &[],
     )
@@ -947,10 +997,11 @@ pub async fn submit_with_plan_skipping_in_tx(
     requested_by: Uuid,
     plan: ApprovalPlan,
     backstop_ttl: Duration,
-    policy_id: Option<Uuid>,
+    policy: PolicyRef,
     regarding: Option<(&str, Uuid)>,
     skipped_steps: &[i32],
 ) -> Result<ApprovalRequest, AppError> {
+    let policy_id = policy.id;
     plan.validate()?;
     let mut skipped: Vec<i32> = skipped_steps.to_vec();
     skipped.sort_unstable();
@@ -984,8 +1035,8 @@ pub async fn submit_with_plan_skipping_in_tx(
         "INSERT INTO approval_request \
              (id, action_type, payload, requested_by, status, required_approvals, row_version, \
               expires_at, plan, step, step_started_at, policy_id, regarding_entity, regarding_id, \
-              skipped_steps) \
-         VALUES ($1, $2, $3, $4, $10, 1, 0, $5, $6, $11, NOW(), $7, $8, $9, $12) \
+              skipped_steps, policy_version) \
+         VALUES ($1, $2, $3, $4, $10, 1, 0, $5, $6, $11, NOW(), $7, $8, $9, $12, $13) \
          RETURNING {REQUEST_COLUMNS}"
     ))
     .bind(id)
@@ -1000,6 +1051,7 @@ pub async fn submit_with_plan_skipping_in_tx(
     .bind(status)
     .bind(step)
     .bind(&skipped)
+    .bind(policy.version)
     .fetch_one(&mut **tx)
     .await
     .map_err(AppError::internal)?;

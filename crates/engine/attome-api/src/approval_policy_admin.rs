@@ -296,8 +296,30 @@ async fn create_policy(
         }
     })?;
     let view: ApprovalPolicyView = row.try_into()?;
+    record_policy_version(&mut tx, id, ctx.user_id).await?;
     tx.commit().await?;
     Ok((StatusCode::CREATED, Json(view)))
+}
+
+/// Z10-T5: snapshots the policy's plan and condition as its current version,
+/// in the policy write's own transaction. Requests keep the plan they were
+/// submitted with; this is the history of what the policy said.
+async fn record_policy_version(
+    tx: &mut SecurityTx<'_>,
+    id: Uuid,
+    user_id: Uuid,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "INSERT INTO approval_policy_version (policy_id, version, plan, condition, created_by) \
+         SELECT id, current_version, plan, condition, $2 FROM approval_policy WHERE id = $1 \
+         ON CONFLICT (policy_id, version) DO NOTHING",
+    )
+    .bind(id)
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
 }
 
 /// One approval policy
@@ -418,6 +440,8 @@ async fn update_policy(
              is_active = COALESCE($4, is_active), \
              condition = CASE WHEN $5 THEN $6 ELSE condition END, \
              plan = COALESCE($7, plan), \
+             current_version = current_version \
+                 + CASE WHEN $5 OR $7::jsonb IS NOT NULL THEN 1 ELSE 0 END, \
              row_version = row_version + 1, \
              updated_at = NOW() \
          WHERE id = $1 AND row_version = $2 AND NOT is_deleted \
@@ -452,6 +476,10 @@ async fn update_policy(
         }
     };
     let view: ApprovalPolicyView = row.try_into()?;
+    // Z10-T5: a changed plan or condition is a new version.
+    if body.condition.is_some() || body.plan.is_some() {
+        record_policy_version(&mut tx, id, ctx.user_id).await?;
+    }
     tx.commit().await?;
     Ok(Json(view))
 }
