@@ -205,6 +205,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Dependency editor (A6-T4): `/model/dependencies` edits which dependent values each controlling
+  value allows, as a grid or a tree, and before publishing counts the live records the draft would
+  no longer allow (`GET /api/v1/admin/model/dependency/{id}/impact`).
 - Forms follow allowed values (A6-T2): `allowed_values` business rules (and so A6-T1 dependencies)
   now reach the form, which offers only the allowed choices, fills a field that has exactly one, and
   clears a value the other fields no longer allow, with a note and Undo.

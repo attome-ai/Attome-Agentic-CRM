@@ -1001,6 +1001,13 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/model').then(m => m.AgentDesignerComponent),
           },
           {
+            // A6-T4: dependent values (the cities of a region) and their impact.
+            path: 'model/dependencies',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/model').then(m => m.DependencyEditorComponent),
+          },
+          {
             // A5-T4: shared option sets (values, labels, colours, retirement).
             path: 'model/option-sets',
             canActivate: [authGuard],

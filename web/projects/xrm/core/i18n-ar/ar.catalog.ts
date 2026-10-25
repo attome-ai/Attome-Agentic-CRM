@@ -221,6 +221,15 @@ export const xrmAr = {
       text: 'النص', text_dark: 'النص (داكن)', success: 'نجاح', warning: 'تحذير', danger: 'خطر', info: 'معلومة',
     },
   },
+  // A6-T4: the dependency editor.
+  dependencies: {
+    title: 'القيم التابعة', new: 'تبعية جديدة', name: 'الاسم', entity: 'الكيان',
+    controlling: 'السمة المتحكمة', dependent: 'السمة التابعة',
+    matrix: 'جدول', tree: 'شجرة', anyValue: 'أي قيمة (بلا قيد)',
+    saveDraft: 'حفظ المسودة', checkRecords: 'فحص السجلات', publish: 'نشر',
+    saved: 'حُفظت المسودة', published: 'نُشرت',
+    impact: '{count, plural, =0 {لا يخالفها أي سجل موجود.} one {سجل موجود واحد لن يطابقها.} other {# سجلات موجودة لن تطابقها.}}',
+  },
   optionSets: {
     title: 'مجموعات الخيارات', new: 'مجموعة خيارات جديدة', name: 'الاسم', code: 'الرمز', labelEn: 'التسمية بالإنجليزية',
     labelAr: 'التسمية بالعربية', colour: 'اللون', order: 'الترتيب', retired: 'متقاعد', addValue: 'إضافة قيمة',

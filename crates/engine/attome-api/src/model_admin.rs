@@ -1532,6 +1532,112 @@ pub(crate) fn menu_item_paths(menu: &Value) -> Vec<String> {
         .collect()
 }
 
+/// A6-T4: how many live records a dependency's newest version would not
+/// allow, and a few of their ids.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct DependencyImpact {
+    /// Live records whose dependent value the matrix (or its default) does
+    /// not allow for their controlling value.
+    pub count: i64,
+    /// Up to 20 of them, for a person to look at.
+    pub sample_ids: Vec<Uuid>,
+}
+
+/// The pairs a matrix allows, as two parallel lists, and its keys. Pure.
+fn dependency_pairs(doc: &Value) -> (Vec<String>, Vec<String>, Vec<String>) {
+    let mut controlling = Vec::new();
+    let mut dependent = Vec::new();
+    let mut keys = Vec::new();
+    if let Some(matrix) = doc.get("matrix").and_then(Value::as_object) {
+        for (code, allowed) in matrix {
+            keys.push(code.clone());
+            for value in allowed.as_array().into_iter().flatten() {
+                if let Some(value) = value.as_str() {
+                    controlling.push(code.clone());
+                    dependent.push(value.to_owned());
+                }
+            }
+        }
+    }
+    (controlling, dependent, keys)
+}
+
+/// A6-T4: the records an edited dependency would refuse
+///
+/// Counts the entity's live records whose dependent value the dependency's
+/// newest version (the draft being edited) does not allow, so a person sees
+/// the effect before publishing. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/model/dependency/{id}/impact",
+    tag = "model",
+    params(("id" = Uuid, Path, description = "The dependency")),
+    responses(
+        (status = 200, description = "How many live records would not fit, and some of them", body = DependencyImpact),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such dependency", body = ErrorResponse),
+        (status = 422, description = "Its entity or attributes do not exist", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn dependency_impact(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<DependencyImpact>, AppError> {
+    let version = store::read(&state.base.db, id, None).await?;
+    if version.kind != attome_model::kinds::DEPENDENCY.0 {
+        return Err(AppError::NotFound);
+    }
+    let doc = &version.doc;
+    let text = |key: &str| doc.get(key).and_then(Value::as_str).unwrap_or_default();
+    let (entity, controlling, dependent) = (text("entity"), text("controlling"), text("dependent"));
+    // Identifiers come from the live registry, never from the document alone.
+    let registry = state.entities.load();
+    let meta = registry
+        .get(entity)
+        .ok_or_else(|| AppError::Validation(format!("entity {entity} does not exist")))?;
+    for attr in [controlling, dependent] {
+        if !meta.attrs.iter().any(|a| a.logicalname == attr) {
+            return Err(AppError::Validation(format!(
+                "{entity} has no attribute {attr}"
+            )));
+        }
+    }
+    let (pair_c, pair_d, keys) = dependency_pairs(doc);
+    let default: Option<Vec<String>> = doc.get("default").and_then(Value::as_array).map(|items| {
+        items
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_owned))
+            .collect()
+    });
+    let (c, d) = (
+        attome_core::quote_ident(controlling),
+        attome_core::quote_ident(dependent),
+    );
+    let predicate = format!(
+        "(is_active IS NULL OR is_active = true) AND {c} IS NOT NULL AND {d} IS NOT NULL AND (            ({c}::text = ANY($3) AND NOT EXISTS (                SELECT 1 FROM unnest($1::text[], $2::text[]) AS p(c, d)                 WHERE p.c = {c}::text AND p.d = {d}::text))            OR ($4 AND NOT ({c}::text = ANY($3)) AND NOT ({d}::text = ANY($5))))"
+    );
+    let table = attome_core::quote_ident(entity);
+    let sql =
+        format!("SELECT count(*) OVER (), id FROM {table} WHERE {predicate} ORDER BY id LIMIT 20");
+    let rows: Vec<(i64, Uuid)> =
+        sqlx::query_as(&attome_db::tag_dynamic("model.dependency_impact", &sql))
+            .bind(&pair_c)
+            .bind(&pair_d)
+            .bind(&keys)
+            .bind(default.is_some())
+            .bind(default.unwrap_or_default())
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(Json(DependencyImpact {
+        count: rows.first().map_or(0, |(n, _)| *n),
+        sample_ids: rows.into_iter().map(|(_, id)| id).collect(),
+    }))
+}
+
 /// A21-T5: each item of a published menu with its opens over the last
 /// `days` (default 60), the items nobody opened flagged `unused`.
 /// Administrators only.
@@ -2343,6 +2449,10 @@ pub fn routes() -> Router<EngineState> {
             axum::routing::post(menu_item_opened),
         )
         .route("/api/v1/admin/model/navigation/{id}/usage", get(menu_usage))
+        .route(
+            "/api/v1/admin/model/dependency/{id}/impact",
+            get(dependency_impact),
+        )
         .route("/api/v1/admin/model/export", get(export_files))
         .route("/api/v1/admin/model/import", post(import_files))
         .route("/api/v1/admin/model/blueprint/plan", post(blueprint_plan))
@@ -2383,6 +2493,7 @@ pub fn routes() -> Router<EngineState> {
     paths(
         menu_item_opened,
         menu_usage,
+        dependency_impact,
         list_kinds,
         list_objects,
         get_object,

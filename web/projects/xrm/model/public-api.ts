@@ -13,3 +13,4 @@ export { LiveService } from './live.service';
 export { AppMenuComponent, linkFor } from './app-menu/app-menu.component';
 export type { MenuLink } from './app-menu/app-menu.component';
 export { OptionSetEditorComponent } from './option-set-editor/option-set-editor.component';
+export { DependencyEditorComponent } from './dependency-editor/dependency-editor.component';

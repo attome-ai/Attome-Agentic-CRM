@@ -286,6 +286,15 @@ export const xrmEn = {
     tryOn: 'Try on a record', entity: 'Entity', record: 'Record id', show: 'Show what the model receives',
   },
   // N30-T5/T9 — AI governance.
+  // A6-T4: the dependency editor.
+  dependencies: {
+    title: 'Dependent values', new: 'New dependency', name: 'Name', entity: 'Entity',
+    controlling: 'Controlling attribute', dependent: 'Dependent attribute',
+    matrix: 'Grid', tree: 'Tree', anyValue: 'Any value (no limit)',
+    saveDraft: 'Save draft', checkRecords: 'Check records', publish: 'Publish',
+    saved: 'Draft saved', published: 'Published',
+    impact: '{count, plural, =0 {No existing record breaks this.} one {# existing record would not fit.} other {# existing records would not fit.}}',
+  },
   optionSets: {
     title: 'Option sets', new: 'New option set', name: 'Name', code: 'Code', labelEn: 'English label',
     labelAr: 'Arabic label', colour: 'Colour', order: 'Order', retired: 'Retired', addValue: 'Add a value',
