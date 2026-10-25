@@ -710,6 +710,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Data lineage guide (L5-T10): `docs/lineage.md` describes the graph (nodes, edge kinds and
+  confidences, versions and history), the impact report that stops a breaking field change, the walk,
+  compare and clean-up routes, hand-documented links, the OpenLineage export and the agent tools.
 - Data quality guide (L2-T11): `docs/data-quality.md` describes the six dimensions, measure-only rules,
   targets, incremental and daily scoring, issues with owners and due dates, fixes, alerts, the agent
   tools and the `/api/v1/admin/data/quality` routes, including what is not built yet (accuracy, issue
