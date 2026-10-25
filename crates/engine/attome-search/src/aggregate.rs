@@ -223,7 +223,8 @@ fn data_type_of_storage(ft: &attome_core::FieldType) -> &'static str {
         | FieldType::Icon
         | FieldType::Color
         | FieldType::RichText
-        | FieldType::Formula => "text",
+        | FieldType::Formula
+        | FieldType::Time => "text",
     }
 }
 

@@ -81,7 +81,8 @@ pub fn rules_type(ft: &FieldType) -> Option<Type> {
         FieldType::Bool => Some(Type::Bool),
         FieldType::Choice => Some(Type::Choice),
         FieldType::Lookup => Some(Type::Lookup),
-        FieldType::File | FieldType::Image => None,
+        // A2-T1: a time of day has no rules type yet.
+        FieldType::File | FieldType::Image | FieldType::Time => None,
         FieldType::Text
         | FieldType::Icon
         | FieldType::Color

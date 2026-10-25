@@ -6,7 +6,9 @@ export type FieldType =
   // sanitized `rich_text` HTML, and an `image` (a `file` limited to images).
   | 'formula' | 'rich_text' | 'image'
   // Y2-T1: a moment (TIMESTAMPTZ); `date` is a calendar day.
-  | 'date_time';
+  | 'date_time'
+  // A2-T1: a time of day (TIME), `HH:MM[:SS]`.
+  | 'time';
 
 // Mirrors attome_core::formula::FormulaOptions (B-R6, D-604). The value
 // is computed by the server on every write; the form shows it read-only.

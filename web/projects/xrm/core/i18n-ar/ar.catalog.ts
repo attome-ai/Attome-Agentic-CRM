@@ -1532,7 +1532,7 @@ export const xrmAr = {
   fieldTypes: {
     text: 'نص', number: 'رقم', date: 'تاريخ', bool: 'قيمة منطقية',
     choice: 'اختيار', lookup: 'بحث مرجعي', file: 'ملف', icon: 'أيقونة', color: 'لون', currency: 'عملة',
-    formula: 'صيغة', rich_text: 'نص منسق', image: 'صورة', date_time: 'تاريخ ووقت',
+    formula: 'صيغة', rich_text: 'نص منسق', image: 'صورة', date_time: 'تاريخ ووقت', time: 'وقت',
   },
   security: {
     accessLevel: {

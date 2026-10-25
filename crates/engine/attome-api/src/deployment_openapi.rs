@@ -36,6 +36,7 @@ fn attribute_schema(attr: &AttrInfo) -> Value {
         FieldType::Bool => json!({ "type": "boolean" }),
         FieldType::Date => json!({ "type": "string", "format": "date" }),
         FieldType::DateTime => json!({ "type": "string", "format": "date-time" }),
+        FieldType::Time => json!({ "type": "string", "format": "time" }),
         FieldType::Lookup => json!({ "type": "string", "format": "uuid" }),
         FieldType::Choice => {
             let choices: Vec<Value> = attr

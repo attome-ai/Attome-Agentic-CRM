@@ -359,6 +359,12 @@ fn convert_for(value: &Value, target: FieldType, options: Option<&Value>) -> Opt
             }
             _ => None,
         },
+        FieldType::Time => match value {
+            Value::String(s) if attome_field::time_ok(s.trim()) => {
+                Some(Value::String(s.trim().to_owned()))
+            }
+            _ => None,
+        },
         FieldType::DateTime => match value {
             Value::String(s) => chrono::DateTime::parse_from_rfc3339(s.trim())
                 .ok()

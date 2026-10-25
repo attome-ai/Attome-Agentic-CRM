@@ -196,7 +196,7 @@ impl Translator<'_> {
             | FieldType::Icon
             | FieldType::Color
             | FieldType::RichText => Ty::Text,
-            FieldType::File | FieldType::Image | FieldType::Formula => {
+            FieldType::File | FieldType::Image | FieldType::Formula | FieldType::Time => {
                 return refuse(format!("{name} is not a comparable column"));
             }
         };

@@ -88,6 +88,11 @@
       }
     }
 
+    @case ('time') {
+      <input [id]="field().name" type="time" step="1" class="xf-input"
+             [formControlName]="field().name" />
+    }
+
     @case ('date_time') {
       <input [id]="field().name" type="datetime-local" class="xf-input"
              [value]="localDateTime()" (change)="setDateTime($any($event.target).value)" />

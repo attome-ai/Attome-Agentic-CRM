@@ -214,7 +214,11 @@ enum Shape {
 
 fn shape_of(attr: &AttrInfo) -> Option<Shape> {
     Some(match attr.field_type() {
-        FieldType::Text | FieldType::RichText | FieldType::Icon | FieldType::Color => Shape::Text,
+        FieldType::Text
+        | FieldType::RichText
+        | FieldType::Icon
+        | FieldType::Color
+        | FieldType::Time => Shape::Text,
         FieldType::Number | FieldType::Currency => Shape::Number,
         FieldType::Date | FieldType::DateTime => Shape::Date,
         FieldType::Bool => Shape::Bool,

@@ -194,6 +194,12 @@ pub fn normalize(field_type: &FieldType, value: &Value, options: Option<&Value>)
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
+/// A2-T1: whether `s` is a time of day, `HH:MM` or `HH:MM:SS`. Pure.
+pub fn time_ok(s: &str) -> bool {
+    chrono::NaiveTime::parse_from_str(s, "%H:%M:%S").is_ok()
+        || chrono::NaiveTime::parse_from_str(s, "%H:%M").is_ok()
+}
+
 /// Validates that `value` is an acceptable JSON representation for `field_type`.
 /// Pass `options` (the `options` JSONB from entity_fields) for Choice/Lookup checks.
 pub fn validate(
@@ -218,6 +224,17 @@ pub fn validate(
                 && let Ok(opts) = serde_json::from_value::<NumberOptions>(opts_val.clone())
             {
                 validate_number_bounds(n, &opts)?;
+            }
+        }
+        // A2-T1: a time of day, `HH:MM` or `HH:MM:SS`.
+        FieldType::Time => {
+            let s = value
+                .as_str()
+                .ok_or_else(|| type_err("time (HH:MM or HH:MM:SS)", value))?;
+            if !time_ok(s) {
+                return Err(AppError::Validation(format!(
+                    "time value must be HH:MM or HH:MM:SS, got: {s}"
+                )));
             }
         }
         // A2-T1: a day is only `YYYY-MM-DD`, so it never shifts across zones.
@@ -1428,6 +1445,10 @@ mod tests {
 
     #[test]
     fn date_accepts_rfc3339_and_plain_date_rejects_garbage() {
+        assert!(validate(&FieldType::Time, &json!("08:30"), None).is_ok());
+        assert!(validate(&FieldType::Time, &json!("23:59:59"), None).is_ok());
+        assert!(validate(&FieldType::Time, &json!("24:00"), None).is_err());
+        assert!(validate(&FieldType::Time, &json!("8.30"), None).is_err());
         // A2-T1: a day takes no time part; a moment takes either.
         assert!(validate(&FieldType::Date, &json!("2026-07-06T12:00:00Z"), None).is_err());
         assert!(validate(&FieldType::Date, &json!("2026-07-06"), None).is_ok());

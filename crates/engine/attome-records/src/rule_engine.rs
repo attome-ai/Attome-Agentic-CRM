@@ -137,7 +137,8 @@ fn rules_value_of_type(ft: &attome_core::FieldType, v: Option<&Value>) -> RulesV
         | FieldType::Icon
         | FieldType::Color
         | FieldType::RichText
-        | FieldType::Formula => v
+        | FieldType::Formula
+        | FieldType::Time => v
             .as_str()
             .map(|s| RulesValue::Text(s.to_owned()))
             .unwrap_or(RulesValue::Null),

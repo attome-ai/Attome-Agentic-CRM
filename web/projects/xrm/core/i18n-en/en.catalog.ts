@@ -1595,7 +1595,7 @@ export const xrmEn = {
   fieldTypes: {
     text: 'Text', number: 'Number', date: 'Date', bool: 'Boolean',
     choice: 'Choice', lookup: 'Lookup', file: 'File', icon: 'Icon', color: 'Color', currency: 'Currency',
-    formula: 'Formula', rich_text: 'Rich text', image: 'Image', date_time: 'Date and time',
+    formula: 'Formula', rich_text: 'Rich text', image: 'Image', date_time: 'Date and time', time: 'Time',
   },
   // C-29 (M01 §7) — `security-admin.service.ts`'s `ACCESS_LEVELS`/
   // `CONDITION_OPERATORS` used to hold literal English display text; both

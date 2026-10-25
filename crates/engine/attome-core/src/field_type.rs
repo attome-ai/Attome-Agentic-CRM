@@ -3,7 +3,8 @@ use serde_json::Value;
 
 /// A field's type. Y2-T1: `Date` is a calendar day (`DATE`) and `DateTime`
 /// a moment (`TIMESTAMPTZ`); attributes made before the split hold a
-/// `TIMESTAMPTZ` column and are relabelled `date_time` (Y2-T2).
+/// `TIMESTAMPTZ` column and are relabelled `date_time` (Y2-T2). A2-T1:
+/// `Time` is a time of day (`TIME`, `HH:MM[:SS]`).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FieldType {
@@ -21,12 +22,13 @@ pub enum FieldType {
     RichText,
     Image,
     DateTime,
+    Time,
 }
 
 /// Every variant, in declaration order. The one list callers iterate — the
 /// bundle vocabulary ([`FieldType::NAMES`]), the admin/reconcile validator,
 /// and the round-trip tests below all derive from it.
-pub const ALL_FIELD_TYPES: [FieldType; 14] = [
+pub const ALL_FIELD_TYPES: [FieldType; 15] = [
     FieldType::Text,
     FieldType::Number,
     FieldType::Currency,
@@ -41,6 +43,7 @@ pub const ALL_FIELD_TYPES: [FieldType; 14] = [
     FieldType::RichText,
     FieldType::Image,
     FieldType::DateTime,
+    FieldType::Time,
 ];
 
 /// The storage types a `formula` field (B-R6, D-604) may declare as its
@@ -68,6 +71,7 @@ impl FieldType {
         "rich_text",
         "image",
         "date_time",
+        "time",
     ];
 
     /// Whether `name` is one of [`Self::NAMES`] — the one field-type
@@ -93,6 +97,7 @@ impl FieldType {
             Self::RichText => "rich_text",
             Self::Image => "image",
             Self::DateTime => "date_time",
+            Self::Time => "time",
         }
     }
 
@@ -135,6 +140,7 @@ impl FieldType {
             17 => Self::RichText,
             18 => Self::Image,
             19 => Self::DateTime,
+            20 => Self::Time,
             _ => Self::Text,
         })
     }
@@ -159,6 +165,7 @@ impl FieldType {
             Self::RichText => 17,
             Self::Image => 18,
             Self::DateTime => 19,
+            Self::Time => 20,
         }
     }
 
@@ -212,6 +219,7 @@ impl FieldType {
             Self::Currency => "NUMERIC",
             Self::Date => "DATE",
             Self::DateTime => "TIMESTAMPTZ",
+            Self::Time => "TIME",
             Self::Bool => "BOOLEAN",
             Self::Choice if multi => "TEXT[]",
             Self::Choice => "TEXT",
@@ -242,6 +250,7 @@ impl FieldType {
             Self::Currency => "::numeric",
             Self::Date => "::date",
             Self::DateTime => "::timestamptz",
+            Self::Time => "::time",
             Self::Bool => "::boolean",
             Self::Lookup => "::uuid",
             Self::Choice if multi => "::text[]",
@@ -289,6 +298,7 @@ impl TryFrom<&str> for FieldType {
             "rich_text" => Ok(Self::RichText),
             "image" => Ok(Self::Image),
             "date_time" => Ok(Self::DateTime),
+            "time" => Ok(Self::Time),
             other => Err(format!("unknown field type: {other}")),
         }
     }
@@ -298,7 +308,7 @@ impl TryFrom<&str> for FieldType {
 mod tests {
     use super::*;
 
-    const ALL: [FieldType; 14] = ALL_FIELD_TYPES;
+    const ALL: [FieldType; 15] = ALL_FIELD_TYPES;
 
     #[test]
     fn names_match_every_variant_in_order() {
@@ -317,6 +327,8 @@ mod tests {
         assert_eq!(FieldType::RichText.to_int(), 17);
         assert_eq!(FieldType::Image.to_int(), 18);
         assert_eq!(FieldType::DateTime.to_int(), 19);
+        assert_eq!(FieldType::Time.to_int(), 20);
+        assert_eq!(FieldType::Time.pg_type(false), "TIME");
     }
 
     #[test]

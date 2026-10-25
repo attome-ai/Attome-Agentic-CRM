@@ -27,6 +27,7 @@ pub fn edm_type(field: FieldType) -> &'static str {
         FieldType::Number | FieldType::Currency => "Edm.Decimal",
         FieldType::Date => "Edm.Date",
         FieldType::DateTime => "Edm.DateTimeOffset",
+        FieldType::Time => "Edm.TimeOfDay",
         FieldType::Bool => "Edm.Boolean",
         FieldType::Lookup => "Edm.Guid",
         _ => "Edm.String",

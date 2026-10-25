@@ -199,6 +199,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- A `time` field type (A2-T1): a time of day in a `TIME` column (`HH:MM` or `HH:MM:SS`), OData
+  `Edm.TimeOfDay`, OpenAPI `format: time`, a time input on forms; not yet usable in rule conditions.
 - Visitors identified on form submit (E14-T7): with `marketing.tracking_identify` on and marketing
   consent ticked, a form carrying the tracking script's `atm_vid` links that visitor's web sessions to
   the lead or contact and writes its first touch (only while empty) and latest touch (marketing pack
