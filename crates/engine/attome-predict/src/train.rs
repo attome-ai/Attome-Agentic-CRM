@@ -205,6 +205,78 @@ fn fit(features: &[Vec<f64>], labels: &[i32]) -> Result<ModelArtifact, String> {
     })
 }
 
+/// O1-T2: the area under the ROC curve of `scored` (`(probability, label)`),
+/// from the rank sum (ties share their average rank); `None` without both
+/// classes. Pure.
+pub fn auc(scored: &[(f64, i32)]) -> Option<f64> {
+    let positives = scored.iter().filter(|(_, l)| *l == 1).count();
+    let negatives = scored.len() - positives;
+    if positives == 0 || negatives == 0 {
+        return None;
+    }
+    let mut order: Vec<(f64, i32)> = scored.to_vec();
+    order.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut rank_sum = 0.0;
+    let mut i = 0;
+    while i < order.len() {
+        let mut j = i;
+        while j + 1 < order.len() && order[j + 1].0 == order[i].0 {
+            j += 1;
+        }
+        // Ranks i+1 ..= j+1 share their average.
+        let average = (i + j + 2) as f64 / 2.0;
+        rank_sum += order[i..=j].iter().filter(|(_, l)| *l == 1).count() as f64 * average;
+        i = j + 1;
+    }
+    let p = positives as f64;
+    Some((rank_sum - p * (p + 1.0) / 2.0) / (p * negatives as f64))
+}
+
+/// O1-T2: each feature's mean and standard deviation over `rows`. Pure.
+pub fn feature_profile(rows: &[Vec<f64>]) -> Vec<(f64, f64)> {
+    let width = rows.first().map_or(0, Vec::len);
+    let n = rows.len().max(1) as f64;
+    (0..width)
+        .map(|k| {
+            let mean = rows.iter().map(|r| r[k]).sum::<f64>() / n;
+            let var = rows.iter().map(|r| (r[k] - mean).powi(2)).sum::<f64>() / n;
+            (mean, var.sqrt())
+        })
+        .collect()
+}
+
+/// How far a feature's mean may move, in training standard deviations,
+/// before the drift check flags it.
+pub const DRIFT_THRESHOLD: f64 = 0.5;
+
+/// O1-T2: the features whose mean over `current` moved more than
+/// `threshold` training standard deviations from `profile` (a feature with
+/// no spread in training drifts on any change). Pure.
+pub fn drifted(profile: &[(f64, f64)], current: &[Vec<f64>], threshold: f64) -> Vec<usize> {
+    if current.is_empty() {
+        return Vec::new();
+    }
+    let now = feature_profile(current);
+    profile
+        .iter()
+        .zip(now)
+        .enumerate()
+        .filter(|(_, ((mean, std), (cur, _)))| {
+            let shift = (cur - mean).abs();
+            if *std > f64::EPSILON {
+                shift / std > threshold
+            } else {
+                shift > 1e-9
+            }
+        })
+        .map(|(k, _)| k)
+        .collect()
+}
+
+/// How much worse (in AUC) a retrain may be before the previous model is
+/// kept.
+pub const KEEP_PREVIOUS_MARGIN: f64 = 0.02;
+
 /// Deterministic 80/20 split — every 5th row (by the query's own
 /// `ORDER BY created_at DESC`) goes to holdout. No RNG dependency, and
 /// reproducible across runs against the same data, which matters for the
@@ -312,8 +384,10 @@ pub async fn run(db: &DbPool, model_id: Uuid) -> Result<(), AppError> {
     let holdout_total = holdout.len();
     let mut correct = 0usize;
     let mut baseline_correct = 0usize;
+    let mut scored = Vec::with_capacity(holdout_total);
     for row in &holdout {
         let p = artifact.predict_proba(&row.features);
+        scored.push((p, row.label));
         let predicted = i32::from(p > 0.5);
         if predicted == row.label {
             correct += 1;
@@ -326,6 +400,24 @@ pub async fn run(db: &DbPool, model_id: Uuid) -> Result<(), AppError> {
     let baseline_accuracy = baseline_correct as f64 / holdout_total as f64;
     let beat_baseline = accuracy > baseline_accuracy;
 
+    let holdout_auc = auc(&scored);
+    let train_rows: Vec<Vec<f64>> = train.iter().map(|r| r.features.clone()).collect();
+    let profile = feature_profile(&train_rows);
+
+    // O1-T2: the version this run would replace, for comparison.
+    let previous: Option<(String, Option<serde_json::Value>)> =
+        sqlx::query_as("SELECT status, metrics FROM prediction_model WHERE id = $1")
+            .bind(model_id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    let previous_auc = previous
+        .as_ref()
+        .filter(|(status, _)| status == "active")
+        .and_then(|(_, m)| m.as_ref())
+        .and_then(|m| m["auc"].as_f64());
+    let keep_previous = matches!((previous_auc, holdout_auc), (Some(before), Some(now)) if now + KEEP_PREVIOUS_MARGIN < before);
+
     let metrics = json!({
         "train_size": train.len(),
         "holdout_size": holdout_total,
@@ -333,7 +425,29 @@ pub async fn run(db: &DbPool, model_id: Uuid) -> Result<(), AppError> {
         "baseline_accuracy": baseline_accuracy,
         "baseline_method": "majority_class",
         "beat_baseline": beat_baseline,
+        "auc": holdout_auc,
+        "previous_auc": previous_auc,
+        "kept_previous": keep_previous,
+        "feature_profile": profile,
+        "trained_at": chrono::Utc::now(),
     });
+    if keep_previous {
+        // The retrain is worse than the active version: keep that one's
+        // artifact and record why in its metrics history.
+        sqlx::query(
+            "UPDATE prediction_model \
+                SET metrics = metrics || jsonb_build_object('last_rejected_run', $2::jsonb), \
+                    updated_at = NOW(), row_version = row_version + 1 \
+              WHERE id = $1",
+        )
+        .bind(model_id)
+        .bind(&metrics)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
+        tracing::info!(model_id = %model_id, ?holdout_auc, ?previous_auc, "predict: retrain was worse; the previous version stays active");
+        return Ok(());
+    }
     let status = if beat_baseline {
         "active"
     } else {
@@ -396,6 +510,68 @@ pub async fn run(db: &DbPool, model_id: Uuid) -> Result<(), AppError> {
     );
     Ok(())
 }
+
+/// O1-T2: the weekly drift check. For every active model, compares each
+/// feature's mean over the most recent closed records with the profile
+/// stored at training and records the drifted features in its metrics
+/// (`drift`); returns how many models drifted.
+pub async fn drift_check(db: &DbPool) -> Result<usize, AppError> {
+    let models: Vec<(Uuid, Option<serde_json::Value>)> = sqlx::query_as(
+        "SELECT id, metrics FROM prediction_model WHERE status = 'active' ORDER BY id LIMIT 100",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    if models.is_empty() {
+        return Ok(0);
+    }
+    let recent: Vec<Vec<f64>> = crate::features::training_rows(db)
+        .await?
+        .into_iter()
+        .take(DRIFT_WINDOW)
+        .map(|r| r.features)
+        .collect();
+    let mut drifted_models = 0;
+    for (id, metrics) in models {
+        let profile: Vec<(f64, f64)> = metrics
+            .as_ref()
+            .and_then(|m| serde_json::from_value(m["feature_profile"].clone()).ok())
+            .unwrap_or_default();
+        if profile.is_empty() {
+            continue;
+        }
+        let keys: Vec<&str> = drifted(&profile, &recent, DRIFT_THRESHOLD)
+            .into_iter()
+            .filter_map(|k| crate::features::FEATURE_KEYS.get(k).copied())
+            .collect();
+        if !keys.is_empty() {
+            drifted_models += 1;
+        }
+        let drift = json!({
+            "checked_at": chrono::Utc::now(),
+            "window": recent.len(),
+            "drifted_features": keys,
+        });
+        sqlx::query(
+            "UPDATE prediction_model \
+                SET metrics = COALESCE(metrics, '{}'::jsonb) || jsonb_build_object('drift', $2::jsonb), \
+                    updated_at = NOW() \
+              WHERE id = $1",
+        )
+        .bind(id)
+        .bind(&drift)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    Ok(drifted_models)
+}
+
+/// How many of the most recent closed records the drift check reads.
+pub const DRIFT_WINDOW: usize = 200;
+
+/// O1-T2: the registered weekly drift job's name.
+pub const DRIFT_JOB: &str = "predict_drift_check";
 
 async fn fail_holdout(
     db: &DbPool,
@@ -482,6 +658,28 @@ mod tests {
                 }
             })
             .collect()
+    }
+
+    #[test]
+    fn auc_of_a_perfect_and_a_random_ranking() {
+        let perfect = [(0.9, 1), (0.8, 1), (0.2, 0), (0.1, 0)];
+        assert!((auc(&perfect).unwrap() - 1.0).abs() < 1e-9);
+        let inverted = [(0.1, 1), (0.2, 1), (0.8, 0), (0.9, 0)];
+        assert!(auc(&inverted).unwrap().abs() < 1e-9);
+        let tied = [(0.5, 1), (0.5, 0)];
+        assert!((auc(&tied).unwrap() - 0.5).abs() < 1e-9);
+        assert!(auc(&[(0.5, 1)]).is_none());
+    }
+
+    #[test]
+    fn drift_flags_a_moved_feature_only() {
+        let train = vec![vec![1.0, 10.0], vec![3.0, 10.0], vec![2.0, 10.0]];
+        let profile = feature_profile(&train);
+        assert!((profile[0].0 - 2.0).abs() < 1e-9);
+        let same = vec![vec![2.0, 10.0], vec![2.1, 10.0]];
+        assert!(drifted(&profile, &same, DRIFT_THRESHOLD).is_empty());
+        let moved = vec![vec![5.0, 10.0], vec![6.0, 11.0]];
+        assert_eq!(drifted(&profile, &moved, DRIFT_THRESHOLD), vec![0, 1]);
     }
 
     #[test]

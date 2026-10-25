@@ -2977,6 +2977,8 @@ const DEDUP_KEY_CONTENT_SITEMAP: &str = "content-sitemap";
 const DEDUP_KEY_FULFILMENT_SPLIT: &str = "fulfilment-split";
 /// F6-T14: late and stuck fulfilment orders (a registered job type).
 const DEDUP_KEY_FULFILMENT_EXCEPTIONS: &str = "fulfilment-exceptions";
+/// O1-T2: the weekly drift check of active prediction models.
+const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
 /// R11-T1: evidence collectors (a registered job type).
 const DEDUP_KEY_GRC_EVIDENCE: &str = "grc-evidence-collect";
@@ -3253,6 +3255,10 @@ pub const SECURITY_DETECTIONS: attome_jobs::JobType =
 /// F6-T3: confirmed orders split into fulfilment orders.
 pub const FULFILMENT_SPLIT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::split::JOB, 1);
+
+/// O1-T2: active prediction models checked for feature drift.
+pub const PREDICT_DRIFT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_predict::train::DRIFT_JOB, 1);
 
 /// F6-T14: late and stuck fulfilment orders raised as exceptions.
 pub const FULFILMENT_EXCEPTIONS: attome_jobs::JobType =
@@ -4144,6 +4150,28 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PREDICT_DRIFT,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if state
+                    .modules
+                    .load()
+                    .require(attome_modules::MODULE_PREDICT)
+                    .is_err()
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let drifted = attome_predict::train::drift_check(&state.base.db)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if drifted > 0 {
+                    tracing::warn!(drifted, "prediction models whose features drifted");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             FULFILMENT_EXCEPTIONS,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if state
@@ -4742,6 +4770,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == FULFILMENT_EXCEPTIONS.name => {
             DEDUP_KEY_FULFILMENT_EXCEPTIONS
         }
+        EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
         }
@@ -5725,6 +5754,21 @@ pub fn spawn_fulfilment_split_scheduler(db: DbPool, interval: std::time::Duratio
             "fulfilment split",
         ),
         Err(error) => tracing::error!(%error, "fulfilment split: not scheduled"),
+    }
+}
+
+/// O1-T2: weekly, active prediction models checked for drift.
+pub fn spawn_predict_drift_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PREDICT_DRIFT.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PREDICT_DRIFT,
+            "predict drift",
+        ),
+        Err(error) => tracing::error!(%error, "predict drift: not scheduled"),
     }
 }
 

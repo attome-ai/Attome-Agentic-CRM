@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Prediction model versions and drift (O1-T2): training records the holdout AUC and each feature's
+  mean and spread; a retrain more than 0.02 AUC worse than the active version is recorded and the
+  active version kept. A weekly job compares recent records with the stored profile and lists
+  drifted features in the model's metrics.
 - Revenue recognition patterns (F11-T5): point in time on delivery, ratable over service dates,
   milestone shares on completion, usage in its rated period, and percent complete as a catch-up
   (reversing when the cost estimate rises), each as amounts per fiscal period.
