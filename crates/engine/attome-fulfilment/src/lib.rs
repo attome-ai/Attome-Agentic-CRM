@@ -8,6 +8,8 @@
 pub mod atp;
 /// F6-T7: backorders and partial shipments.
 pub mod backorder;
+/// F6-T14: late and stuck orders as exceptions.
+pub mod exceptions;
 /// F6-T6: holds that stop a release, and releasing.
 pub mod hold;
 pub mod model;

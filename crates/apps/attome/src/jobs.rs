@@ -2975,6 +2975,8 @@ const DEDUP_KEY_GRC_POLICY_SWEEP: &str = "grc-policy-sweep";
 const DEDUP_KEY_SECURITY_DETECTIONS: &str = "security-detections";
 const DEDUP_KEY_CONTENT_SITEMAP: &str = "content-sitemap";
 const DEDUP_KEY_FULFILMENT_SPLIT: &str = "fulfilment-split";
+/// F6-T14: late and stuck fulfilment orders (a registered job type).
+const DEDUP_KEY_FULFILMENT_EXCEPTIONS: &str = "fulfilment-exceptions";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
 /// R11-T1: evidence collectors (a registered job type).
 const DEDUP_KEY_GRC_EVIDENCE: &str = "grc-evidence-collect";
@@ -3251,6 +3253,10 @@ pub const SECURITY_DETECTIONS: attome_jobs::JobType =
 /// F6-T3: confirmed orders split into fulfilment orders.
 pub const FULFILMENT_SPLIT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::split::JOB, 1);
+
+/// F6-T14: late and stuck fulfilment orders raised as exceptions.
+pub const FULFILMENT_EXCEPTIONS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_fulfilment::exceptions::JOB, 1);
 
 /// E13-T9: the stored sitemaps of sites whose pages changed, rebuilt.
 pub const CONTENT_SITEMAP: attome_jobs::JobType =
@@ -4138,6 +4144,28 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            FULFILMENT_EXCEPTIONS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if state
+                    .modules
+                    .load()
+                    .require(attome_modules::MODULE_FULFILMENT)
+                    .is_err()
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let opened = attome_fulfilment::exceptions::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if opened > 0 {
+                    tracing::info!(opened, "fulfilment exceptions opened");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             FULFILMENT_SPLIT,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if state
@@ -4710,6 +4738,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == CONTENT_SITEMAP.name => DEDUP_KEY_CONTENT_SITEMAP,
         EngineJob::Registered(job) if job.name == FULFILMENT_SPLIT.name => {
             DEDUP_KEY_FULFILMENT_SPLIT
+        }
+        EngineJob::Registered(job) if job.name == FULFILMENT_EXCEPTIONS.name => {
+            DEDUP_KEY_FULFILMENT_EXCEPTIONS
         }
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
@@ -5694,6 +5725,21 @@ pub fn spawn_fulfilment_split_scheduler(db: DbPool, interval: std::time::Duratio
             "fulfilment split",
         ),
         Err(error) => tracing::error!(%error, "fulfilment split: not scheduled"),
+    }
+}
+
+/// F6-T14: every 15 minutes, late and stuck fulfilment orders.
+pub fn spawn_fulfilment_exceptions_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(FULFILMENT_EXCEPTIONS.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_FULFILMENT_EXCEPTIONS,
+            "fulfilment exceptions",
+        ),
+        Err(error) => tracing::error!(%error, "fulfilment exceptions: not scheduled"),
     }
 }
 

@@ -426,6 +426,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(null),
         ),
+        // F6-T14: when an order counts as stuck.
+        SettingDescriptor::new(
+            "fulfilment.stuck_hours",
+            "How many hours a fulfilment order may stay in one open status before it is raised as \
+         a stuck exception (F6-T14). 48 by default.",
+            || json!({"type": "integer", "minimum": 1, "maximum": 720}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(48),
+        ),
         // F11-T4: the SSP fallbacks.
         SettingDescriptor::new(
             "revrec.ssp_list_discount_percent",

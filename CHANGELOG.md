@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Fulfilment exceptions (F6-T14): every 15 minutes a released, picking or packed order past its
+  promised date opens a `late` exception, and an order left in one open status longer than
+  `fulfilment.stuck_hours` (48) opens a `stuck` one, never two open of a kind per order, each with a
+  suggested action. The fulfilment pack adds an Open fulfilment exceptions view.
 - Picking and packing (F6-T8): `GET /api/v1/fulfilment/orders/{id}/pick-list` groups the goods still
   to ship by product, and `POST /api/v1/fulfilment/orders/{id}/packages` records the packages as a
   shipment with its lines and marks the order packed. The fulfilment pack adds Packing slip and
