@@ -244,6 +244,15 @@ fn combine_refused_after_lock() {
         .await
         .unwrap();
 
+        // F11-T11: the revenue routes need revrec.basic on.
+        let (status, body) = app
+            .request(
+                Method::PUT,
+                "/api/v1/admin/features/revrec.basic",
+                Some(json!({"deployment": true, "user_overrides": {}, "role_overrides": {}, "percentage": null})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
         let path = "/api/v1/ledger/revrec/contracts/combine";
         let (status, body) = app
             .request(

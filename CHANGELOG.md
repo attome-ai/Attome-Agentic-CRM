@@ -199,6 +199,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Revenue recognition switches and roles (F11-T11): flags `revrec.basic`, `revrec.contracts`,
+  `revrec.ssp_allocation`, `revrec.usage_completion`, `revrec.change_rules` and `revrec.disclosure`, all off
+  by default (the others need `revrec.basic`; the old `revrec.contracts` setting is gone); the revenue routes
+  answer 404 while `revrec.basic` is off; ledger pack `0005` adds the Revenue Accountant, Revenue Controller
+  and Revenue Auditor roles.
 - A `time` field type (A2-T1): a time of day in a `TIME` column (`HH:MM` or `HH:MM:SS`), OData
   `Edm.TimeOfDay`, OpenAPI `format: time`, a time input on forms; not yet usable in rule conditions.
 - Visitors identified on form submit (E14-T7): with `marketing.tracking_identify` on and marketing

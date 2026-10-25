@@ -12,7 +12,9 @@
 //! `"feature.{key}"` in `setting_catalog.rs`'s `feature_flag_settings()` —
 //! `FeatureFlagRegistry::new()` asserts this at boot.
 
-use attome_modules::{MODULE_CONTENT, MODULE_CORE, MODULE_MARKETING, MODULE_PROJECT, MODULE_SALES};
+use attome_modules::{
+    MODULE_CONTENT, MODULE_CORE, MODULE_LEDGER, MODULE_MARKETING, MODULE_PROJECT, MODULE_SALES,
+};
 
 use crate::feature_flag_descriptor::FeatureFlag;
 
@@ -23,7 +25,57 @@ pub(crate) fn all() -> Vec<FeatureFlag> {
     all.extend(e14_flags());
     all.extend(d6_flags());
     all.extend(d7_flags());
+    all.extend(f11_flags());
     all
+}
+
+/// F11-T11: revenue recognition stays off until switched on; every part of
+/// it needs `revrec.basic`.
+fn f11_flags() -> Vec<FeatureFlag> {
+    vec![
+        FeatureFlag::new(
+            "revrec.basic",
+            MODULE_LEDGER,
+            "Revenue recognition: revenue contracts, schedules and the revenue routes.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "revrec.contracts",
+            MODULE_LEDGER,
+            "A confirmed order or an active subscription gets its revenue contract and obligations, built in the background.",
+            false,
+            &["revrec.basic"],
+        ),
+        FeatureFlag::new(
+            "revrec.ssp_allocation",
+            MODULE_LEDGER,
+            "A contract's price is allocated across its obligations by standalone selling price.",
+            false,
+            &["revrec.basic"],
+        ),
+        FeatureFlag::new(
+            "revrec.usage_completion",
+            MODULE_LEDGER,
+            "Usage and percent-complete obligations recognise from measured progress.",
+            false,
+            &["revrec.basic"],
+        ),
+        FeatureFlag::new(
+            "revrec.change_rules",
+            MODULE_LEDGER,
+            "Contract changes are treated as a separate contract, a prospective change or a catch-up.",
+            false,
+            &["revrec.basic"],
+        ),
+        FeatureFlag::new(
+            "revrec.disclosure",
+            MODULE_LEDGER,
+            "The revenue disclosure reports (disaggregation, contract balances, remaining obligations).",
+            false,
+            &["revrec.basic"],
+        ),
+    ]
 }
 
 /// D6-T13: opportunity lines and what builds on them stay off until
@@ -294,6 +346,29 @@ mod tests {
             registry.get("sales.splits").map(|f| f.requires),
             Some(&["sales.deal_teams"][..])
         );
+    }
+
+    /// F11-T11: the revenue recognition flags exist, are off, and need
+    /// `revrec.basic`.
+    #[test]
+    fn revrec_flags_registered_and_off_by_default() {
+        let registry = crate::feature_flag_descriptor::registry();
+        for key in [
+            "revrec.basic",
+            "revrec.contracts",
+            "revrec.ssp_allocation",
+            "revrec.usage_completion",
+            "revrec.change_rules",
+            "revrec.disclosure",
+        ] {
+            let flag = registry
+                .get(key)
+                .unwrap_or_else(|| panic!("{key} is registered"));
+            assert!(!flag.default, "{key} is off by default");
+            if key != "revrec.basic" {
+                assert_eq!(flag.requires, &["revrec.basic"][..], "{key}");
+            }
+        }
     }
 
     /// E13-T2: the SEO flags exist and are off until switched on.

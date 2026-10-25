@@ -42,6 +42,9 @@ use sqlx::{PgConnection, Postgres, Transaction};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+/// F11-T11: the flag that turns allocation by SSP on.
+pub const ALLOCATION_FLAG: &str = "revrec.ssp_allocation";
+
 /// The setting: percent taken off the list price for an SSP.
 pub const LIST_DISCOUNT_SETTING: &str = "revrec.ssp_list_discount_percent";
 /// The setting: percent added to cost for an SSP.
@@ -446,6 +449,14 @@ pub(crate) async fn set_ssp(
     ctx: Authorized<Privilege<SspEntryCreate>>,
     Json(body): Json<NewSsp>,
 ) -> Result<Json<SspVersion>, AppError> {
+    // F11-T11: off, revenue recognition is not there.
+    if !state
+        .feature_flags()
+        .is_on(crate::revrec::contract::BASIC_FLAG, &ctx)
+        .await
+    {
+        return Err(AppError::NotFound);
+    }
     check_new_ssp(&body).map_err(AppError::Validation)?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")

@@ -156,6 +156,9 @@ and allocations; the `ssp_entry` price list; the `revenue_schedule_line`s per fi
 `contract_change` with its treatment; `revrec_close_run` and `revenue_balance_snapshot`. It builds on
 crm (`account`) and sales (`product`); install it after them. `0004` records on each obligation
 how its standalone selling price was found (`ssp_method`) and the `ssp_entry` version it used (F11-T4).
+`0005` adds the Revenue Accountant (contracts, obligations, schedules and changes, not prices), Revenue
+Controller (all of revenue recognition) and Revenue Auditor (read only, the ledger included) roles
+(F11-T11). Revenue recognition stays off until the `revrec.*` flags are switched on.
 
 ## procurement
 

@@ -1,0 +1,722 @@
+{
+  "author": "packs",
+  "checksum": "sha256:b306ca920049b01838a7a2d4abadd337217451c063992da52937a6b5f93400d1",
+  "closed_at": "2026-10-25T00:00:00Z",
+  "description": "Revenue roles (F11-T11): the revenue accountant (contracts, obligations, schedules and changes, not standalone selling prices), the revenue controller (all of revenue recognition, prices and period close included) and the revenue auditor (read only, the ledger included).",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d19-7e17-9b17-17c017c017f6",
+  "layer": "product",
+  "name": "ledger-revenue-roles",
+  "opened_at": "2026-10-25T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Revenue accountant (ledger pack): builds and maintains revenue contracts and schedules; cannot set standalone selling prices.",
+          "is_customized": false,
+          "name": "Revenue Accountant",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "contract_change.create",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "contract_change.read",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "contract_change.update",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "performance_obligation.create",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "performance_obligation.read",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "performance_obligation.update",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "revenue_balance_snapshot.read",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "revenue_contract.create",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "revenue_contract.read",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "revenue_contract.update",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "revenue_rule.read",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "revenue_schedule_line.create",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "revenue_schedule_line.read",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "revenue_schedule_line.update",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "revrec_close_run.create",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "revrec_close_run.read",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "ssp_entry.read",
+        "role": "Revenue Accountant"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Revenue controller (ledger pack): everything the accountant does, plus revenue rules, standalone selling prices and closing periods.",
+          "is_customized": false,
+          "name": "Revenue Controller",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "contract_change.create",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "contract_change.read",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "contract_change.update",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "privilege": "performance_obligation.create",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "privilege": "performance_obligation.read",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "privilege": "performance_obligation.update",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "privilege": "revenue_balance_snapshot.create",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "privilege": "revenue_balance_snapshot.read",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "privilege": "revenue_balance_snapshot.update",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "privilege": "revenue_contract.create",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "privilege": "revenue_contract.read",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "privilege": "revenue_contract.update",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "privilege": "revenue_rule.create",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "privilege": "revenue_rule.read",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "privilege": "revenue_rule.update",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "privilege": "revenue_schedule_line.create",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "privilege": "revenue_schedule_line.read",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "privilege": "revenue_schedule_line.update",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "privilege": "revrec_close_run.create",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "privilege": "revrec_close_run.read",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "privilege": "revrec_close_run.update",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "privilege": "ssp_entry.create",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "privilege": "ssp_entry.read",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "privilege": "ssp_entry.update",
+        "role": "Revenue Controller"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Revenue auditor (ledger pack): reads revenue recognition and the ledger; changes nothing.",
+          "is_customized": false,
+          "name": "Revenue Auditor",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "privilege": "contract_change.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "privilege": "gl_account.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "privilege": "gl_entry.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "privilege": "gl_entry_line.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "privilege": "gl_journal.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "privilege": "gl_period.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "privilege": "performance_obligation.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "privilege": "revenue_balance_snapshot.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "privilege": "revenue_contract.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "privilege": "revenue_rule.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "privilege": "revenue_schedule_line.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "privilege": "revrec_close_run.read",
+        "role": "Revenue Auditor"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "privilege": "ssp_entry.read",
+        "role": "Revenue Auditor"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "ledger",
+  "seq": 5,
+  "title": "Pack: revenue accountant, controller and auditor roles"
+}

@@ -31,8 +31,10 @@ use sqlx::{Postgres, Transaction};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// The setting that turns contract creation on.
-pub const CONTRACTS_SETTING: &str = "revrec.contracts";
+/// F11-T11: the flag that turns contract creation on.
+pub const CONTRACTS_FLAG: &str = "revrec.contracts";
+/// F11-T11: the flag every revenue route needs.
+pub const BASIC_FLAG: &str = "revrec.basic";
 /// The change-feed consumer.
 pub const CONSUMER: &str = "attome-ledger/revrec-contracts";
 /// Change events read per sweep.
@@ -91,11 +93,7 @@ pub fn shares(amount: Decimal, weights: &[Decimal]) -> Vec<Decimal> {
 
 /// Whether contract creation is on.
 pub fn enabled(state: &EngineState) -> bool {
-    attome_core::setting_registry()
-        .get(CONTRACTS_SETTING)
-        .map(|d| state.settings.load().resolve(d, None, None).0)
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false)
+    state.feature_flags().is_on_for_deployment(CONTRACTS_FLAG)
 }
 
 /// Queues a contract build for each order now confirmed and each
@@ -184,13 +182,18 @@ pub async fn build_from_source(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let built = build_in(&mut tx, source_kind, source_id).await?;
     // F11-T4: the price allocated by standalone selling price.
-    crate::revrec::allocation::allocate_contract(
-        &mut tx,
-        built.contract,
-        chrono::Utc::now().date_naive(),
-        &crate::revrec::allocation::fallback(state),
-    )
-    .await?;
+    if state
+        .feature_flags()
+        .is_on_for_deployment(crate::revrec::allocation::ALLOCATION_FLAG)
+    {
+        crate::revrec::allocation::allocate_contract(
+            &mut tx,
+            built.contract,
+            chrono::Utc::now().date_naive(),
+            &crate::revrec::allocation::fallback(state),
+        )
+        .await?;
+    }
     attome_db::tx::commit(tx).await?;
     Ok(built)
 }
@@ -440,6 +443,10 @@ pub(crate) async fn combine(
     ctx: Authorized<Privilege<RevenueContractUpdate>>,
     Json(body): Json<CombineContractsBody>,
 ) -> Result<Json<CombinedContract>, AppError> {
+    // F11-T11: off, revenue recognition is not there.
+    if !state.feature_flags().is_on(BASIC_FLAG, &ctx).await {
+        return Err(AppError::NotFound);
+    }
     check_combine(&body.contract_ids).map_err(AppError::Validation)?;
     let keep = body.contract_ids[0];
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

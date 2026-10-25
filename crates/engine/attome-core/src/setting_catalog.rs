@@ -415,17 +415,6 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(true),
         ),
-        // F11-T3: revenue contracts from orders and subscriptions.
-        SettingDescriptor::new(
-            "revrec.contracts",
-            "Whether a confirmed order or an active subscription gets its revenue contract and \
-         performance obligations, built in the background after the change (F11-T3). Off by \
-         default.",
-            || json!({"type": "boolean"}),
-            &[SettingScope::Deployment],
-            false,
-            || json!(false),
-        ),
         // F6-T3: where a confirmed order ships from until sourcing does it.
         SettingDescriptor::new(
             "fulfilment.default_location_id",
@@ -1130,6 +1119,30 @@ fn feature_flag_settings() -> Vec<SettingDescriptor> {
         )
     };
     vec![
+        scan(
+            "feature.revrec.basic",
+            "Stored policy value for the revrec.basic feature flag (F11-T11).",
+        ),
+        scan(
+            "feature.revrec.contracts",
+            "Stored policy value for the revrec.contracts feature flag (F11-T11).",
+        ),
+        scan(
+            "feature.revrec.ssp_allocation",
+            "Stored policy value for the revrec.ssp_allocation feature flag (F11-T11).",
+        ),
+        scan(
+            "feature.revrec.usage_completion",
+            "Stored policy value for the revrec.usage_completion feature flag (F11-T11).",
+        ),
+        scan(
+            "feature.revrec.change_rules",
+            "Stored policy value for the revrec.change_rules feature flag (F11-T11).",
+        ),
+        scan(
+            "feature.revrec.disclosure",
+            "Stored policy value for the revrec.disclosure feature flag (F11-T11).",
+        ),
         scan(
             "feature.scan.enabled",
             "Stored policy value for the scan.enabled feature flag (B16-T9), same shape as \
