@@ -27,6 +27,12 @@ pub struct Pacer {
     windows: Mutex<HashMap<String, (Instant, u32)>>,
 }
 
+impl std::fmt::Debug for Pacer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Pacer").finish_non_exhaustive()
+    }
+}
+
 impl Pacer {
     /// Takes one send from every `(key, per_minute)` window, or none of them
     /// when any is full; then answers how long until the fullest one turns.

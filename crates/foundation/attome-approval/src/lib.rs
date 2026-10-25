@@ -2576,7 +2576,7 @@ pub async fn sweep_expired_report_at(
 
 /// One row's worth of [`sweep_expired_report_with`].
 enum SweepStep {
-    Expired(ApprovalRequest),
+    Expired(Box<ApprovalRequest>),
     /// No more due rows (or the row was taken by a concurrent sweep).
     Done,
     /// This row could not be expired; everything it wrote is rolled back.
@@ -2652,7 +2652,7 @@ async fn expire_one(
         return Ok(SweepStep::Failed(id, AppError::internal(e)));
     }
     log_transition(&expired, ApprovalStatus::Pending);
-    Ok(SweepStep::Expired(expired))
+    Ok(SweepStep::Expired(Box::new(expired)))
 }
 
 /// D-421 — the read half of the per-step timeout sweep: the ids of pending,
