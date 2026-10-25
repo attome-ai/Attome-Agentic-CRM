@@ -25,6 +25,8 @@ pub mod error;
 pub mod evidence;
 /// AB4-T9: how fresh each kind of drill is.
 pub mod freshness;
+/// AB3-T2: the live recovery point from three sources.
+pub mod live_rpo;
 pub mod model;
 /// AB3-T1: recovery targets per profile and scenario, with their proof.
 pub mod recovery_targets;
@@ -54,6 +56,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(freshness::openapi_fragment());
     doc.merge(recovery_targets::openapi_fragment());
     doc.merge(dr_runbook::openapi_fragment());
+    doc.merge(live_rpo::openapi_fragment());
     doc.merge(switchover::openapi_fragment());
     doc
 }

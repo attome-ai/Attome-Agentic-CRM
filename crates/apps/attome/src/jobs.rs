@@ -2988,6 +2988,8 @@ const DEDUP_KEY_OPS_CLUSTER_POLL: &str = "ops-cluster-poll";
 const DEDUP_KEY_OPS_DRILL_SKIP_CHECK: &str = "ops-drill-skip-check";
 /// AB4-T9: the daily drill freshness notice (a registered job type).
 const DEDUP_KEY_OPS_DRILL_FRESHNESS: &str = "ops-drill-freshness";
+/// AB3-T2: the one-minute live recovery point (a registered job type).
+const DEDUP_KEY_OPS_LIVE_RPO: &str = "ops-live-rpo";
 /// Z8-T4: the daily sending-domain check (a registered job type).
 const DEDUP_KEY_EMAIL_DOMAIN_CHECK: &str = "email-domain-check";
 /// Z12-T8: the daily calendar feed fetch (a registered job type).
@@ -3301,6 +3303,10 @@ pub const OPS_DRILL_SKIP_CHECK: attome_jobs::JobType =
 /// AB4-T9: stale or failed drill kinds told to `ops.read` holders, daily.
 pub const OPS_DRILL_FRESHNESS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ops::freshness::JOB, 1);
+
+/// AB3-T2: the live recovery point, every minute.
+pub const OPS_LIVE_RPO: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ops::live_rpo::JOB, 1);
 
 /// Z8-T4: every configured sending domain's DNS records, daily.
 pub const EMAIL_DOMAIN_CHECK: attome_jobs::JobType =
@@ -4367,6 +4373,28 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            OPS_LIVE_RPO,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if state
+                    .modules
+                    .load()
+                    .require(attome_modules::MODULE_OPS)
+                    .is_err()
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let turned = attome_ops::live_rpo::run(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if turned > 0 {
+                    tracing::warn!(turned, "live recovery point over its target");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             OPS_DRILL_FRESHNESS,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if state
@@ -4982,6 +5010,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == OPS_DRILL_FRESHNESS.name => {
             DEDUP_KEY_OPS_DRILL_FRESHNESS
         }
+        EngineJob::Registered(job) if job.name == OPS_LIVE_RPO.name => DEDUP_KEY_OPS_LIVE_RPO,
         EngineJob::Registered(job) if job.name == EMAIL_DOMAIN_CHECK.name => {
             DEDUP_KEY_EMAIL_DOMAIN_CHECK
         }
@@ -6061,6 +6090,21 @@ pub fn spawn_ops_cluster_scheduler(db: DbPool, interval: std::time::Duration) {
             "ops cluster poll",
         ),
         Err(error) => tracing::error!(%error, "ops cluster poll: not scheduled"),
+    }
+}
+
+/// AB3-T2: every minute, the live recovery point.
+pub fn spawn_ops_live_rpo_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(OPS_LIVE_RPO.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_OPS_LIVE_RPO,
+            "ops live rpo",
+        ),
+        Err(error) => tracing::error!(%error, "ops live rpo: not scheduled"),
     }
 }
 

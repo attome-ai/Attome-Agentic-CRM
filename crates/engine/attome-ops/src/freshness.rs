@@ -256,6 +256,45 @@ pub fn message(f: &Freshness) -> (String, String) {
     (subject, body)
 }
 
+/// Sends `subject` and `body` to every holder of `ops.read` (the drill
+/// freshness notice, and AB3-T2's live recovery point). A failed dispatch
+/// to one person is logged, not fatal.
+pub(crate) async fn notify_readers(
+    state: &EngineState,
+    subject: &str,
+    body: &str,
+) -> Result<(), AppError> {
+    let db = &state.base.db;
+    for user in privilege_holders(db, OpsRead::KEY).await? {
+        let request = attome_notification::dispatch::DispatchRequest {
+            template_key: None,
+            locale: "en".to_owned(),
+            recipient_user_ref: Some(user),
+            is_global: false,
+            organization_ref: None,
+            channels: None,
+            subject: Some(subject.to_owned()),
+            body_html: None,
+            body_text: Some(body.to_owned()),
+            route: Some("/xrm/ops".to_owned()),
+            variables: HashMap::new(),
+            priority: "high".to_owned(),
+            escalate_after_minutes: None,
+            escalate_channels: None,
+        };
+        if let Err(error) = attome_notification::dispatch::create_dispatch(
+            db,
+            &state.base.config.notification,
+            request,
+        )
+        .await
+        {
+            tracing::error!(%error, %user, "ops notification failed");
+        }
+    }
+    Ok(())
+}
+
 /// The daily check: one notification per stale or failed kind to every
 /// holder of `ops.read`; answers how many kinds were reported.
 pub async fn notify_stale(state: &EngineState) -> Result<usize, AppError> {
@@ -268,37 +307,10 @@ pub async fn notify_stale(state: &EngineState) -> Result<usize, AppError> {
     if bad.is_empty() {
         return Ok(0);
     }
-    let recipients = privilege_holders(db, OpsRead::KEY).await?;
     for f in &bad {
         let (subject, body) = message(f);
         tracing::warn!(kind = %f.kind, status = %f.status, "recovery drill needs attention");
-        for user in &recipients {
-            let request = attome_notification::dispatch::DispatchRequest {
-                template_key: None,
-                locale: "en".to_owned(),
-                recipient_user_ref: Some(*user),
-                is_global: false,
-                organization_ref: None,
-                channels: None,
-                subject: Some(subject.clone()),
-                body_html: None,
-                body_text: Some(body.clone()),
-                route: Some("/xrm/ops".to_owned()),
-                variables: HashMap::new(),
-                priority: "high".to_owned(),
-                escalate_after_minutes: None,
-                escalate_channels: None,
-            };
-            if let Err(error) = attome_notification::dispatch::create_dispatch(
-                db,
-                &state.base.config.notification,
-                request,
-            )
-            .await
-            {
-                tracing::error!(%error, %user, kind = %f.kind, "drill freshness notification failed");
-            }
-        }
+        notify_readers(state, &subject, &body).await?;
     }
     Ok(bad.len())
 }

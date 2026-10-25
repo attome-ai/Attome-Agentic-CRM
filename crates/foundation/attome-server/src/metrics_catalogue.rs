@@ -857,6 +857,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "قيمة 1 عندما يستجيب مخزن الملفات.",
     },
     MetricInfo {
+        name: "ops_live_rpo_seconds",
+        kind: "gauge",
+        unit: "seconds",
+        en: "Live recovery point: data a disaster now would lose, by source (wal_archive, standby, backup).",
+        ar: "نقطة الاستعادة الحية: البيانات التي ستُفقد لو وقعت كارثة الآن، حسب المصدر.",
+    },
+    MetricInfo {
         name: "outbound_breaker_state",
         kind: "gauge",
         unit: "state",

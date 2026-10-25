@@ -31,6 +31,7 @@ impl EngineModel for OpsModel {
             .merge(crate::freshness::routes())
             .merge(crate::recovery_targets::routes())
             .merge(crate::dr_runbook::routes())
+            .merge(crate::live_rpo::routes())
             .merge(crate::switchover::routes())
     }
 }

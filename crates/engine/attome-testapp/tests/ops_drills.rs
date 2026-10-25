@@ -642,3 +642,31 @@ fn the_dr_runbook_answers_in_both_languages() {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     });
 }
+
+#[test]
+fn the_live_rpo_names_three_sources_with_their_targets() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        let (status, page) = app.request(Method::GET, "/api/v1/ops/rpo", None).await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        let sources: Vec<&str> = page["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s["source"].as_str().unwrap())
+            .collect();
+        assert_eq!(sources, ["wal_archive", "standby", "backup"]);
+        for s in page["items"].as_array().unwrap() {
+            assert!(
+                ["ok", "over", "off"].contains(&s["status"].as_str().unwrap()),
+                "{s}"
+            );
+            assert!(
+                s["target_seconds"].is_i64(),
+                "the solo profile's target: {s}"
+            );
+        }
+    });
+}
