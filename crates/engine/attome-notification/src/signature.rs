@@ -141,7 +141,10 @@ async fn write(
     })
 }
 
-/// The caller's own email signature (J1-T1).
+/// The caller's email signature
+///
+/// The signature appended to the record emails the caller composes or
+/// replies to, or none (J1-T1).
 #[utoipa::path(
     get,
     path = "/api/v1/me/email-signature",
@@ -159,7 +162,10 @@ async fn get_my_signature(
     Ok(Json(read(&state.base.db, ctx.user_id).await?))
 }
 
+/// Set the caller's email signature
+///
 /// Sets the caller's own email signature (J1-T1); an empty body clears it.
+/// Send the current `row_version`.
 #[utoipa::path(
     put,
     path = "/api/v1/me/email-signature",

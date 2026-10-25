@@ -53,7 +53,10 @@ pub struct BreakGlassBody {
     pub reason: String,
 }
 
+/// Set a role's sign-in policy
+///
 /// Sets whether a role signs in only through single sign-on (Q1-T7).
+/// Administrators only.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/security/roles/{id}/auth-policy",
@@ -116,6 +119,8 @@ async fn put_role_auth_policy(
     }))
 }
 
+/// Add a break-glass account
+///
 /// Makes a user a break-glass account (Q1-T7). The user must have a
 /// confirmed authenticator.
 #[utoipa::path(
@@ -194,6 +199,8 @@ async fn add_break_glass(
     Ok(StatusCode::CREATED)
 }
 
+/// Remove a break-glass account
+///
 /// Removes a break-glass account (Q1-T7); refused while it is the last one
 /// and an SSO-only rule is in force.
 #[utoipa::path(
