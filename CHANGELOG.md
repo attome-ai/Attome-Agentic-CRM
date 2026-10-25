@@ -199,6 +199,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Promised dates (F6-T5): when an order is split, each goods line is promised from the location's free
+  stock (today plus a handling day), the first incoming receipt that covers it, or a 7-day lead time when
+  stock is not tracked; the fulfilment order gets the latest line's date and short lines their expected
+  date. Stock comes through a seam the inventory engine registers (`attome_core::stock_seam`).
 - Fulfilment holds (F6-T6): releasing a fulfilment order (`POST /api/v1/fulfilment/orders/{id}/release`)
   first opens the holds it should carry (credit when the customer's credit check refuses the order,
   prepayment for prepaid terms, address for goods with no delivery address) and is refused while any is

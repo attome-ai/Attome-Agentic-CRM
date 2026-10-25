@@ -231,6 +231,9 @@ pub struct EngineState {
     /// implementation is registered — `workflow.start` then answers as
     /// absent, never as a silent no-op (`workflow_start.rs`).
     pub workflow_starter: Option<Arc<dyn crate::workflow_start::WorkflowStarter>>,
+    /// F6-T5 — the stock seam the inventory engine registers on the
+    /// builder; `None` (no inventory) means stock is not tracked.
+    pub stock_source: Option<Arc<dyn crate::stock_seam::StockSource>>,
     /// U10-T2 — the settings API's write, registered by `attome-api` on the
     /// builder so the settings agent tool writes as the admin route does.
     /// `None` on a bare state (`settings_write.rs`).
@@ -330,6 +333,7 @@ impl EngineState {
             feature_flags: create_hot_cache(10_000, 30),
             my_work_providers: Arc::new(Vec::new()),
             workflow_starter: None,
+            stock_source: None,
             settings_writer: None,
             workflow_step_handlers: Arc::new(std::collections::HashMap::new()),
             workflow_kind_guards: Arc::new(std::collections::HashMap::new()),

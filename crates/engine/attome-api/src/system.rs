@@ -89,6 +89,7 @@ pub struct EngineSystemBuilder {
     notifications: Arc<dyn NotificationService>,
     my_work_providers: Vec<Box<dyn MyWorkProvider>>,
     workflow_starter: Option<Arc<dyn attome_core::WorkflowStarter>>,
+    stock_source: Option<Arc<dyn attome_core::stock_seam::StockSource>>,
     workflow_step_handlers: std::collections::HashMap<
         &'static str,
         Arc<dyn attome_core::workflow_step::WorkflowStepHandler>,
@@ -116,6 +117,7 @@ impl EngineSystem {
             notifications: Arc::new(NoopNotifications),
             my_work_providers: Vec::new(),
             workflow_starter: None,
+            stock_source: None,
             workflow_step_handlers: std::collections::HashMap::new(),
             workflow_kind_guards: std::collections::HashMap::new(),
         }
@@ -822,6 +824,15 @@ impl EngineSystemBuilder {
     /// `register_my_work_provider` this carries no licence gate of its own —
     /// the caller checks `MODULE_WORKFLOW` and the admin boundary before
     /// starting anything.
+    /// F6-T5: the stock seam, registered by the inventory engine.
+    pub fn register_stock_source(
+        mut self,
+        source: impl attome_core::stock_seam::StockSource + 'static,
+    ) -> Self {
+        self.stock_source = Some(Arc::new(source));
+        self
+    }
+
     pub fn register_workflow_starter(
         mut self,
         starter: impl attome_core::WorkflowStarter + 'static,
@@ -900,6 +911,8 @@ impl EngineSystemBuilder {
         state.my_work_providers = std::sync::Arc::new(self.my_work_providers);
         // C5 — the registered `WorkflowStarter`, frozen the same way.
         state.workflow_starter = self.workflow_starter;
+        // F6-T5 — the stock seam, frozen the same way.
+        state.stock_source = self.stock_source;
         // U10-T2: the settings agent tool writes through the settings API.
         state.settings_writer = Some(Arc::new(crate::settings_admin::ApiSettingsWriter));
         // E8-T1 — the registered step handlers and kind guards, frozen the

@@ -104,6 +104,51 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
         tracing::warn!(%order, "fulfilment split: no ship-from location; set fulfilment.default_location_id");
         return Ok(0);
     };
+    // The lines and their promises are read before the transaction: the
+    // stock seam may do its own reads, never while the split holds its lock.
+    let rows: Vec<(Uuid, Option<Uuid>, Option<f64>)> = sqlx::query_as(
+        "SELECT id, product_ref, quantity::float8 FROM order_line \
+          WHERE order_ref = $1 AND (is_active IS NULL OR is_active = true) ORDER BY id",
+    )
+    .bind(order)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let lines: Vec<OrderLine> = rows
+        .into_iter()
+        .map(|(id, product, quantity)| OrderLine {
+            id,
+            product,
+            quantity: quantity.unwrap_or(1.0),
+            delivery_group: None,
+        })
+        .collect();
+    let planned = groups(&lines, location);
+    let today = chrono::Utc::now().date_naive();
+    let mut promises: std::collections::HashMap<Uuid, crate::atp::Promise> =
+        std::collections::HashMap::new();
+    for group in &planned {
+        for (line, kind) in &group.lines {
+            let Some(product) = line.product.filter(|_| *kind == "goods") else {
+                continue;
+            };
+            let avail = match &state.stock_source {
+                Some(source) => source.available(product, group.location).await?,
+                None => None,
+            };
+            let qty = rust_decimal::Decimal::from_f64_retain(line.quantity)
+                .unwrap_or(rust_decimal::Decimal::ONE);
+            promises.insert(
+                line.id,
+                crate::atp::promised_date(
+                    qty,
+                    avail.as_ref(),
+                    today,
+                    crate::atp::DEFAULT_LEAD_DAYS,
+                ),
+            );
+        }
+    }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
         .bind(crate::ADVISORY_LOCK_NAMESPACE)
@@ -135,36 +180,25 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
     let Some(owner) = owner else {
         return Ok(0);
     };
-    let rows: Vec<(Uuid, Option<Uuid>, Option<f64>)> = sqlx::query_as(
-        "SELECT id, product_ref, quantity::float8 FROM order_line \
-          WHERE order_ref = $1 AND (is_active IS NULL OR is_active = true) ORDER BY id",
-    )
-    .bind(order)
-    .fetch_all(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
-    let lines: Vec<OrderLine> = rows
-        .into_iter()
-        .map(|(id, product, quantity)| OrderLine {
-            id,
-            product,
-            quantity: quantity.unwrap_or(1.0),
-            delivery_group: None,
-        })
-        .collect();
-    let planned = groups(&lines, location);
     for group in &planned {
         let fulfilment_order = Uuid::now_v7();
+        // F6-T5: the order is promised for its latest goods line.
+        let promised = group
+            .lines
+            .iter()
+            .filter_map(|(line, _)| promises.get(&line.id).map(|p| p.date()))
+            .max();
         sqlx::query(
             "INSERT INTO fulfilment_order (id, order_ref, location_ref, delivery_group, status, \
-                 ship_policy, created_by, owner_ref) \
-             VALUES ($1, $2, $3, $4, 'draft', 'ship_as_available', $5, $5)",
+                 ship_policy, promised_date, created_by, owner_ref) \
+             VALUES ($1, $2, $3, $4, 'draft', 'ship_as_available', $6, $5, $5)",
         )
         .bind(fulfilment_order)
         .bind(order)
         .bind(group.location)
         .bind(&group.delivery_group)
         .bind(owner)
+        .bind(promised)
         .execute(&mut *tx)
         .await
         .map_err(AppError::internal)?;
@@ -180,8 +214,8 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
             sqlx::query(
                 "INSERT INTO fulfilment_order_line (id, fulfilment_order_ref, order_line_ref, \
                      product_ref, quantity, quantity_shipped, quantity_delivered, \
-                     quantity_backordered, line_kind, created_by, owner_ref) \
-                 VALUES ($1, $2, $3, $4, $5, 0, 0, 0, $6, $7, $7)",
+                     quantity_backordered, line_kind, expected_date, created_by, owner_ref) \
+                 VALUES ($1, $2, $3, $4, $5, 0, 0, 0, $6, $8, $7, $7)",
             )
             .bind(id)
             .bind(fulfilment_order)
@@ -190,6 +224,13 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
             .bind(line.quantity)
             .bind(kind)
             .bind(owner)
+            // F6-T5: a line short of stock records when it is expected.
+            .bind(
+                promises
+                    .get(&line.id)
+                    .filter(|p| p.is_short())
+                    .map(|p| p.date()),
+            )
             .execute(&mut *tx)
             .await
             .map_err(AppError::internal)?;

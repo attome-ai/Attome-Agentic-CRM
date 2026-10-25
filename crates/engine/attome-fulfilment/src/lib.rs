@@ -4,6 +4,8 @@
 //! matching pack; this crate holds the engine code that acts on them as later tasks add it. Gated
 //! on the `fulfilment` module.
 
+/// F6-T5: available-to-promise dates.
+pub mod atp;
 /// F6-T6: holds that stop a release, and releasing.
 pub mod hold;
 pub mod model;
