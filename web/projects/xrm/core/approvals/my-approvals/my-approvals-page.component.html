@@ -20,9 +20,29 @@
     <p>{{ 'myApprovals.empty' | translate }}</p>
   </div>
 } @else {
+  @if (selected().size > 0) {
+    <div class="ma-bulk" role="region" [attr.aria-label]="'myApprovals.bulk.region' | translate" data-testid="my-approvals-bulk">
+      <span>{{ 'myApprovals.bulk.selected' | translate: { count: selected().size, max: bulkMax } }}</span>
+      <button type="button" class="btn-sm btn-sm-accent" data-testid="my-approvals-bulk-approve"
+              [disabled]="bulkBusy()" (click)="bulkDecide('approve')">
+        <i class="las la-check" aria-hidden="true"></i> {{ 'myApprovals.bulk.approve' | translate }}
+      </button>
+      <button type="button" class="btn-sm btn-sm-danger" data-testid="my-approvals-bulk-reject"
+              [disabled]="bulkBusy()" (click)="bulkDecide('reject')">
+        <i class="las la-times" aria-hidden="true"></i> {{ 'myApprovals.bulk.reject' | translate }}
+      </button>
+    </div>
+  }
   <ul class="ma-list" [attr.aria-label]="'myApprovals.title' | translate">
     @for (item of items(); track item.record_id) {
       <li class="ma-item" data-testid="my-approvals-item">
+        @if (canDecide(item)) {
+          <input type="checkbox" class="ma-pick" data-testid="my-approvals-pick"
+                 [checked]="selected().has(item.record_id)"
+                 [disabled]="bulkBusy() || (!selected().has(item.record_id) && selected().size >= bulkMax)"
+                 [attr.aria-label]="'myApprovals.bulk.pick' | translate: { title: item.title }"
+                 (change)="toggle(item)" />
+        }
         <div class="ma-main">
           <span class="ma-title">{{ item.title }}</span>
           <span class="ma-meta">
@@ -34,6 +54,12 @@
               <span>{{ 'myApprovals.due' | translate: { date: (item.due_date | localDate: { dateStyle: 'medium', timeStyle: 'short' }) } }}</span>
             }
           </span>
+          @if (bulkResultFor(item.record_id); as result) {
+            <p class="ma-skipped" role="status" data-testid="my-approvals-bulk-result">
+              {{ (result.status === 'skipped' ? 'myApprovals.bulk.skipped' : 'myApprovals.bulk.failed') | translate }}
+              @if (result.reason) { <span dir="auto">{{ result.reason }}</span> }
+            </p>
+          }
           @if (itemErrors()[item.record_id]; as message) {
             <p class="error-msg" role="alert" data-testid="my-approvals-item-error">{{ message }}</p>
           }

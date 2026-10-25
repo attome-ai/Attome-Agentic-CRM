@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, AuthService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -41,6 +41,7 @@ describe('ApprovalRequestPageComponent (M9-T4)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { get, post } },
+        { provide: AuthService, useValue: { userId: () => 'u-9' } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],
@@ -94,5 +95,18 @@ describe('ApprovalRequestPageComponent (M9-T4)', () => {
     expect(showValue('a')).toBe('a');
     expect(showValue(25)).toBe('25');
     expect(showValue({ a: 1 })).toBe('{"a":1}');
+  });
+
+  it('lets the requester recall a pending request with its row version', () => {
+    const { fixture, post } = create({ ...DETAIL, requested_by: 'u-9', can_decide: false });
+    const recall: HTMLButtonElement | null = fixture.nativeElement.querySelector('[data-testid="rq-recall"]');
+    expect(recall).not.toBeNull();
+    recall!.click();
+    expect(post).toHaveBeenCalledWith('/api/v1/approvals/r-1/recall', {}, { ifMatch: 3 });
+  });
+
+  it('offers no recall to someone who did not submit the request', () => {
+    const { fixture } = create();
+    expect(fixture.nativeElement.querySelector('[data-testid="rq-recall"]')).toBeNull();
   });
 });

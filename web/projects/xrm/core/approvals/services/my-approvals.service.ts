@@ -14,6 +14,36 @@ export type ApprovalDecisionResponse = Schemas['DecideResponse'];
 export type ApprovalDecisionBody = Schemas['DecideBody'];
 export type ApprovalDecision = 'approve' | 'reject';
 
+/** One item of a bulk decision (`POST /api/v1/approvals/bulk-decide`). */
+export interface BulkDecideItem {
+  id: string;
+  row_version: number;
+}
+
+/** One request's outcome in a bulk decision: its new status, `skipped`
+ *  (a step that asks for a fresh sign-in or a signature) or `failed`. */
+export interface BulkDecideResult {
+  id: string;
+  status: string;
+  error_code: string | null;
+  reason: string | null;
+}
+
+/** A recommendation on an approval request (Z10-T11). */
+export interface ApprovalRecommendation {
+  id: string;
+  request_id: string;
+  recommended: 'approve' | 'reject';
+  reasons: string;
+  recommended_by: string;
+  /** Set when an agent wrote it. */
+  agent_session: string | null;
+  created_at: string;
+}
+
+/** The most requests one bulk decision covers. */
+export const BULK_DECIDE_MAX = 100;
+
 /** The longest decision comment the decide route accepts, in characters
  *  (`attome_approval::MAX_DECISION_COMMENT_CHARS`). */
 export const DECISION_COMMENT_MAX = 2000;
@@ -54,5 +84,39 @@ export class MyApprovalsService {
     const note = comment?.trim();
     if (note) body.comment = note;
     return this.api.post<ApprovalDecisionResponse>(action.route, body);
+  }
+
+  /** Z10-T10: decides up to 100 requests the same way, each on its own. */
+  bulkDecide(
+    items: BulkDecideItem[], decision: ApprovalDecision, comment?: string | null,
+  ): Observable<{ results: BulkDecideResult[] }> {
+    const body: { items: BulkDecideItem[]; decision: ApprovalDecision; comment?: string } = {
+      items: items.slice(0, BULK_DECIDE_MAX),
+      decision,
+    };
+    const note = comment?.trim();
+    if (note) body.comment = note;
+    return this.api.post<{ results: BulkDecideResult[] }>('/api/v1/approvals/bulk-decide', body);
+  }
+
+  /** Z10-T10: the requester takes a pending request back to change it. */
+  recall(id: string, rowVersion: number): Observable<unknown> {
+    return this.api.post<unknown>(
+      `/api/v1/approvals/${encodeURIComponent(id)}/recall`, {}, { ifMatch: rowVersion },
+    );
+  }
+
+  /** Z10-T10: the corrected request after a recall. */
+  resubmit(id: string, payload: unknown): Observable<{ id: string }> {
+    return this.api.post<{ id: string }>(
+      `/api/v1/approvals/${encodeURIComponent(id)}/resubmit`, { payload },
+    );
+  }
+
+  /** Z10-T11: what approvers and their agents recommend, oldest first. */
+  recommendations(id: string): Observable<{ items: ApprovalRecommendation[] }> {
+    return this.api.get<{ items: ApprovalRecommendation[] }>(
+      `/api/v1/approvals/${encodeURIComponent(id)}/recommendations`,
+    );
   }
 }

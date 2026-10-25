@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, ApiService, AuthService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
-import { DECISION_COMMENT_MAX } from '../services/my-approvals.service';
+import {
+  ApprovalRecommendation, DECISION_COMMENT_MAX, MyApprovalsService,
+} from '../services/my-approvals.service';
 
 /** `attome_api::approval_process::ChangedAttribute`. */
 export interface ChangedAttribute {
@@ -134,6 +136,39 @@ export function showValue(value: unknown): string {
           }
         </ol>
 
+        @if (recommendations().length > 0) {
+          <h3>{{ 'approvalRequest.recommendations' | translate }}</h3>
+          <ul class="rq-recs" data-testid="rq-recommendations">
+            @for (r of recommendations(); track r.id) {
+              <li [attr.data-recommended]="r.recommended">
+                <strong>{{ 'approvalRequest.recommended.' + r.recommended | translate }}</strong>
+                @if (r.agent_session) { <span class="rq-agent">{{ 'approvalRequest.byAgent' | translate }}</span> }
+                · {{ r.created_at | localDate }}
+                <span class="rq-comment" dir="auto">{{ r.reasons }}</span>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (isRequester(d) && d.status === 'pending') {
+          <div class="rq-buttons">
+            <button type="button" class="rq-recall" data-testid="rq-recall" (click)="recall(d)" [disabled]="busy()">
+              {{ 'approvalRequest.recall' | translate }}
+            </button>
+          </div>
+        }
+        @if (isRequester(d) && d.status === 'recalled') {
+          <div class="rq-decide">
+            <label for="rq-payload">{{ 'approvalRequest.correctedPayload' | translate }}</label>
+            <textarea id="rq-payload" rows="6" dir="ltr" [(ngModel)]="payloadText"></textarea>
+            <div class="rq-buttons">
+              <button type="button" class="rq-resubmit" data-testid="rq-resubmit" (click)="resubmit(d)" [disabled]="busy()">
+                {{ 'approvalRequest.resubmit' | translate }}
+              </button>
+            </div>
+          </div>
+        }
+
         @if (d.can_decide && d.status === 'pending') {
           <div class="rq-decide">
             <label for="rq-comment">{{ 'approvalRequest.comment' | translate }}</label>
@@ -172,10 +207,15 @@ export function showValue(value: unknown): string {
     .rq-buttons { display: flex; gap: 0.5rem; }
     .rq-muted { color: var(--color-text-secondary); font-size: 0.875rem; }
     .rq-error { color: var(--color-danger); }
+    .rq-recs { margin: 0; padding-inline-start: 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; }
+    .rq-agent { font-size: 0.75rem; padding-inline: 0.375rem; border: 1px solid var(--color-border); border-radius: 999px; }
   `],
 })
 export class ApprovalRequestPageComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly approvals = inject(MyApprovalsService);
+  private readonly auth = inject(AuthService);
+  private readonly lang = inject(LangService);
 
   /** The request id, bound from the route's `:id`. */
   readonly id = input('');
@@ -185,6 +225,42 @@ export class ApprovalRequestPageComponent implements OnInit {
   readonly busy = signal(false);
   readonly commentMax = DECISION_COMMENT_MAX;
   comment = '';
+  /** Z10-T13: what approvers and their agents recommend. */
+  readonly recommendations = signal<ApprovalRecommendation[]>([]);
+  /** The corrected payload a recalled request is sent again with, as JSON. */
+  payloadText = '';
+
+  /** Whether the signed-in person submitted `d`. */
+  isRequester(d: ApprovalDetail): boolean {
+    return this.auth.userId() === d.requested_by;
+  }
+
+  /** Z10-T13: takes the person's own pending request back to change it. */
+  recall(d: ApprovalDetail): void {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.approvals.recall(d.id, d.row_version).subscribe({
+      next: () => { this.busy.set(false); this.load(); },
+      error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message || null); },
+    });
+  }
+
+  /** Z10-T13: sends a recalled request again with the corrected payload. */
+  resubmit(d: ApprovalDetail): void {
+    if (this.busy()) return;
+    let payload: unknown;
+    try {
+      payload = JSON.parse(this.payloadText || 'null');
+    } catch {
+      this.error.set(this.lang.translate('approvalRequest.invalidJson'));
+      return;
+    }
+    this.busy.set(true);
+    this.approvals.resubmit(d.id, payload).subscribe({
+      next: () => { this.busy.set(false); this.load(); },
+      error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message || null); },
+    });
+  }
 
   show(value: unknown): string {
     return showValue(value);
@@ -197,7 +273,16 @@ export class ApprovalRequestPageComponent implements OnInit {
   load(): void {
     this.error.set(null);
     this.api.get<ApprovalDetail>(`/api/v1/approvals/${encodeURIComponent(this.id())}`).subscribe({
-      next: d => this.detail.set(d),
+      next: d => {
+        this.detail.set(d);
+        this.payloadText = JSON.stringify(d.payload ?? null, null, 2);
+        // Only the requester and eligible approvers may read them; anyone
+        // else simply sees none.
+        this.approvals.recommendations(d.id).subscribe({
+          next: page => this.recommendations.set(page.items ?? []),
+          error: () => this.recommendations.set([]),
+        });
+      },
       error: (e: ApiError) => this.error.set(e.message),
     });
   }

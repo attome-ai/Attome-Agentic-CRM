@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { ApiError, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import {
-  ApprovalDecision, DECISION_COMMENT_MAX, MyApprovalsService, MyWorkAction, MyWorkItem,
+  ApprovalDecision, BULK_DECIDE_MAX, BulkDecideResult, DECISION_COMMENT_MAX, MyApprovalsService,
+  MyWorkAction, MyWorkItem,
 } from '../services/my-approvals.service';
 
 /**
@@ -42,6 +43,12 @@ export class MyApprovalsPageComponent implements OnInit {
   /** Draft decision comments, by `record_id`. */
   readonly comments    = signal<Record<string, string>>({});
   readonly commentMax  = DECISION_COMMENT_MAX;
+  /** Z10-T13: the items ticked for a bulk decision, by `record_id`. */
+  readonly selected    = signal<ReadonlySet<string>>(new Set());
+  /** The last bulk decision's outcome per request. */
+  readonly bulkResults = signal<BulkDecideResult[]>([]);
+  readonly bulkBusy    = signal(false);
+  readonly bulkMax     = BULK_DECIDE_MAX;
 
   ngOnInit(): void { this.load(); }
 
@@ -86,6 +93,55 @@ export class MyApprovalsPageComponent implements OnInit {
   /** Only an item that carries its `row_version` can be decided here. */
   canDecide(item: MyWorkItem): boolean {
     return typeof item.row_version === 'number';
+  }
+
+  /** Z10-T13: ticks or clears one item for a bulk decision. */
+  toggle(item: MyWorkItem): void {
+    if (!this.canDecide(item)) return;
+    this.selected.update(set => {
+      const next = new Set(set);
+      if (next.has(item.record_id)) next.delete(item.record_id);
+      else if (next.size < BULK_DECIDE_MAX) next.add(item.record_id);
+      return next;
+    });
+  }
+
+  /**
+   * Z10-T13: decides every ticked item the same way. Each is decided on its
+   * own server-side; a step that asks for a fresh sign-in or a signature is
+   * skipped and stays in the list with its reason.
+   */
+  bulkDecide(decision: ApprovalDecision): void {
+    const picked = this.items().filter(
+      i => this.selected().has(i.record_id) && typeof i.row_version === 'number',
+    );
+    if (picked.length === 0 || this.bulkBusy()) return;
+    this.bulkBusy.set(true);
+    this.notice.set(null);
+    const items = picked.map(i => ({ id: i.record_id, row_version: i.row_version as number }));
+    this.svc.bulkDecide(items, decision).subscribe({
+      next: ({ results }) => {
+        this.bulkBusy.set(false);
+        this.bulkResults.set(results);
+        const decided = new Set(
+          results.filter(r => r.status !== 'skipped' && r.status !== 'failed').map(r => r.id),
+        );
+        this.items.update(list => list.filter(i => !decided.has(i.record_id)));
+        this.selected.set(new Set());
+        this.notice.set(this.lang.translate('myApprovals.bulk.done', {
+          decided: decided.size, total: results.length,
+        }));
+      },
+      error: (e: ApiError) => {
+        this.bulkBusy.set(false);
+        this.loadError.set(this.errorText(e));
+      },
+    });
+  }
+
+  /** The bulk outcome shown on an item that was not decided. */
+  bulkResultFor(id: string): BulkDecideResult | undefined {
+    return this.bulkResults().find(r => r.id === id && (r.status === 'skipped' || r.status === 'failed'));
   }
 
   setComment(id: string, value: string): void {

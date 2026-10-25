@@ -66,4 +66,35 @@ describe('MyApprovalsService', () => {
       .subscribe({ error: e => (error = e) });
     expect(error?.kind).toBe('validation');
   });
+
+  it('bulkDecide posts all items with one decision and the trimmed comment', () => {
+    service.bulkDecide(
+      [{ id: REQ, row_version: 2 }, { id: 'other', row_version: 0 }], 'approve', '  ok  ',
+    ).subscribe();
+    const req = http.expectOne(`${API}/api/v1/approvals/bulk-decide`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      items: [{ id: REQ, row_version: 2 }, { id: 'other', row_version: 0 }],
+      decision: 'approve',
+      comment: 'ok',
+    });
+    req.flush({ results: [] });
+  });
+
+  it('recalls with If-Match, resubmits the payload and reads recommendations', () => {
+    service.recall(REQ, 4).subscribe();
+    const recall = http.expectOne(`${API}/api/v1/approvals/${REQ}/recall`);
+    expect(recall.request.headers.get('If-Match')).toBe('"4"');
+    recall.flush({});
+
+    service.resubmit(REQ, { amount: 10 }).subscribe();
+    const resubmit = http.expectOne(`${API}/api/v1/approvals/${REQ}/resubmit`);
+    expect(resubmit.request.body).toEqual({ payload: { amount: 10 } });
+    resubmit.flush({ id: 'new' });
+
+    service.recommendations(REQ).subscribe();
+    const recs = http.expectOne(`${API}/api/v1/approvals/${REQ}/recommendations`);
+    expect(recs.request.method).toBe('GET');
+    recs.flush({ items: [], total: 0, page: 1, page_size: 100 });
+  });
 });

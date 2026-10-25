@@ -19,10 +19,14 @@ function item(id: string, title = `Approve: ${id}`): MyWorkItem {
 }
 
 describe('MyApprovalsPageComponent', () => {
-  let svc: { list: ReturnType<typeof vi.fn>; decide: ReturnType<typeof vi.fn> };
+  let svc: {
+    list: ReturnType<typeof vi.fn>;
+    decide: ReturnType<typeof vi.fn>;
+    bulkDecide: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
-    svc = { list: vi.fn(), decide: vi.fn() };
+    svc = { list: vi.fn(), decide: vi.fn(), bulkDecide: vi.fn() };
     TestBed.configureTestingModule({
       imports: [MyApprovalsPageComponent],
       providers: [
@@ -141,5 +145,27 @@ describe('MyApprovalsPageComponent', () => {
     expect(svc.list).toHaveBeenLastCalledWith('c1');
     expect(qa('my-approvals-item').length).toBe(2);
     expect(q('my-approvals-more')).toBeNull();
+  });
+
+  it('bulk-decides the ticked items and keeps a skipped one with its reason', () => {
+    svc.list.mockReturnValue(of({ items: [item('a'), item('b'), item('c')] }));
+    svc.bulkDecide.mockReturnValue(of({ results: [
+      { id: 'a', status: 'approved', error_code: null, reason: null },
+      { id: 'b', status: 'skipped', error_code: null, reason: 'needs a signature' },
+    ] }));
+    const { fixture, q, qa } = render();
+    const picks = qa('my-approvals-pick');
+    picks[0].click();
+    picks[1].click();
+    fixture.detectChanges();
+    expect(q('my-approvals-bulk')).not.toBeNull();
+    q('my-approvals-bulk-approve')!.click();
+    fixture.detectChanges();
+    expect(svc.bulkDecide).toHaveBeenCalledWith(
+      [{ id: 'a', row_version: 2 }, { id: 'b', row_version: 2 }], 'approve',
+    );
+    expect(qa('my-approvals-item').length).toBe(2);
+    expect(q('my-approvals-bulk-result')?.textContent).toContain('needs a signature');
+    expect(q('my-approvals-bulk')).toBeNull();
   });
 });
