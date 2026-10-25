@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Inherited listening socket (AB7-T3): `attome serve` takes its listening socket from the process
+  that started it when `ATTOME_LISTEN_FD` (Unix, a file descriptor) or
+  `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from
+  `WSADuplicateSocketW`, or `-` to read it from stdin) is set, so a supervisor can hand the same
+  socket to the next version; otherwise it binds as before.
 - Saved queries with typed parameters (S4-T9): a stored query may hold a `query_spec` and
   `parameters` (`[{name, type, required}]`, types text, number, date, uuid, bool), checked on
   save (every `param` condition declared) and versioned with the query. `POST /api/v1/query/run`

@@ -35,6 +35,8 @@ pub mod dev_access_seed;
 /// J2-T2: shared mailboxes routed into cases, leads and contacts.
 pub mod inbound_mail;
 pub mod jobs;
+/// AB7-T3: the listening socket, inherited from a supervisor or bound.
+pub mod listener;
 /// D15-T2: personal emails captured onto matching records.
 pub mod mail_capture;
 pub mod observability;

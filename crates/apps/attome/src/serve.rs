@@ -442,8 +442,15 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let addr = config.bind_addr();
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    tracing::info!("listening on {addr}");
+    // AB7-T3: a supervisor may hand over the socket instead (zero-downtime
+    // replacement); otherwise this binds `addr` as before.
+    let (std_listener, inherited) = attome::listener::bind_or_inherit(&addr)?;
+    let listener = tokio::net::TcpListener::from_std(std_listener)?;
+    if inherited {
+        tracing::info!("listening on a socket inherited from the supervisor ({addr} configured)");
+    } else {
+        tracing::info!("listening on {addr}");
+    }
 
     // AB7-T8: the deploy history: a `start` row once ready, a `drain` row
     // from the shutdown signal to exit.
