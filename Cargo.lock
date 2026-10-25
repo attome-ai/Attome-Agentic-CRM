@@ -1232,6 +1232,7 @@ dependencies = [
  "attome-billing",
  "attome-core",
  "attome-db",
+ "attome-integration",
  "attome-modules",
  "attome-server",
  "attome-types",

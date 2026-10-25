@@ -205,6 +205,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Carrier booking (F6-T9): `POST /api/v1/fulfilment/shipments/{id}/book` books a packed shipment
+  with Aramex (an integration system whose config names `"carrier": "aramex"`, its account fields
+  and the ship-from party; the password is its credential) and stores the waybill as the tracking
+  number; `POST .../track` reads the latest update and moves the shipment's status.
 - Stored hierarchy paths (A17-T1): a lookup from an entity to itself saved with `"hierarchy": true`
   in its options gets a `hier_path` column (the ancestors' ids and its own, joined by `/`) with a
   prefix index, kept right by database triggers on every write and move and filled once for

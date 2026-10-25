@@ -15,6 +15,7 @@ attome-audit.workspace = true
 attome-billing.workspace = true
 attome-core.workspace = true
 attome-db.workspace = true
+attome-integration.workspace = true
 attome-modules.workspace = true
 attome-server.workspace = true
 attome-types.workspace = true

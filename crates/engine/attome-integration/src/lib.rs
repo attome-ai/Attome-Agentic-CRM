@@ -13,6 +13,8 @@
 //! 2's sync engine will read from.
 
 pub mod admin;
+/// F6-T9: booking and tracking shipments with a carrier.
+pub mod carrier;
 pub mod connection;
 pub mod connector;
 pub mod credential;
