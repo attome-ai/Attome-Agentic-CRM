@@ -249,9 +249,11 @@ pub fn role_grant_event(actor_user_id: Uuid) -> SecurityEvent {
 pub(super) async fn assign_user_role(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
+    attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Path(user_id): Path<Uuid>,
     Json(body): Json<AssignUserRoleBody>,
 ) -> Result<(StatusCode, Json<AssignUserRoleResponse>), AppError> {
+    role_change_step_up(&state, caller, ctx.user_id).await?;
     crate::grant_expiry::valid_end(body.valid_until, chrono::Utc::now())?;
     // Q12-T3: never a role carrying privileges the granter lacks.
     crate::grants::require_role_within_ceiling(&state.base.db, &ctx, body.role_id).await?;
@@ -324,8 +326,10 @@ pub(super) async fn assign_user_role(
 pub(super) async fn remove_user_role(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
+    attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Path((user_id, role_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
+    role_change_step_up(&state, caller, ctx.user_id).await?;
     let mut tx = super::shared::access_tx(
         &state,
         AuditOperation::Revoke,
@@ -356,6 +360,30 @@ pub(super) async fn remove_user_role(
     attome_auth::epoch::invalidate_cache(&state.base.redis_coordination, user_id).await;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Q5-T7: with `auth.step_up_phishing_resistant` on, a session that grants
+/// or takes a role needs a fresh passkey step-up (`role_change`). API-key and
+/// S2S callers have no session to step up with, so they keep the access their
+/// key gives (the task's stop condition, decided in V2-D).
+async fn role_change_step_up(
+    state: &EngineState,
+    caller: attome_auth::step_up::Caller,
+    actor: Uuid,
+) -> Result<(), AppError> {
+    if !state.base.config.auth.step_up_phishing_resistant
+        || !matches!(caller, attome_auth::step_up::Caller::Session(_))
+    {
+        return Ok(());
+    }
+    attome_auth::step_up::require_recent_auth(
+        &state.base.db,
+        caller,
+        actor,
+        attome_auth::step_up::Operation::RoleChange,
+        state.base.config.refresh_absolute_lifetime_secs(),
+    )
+    .await
 }
 
 pub(super) fn routes() -> Router<EngineState> {

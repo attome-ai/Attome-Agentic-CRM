@@ -1431,3 +1431,254 @@ async fn mfa_operations_take_freshness_from_the_code_in_the_request() {
         "neither operation reads or writes elevation"
     );
 }
+
+// ── Q5-T7: phishing-resistant step-up ────────────────────────────────────────
+
+mod passkey {
+    //! A software platform authenticator holding one Ed25519 passkey, the
+    //! same construction as `webauthn_flow.rs`.
+    use base64::Engine;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    use ed25519_dalek::{Signer, SigningKey};
+    use serde_json::{Value, json};
+    use sha2::{Digest, Sha256};
+    use uuid::Uuid;
+
+    pub const RP_ID: &str = "crm.attome.test";
+    pub const ORIGIN: &str = "https://crm.attome.test";
+
+    fn b64(bytes: &[u8]) -> String {
+        URL_SAFE_NO_PAD.encode(bytes)
+    }
+
+    pub struct Authenticator {
+        key: SigningKey,
+        credential_id: [u8; 16],
+    }
+
+    impl Authenticator {
+        pub fn new(seed: u8) -> Self {
+            Self {
+                key: SigningKey::from_bytes(&[seed; 32]),
+                credential_id: *Uuid::now_v7().as_bytes(),
+            }
+        }
+
+        fn client_data(kind: &str, options: &Value) -> Vec<u8> {
+            json!({"type": kind, "challenge": options["challenge"], "origin": ORIGIN, "crossOrigin": false})
+                .to_string()
+                .into_bytes()
+        }
+
+        fn head(extra: u8, count: u32) -> Vec<u8> {
+            let mut data = Sha256::digest(RP_ID.as_bytes()).to_vec();
+            data.push(0b0000_0101 | extra);
+            data.extend_from_slice(&count.to_be_bytes());
+            data
+        }
+
+        pub fn register(&self, options: &Value) -> Vec<u8> {
+            let client_data = Self::client_data("webauthn.create", options);
+            let mut auth = Self::head(0b0100_0000, 0);
+            auth.extend_from_slice(&[0; 16]);
+            auth.extend_from_slice(&16u16.to_be_bytes());
+            auth.extend_from_slice(&self.credential_id);
+            auth.extend_from_slice(&[0xa4, 0x01, 0x01, 0x03, 0x27, 0x20, 0x06, 0x21, 0x58, 0x20]);
+            auth.extend_from_slice(self.key.verifying_key().as_bytes());
+            let mut att = vec![0xa3, 0x63];
+            att.extend_from_slice(b"fmt");
+            att.push(0x64);
+            att.extend_from_slice(b"none");
+            att.push(0x67);
+            att.extend_from_slice(b"attStmt");
+            att.push(0xa0);
+            att.push(0x68);
+            att.extend_from_slice(b"authData");
+            att.extend_from_slice(&[0x58, u8::try_from(auth.len()).unwrap()]);
+            att.extend_from_slice(&auth);
+            json!({"id": b64(&self.credential_id), "rawId": b64(&self.credential_id), "type": "public-key",
+                   "response": {"clientDataJSON": b64(&client_data), "attestationObject": b64(&att)},
+                   "clientExtensionResults": {}})
+            .to_string()
+            .into_bytes()
+        }
+
+        pub fn assert(&self, options: &Value, user: Uuid, count: u32) -> Vec<u8> {
+            let client_data = Self::client_data("webauthn.get", options);
+            let auth = Self::head(0, count);
+            let mut signed = auth.clone();
+            signed.extend_from_slice(&Sha256::digest(&client_data));
+            let signature = self.key.sign(&signed);
+            json!({"id": b64(&self.credential_id), "rawId": b64(&self.credential_id), "type": "public-key",
+                   "response": {"clientDataJSON": b64(&client_data), "authenticatorData": b64(&auth),
+                                "signature": b64(&signature.to_bytes()), "userHandle": b64(user.as_bytes())},
+                   "clientExtensionResults": {}})
+            .to_string()
+            .into_bytes()
+        }
+    }
+}
+
+/// Turns `auth.step_up_phishing_resistant` on for one test and off again,
+/// whichever way the test ends.
+struct PhishingResistant;
+
+impl PhishingResistant {
+    fn on() -> Self {
+        step_up::set_phishing_resistant_required(true);
+        Self
+    }
+}
+
+impl Drop for PhishingResistant {
+    fn drop(&mut self) {
+        step_up::set_phishing_resistant_required(false);
+    }
+}
+
+fn relying_party() -> attome_auth::webauthn::RelyingParty {
+    attome_auth::webauthn::RelyingParty::new(passkey::RP_ID, vec![passkey::ORIGIN.to_owned()])
+        .unwrap()
+}
+
+#[tokio::test]
+async fn api_key_create_refuses_totp_when_phishing_resistant_required() {
+    let env = skip_if_no_db!(env().await);
+    let user = create_user(&env.db, Some(PASSWORD), false).await;
+    let (totp, _) = enroll_totp(&env.db, user).await;
+    let issued = sign_in(&env.db, user, &AuthContext::password()).await;
+
+    // Off: a TOTP step-up satisfies api_key_create, as before.
+    let started = env
+        .start(session(&issued), user, Operation::ApiKeyCreate)
+        .await
+        .expect("start");
+    env.verify(
+        session(&issued),
+        user,
+        Operation::ApiKeyCreate,
+        &started.challenge_id.to_string(),
+        "totp",
+        &next_code(&totp),
+    )
+    .await
+    .expect("a TOTP step-up elevates");
+    env.guard(session(&issued), user, Operation::ApiKeyCreate)
+        .await
+        .expect("api_key_create passes with TOTP while the switch is off");
+
+    let _on = PhishingResistant::on();
+    // On: the same TOTP elevation no longer counts, a TOTP challenge cannot
+    // be started, and the refusal asks for a passkey to be enrolled.
+    assert_reauth(
+        env.guard(session(&issued), user, Operation::ApiKeyCreate)
+            .await,
+        "api_key_create",
+        &[step_up::PASSKEY_ENROLLMENT_REQUIRED],
+    );
+    assert_reauth(
+        env.start(session(&issued), user, Operation::ApiKeyCreate)
+            .await,
+        "api_key_create",
+        &[step_up::PASSKEY_ENROLLMENT_REQUIRED],
+    );
+    // Other operations keep their factors.
+    env.guard(session(&issued), user, Operation::IdentityLink)
+        .await
+        .expect("identity_link still accepts the TOTP elevation");
+}
+
+#[tokio::test]
+async fn role_change_accepts_passkey() {
+    let env = skip_if_no_db!(env().await);
+    let rp = relying_party();
+    let user = create_user(&env.db, Some(PASSWORD), false).await;
+    let issued = sign_in(&env.db, user, &AuthContext::password()).await;
+    let authenticator = passkey::Authenticator::new(21);
+    let options = attome_auth::webauthn::start_registration(
+        &env.db,
+        &rp,
+        user,
+        "admin@example.invalid",
+        None,
+    )
+    .await
+    .expect("start registration");
+    attome_auth::webauthn::finish_registration(
+        &env.db,
+        &rp,
+        user,
+        &authenticator.register(&options),
+        None,
+    )
+    .await
+    .expect("register a passkey");
+
+    let _on = PhishingResistant::on();
+    assert_reauth(
+        env.guard(session(&issued), user, Operation::RoleChange)
+            .await,
+        "role_change",
+        &["passkey"],
+    );
+    let options = step_up::start_passkey_step_up(
+        &env.db,
+        &rp,
+        session(&issued),
+        user,
+        Operation::RoleChange,
+        THIRTY_DAYS_SECS,
+    )
+    .await
+    .expect("start a passkey step-up");
+    step_up::complete_passkey_step_up(
+        &env.db,
+        &rp,
+        session(&issued),
+        user,
+        Operation::RoleChange,
+        &authenticator.assert(&options, user, 1),
+        THIRTY_DAYS_SECS,
+        &attome_db::NoHook,
+    )
+    .await
+    .expect("a passkey step-up elevates");
+    let (_, _, amr, _) = live_row(&env.db, issued.family_id).await;
+    assert_eq!(amr.unwrap().last().map(String::as_str), Some("hwk"));
+    env.guard(session(&issued), user, Operation::RoleChange)
+        .await
+        .expect("role_change passes after a passkey step-up");
+    env.guard(session(&issued), user, Operation::ApiKeyCreate)
+        .await
+        .expect("and so does api_key_create");
+
+    // A replayed assertion is refused.
+    assert_reauth(
+        step_up::complete_passkey_step_up(
+            &env.db,
+            &rp,
+            session(&issued),
+            user,
+            Operation::RoleChange,
+            &authenticator.assert(&options, user, 2),
+            THIRTY_DAYS_SECS,
+            &attome_db::NoHook,
+        )
+        .await,
+        "role_change",
+        &["passkey"],
+    );
+    // API-key and S2S callers cannot step up at all.
+    assert!(matches!(
+        step_up::start_passkey_step_up(
+            &env.db,
+            &rp,
+            Caller::NonSession,
+            user,
+            Operation::RoleChange,
+            THIRTY_DAYS_SECS
+        )
+        .await,
+        Err(AppError::Forbidden)
+    ));
+}

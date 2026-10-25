@@ -20,6 +20,7 @@
 //! Wiring the guard onto the protected routes is 2.1d; federated step-up is
 //! 2.1c.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use attome_cache::Store;
@@ -67,6 +68,8 @@ pub enum Operation {
     ApprovalDecision,
     /// AB8-T6: starting a platform upgrade.
     PlatformUpgrade,
+    /// Q5-T7: granting or removing a user's role.
+    RoleChange,
 }
 
 /// Where an operation's freshness comes from.
@@ -80,7 +83,7 @@ pub enum Freshness {
 }
 
 impl Operation {
-    pub const ALL: [Operation; 7] = [
+    pub const ALL: [Operation; 8] = [
         Operation::MfaDisable,
         Operation::RecoveryCodesRegenerate,
         Operation::IdentityLink,
@@ -88,6 +91,7 @@ impl Operation {
         Operation::AdminMfaReset,
         Operation::ApprovalDecision,
         Operation::PlatformUpgrade,
+        Operation::RoleChange,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -99,6 +103,7 @@ impl Operation {
             Operation::AdminMfaReset => "admin_mfa_reset",
             Operation::ApprovalDecision => "approval_decision",
             Operation::PlatformUpgrade => "platform_upgrade",
+            Operation::RoleChange => "role_change",
         }
     }
 
@@ -111,7 +116,8 @@ impl Operation {
             | Operation::RecoveryCodesRegenerate
             | Operation::IdentityLink
             | Operation::AdminMfaReset
-            | Operation::ApprovalDecision => 5 * 60,
+            | Operation::ApprovalDecision
+            | Operation::RoleChange => 5 * 60,
         }
     }
 
@@ -124,8 +130,15 @@ impl Operation {
             | Operation::ApiKeyCreate
             | Operation::AdminMfaReset
             | Operation::ApprovalDecision
-            | Operation::PlatformUpgrade => Freshness::Elevation,
+            | Operation::PlatformUpgrade
+            | Operation::RoleChange => Freshness::Elevation,
         }
+    }
+
+    /// Q5-T7: the operations that, with `auth.step_up_phishing_resistant`
+    /// on, accept only a phishing-resistant factor (a passkey).
+    pub fn requires_phishing_resistant(self) -> bool {
+        matches!(self, Operation::ApiKeyCreate | Operation::RoleChange)
     }
 
     /// Parses a step-up route segment. Only operations that need elevation
@@ -150,6 +163,9 @@ pub enum Factor {
     Password,
     /// An OIDC re-authentication (2.1c). No local verifier accepts it.
     Federated,
+    /// Q5-T7: a WebAuthn passkey assertion (`webauthn`), the
+    /// phishing-resistant factor. No code challenge accepts it.
+    Passkey,
 }
 
 impl Factor {
@@ -159,6 +175,7 @@ impl Factor {
             Factor::RecoveryCode => "recovery_code",
             Factor::Password => "password",
             Factor::Federated => "federated",
+            Factor::Passkey => "passkey",
         }
     }
 
@@ -169,6 +186,8 @@ impl Factor {
             Factor::RecoveryCode => "rcode",
             Factor::Password => "pwd",
             Factor::Federated => "fed",
+            // RFC 8176's hardware-key method.
+            Factor::Passkey => "hwk",
         }
     }
 
@@ -178,13 +197,14 @@ impl Factor {
             Factor::RecoveryCode,
             Factor::Password,
             Factor::Federated,
+            Factor::Passkey,
         ]
         .into_iter()
         .find(|factor| factor.as_str() == name)
     }
 
     fn is_local(self) -> bool {
-        !matches!(self, Factor::Federated)
+        !matches!(self, Factor::Federated | Factor::Passkey)
     }
 }
 
@@ -197,9 +217,43 @@ pub struct AccountFactors {
     /// since BAU-8b validates Google's `auth_time` locally (D-628 amending
     /// rule 4); it is answered by [`complete_google_step_up_with`].
     pub federated_linked: bool,
+    /// Q5-T7: the account has a live passkey (`webauthn_credential`).
+    pub passkey_registered: bool,
 }
 
+/// Q5-T7: `auth.step_up_phishing_resistant`, set once at boot from the
+/// configuration every node shares.
+static PHISHING_RESISTANT: AtomicBool = AtomicBool::new(false);
+
+/// Q5-T7: sets whether [`Operation::requires_phishing_resistant`]
+/// operations accept only a passkey. Called at boot.
+pub fn set_phishing_resistant_required(on: bool) {
+    PHISHING_RESISTANT.store(on, Ordering::Relaxed);
+}
+
+fn phishing_resistant_for(operation: Operation) -> bool {
+    operation.requires_phishing_resistant() && PHISHING_RESISTANT.load(Ordering::Relaxed)
+}
+
+/// Q5-T7: what a refusal names when an operation needs a passkey the
+/// account does not have.
+pub const PASSKEY_ENROLLMENT_REQUIRED: &str = "passkey_enrollment_required";
+
 impl AccountFactors {
+    /// The factors a step-up for `operation` accepts: [`Self::accepted`],
+    /// or only a passkey for an operation that requires a phishing-resistant
+    /// factor while the switch is on.
+    pub fn accepted_for(self, operation: Operation) -> Vec<Factor> {
+        if phishing_resistant_for(operation) {
+            return if self.passkey_registered {
+                vec![Factor::Passkey]
+            } else {
+                Vec::new()
+            };
+        }
+        self.accepted()
+    }
+
     /// The factors this account may step up with (rule 4). Empty means the
     /// account is refused with [`TOTP_ENROLLMENT_REQUIRED`].
     pub fn accepted(self) -> Vec<Factor> {
@@ -220,13 +274,15 @@ impl AccountFactors {
 /// Reads the current state of an active account. An inactive or missing
 /// account is `Unauthorized`.
 pub async fn account_factors(db: &DbPool, user_id: Uuid) -> Result<AccountFactors, AppError> {
-    let row: Option<(bool, bool, bool)> = sqlx::query_as(
+    let row: Option<(bool, bool, bool, bool)> = sqlx::query_as(
         "SELECT u.password_hash IS NOT NULL,
                 EXISTS (SELECT 1 FROM user_mfa m
                         WHERE m.user_ref = u.id AND m.is_deleted = false
                           AND m.confirmed_at IS NOT NULL),
                 u.google_sub IS NOT NULL
-                    OR EXISTS (SELECT 1 FROM user_identity i WHERE i.user_ref = u.id)
+                    OR EXISTS (SELECT 1 FROM user_identity i WHERE i.user_ref = u.id),
+                EXISTS (SELECT 1 FROM webauthn_credential w
+                        WHERE w.user_ref = u.id AND NOT w.is_deleted)
          FROM user_account u
          WHERE u.id = $1 AND u.is_active",
     )
@@ -234,18 +290,22 @@ pub async fn account_factors(db: &DbPool, user_id: Uuid) -> Result<AccountFactor
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let (has_password, totp_enrolled, federated_linked) = row.ok_or(AppError::Unauthorized)?;
+    let (has_password, totp_enrolled, federated_linked, passkey_registered) =
+        row.ok_or(AppError::Unauthorized)?;
     Ok(AccountFactors {
         totp_enrolled,
         has_password,
         federated_linked,
+        passkey_registered,
     })
 }
 
 /// The structured refusal for `operation` (rule 6): 401 `reauth_required`
 /// naming the factors the account can use.
 pub fn reauth_required(operation: Operation, accepted: &[Factor]) -> AppError {
-    let acceptable_factors = if accepted.is_empty() {
+    let acceptable_factors = if accepted.is_empty() && phishing_resistant_for(operation) {
+        vec![PASSKEY_ENROLLMENT_REQUIRED]
+    } else if accepted.is_empty() {
         vec![TOTP_ENROLLMENT_REQUIRED]
     } else {
         accepted.iter().map(|factor| factor.as_str()).collect()
@@ -375,7 +435,7 @@ pub async fn require_recent_auth(
     match operation.freshness() {
         Freshness::InRequestFactor => Ok(()),
         Freshness::Elevation => {
-            let accepted = account_factors(db, user_id).await?.accepted();
+            let accepted = account_factors(db, user_id).await?.accepted_for(operation);
             decide(operation, &state, &accepted)
         }
     }
@@ -429,7 +489,7 @@ pub async fn elevation_status(
             .await
             .map_err(AppError::internal)?
             .flatten();
-            let accepted = account_factors(db, user_id).await?.accepted();
+            let accepted = account_factors(db, user_id).await?.accepted_for(operation);
             Ok(ElevationStatus {
                 operation,
                 elevated: true,
@@ -631,7 +691,9 @@ pub async fn start_challenge(
     .await?
     .ok_or(AppError::Unauthorized)?;
 
-    let accepted = account_factors(stores.db, user_id).await?.accepted();
+    let accepted = account_factors(stores.db, user_id)
+        .await?
+        .accepted_for(operation);
     if accepted.is_empty() {
         return Err(reauth_required(operation, &accepted));
     }
@@ -731,7 +793,9 @@ pub async fn verify_challenge_with(
     hook: &dyn attome_db::BeforeCommit<Uuid>,
 ) -> Result<DateTime<Utc>, AppError> {
     let session = session_of(caller)?;
-    let accepted = account_factors(stores.db, user_id).await?.accepted();
+    let accepted = account_factors(stores.db, user_id)
+        .await?
+        .accepted_for(operation);
     let reject = || reauth_required(operation, &accepted);
 
     let Ok(challenge_id) = Uuid::parse_str(submission.challenge_id) else {
@@ -764,7 +828,7 @@ pub async fn verify_challenge_with(
         Factor::Password => {
             verify_account_password(stores.db, user_id, submission.credential).await
         }
-        Factor::Federated => Err(AppError::Unauthorized),
+        Factor::Federated | Factor::Passkey => Err(AppError::Unauthorized),
     };
     match verified {
         Ok(()) => {
@@ -956,7 +1020,9 @@ pub async fn begin_federated_step_up(
     .await?
     .ok_or(AppError::Unauthorized)?;
 
-    let accepted = account_factors(stores.db, user_id).await?.accepted();
+    let accepted = account_factors(stores.db, user_id)
+        .await?
+        .accepted_for(operation);
     let reject = || reauth_required(operation, &accepted);
     let Ok(challenge_id) = Uuid::parse_str(challenge_id) else {
         return Err(reject());
@@ -1037,7 +1103,7 @@ pub async fn complete_federated_step_up_with(
 ) -> Result<DateTime<Utc>, AppError> {
     let accepted = account_factors(stores.db, step_up.user_id)
         .await?
-        .accepted();
+        .accepted_for(step_up.operation);
     let reject = || reauth_required(step_up.operation, &accepted);
 
     if step_up.protocol != protocol || step_up.provider_key != provider_key {
@@ -1103,6 +1169,82 @@ pub async fn complete_federated_step_up_with(
     .await
 }
 
+// ── Passkey step-up (Q5-T7) ─────────────────────────────────────────────────
+
+/// Starts a passkey step-up for `operation`: the caller's own live family,
+/// and a passkey among the factors the operation accepts. Returns the
+/// request options for `navigator.credentials.get`.
+pub async fn start_passkey_step_up(
+    db: &DbPool,
+    rp: &crate::webauthn::RelyingParty,
+    caller: Caller,
+    user_id: Uuid,
+    operation: Operation,
+    absolute_secs: i64,
+) -> Result<serde_json::Value, AppError> {
+    if operation.freshness() != Freshness::Elevation {
+        return Err(AppError::NotFound);
+    }
+    let session = session_of(caller)?;
+    live_family_state(
+        db,
+        user_id,
+        session,
+        operation.max_age_secs(),
+        absolute_secs,
+    )
+    .await?
+    .ok_or(AppError::Unauthorized)?;
+    let accepted = account_factors(db, user_id).await?.accepted_for(operation);
+    if !accepted.contains(&Factor::Passkey) {
+        return Err(reauth_required(operation, &accepted));
+    }
+    crate::webauthn::start_assertion(db, rp, Some(user_id)).await
+}
+
+/// Completes a passkey step-up: the assertion must be the account's own
+/// passkey answering a challenge started for it, then the caller's family is
+/// elevated with `hwk` as its last `amr`. Any refusal is `reauth_required`
+/// and writes no elevation.
+#[allow(clippy::too_many_arguments)]
+pub async fn complete_passkey_step_up(
+    db: &DbPool,
+    rp: &crate::webauthn::RelyingParty,
+    caller: Caller,
+    user_id: Uuid,
+    operation: Operation,
+    response_json: &[u8],
+    absolute_secs: i64,
+    hook: &dyn attome_db::BeforeCommit<Uuid>,
+) -> Result<DateTime<Utc>, AppError> {
+    if operation.freshness() != Freshness::Elevation {
+        return Err(AppError::NotFound);
+    }
+    let session = session_of(caller)?;
+    let accepted = account_factors(db, user_id).await?.accepted_for(operation);
+    let reject = || reauth_required(operation, &accepted);
+    if !accepted.contains(&Factor::Passkey) {
+        return Err(reject());
+    }
+    match crate::webauthn::finish_assertion(db, rp, Some(user_id), response_json).await {
+        Ok(asserted) if asserted.user_ref == user_id => {}
+        Ok(_) | Err(AppError::Unauthorized) | Err(AppError::Validation(_)) => {
+            return Err(reject());
+        }
+        Err(other) => return Err(other),
+    }
+    write_elevation(
+        db,
+        user_id,
+        session,
+        Factor::Passkey,
+        None,
+        absolute_secs,
+        hook,
+    )
+    .await
+}
+
 // ── Google step-up (BAU-8c, D-628; owner ruling 2026-09-25) ─────────────────
 
 /// The challenge a Google step-up answers, after every check that needs no
@@ -1130,7 +1272,9 @@ async fn google_challenge(
     .await?
     .ok_or(AppError::Unauthorized)?;
 
-    let accepted = account_factors(stores.db, user_id).await?.accepted();
+    let accepted = account_factors(stores.db, user_id)
+        .await?
+        .accepted_for(operation);
     let Ok(challenge_id) = Uuid::parse_str(challenge_id) else {
         return Err(reauth_required(operation, &accepted));
     };
@@ -1372,6 +1516,7 @@ mod tests {
             (Factor::RecoveryCode, "recovery_code", "rcode"),
             (Factor::Password, "password", "pwd"),
             (Factor::Federated, "federated", "fed"),
+            (Factor::Passkey, "passkey", "hwk"),
         ] {
             assert_eq!(factor.as_str(), wire);
             assert_eq!(factor.amr(), amr);
@@ -1387,6 +1532,7 @@ mod tests {
             totp_enrolled: true,
             has_password: true,
             federated_linked: true,
+            passkey_registered: false,
         };
         assert_eq!(totp.accepted(), vec![Factor::Totp, Factor::RecoveryCode]);
 
@@ -1394,6 +1540,7 @@ mod tests {
             totp_enrolled: true,
             has_password: false,
             federated_linked: true,
+            passkey_registered: false,
         };
         assert_eq!(
             federated_with_totp.accepted(),

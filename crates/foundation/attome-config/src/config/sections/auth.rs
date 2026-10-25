@@ -61,6 +61,12 @@ pub struct AuthSection {
     /// working. `SameSite=Strict`/`HttpOnly` apply unconditionally either way.
     #[serde(default = "default_true")]
     pub secure_cookies: bool,
+    /// Q5-T7: creating an API key or changing a user's roles from a session
+    /// needs a step-up with a passkey (a phishing-resistant factor). Off by
+    /// default until passkey sign-in (Q6) lets every administrator register
+    /// one; API-key and S2S callers are not affected.
+    #[serde(default)]
+    pub step_up_phishing_resistant: bool,
     #[serde(default)]
     pub oauth_google_client_id: String,
     #[serde(default)]
@@ -276,6 +282,10 @@ impl std::fmt::Debug for AuthSection {
                 &self.refresh_absolute_lifetime_days,
             )
             .field("secure_cookies", &self.secure_cookies)
+            .field(
+                "step_up_phishing_resistant",
+                &self.step_up_phishing_resistant,
+            )
             .field("oauth_google_client_id", &self.oauth_google_client_id)
             .field("oauth_google_client_secret", &"[REDACTED]")
             .field("require_verified_email", &self.require_verified_email)

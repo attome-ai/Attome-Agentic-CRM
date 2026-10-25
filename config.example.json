@@ -132,6 +132,8 @@
     "apikey_default_expiry_days": null,
     "_mfa_challenge_max_attempts_comment": "P-mfa-challenge-hardening — per-challenge attempt ceiling enforced atomically against the mfa:pending:{jti} Redis marker; reaching it kills the pending token outright. Independent of rate_limit.categories.mfa's general per-IP/user budget. Default 5.",
     "mfa_challenge_max_attempts": 5,
+    "_step_up_phishing_resistant_comment": "Q5-T7: when true, creating an API key or changing a user's roles from a session needs a passkey step-up. Off until every administrator has a passkey (passkey sign-in, Q6); API-key and S2S callers are not affected.",
+    "step_up_phishing_resistant": false,
     "_registration_mode_comment": "P-registration-gating (D-128) — one of public/invite/disabled. Default (and this example) is disabled: a single-tenant deployment provisions its users, it doesn't accept anonymous sign-ups. Bootstrap the first admin with `server --bootstrap-admin <email>` instead of flipping this to public. Set to public only for a deployment that genuinely wants open self-registration; set to invite once Phase 2's admin-minted invitation endpoints are in use.",
     "registration_mode": "disabled"
   },

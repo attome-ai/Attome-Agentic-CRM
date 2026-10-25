@@ -538,6 +538,11 @@
           "default": true,
           "description": "Gates the `Secure` flag on both auth cookies (Plan 1.6a). Default true —\nonly `config.debug.json` sets this false, so plain-http local dev keeps\nworking. `SameSite=Strict`/`HttpOnly` apply unconditionally either way.",
           "type": "boolean"
+        },
+        "step_up_phishing_resistant": {
+          "default": false,
+          "description": "Q5-T7: creating an API key or changing a user's roles from a session\nneeds a step-up with a passkey (a phishing-resistant factor). Off by\ndefault until passkey sign-in (Q6) lets every administrator register\none; API-key and S2S callers are not affected.",
+          "type": "boolean"
         }
       },
       "required": [
@@ -1494,7 +1499,6 @@
       "description": "Z8-T4: `email.domain_check`.",
       "properties": {
         "domains": {
-          "default": [],
           "description": "The domains this deployment sends from; the daily check raises the\n`SendingDomainBroken` alert when one of their records breaks.",
           "items": {
             "$ref": "#/$defs/SendingDomain"
@@ -2473,7 +2477,6 @@
     "OpsSection": {
       "properties": {
         "dr_contacts": {
-          "default": [],
           "description": "AB3-T8: the people the disaster runbook says to call.",
           "items": {
             "$ref": "#/$defs/DrContact"

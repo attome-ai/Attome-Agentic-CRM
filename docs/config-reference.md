@@ -107,6 +107,7 @@ Required.
 | `auth.registration_mode` | string | `"disabled"` |  | P-registration-gating — one of `"public"`/`"invite"`/`"disabled"` (see `VALID_REGISTRATION_MODES` in `validate()`). Default `"disabled"` — deliberately secure-by-default (D-128): a deployment upgrading without touching config loses public self-registration, not the other way around. `"public"` is today's pre-P-registration-gating behavior (anyone can `POST /api/v1/auth/register`); `"disabled"` rejects every registration attempt with `AppError::Forbidden` before any DB work; `"invite"` additionally requires a valid, unconsumed `base_invitation_token` bearer matching the submitted email (Phase 2). Same plain-`String` string-enum convention as `mfa_policy`/ `database.ssl_mode` — not a Rust enum. |
 | `auth.require_verified_email` | boolean | `false` |  | P-account-lifecycle — when true, `attome_auth::accounts::login` rejects (403) a local password account whose `email_verified` is still false. Default false so air-gapped/no-SMTP deployments are unaffected; only turn this on once `email.enabled` is also true, or every local account locks itself out with no way to receive a verification link. |
 | `auth.secure_cookies` | boolean | `true` |  | Gates the `Secure` flag on both auth cookies (Plan 1.6a). Default true — only `config.debug.json` sets this false, so plain-http local dev keeps working. `SameSite=Strict`/`HttpOnly` apply unconditionally either way. |
+| `auth.step_up_phishing_resistant` | boolean | `false` |  | Q5-T7: creating an API key or changing a user's roles from a session needs a step-up with a passkey (a phishing-resistant factor). Off by default until passkey sign-in (Q6) lets every administrator register one; API-key and S2S callers are not affected. |
 
 ## `backup`
 
@@ -274,9 +275,9 @@ Required.
 
 | Key | Type | Default | Secret | Description |
 |---|---|---|---|---|
-| `email.enabled` | boolean | `false` |  | P-account-lifecycle — this section existed but nothing consumed it (dead config, audit finding E). `enabled` is the explicit opt-in: when false, `attome-email` is never constructed and reset/verification requests return 503 `feature_unavailable` instead of silently trying (and failing) to reach an SMTP host that was never meant to be live — same "ships dark behind a flag" pattern as `audit.chainer_enabled`. |
-| `email.domain_check.domains` | array of object | `[]` |  | The domains this deployment sends from; the daily check raises the `SendingDomainBroken` alert when one of their records breaks. Each is `{domain, spf_include?, dkim_selector?}`. |
+| `email.domain_check.domains` | array of object |  |  | The domains this deployment sends from; the daily check raises the `SendingDomainBroken` alert when one of their records breaks. |
 | `email.domain_check.resolver` | string | `"1.1.1.1:53"` |  | The DNS resolver the checks ask (an IP address, port 53 unless given). |
+| `email.enabled` | boolean | `false` |  | P-account-lifecycle — this section existed but nothing consumed it (dead config, audit finding E). `enabled` is the explicit opt-in: when false, `attome-email` is never constructed and reset/verification requests return 503 `feature_unavailable` instead of silently trying (and failing) to reach an SMTP host that was never meant to be live — same "ships dark behind a flag" pattern as `audit.chainer_enabled`. |
 | `email.feedback.sendgrid_public_key` | string, optional | `null` |  | SendGrid's signed event webhook verification key (the base64 SubjectPublicKeyInfo SendGrid shows); unset refuses SendGrid events. |
 | `email.feedback.ses_topic_arns` | array of string | `[]` |  | The SNS topics (ARNs) whose SES notifications are accepted; empty refuses SES events. |
 | `email.providers.by_sender` | map |  |  |  |
@@ -470,7 +471,7 @@ AB4-T1 — the reliability engine's settings (Patroni, recovery drills). Empty b
 
 | Key | Type | Default | Secret | Description |
 |---|---|---|---|---|
-| `ops.dr_contacts` | array of object | `[]` |  | AB3-T8: the people the disaster runbook says to call. Each is `{name, role?, phone?}`. |
+| `ops.dr_contacts` | array of object |  |  | AB3-T8: the people the disaster runbook says to call. |
 | `ops.drill_public_keys` | array of string | `[]` |  | Public keys (base64) a drill report's signature is checked against. |
 | `ops.drill_signing_key_path` | string, optional | `null` |  | The private key that signs recovery-drill reports. |
 | `ops.patroni_api_urls` | array of string | `[]` |  | The Patroni REST API of each database node (`http://db1:8008`), for cluster status and switchover. Empty: no Patroni cluster. |

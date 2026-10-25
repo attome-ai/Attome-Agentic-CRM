@@ -402,6 +402,8 @@ pub async fn init(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Error>
     } else {
         attome_auth::password_policy::configure_online(None);
     }
+    // Q5-T7: API key creation and role changes from a session need a passkey.
+    attome_auth::step_up::set_phishing_resistant_required(config.auth.step_up_phishing_resistant);
     // BPR-32 (BPR-F7): the profiler's posture was invisible at runtime; one
     // line per boot names it, next to the `profiler_enabled` gauge.
     tracing::info!(
