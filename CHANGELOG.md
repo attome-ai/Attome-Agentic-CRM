@@ -710,6 +710,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- UAE Pass sign-in adapter (AJ2-T1, sign-in part): staging and production endpoints, the authorization
+  URL, the code exchange and the profile read, with the Emirates ID checked (784, 15 digits, Luhn) and
+  trusted only from a verified (SOP2/SOP3) account. Document signing through UAE Pass is not built.
 - Unit auditors (Q17-T2): `GET /api/v1/admin/audit/search` and `/export` also admit holders of
   `audit.read_unit`, who read only the events of their organisations and those below them in the
   organisation tree; administrators still read everything, and anyone else gets 403.
