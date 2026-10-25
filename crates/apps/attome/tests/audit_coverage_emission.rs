@@ -3941,6 +3941,56 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"decision": "approve", "row_version": submitted.row_version})),
             )
         }
+        "POST /api/v1/approvals/{id}/recall" => {
+            // Z10-T10: the caller recalls their own pending request.
+            let submitted = attome_approval::submit(
+                &fx.base.db,
+                attome_compliance::rewrap_admin::ACTION_SECURITY_REWRAP,
+                json!({"domain": "mfa"}),
+                fx.admin_id,
+                1,
+                chrono::Duration::hours(1),
+            )
+            .await
+            .expect("submit approval request");
+            with_if_match(
+                request(
+                    "POST",
+                    &format!("/api/v1/approvals/{}/recall", submitted.id),
+                    t,
+                    None,
+                ),
+                submitted.row_version,
+            )
+        }
+        "POST /api/v1/approvals/{id}/resubmit" => {
+            // Z10-T10: a recalled request of the caller's, sent again.
+            let submitted = attome_approval::submit(
+                &fx.base.db,
+                attome_compliance::rewrap_admin::ACTION_SECURITY_REWRAP,
+                json!({"domain": "mfa"}),
+                fx.admin_id,
+                1,
+                chrono::Duration::hours(1),
+            )
+            .await
+            .expect("submit approval request");
+            let recalled = attome_approval::recall_with(
+                &fx.base.db,
+                submitted.id,
+                fx.admin_id,
+                submitted.row_version,
+                &attome_db::NoHook,
+            )
+            .await
+            .expect("recall approval request");
+            request(
+                "POST",
+                &format!("/api/v1/approvals/{}/resubmit", recalled.id),
+                t,
+                Some(json!({"payload": {"domain": "mfa"}})),
+            )
+        }
         "PUT /api/v1/approvals/out-of-office" => {
             // Z10-T7: the caller hands their approval standing to another user.
             let (delegate, _) = seed_user(&fx.base, "ooo-delegate").await;

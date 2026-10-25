@@ -2086,6 +2086,338 @@ async fn decision_evidence(
     })
 }
 
+// ── Z10-T10: recall, resubmit and bulk decide ───────────────────────────────
+
+/// `If-Match: "<row_version>"`, required.
+fn if_match_version(headers: &axum::http::HeaderMap) -> Result<i64, AppError> {
+    let raw = headers
+        .get(axum::http::header::IF_MATCH)
+        .ok_or_else(|| {
+            AppError::Validation("If-Match: \"<row_version>\" is required to recall".into())
+        })?
+        .to_str()
+        .map_err(|_| AppError::Validation("If-Match header must be ASCII".into()))?
+        .trim()
+        .trim_matches('"');
+    raw.parse::<i64>().map_err(|_| {
+        AppError::Validation(format!(
+            "If-Match must be a row_version integer, got: {raw}"
+        ))
+    })
+}
+
+/// Recall my approval request
+///
+/// Z10-T10: the requester takes their own pending request back to change
+/// it (`If-Match` names the request's `row_version`); it stays as
+/// `recalled`, and `.../resubmit` sends the corrected one. Only the
+/// requester, only while pending.
+#[utoipa::path(
+    post,
+    path = "/api/v1/approvals/{id}/recall",
+    tag = "approvals",
+    operation_id = "recall_approval",
+    params(
+        ("id" = Uuid, Path, description = "The approval request"),
+        ("If-Match" = String, Header, description = "The request's row_version, quoted"),
+    ),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Cancelled)])))),
+    responses(
+        (status = 200, description = "The recalled request", body = ApprovalRequestView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller did not submit this request", body = ErrorResponse),
+        (status = 404, description = "No such request", body = ErrorResponse),
+        (status = 409, description = "Already decided, being decided, or a stale row_version", body = ErrorResponse),
+        (status = 422, description = "If-Match is missing or not a row_version", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn recall_approval(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<ApprovalRequestView>, AppError> {
+    let row_version = if_match_version(&headers)?;
+    let audit = AuditHook::new(audit_service(&state), |request: &ApprovalRequest| {
+        vec![HookEvent::Security(
+            SecurityEvent::new(
+                MandatoryCategory::Security,
+                AuditOperation::Cancelled,
+                ctx.user_id,
+                "approval_request",
+                Some(request.id),
+            )
+            .named(request.action_type.clone())
+            .comment(format!(
+                "four-eyes approval request {} recalled by its requester to change it",
+                request.id
+            )),
+        )]
+    });
+    let request =
+        attome_approval::recall_with(&state.base.db, id, ctx.user_id, row_version, &audit).await?;
+    Ok(Json(request.into()))
+}
+
+#[derive(Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+struct ResubmitBody {
+    /// The corrected payload.
+    #[schema(value_type = Object)]
+    payload: Value,
+}
+
+/// Resubmit a recalled approval request
+///
+/// Z10-T10: the corrected request after a recall: the same action,
+/// requester and regarding record, the new payload, linked to the recalled
+/// one. It is matched against the action's current approval policy, as a
+/// new submission is. Only the requester, once per recall.
+#[utoipa::path(
+    post,
+    path = "/api/v1/approvals/{id}/resubmit",
+    tag = "approvals",
+    operation_id = "resubmit_approval",
+    params(("id" = Uuid, Path, description = "The recalled approval request")),
+    request_body = ResubmitBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Submitted)])))),
+    responses(
+        (status = 201, description = "The new request", body = ApprovalRequestView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller did not submit the recalled request", body = ErrorResponse),
+        (status = 404, description = "No such request", body = ErrorResponse),
+        (status = 409, description = "The request is not recalled, or was already resubmitted", body = ErrorResponse),
+        (status = 422, description = "The action's policy no longer validates", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn resubmit_approval(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ResubmitBody>,
+) -> Result<(axum::http::StatusCode, Json<ApprovalRequestView>), AppError> {
+    let previous = attome_approval::get(&state.base.db, id).await?;
+    if previous.requested_by != ctx.user_id {
+        return Err(AppError::Forbidden);
+    }
+    // The same policy match a new submission gets (`approval::gate`).
+    let policy =
+        attome_audit::approval::find_matching_policy(&state.base.db, &previous.action_type)
+            .await?
+            .filter(|p| {
+                attome_audit::approval::condition_permits(p.condition.as_deref(), &body.payload)
+            });
+    let ttl = policy.as_ref().map_or_else(
+        || chrono::Duration::hours(state.base.config.approval.ttl_hours),
+        |p| attome_audit::approval::plan_backstop_ttl(&p.plan),
+    );
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    // One resubmission per recall, even under two concurrent calls.
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+        .bind(attome_approval::ADVISORY_LOCK_NAMESPACE)
+        .bind(format!("attome-approval/resubmit:{id}"))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        return Err(AppError::Conflict(
+            "this approval request is already being resubmitted",
+        ));
+    }
+    let resubmitted: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM approval_request WHERE parent_request_id = $1)",
+    )
+    .bind(id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if resubmitted {
+        return Err(AppError::Conflict(
+            "this approval request was already resubmitted",
+        ));
+    }
+    let request = attome_approval::resubmit_regarding_in_tx(
+        &mut tx,
+        &previous,
+        body.payload,
+        policy.as_ref().map(|p| &p.plan),
+        ttl,
+    )
+    .await?;
+    attome_audit::security::write_security_event(
+        &mut tx,
+        &audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Security,
+            AuditOperation::Submitted,
+            ctx.user_id,
+            "approval_request",
+            Some(request.id),
+        )
+        .named(request.action_type.clone())
+        .comment(format!(
+            "four-eyes approval request {} resubmitted after recalling {}",
+            request.id, previous.id
+        )),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok((axum::http::StatusCode::CREATED, Json(request.into())))
+}
+
+#[derive(Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+struct BulkDecideBody {
+    /// At most 100 requests.
+    items: Vec<BatchItem>,
+    /// `"approve"` or `"reject"`, for every request.
+    decision: String,
+    #[serde(default)]
+    #[schema(max_length = 2000)]
+    comment: Option<String>,
+}
+
+/// One request's outcome in a bulk decision.
+#[derive(Serialize, ToSchema)]
+struct BulkDecideResult {
+    id: Uuid,
+    /// The request's status after the decision, `skipped` for a step that
+    /// asks for a step-up or a signature, or `failed`.
+    status: String,
+    /// Why a request failed: `stale`, `decided`, `forbidden`, `not_found`,
+    /// `invalid` or `error`.
+    error_code: Option<String>,
+    /// Why a request was skipped.
+    reason: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
+struct BulkDecideResponse {
+    results: Vec<BulkDecideResult>,
+}
+
+/// The skip reason for a request whose current step a bulk decision cannot
+/// satisfy, or `None`. Pure.
+fn bulk_skip_reason(request: &ApprovalRequest) -> Option<&'static str> {
+    let step = request.plan.as_ref().and_then(|plan| {
+        usize::try_from(request.step)
+            .ok()
+            .and_then(|i| plan.steps.get(i))
+    })?;
+    if step.extras.requires_signature {
+        Some("this step asks for a signature: decide it on its own")
+    } else if step.extras.requires_step_up {
+        Some("this step asks for a fresh sign-in: decide it on its own")
+    } else {
+        None
+    }
+}
+
+fn bulk_error_code(error: &AppError) -> &'static str {
+    match error {
+        AppError::VersionConflict | AppError::VersionConflictAt { .. } => "stale",
+        AppError::Conflict(_) => "decided",
+        AppError::Forbidden => "forbidden",
+        AppError::NotFound => "not_found",
+        AppError::Validation(_) | AppError::FieldValidation(_) => "invalid",
+        _ => "error",
+    }
+}
+
+/// Decide many of my approval requests
+///
+/// Z10-T10: decides up to 100 plan-bearing requests the caller may decide,
+/// each through the single decision's own path (eligibility, row version,
+/// transaction, audit events and execution), so one failing never stops the
+/// others. A request whose current step asks for a step-up or a signature
+/// is skipped, not decided.
+#[utoipa::path(
+    post,
+    path = "/api/v1/approvals/bulk-decide",
+    tag = "approvals",
+    operation_id = "bulk_decide_approvals",
+    request_body = BulkDecideBody,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("do_decide"),
+        "each request is decided through the single-decision path, which writes its own \
+         Approved/Rejected event and decision digest in its own transaction"
+    )))),
+    responses(
+        (status = 200, description = "Each request's outcome", body = BulkDecideResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 422, description = "Unknown decision, no items, more than 100, or a comment too long", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn bulk_decide_approvals(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
+    Json(body): Json<BulkDecideBody>,
+) -> Result<Json<BulkDecideResponse>, AppError> {
+    if !matches!(body.decision.as_str(), "approve" | "reject") {
+        return Err(AppError::Validation(format!(
+            "decision must be \"approve\" or \"reject\", got {:?}",
+            body.decision
+        )));
+    }
+    if body.items.is_empty() || body.items.len() > MAX_BATCH {
+        return Err(AppError::Validation(format!(
+            "a bulk decision covers 1 to {MAX_BATCH} requests"
+        )));
+    }
+    attome_approval::normalize_decision_comment(body.comment.as_deref())?;
+    let mut results = Vec::with_capacity(body.items.len());
+    for item in &body.items {
+        let skip = match attome_approval::get(&state.base.db, item.id).await {
+            Ok(request) => bulk_skip_reason(&request),
+            Err(_) => None,
+        };
+        if let Some(reason) = skip {
+            results.push(BulkDecideResult {
+                id: item.id,
+                status: "skipped".into(),
+                error_code: None,
+                reason: Some(reason.into()),
+            });
+            continue;
+        }
+        let decided = do_decide(
+            &state,
+            ctx.user_id,
+            caller,
+            item.id,
+            DecideBody {
+                decision: body.decision.clone(),
+                row_version: item.row_version,
+                comment: body.comment.clone(),
+                attachments: Vec::new(),
+                signature_ref: None,
+            },
+            RequirePlan::PlanOnly,
+        )
+        .await;
+        results.push(match decided {
+            Ok(response) => BulkDecideResult {
+                id: item.id,
+                status: response.status,
+                error_code: None,
+                reason: None,
+            },
+            Err(error) => BulkDecideResult {
+                id: item.id,
+                status: "failed".into(),
+                error_code: Some(bulk_error_code(&error).into()),
+                reason: None,
+            },
+        });
+    }
+    Ok(Json(BulkDecideResponse { results }))
+}
+
 /// Shared body of [`decide_approval`] (admin, any request) and
 /// [`decide_approval_eligible`] (any authenticated caller, plan-bearing
 /// requests only). Eligibility for a plan-bearing request is enforced by
@@ -2633,6 +2965,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/approvals/{id}/decide",
             post(decide_approval_eligible),
         )
+        // Z10-T10: recall, resubmit and bulk decide.
+        .route("/api/v1/approvals/{id}/recall", post(recall_approval))
+        .route("/api/v1/approvals/{id}/resubmit", post(resubmit_approval))
+        .route("/api/v1/approvals/bulk-decide", post(bulk_decide_approvals))
         .route(
             "/api/v1/approvals/out-of-office",
             axum::routing::put(put_out_of_office).delete(delete_out_of_office),
@@ -2654,6 +2990,9 @@ pub fn routes() -> Router<EngineState> {
         retry_execution,
         delegate_approval,
         decide_approval_eligible,
+        recall_approval,
+        resubmit_approval,
+        bulk_decide_approvals,
         put_out_of_office,
         delete_out_of_office
     ),
@@ -2662,6 +3001,10 @@ pub fn routes() -> Router<EngineState> {
         BatchDecideBody,
         BatchOutcome,
         BatchDecideResponse,
+        ResubmitBody,
+        BulkDecideBody,
+        BulkDecideResult,
+        BulkDecideResponse,
         OutOfOfficeBody,
         OutOfOfficeResponse,
         OutOfOfficeEnded
@@ -2676,6 +3019,18 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bulk_decide_maps_errors_to_codes() {
+        assert_eq!(bulk_error_code(&AppError::VersionConflict), "stale");
+        assert_eq!(bulk_error_code(&AppError::Conflict("decided")), "decided");
+        assert_eq!(bulk_error_code(&AppError::Forbidden), "forbidden");
+        assert_eq!(bulk_error_code(&AppError::NotFound), "not_found");
+        assert_eq!(
+            bulk_error_code(&AppError::Validation("x".into())),
+            "invalid"
+        );
+    }
 
     #[test]
     fn the_rollout_credential_reads_only_its_own_request() {
