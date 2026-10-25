@@ -710,6 +710,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Redis reconnect counter (AB2-T5): every cache and coordination pool client counts its reconnects as
+  `redis_reconnects_total{pool}`. Following a Sentinel failover was already built and is covered by the
+  container test in `attome-cache/tests/sentinel.rs`; during the switch, commands time out and the
+  fail-closed callers refuse.
 - Failover read pin (AB2-T4): the replica watermark loop also reads the primary's timeline; when it
   changes (a new leader), every routed read goes to the primary for `database.failover_pin_secs`
   (default 30, at most 300, 0 off) through a shared Redis pin, read in the same round trip as the

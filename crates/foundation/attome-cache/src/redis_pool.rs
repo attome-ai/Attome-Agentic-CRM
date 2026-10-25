@@ -155,6 +155,19 @@ fn client_builder(redis_config: RedisConfig, command_timeout_ms: u64) -> Builder
     builder
 }
 
+/// AB2-T5: counts each client's reconnects (a Sentinel failover, a Redis
+/// restart) as `redis_reconnects_total{pool}`. While a pool is reconnecting
+/// its commands time out, which the nonce, revocation and rate-limit callers
+/// already treat as a refusal.
+fn count_reconnects(pool: &RedisPool, label: &'static str) {
+    for client in pool.clients() {
+        fred::interfaces::EventInterface::on_reconnect(client, move |_server| {
+            metrics::counter!("redis_reconnects_total", "pool" => label).increment(1);
+            Ok(())
+        });
+    }
+}
+
 pub async fn create_redis_pool(config: &AppConfig) -> Result<RedisPool, RedisError> {
     let mut redis_config = redis_config_from_url(&config.redis_url(), config.cache.tls_enabled)?;
     apply_tls_ca(&mut redis_config, config.cache.tls_ca_path.as_deref())?;
@@ -164,6 +177,7 @@ pub async fn create_redis_pool(config: &AppConfig) -> Result<RedisPool, RedisErr
 
     pool.connect();
     pool.wait_for_connect().await?;
+    count_reconnects(&pool, "general");
 
     tracing::info!(
         "redis pool connected (size={}, sentinel={sentinel})",
@@ -205,6 +219,12 @@ pub async fn create_role_redis_pool(
 
     pool.connect();
     pool.wait_for_connect().await?;
+    count_reconnects(
+        &pool,
+        match role {
+            CacheRole::Coordination => "coordination",
+        },
+    );
 
     tracing::info!(
         ?role,
