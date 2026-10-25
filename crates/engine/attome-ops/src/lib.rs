@@ -16,6 +16,8 @@ pub mod error;
 /// AB4-T2: the signed `attome-evidence/v1` record every drill writes.
 pub mod evidence;
 pub mod model;
+/// AB2-T7: the cluster's status and failover history routes.
+pub mod status;
 /// AB8-T6: the upgrade record and its routes.
 pub mod upgrades;
 
@@ -31,5 +33,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 46;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = upgrades::openapi_fragment();
     doc.merge(disasters::openapi_fragment());
+    doc.merge(status::openapi_fragment());
     doc
 }
