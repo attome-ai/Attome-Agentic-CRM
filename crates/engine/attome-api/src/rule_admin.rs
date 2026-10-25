@@ -939,12 +939,15 @@ async fn check_business(
         ));
         return Ok(());
     };
+    // A11-T2: value expressions may read related records through lookups.
+    let registry = state.entities.load_full();
     let spec = BusinessRuleSpec {
         applies_to: input.applies_to,
         staff_role_count: input.role_ids.len(),
         portal_role_count: input.portal_role_ids.len(),
         condition,
         policies: &input.policies,
+        related: Some(registry.as_ref()),
     };
     let compiled = match br::validate_rule(&spec, attrs) {
         Ok(c) => Some(c),

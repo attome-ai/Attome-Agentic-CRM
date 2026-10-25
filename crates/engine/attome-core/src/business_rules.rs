@@ -957,6 +957,133 @@ pub fn condition_schema(attrs: &[AttrInfo]) -> Schema {
     schema
 }
 
+// ── Related records (A11-T2) ────────────────────────────────────────────────
+
+/// A11-T2: the most lookups a rule follows to reach a value.
+pub const MAX_RELATED_HOPS: usize = 3;
+/// A11-T2: the most related values one expression reads.
+pub const MAX_RELATED_REFS: usize = 20;
+
+/// A11-T2: one value an expression reads through lookups:
+/// `account.name` (one hop) or `account.owner.region` (up to
+/// [`MAX_RELATED_HOPS`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RelatedRef {
+    /// The lookup fields followed, then the field read.
+    pub segments: Vec<String>,
+    /// The entity each lookup reaches, in order.
+    pub entities: Vec<String>,
+    /// The kind of the field read.
+    pub kind: ConditionFieldKind,
+}
+
+fn collect_related(expr: &Expr, params: &mut Vec<String>, out: &mut BTreeSet<Vec<String>>) {
+    match expr {
+        Expr::FieldRef(r) => {
+            if let Some(hop) = &r.hop
+                && !params.contains(&r.base)
+            {
+                out.insert(vec![r.base.clone(), hop.clone()]);
+            }
+        }
+        Expr::Path(segments) => {
+            if !segments.first().is_some_and(|s| params.contains(s)) {
+                out.insert(segments.clone());
+            }
+        }
+        Expr::Unary { expr, .. } => collect_related(expr, params, out),
+        Expr::Binary { lhs, rhs, .. } => {
+            collect_related(lhs, params, out);
+            collect_related(rhs, params, out);
+        }
+        Expr::Call { args, .. } | Expr::ListLit(args) => {
+            for a in args {
+                collect_related(a, params, out);
+            }
+        }
+        Expr::Lambda { param, body } => {
+            params.push(param.clone());
+            collect_related(body, params, out);
+            params.pop();
+        }
+        Expr::NullLit | Expr::BoolLit(_) | Expr::NumberLit(_) | Expr::StringLit(_) => {}
+    }
+}
+
+/// A11-T2: the related values `src` reads that resolve through `attrs`'
+/// lookups in `registry`, at most [`MAX_RELATED_REFS`]. A reference that
+/// does not resolve (not a lookup, unknown target, field without a rule
+/// type, too deep) is left out, so the compiler names it as unknown.
+pub fn related_refs(
+    src: &str,
+    attrs: &[AttrInfo],
+    registry: &crate::EntityMetaRegistry,
+) -> Vec<RelatedRef> {
+    let Ok(expr) = attome_rules::parse(src) else {
+        return Vec::new();
+    };
+    let mut found = BTreeSet::new();
+    collect_related(&expr, &mut Vec::new(), &mut found);
+    let mut out = Vec::new();
+    'refs: for segments in found {
+        if segments.len() < 2 || segments.len() > MAX_RELATED_HOPS + 1 {
+            continue;
+        }
+        let mut current: &[AttrInfo] = attrs;
+        let mut entities = Vec::new();
+        for lookup in &segments[..segments.len() - 1] {
+            let Some(target) = current
+                .iter()
+                .find(|a| &a.logicalname == lookup && a.field_type() == FieldType::Lookup)
+                .and_then(|a| a.lookup_entity_ref)
+                .and_then(|id| registry.get_by_id(id))
+            else {
+                continue 'refs;
+            };
+            entities.push(target.logicalname.clone());
+            current = &target.attrs;
+        }
+        let last = &segments[segments.len() - 1];
+        let Some(kind) = current
+            .iter()
+            .find(|a| &a.logicalname == last && !a.is_sensitive)
+            .and_then(ConditionFieldKind::of_attr)
+        else {
+            continue;
+        };
+        out.push(RelatedRef {
+            segments,
+            entities,
+            kind,
+        });
+        if out.len() == MAX_RELATED_REFS {
+            break;
+        }
+    }
+    out
+}
+
+/// A11-T2: `schema` with the related values declared: one hop as the
+/// lookup's related fields, longer ones as optional paths.
+pub fn with_related_schema(mut schema: Schema, refs: &[RelatedRef]) -> Schema {
+    let mut one_hop: BTreeMap<&str, std::collections::HashMap<String, Type>> = BTreeMap::new();
+    for r in refs {
+        if r.segments.len() == 2 {
+            one_hop
+                .entry(r.segments[0].as_str())
+                .or_default()
+                .insert(r.segments[1].clone(), r.kind.rules_type());
+        } else {
+            let path: Vec<&str> = r.segments.iter().map(String::as_str).collect();
+            schema = schema.with_optional_path(&path, r.kind.rules_type());
+        }
+    }
+    for (lookup, fields) in one_hop {
+        schema = schema.with_related(lookup, fields);
+    }
+    schema
+}
+
 /// The value one field of a record has inside a condition. Absent, JSON
 /// `null` and a value of the wrong JSON type are `Null` (the entity engine's
 /// "missing means null" posture). A multi-choice value is its JSON array of
@@ -1615,6 +1742,9 @@ pub struct BusinessRuleSpec<'a> {
     pub portal_role_count: usize,
     pub condition: &'a ConditionTree,
     pub policies: &'a [PolicyDef],
+    /// A11-T2: the entities, so a value expression may read related
+    /// records through lookups; `None` checks it against the record alone.
+    pub related: Option<&'a crate::EntityMetaRegistry>,
 }
 
 /// The pure checks of design §6.2: audience and role count, the condition
@@ -1680,11 +1810,19 @@ pub fn validate_rule(
 
     let expr_schema = condition_schema(attrs);
     for (i, policy) in spec.policies.iter().enumerate() {
+        // A11-T2: a value expression may read related records.
+        let schema = match (spec.related, policy.expression.as_deref()) {
+            (Some(registry), Some(src)) => std::borrow::Cow::Owned(with_related_schema(
+                expr_schema.clone(),
+                &related_refs(src, attrs, registry),
+            )),
+            _ => std::borrow::Cow::Borrowed(&expr_schema),
+        };
         check_policy(
             policy,
             &format!("policies[{i}]"),
             attrs,
-            &expr_schema,
+            &schema,
             &mut issues,
         );
     }
@@ -2009,6 +2147,46 @@ mod tests {
             "options": options,
         }))
         .expect("AttrInfo")
+    }
+
+    fn lookup(name: &str, target: Uuid) -> AttrInfo {
+        let mut a = attr(name, "lookup", None);
+        a.lookup_entity_ref = Some(target);
+        a
+    }
+
+    #[test]
+    fn rule_related_refs_resolve_through_lookups() {
+        let user = Uuid::now_v7();
+        let account = Uuid::now_v7();
+        let meta = |id: Uuid, name: &str, attrs: Vec<AttrInfo>| crate::EntityMeta {
+            entity_id: id,
+            logicalname: name.to_owned(),
+            attrs,
+            is_append_only: false,
+            primary_name_attribute: None,
+        };
+        let registry = crate::EntityMetaRegistry::from_entities(vec![
+            meta(user, "app_user", vec![attr("region", "text", None)]),
+            meta(
+                account,
+                "account",
+                vec![attr("name", "text", None), lookup("owner", user)],
+            ),
+        ]);
+        let deal = vec![lookup("account", account), attr("amount", "number", None)];
+        let src = "account.name + \" / \" + account.owner.region";
+        let refs = related_refs(src, &deal, &registry);
+        assert_eq!(refs.len(), 2, "{refs:?}");
+        assert_eq!(refs[0].segments, vec!["account", "name"]);
+        assert_eq!(refs[0].entities, vec!["account"]);
+        assert_eq!(refs[1].segments, vec!["account", "owner", "region"]);
+        assert_eq!(refs[1].entities, vec!["account", "app_user"]);
+        let schema = with_related_schema(condition_schema(&deal), &refs);
+        assert!(attome_rules::compile(src, &schema).is_ok());
+        // A field that is not a lookup, and an unknown field, resolve to nothing.
+        assert!(related_refs("amount.x", &deal, &registry).is_empty());
+        assert!(related_refs("account.missing", &deal, &registry).is_empty());
     }
 
     fn attrs() -> Vec<AttrInfo> {
@@ -2504,6 +2682,7 @@ mod tests {
             portal_role_count: 0,
             condition,
             policies,
+            related: None,
         }
     }
 

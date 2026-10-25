@@ -210,7 +210,18 @@ async fn compile_set_value(
     {
         return Err(format!("'{field}' is a formula field"));
     }
-    let compiled = attome_rules::compile(src, &condition_schema(attrs))
+    // A11-T2: with the related records the expression reads declared.
+    let schema = match state {
+        Some(state) => {
+            let registry = state.entities.load_full();
+            attome_core::business_rules::with_related_schema(
+                condition_schema(attrs),
+                &attome_core::business_rules::related_refs(src, attrs, &registry),
+            )
+        }
+        None => condition_schema(attrs),
+    };
+    let compiled = attome_rules::compile(src, &schema)
         .map_err(|e| format!("expression does not compile: {e}"))?;
     let target_type = target.rules_type();
     if !result_fits(compiled.result_type(), &target_type) {
@@ -224,6 +235,71 @@ async fn compile_set_value(
         state.rule_compiled.insert(key, Arc::clone(&compiled)).await;
     }
     Ok(compiled)
+}
+
+/// A11-T2: loads the related values `refs` name, following `record`'s
+/// lookups, into `ctx`. A null, dangling or soft-deleted link reads as null.
+/// Each (entity, record, column) is read once per evaluation.
+async fn load_related(
+    state: &EngineState,
+    record: &Map<String, Value>,
+    refs: &[attome_core::business_rules::RelatedRef],
+    mut ctx: attome_rules::Context,
+) -> Result<attome_rules::Context, AppError> {
+    let mut one_hop: std::collections::BTreeMap<String, HashMap<String, attome_rules::Value>> =
+        std::collections::BTreeMap::new();
+    let mut read_cache: HashMap<(String, Uuid, String), Value> = HashMap::new();
+    for r in refs {
+        let mut id = record
+            .get(&r.segments[0])
+            .and_then(Value::as_str)
+            .and_then(|s| Uuid::parse_str(s).ok());
+        let mut value = Value::Null;
+        for (i, entity) in r.entities.iter().enumerate() {
+            let Some(current) = id else {
+                value = Value::Null;
+                break;
+            };
+            let column = &r.segments[i + 1];
+            let key = (entity.clone(), current, column.clone());
+            let read = match read_cache.get(&key) {
+                Some(v) => v.clone(),
+                None => {
+                    let v: Option<Option<Value>> = sqlx::query_scalar(&format!(
+                        "SELECT to_jsonb(t.{}) FROM {} t                          WHERE t.id = $1 AND (t.is_active IS NULL OR t.is_active = true)",
+                        attome_core::quote_ident(column),
+                        attome_core::quote_ident(entity)
+                    ))
+                    .bind(current)
+                    .fetch_optional(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?;
+                    let v = v.flatten().unwrap_or(Value::Null);
+                    read_cache.insert(key, v.clone());
+                    v
+                }
+            };
+            if i + 1 < r.entities.len() {
+                id = read.as_str().and_then(|s| Uuid::parse_str(s).ok());
+            } else {
+                value = read;
+            }
+        }
+        let rules_value = attome_core::business_rules::condition_value(r.kind, Some(&value));
+        if r.segments.len() == 2 {
+            one_hop
+                .entry(r.segments[0].clone())
+                .or_default()
+                .insert(r.segments[1].clone(), rules_value);
+        } else {
+            let path: Vec<&str> = r.segments.iter().map(String::as_str).collect();
+            ctx = ctx.with_path(&path, rules_value);
+        }
+    }
+    for (lookup, fields) in one_hop {
+        ctx = ctx.with_related(lookup, fields);
+    }
+    Ok(ctx)
 }
 
 /// The rules one write evaluates, for one writer.
@@ -531,6 +607,26 @@ impl<'a> WritePipeline<'a> {
                 let ctx = match &self.previous {
                     Some(before) => {
                         ctx.with_previous_from(&condition_context(self.attrs, before, self.now))
+                    }
+                    None => ctx,
+                };
+                // A11-T2: the related records it reads, loaded once.
+                let ctx = match self.state {
+                    Some(state) => {
+                        let refs = {
+                            let registry = state.entities.load_full();
+                            attome_core::business_rules::related_refs(src, self.attrs, &registry)
+                        };
+                        if refs.is_empty() {
+                            ctx
+                        } else {
+                            load_related(state, record, &refs, ctx).await.map_err(|e| {
+                                ComputeFailure {
+                                    reason: e.to_string(),
+                                    transient: false,
+                                }
+                            })?
+                        }
                     }
                     None => ctx,
                 };

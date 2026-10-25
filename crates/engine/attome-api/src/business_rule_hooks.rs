@@ -573,6 +573,7 @@ fn still_valid(rule: &store::BusinessRule, attrs: &[AttrInfo]) -> bool {
             portal_role_count: portal,
             condition,
             policies: &rule.policies,
+            related: None,
         };
         // A rule whose roles were all deleted is still "valid" for a retype.
         let spec = if staff + portal == 0 {

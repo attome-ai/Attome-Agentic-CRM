@@ -94,3 +94,8 @@ which paths it reads (`Compiled::paths()`), checks the person may read every hop
 values (`Context::with_path`). An unloaded path is `rules.field.unknown`, or null when declared
 optional.
 
+A business rule's value expression (`set_value`) reads related records this way (A11-T2): saving the
+rule declares every one-hop reference and path of up to three lookups that resolves through the
+entity's lookups (sensitive fields are never readable), and each write loads those values once, a
+null, missing or soft-deleted link reading as null.
+
