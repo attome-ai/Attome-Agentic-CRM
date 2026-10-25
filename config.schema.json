@@ -1467,6 +1467,25 @@
       },
       "type": "object"
     },
+    "EmailDomainCheck": {
+      "description": "Z8-T4: `email.domain_check`.",
+      "properties": {
+        "domains": {
+          "default": [],
+          "description": "The domains this deployment sends from; the daily check raises the\n`SendingDomainBroken` alert when one of their records breaks.",
+          "items": {
+            "$ref": "#/$defs/SendingDomain"
+          },
+          "type": "array"
+        },
+        "resolver": {
+          "default": "1.1.1.1:53",
+          "description": "The DNS resolver the checks ask (an IP address, port 53 unless given).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "EmailFeedback": {
       "description": "Z8-T5: `email.feedback`.",
       "properties": {
@@ -1546,6 +1565,10 @@
     },
     "EmailSection": {
       "properties": {
+        "domain_check": {
+          "$ref": "#/$defs/EmailDomainCheck",
+          "description": "Z8-T4: the sending domains whose SPF, DKIM and DMARC records are\nchecked (`GET /api/v1/admin/email/domains/{domain}/check`, and daily),\nand the DNS resolver asked."
+        },
         "enabled": {
           "default": false,
           "description": "P-account-lifecycle — this section existed but nothing consumed it\n(dead config, audit finding E). `enabled` is the explicit opt-in: when\nfalse, `attome-email` is never constructed and reset/verification\nrequests return 503 `feature_unavailable` instead of silently trying\n(and failing) to reach an SMTP host that was never meant to be live —\nsame \"ships dark behind a flag\" pattern as `audit.chainer_enabled`.",
@@ -2948,6 +2971,35 @@
       },
       "required": [
         "api_key"
+      ],
+      "type": "object"
+    },
+    "SendingDomain": {
+      "description": "Z8-T4: one sending domain.",
+      "properties": {
+        "dkim_selector": {
+          "default": null,
+          "description": "The sending provider's DKIM selector; unset skips the DKIM check.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "domain": {
+          "description": "The domain (`example.com`).",
+          "type": "string"
+        },
+        "spf_include": {
+          "default": null,
+          "description": "The sending provider's SPF include (`amazonses.com`, `sendgrid.net`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "domain"
       ],
       "type": "object"
     },

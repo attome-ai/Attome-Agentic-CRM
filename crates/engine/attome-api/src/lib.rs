@@ -127,6 +127,8 @@ pub mod duplicates_admin;
 /// calls; everything else stays module-private.
 pub mod duplicates_match;
 mod email_admin;
+/// Z8-T4: sending-domain checks; `pub` for the daily job's `check_all`.
+pub mod email_domains;
 /// Z8-T5: provider bounce, complaint and unsubscribe webhooks.
 mod email_webhooks;
 /// `pub` only for the two re-exports below (`read_record`,

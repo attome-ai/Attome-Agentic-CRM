@@ -153,6 +153,49 @@ pub struct EmailSection {
     /// provider not configured here.
     #[serde(default)]
     pub feedback: EmailFeedback,
+    /// Z8-T4: the sending domains whose SPF, DKIM and DMARC records are
+    /// checked (`GET /api/v1/admin/email/domains/{domain}/check`, and daily),
+    /// and the DNS resolver asked.
+    #[serde(default)]
+    pub domain_check: EmailDomainCheck,
+}
+
+/// Z8-T4: `email.domain_check`.
+#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
+pub struct EmailDomainCheck {
+    /// The DNS resolver the checks ask (an IP address, port 53 unless given).
+    #[serde(default = "default_dns_resolver")]
+    pub resolver: String,
+    /// The domains this deployment sends from; the daily check raises the
+    /// `SendingDomainBroken` alert when one of their records breaks.
+    #[serde(default)]
+    pub domains: Vec<SendingDomain>,
+}
+
+impl Default for EmailDomainCheck {
+    fn default() -> Self {
+        Self {
+            resolver: default_dns_resolver(),
+            domains: Vec::new(),
+        }
+    }
+}
+
+fn default_dns_resolver() -> String {
+    "1.1.1.1:53".to_owned()
+}
+
+/// Z8-T4: one sending domain.
+#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
+pub struct SendingDomain {
+    /// The domain (`example.com`).
+    pub domain: String,
+    /// The sending provider's SPF include (`amazonses.com`, `sendgrid.net`).
+    #[serde(default)]
+    pub spf_include: Option<String>,
+    /// The sending provider's DKIM selector; unset skips the DKIM check.
+    #[serde(default)]
+    pub dkim_selector: Option<String>,
 }
 
 /// Z8-T5: `email.feedback`.

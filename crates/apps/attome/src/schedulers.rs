@@ -238,6 +238,14 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     // AB4-T7: overdue recovery drills, daily (the job does nothing without
     // the ops module).
     crate::jobs::spawn_ops_drill_skip_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
+    // Z8-T4: the sending domains' SPF, DKIM and DMARC records, daily, only
+    // when `email.domain_check.domains` names any.
+    if !config.email.domain_check.domains.is_empty() {
+        crate::jobs::spawn_email_domain_check_scheduler(
+            db.clone(),
+            std::time::Duration::from_secs(86_400),
+        );
+    }
     // Z12-T8: holidays from calendar iCal feeds, daily.
     crate::jobs::spawn_calendar_feed_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // E13-T10: yesterday's search statistics, daily.

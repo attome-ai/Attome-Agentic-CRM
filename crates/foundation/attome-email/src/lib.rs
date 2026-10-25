@@ -32,6 +32,8 @@
 //! that fails must not make the job claim the address was suppressed.
 
 pub mod delivery;
+/// Z8-T4: SPF, DKIM and DMARC checks of a sending domain.
+pub mod domain_check;
 mod error;
 /// Z8-T5: provider bounce, complaint and unsubscribe events.
 pub mod feedback;

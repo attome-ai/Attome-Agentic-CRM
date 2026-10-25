@@ -154,6 +154,7 @@ fn cfg_for(port: u16, user: &str) -> EmailSection {
         providers: Default::default(),
         rate_limits: Default::default(),
         feedback: Default::default(),
+        domain_check: Default::default(),
     }
 }
 

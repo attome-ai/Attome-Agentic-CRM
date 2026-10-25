@@ -2986,6 +2986,8 @@ const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
 const DEDUP_KEY_OPS_CLUSTER_POLL: &str = "ops-cluster-poll";
 /// AB4-T7: the daily overdue-drill check (a registered job type).
 const DEDUP_KEY_OPS_DRILL_SKIP_CHECK: &str = "ops-drill-skip-check";
+/// Z8-T4: the daily sending-domain check (a registered job type).
+const DEDUP_KEY_EMAIL_DOMAIN_CHECK: &str = "email-domain-check";
 /// Z12-T8: the daily calendar feed fetch (a registered job type).
 const DEDUP_KEY_CALENDAR_FEED_FETCH: &str = "calendar-feed-fetch";
 /// E13-T10: the daily search-console pull (a registered job type).
@@ -3293,6 +3295,10 @@ pub const OPS_CLUSTER_POLL: attome_jobs::JobType =
 /// AB4-T7: enabled drill schedules more than two days overdue, daily.
 pub const OPS_DRILL_SKIP_CHECK: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ops::drill_schedules::SKIP_CHECK_JOB, 1);
+
+/// Z8-T4: every configured sending domain's DNS records, daily.
+pub const EMAIL_DOMAIN_CHECK: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::email_domains::JOB, 1);
 
 /// Z12-T8: holidays read from calendar iCal feeds, daily.
 pub const CALENDAR_FEED_FETCH: attome_jobs::JobType =
@@ -4355,6 +4361,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            EMAIL_DOMAIN_CHECK,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let broken = attome_api::email_domains::check_all(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if broken > 0 {
+                    tracing::warn!(broken, "sending domains with broken records");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CALENDAR_FEED_FETCH,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let read = attome_api::calendar_feed::fetch_all(&state)
@@ -4930,6 +4950,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == OPS_DRILL_SKIP_CHECK.name => {
             DEDUP_KEY_OPS_DRILL_SKIP_CHECK
+        }
+        EngineJob::Registered(job) if job.name == EMAIL_DOMAIN_CHECK.name => {
+            DEDUP_KEY_EMAIL_DOMAIN_CHECK
         }
         EngineJob::Registered(job) if job.name == CALENDAR_FEED_FETCH.name => {
             DEDUP_KEY_CALENDAR_FEED_FETCH
@@ -6022,6 +6045,21 @@ pub fn spawn_ops_drill_skip_scheduler(db: DbPool, interval: std::time::Duration)
             "ops drill skip check",
         ),
         Err(error) => tracing::error!(%error, "ops drill skip check: not scheduled"),
+    }
+}
+
+/// Z8-T4: daily, the configured sending domains' DNS records.
+pub fn spawn_email_domain_check_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(EMAIL_DOMAIN_CHECK.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_EMAIL_DOMAIN_CHECK,
+            "email domain check",
+        ),
+        Err(error) => tracing::error!(%error, "email domain check: not scheduled"),
     }
 }
 

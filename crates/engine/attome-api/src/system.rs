@@ -170,6 +170,8 @@ impl EngineSystem {
             .merge(crate::live::routes())
             .merge(crate::calendar_admin::routes())
             .merge(crate::calendar_feed::routes())
+            // Z8-T4: sending-domain checks (admin-gated in the handler).
+            .merge(crate::email_domains::routes())
             // M65 Phase 1 — Application Builder: same "core, always-on,
             // Admin-privilege-gated" posture as `view_admin`/`calendar_admin`
             // immediately above — not wrapped in `license_gate` (core

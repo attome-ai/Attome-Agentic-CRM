@@ -289,6 +289,7 @@ mod tests {
             providers,
             rate_limits: Default::default(),
             feedback: Default::default(),
+            domain_check: Default::default(),
         }
     }
 

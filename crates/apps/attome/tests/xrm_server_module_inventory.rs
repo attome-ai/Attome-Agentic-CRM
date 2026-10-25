@@ -143,6 +143,8 @@ const BASELINE: &[&str] = &[
     "duplicates_admin",
     "duplicates_match",
     "email_admin",
+    // Z8-T4: sending-domain DNS checks against the deployment's config.
+    "email_domains",
     // Z8-T5: the public provider webhooks that feed email suppression.
     "email_webhooks",
     // A30-T1: values of the `environment_variable` model kind, which the

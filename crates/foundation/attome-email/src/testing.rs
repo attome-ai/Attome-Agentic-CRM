@@ -212,6 +212,7 @@ impl FakeInbox {
             providers: Default::default(),
             rate_limits: Default::default(),
             feedback: Default::default(),
+            domain_check: Default::default(),
         }
     }
 
