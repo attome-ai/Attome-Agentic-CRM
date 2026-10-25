@@ -230,6 +230,8 @@ async fn record_evidence(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
+    // AB4-T9: this node's freshness answers are now out of date.
+    crate::freshness::invalidate();
     Ok((
         StatusCode::CREATED,
         Json(EvidenceRecorded {

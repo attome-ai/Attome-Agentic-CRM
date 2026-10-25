@@ -28,6 +28,7 @@ impl EngineModel for OpsModel {
             .merge(crate::drills::routes())
             .merge(crate::drill_schedules::routes())
             .merge(crate::auditor_pack::routes())
+            .merge(crate::freshness::routes())
             .merge(crate::switchover::routes())
     }
 }

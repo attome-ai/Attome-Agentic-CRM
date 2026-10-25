@@ -494,3 +494,36 @@ fn failovers_are_paged_one_based() {
         assert!(page["total"].as_i64().unwrap() >= 2);
     });
 }
+
+#[test]
+fn freshness_turns_fresh_after_a_passing_upload() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        let (status, uploaded) = app
+            .request(
+                Method::POST,
+                "/api/v1/ops/drills/evidence",
+                Some(report(
+                    EvidenceKind::Secrets,
+                    &SigningKey::from_bytes(&SEED),
+                )),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{uploaded}");
+        let (status, page) = app
+            .request(Method::GET, "/api/v1/ops/drills/freshness", None)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        let secrets = page["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|f| f["kind"] == json!("secrets"))
+            .cloned()
+            .unwrap();
+        assert_eq!(secrets["status"], json!("fresh"));
+        assert_eq!(page["items"].as_array().unwrap().len(), 7);
+    });
+}

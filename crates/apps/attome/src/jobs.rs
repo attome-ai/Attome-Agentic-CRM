@@ -2986,6 +2986,8 @@ const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
 const DEDUP_KEY_OPS_CLUSTER_POLL: &str = "ops-cluster-poll";
 /// AB4-T7: the daily overdue-drill check (a registered job type).
 const DEDUP_KEY_OPS_DRILL_SKIP_CHECK: &str = "ops-drill-skip-check";
+/// AB4-T9: the daily drill freshness notice (a registered job type).
+const DEDUP_KEY_OPS_DRILL_FRESHNESS: &str = "ops-drill-freshness";
 /// Z8-T4: the daily sending-domain check (a registered job type).
 const DEDUP_KEY_EMAIL_DOMAIN_CHECK: &str = "email-domain-check";
 /// Z12-T8: the daily calendar feed fetch (a registered job type).
@@ -3295,6 +3297,10 @@ pub const OPS_CLUSTER_POLL: attome_jobs::JobType =
 /// AB4-T7: enabled drill schedules more than two days overdue, daily.
 pub const OPS_DRILL_SKIP_CHECK: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ops::drill_schedules::SKIP_CHECK_JOB, 1);
+
+/// AB4-T9: stale or failed drill kinds told to `ops.read` holders, daily.
+pub const OPS_DRILL_FRESHNESS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ops::freshness::JOB, 1);
 
 /// Z8-T4: every configured sending domain's DNS records, daily.
 pub const EMAIL_DOMAIN_CHECK: attome_jobs::JobType =
@@ -4361,6 +4367,28 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            OPS_DRILL_FRESHNESS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if state
+                    .modules
+                    .load()
+                    .require(attome_modules::MODULE_OPS)
+                    .is_err()
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let reported = attome_ops::freshness::notify_stale(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if reported > 0 {
+                    tracing::warn!(reported, "recovery drills stale or failed");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             EMAIL_DOMAIN_CHECK,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let broken = attome_api::email_domains::check_all(&state)
@@ -4950,6 +4978,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == OPS_DRILL_SKIP_CHECK.name => {
             DEDUP_KEY_OPS_DRILL_SKIP_CHECK
+        }
+        EngineJob::Registered(job) if job.name == OPS_DRILL_FRESHNESS.name => {
+            DEDUP_KEY_OPS_DRILL_FRESHNESS
         }
         EngineJob::Registered(job) if job.name == EMAIL_DOMAIN_CHECK.name => {
             DEDUP_KEY_EMAIL_DOMAIN_CHECK
@@ -6030,6 +6061,21 @@ pub fn spawn_ops_cluster_scheduler(db: DbPool, interval: std::time::Duration) {
             "ops cluster poll",
         ),
         Err(error) => tracing::error!(%error, "ops cluster poll: not scheduled"),
+    }
+}
+
+/// AB4-T9: daily, stale or failed recovery drills.
+pub fn spawn_ops_drill_freshness_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(OPS_DRILL_FRESHNESS.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_OPS_DRILL_FRESHNESS,
+            "ops drill freshness",
+        ),
+        Err(error) => tracing::error!(%error, "ops drill freshness: not scheduled"),
     }
 }
 

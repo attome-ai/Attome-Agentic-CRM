@@ -21,6 +21,8 @@ pub mod drills;
 pub mod error;
 /// AB4-T2: the signed `attome-evidence/v1` record every drill writes.
 pub mod evidence;
+/// AB4-T9: how fresh each kind of drill is.
+pub mod freshness;
 pub mod model;
 /// AB2-T7: the cluster's status and failover history routes.
 pub mod status;
@@ -45,6 +47,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(drills::openapi_fragment());
     doc.merge(drill_schedules::openapi_fragment());
     doc.merge(auditor_pack::openapi_fragment());
+    doc.merge(freshness::openapi_fragment());
     doc.merge(switchover::openapi_fragment());
     doc
 }

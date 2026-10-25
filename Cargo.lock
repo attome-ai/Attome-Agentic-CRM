@@ -1626,6 +1626,7 @@ dependencies = [
  "attome-db",
  "attome-docgen",
  "attome-modules",
+ "attome-notification",
  "attome-outbound",
  "attome-server",
  "attome-types",

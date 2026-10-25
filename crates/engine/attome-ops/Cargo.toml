@@ -18,6 +18,7 @@ attome-core.workspace     = true
 attome-db.workspace       = true
 attome-docgen.workspace   = true
 attome-modules.workspace  = true
+attome-notification.workspace = true
 attome-outbound.workspace = true
 attome-server.workspace   = true
 attome-types.workspace    = true
