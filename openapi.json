@@ -84603,6 +84603,113 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/marketing/lists/{id}/email/send": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Start an email campaign to a list.",
+        "description": "Renders the design once, fixes the consenting recipients and starts\nsending on the bulk stream in the background, at most three marketing\nmessages per person per week.",
+        "operationId": "start_email_campaign",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCampaignBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The send has started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailCampaignStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No subject or purpose, a design that does not render, or nobody to email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/marketing/lists/{id}/explain/{person_id}": {
       "get": {
         "tags": [
@@ -85705,6 +85812,97 @@
         "x-idempotent": "key",
         "x-module": "marketing",
         "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/unsubscribe/{token}": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Unsubscribe page",
+        "description": "The page an email's unsubscribe link opens: one button that confirms.\nPublic; opening it changes nothing (link scanners open links).",
+        "operationId": "show_email_unsubscribe",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The token from the email's unsubscribe link",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page with one unsubscribe button",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Unsubscribe from marketing email",
+        "description": "The page's button, or a mail client's one-click request (RFC 8058):\nthe address stops getting bulk mail. Public; the token is the\ncredential, and an unknown one answers the same page.",
+        "operationId": "email_unsubscribe",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The token from the email's unsubscribe link",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unsubscribed (the same page for any token)",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -90812,6 +91010,83 @@
       }
     },
     "/api/v1/ops/disasters": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "List disasters",
+        "description": "AB3-T10: every declared disaster, open ones first, newest first. Needs\n`ops.read`.",
+        "operationId": "list_ops_disasters",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of disasters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_Disaster"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
       "post": {
         "tags": [
           "ops"
@@ -90975,6 +91250,72 @@
       }
     },
     "/api/v1/ops/disasters/{id}/actions": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "A disaster's actions",
+        "description": "AB3-T10: the actions asked for on one disaster (newest first, at most\n100), each with its approval's status. Needs `ops.read`.",
+        "operationId": "list_ops_disaster_actions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The declared disaster",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The actions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DisasterApproval"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
       "post": {
         "tags": [
           "ops"
@@ -91205,6 +91546,92 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/dr-runbook": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "The disaster runbook",
+        "description": "AB3-T8: this deployment's runbook, from its profile, recovery targets,\ncontacts and backup folder, in English or Arabic, as HTML or (when the\nrender service answers) PDF. Needs `ops.read`.",
+        "operationId": "get_ops_dr_runbook",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`en` (default) or `ar`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "`html` (default) or `pdf`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The runbook (text/html, or application/pdf when asked and available)",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown language or format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/ops/drill-schedules": {
@@ -91949,6 +92376,265 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedResponse_FailoverEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/recovery-targets": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "List recovery targets",
+        "description": "AB3-T1: one profile's recovery point and time per scenario, each with\nwhether a fresh drill proved it. Needs `ops.read`.",
+        "operationId": "list_ops_recovery_targets",
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "description": "`solo`, `team`, `ha` or `scale`; the configured `ops.profile` when\nabsent.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The profile's targets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RecoveryTarget"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/recovery-targets/{id}": {
+      "patch": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Change a recovery target",
+        "description": "AB3-T1: its recovery point or time, in seconds. `If-Match` names the\nrow version. Needs `ops.drill.manage`. Audited.",
+        "operationId": "update_ops_recovery_target",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The target's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecoveryTarget"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The target, with its proof",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryTarget"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.drill.manage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such target",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A stale row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing If-Match, a negative number or nothing to change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/rpo": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Live recovery point",
+        "description": "AB3-T2: each source's live recovery point in seconds, this profile's\ntarget and `ok`, `over` or `off`. Needs `ops.read`.",
+        "operationId": "get_ops_live_rpo",
+        "responses": {
+          "200": {
+            "description": "Every source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RpoSource"
                 }
               }
             }
@@ -96223,6 +96909,91 @@
         "x-privilege": "public",
         "x-rate-class": "consent_capture",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/record-templates": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "List record templates",
+        "description": "B8-T3: the published templates of an entity the caller may create\nrecords of, those whose condition holds for the new record's type and\nstage and the caller's roles, each with its prompts.",
+        "operationId": "list_record_templates",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "query",
+            "description": "The entity's logical name.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "The new record's type, for a template whose condition reads `type`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stage",
+            "in": "query",
+            "description": "The new record's stage, for a template whose condition reads `stage`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The templates offered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OfferedTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, or one the caller cannot create records of",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/record-templates/from-record": {
@@ -147619,6 +148390,55 @@
           }
         }
       },
+      "EmailCampaignBody": {
+        "type": "object",
+        "description": "A campaign to start.",
+        "required": [
+          "subject",
+          "design",
+          "purpose_key"
+        ],
+        "properties": {
+          "design": {
+            "type": "object",
+            "description": "The email designer's JSON (E2-T1): blocks, direction, width, colour."
+          },
+          "locale": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`en` (default) or `ar`: how values are formatted."
+          },
+          "purpose_key": {
+            "type": "string",
+            "description": "The consent purpose the email is sent under."
+          },
+          "subject": {
+            "type": "string",
+            "description": "The subject line (at most 200 characters)."
+          }
+        }
+      },
+      "EmailCampaignStarted": {
+        "type": "object",
+        "description": "A campaign started.",
+        "required": [
+          "send_id",
+          "recipients"
+        ],
+        "properties": {
+          "recipients": {
+            "type": "integer",
+            "format": "int64",
+            "description": "People who will be emailed, before caps and later withdrawals."
+          },
+          "send_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "EmailSignature": {
         "type": "object",
         "description": "The caller's signature. `body` is empty and `row_version` is 0 when none\nis set.",
@@ -160315,6 +161135,42 @@
           }
         }
       },
+      "OfferedTemplate": {
+        "type": "object",
+        "description": "One template the caller may use.",
+        "required": [
+          "id",
+          "label_en",
+          "prompts",
+          "children"
+        ],
+        "properties": {
+          "children": {
+            "type": "integer",
+            "description": "How many child records it creates with the record.",
+            "minimum": 0
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label_en": {
+            "type": "string"
+          },
+          "prompts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplatePrompt"
+            }
+          }
+        }
+      },
       "OfferingPublished": {
         "type": "object",
         "description": "A published offering's version.",
@@ -168543,6 +169399,158 @@
           }
         }
       },
+      "PaginatedResponse_Disaster": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A declared disaster.",
+              "required": [
+                "id",
+                "declared_by",
+                "declared_at",
+                "scenario",
+                "summary",
+                "sla_excluded",
+                "row_version"
+              ],
+              "properties": {
+                "closed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "declared_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "declared_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "exclusion_evidence": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "scenario": {
+                  "type": "string"
+                },
+                "sla_excluded": {
+                  "type": "boolean"
+                },
+                "summary": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_DisasterApproval": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "The approval a disaster action waits on.",
+              "required": [
+                "approval_id",
+                "status"
+              ],
+              "properties": {
+                "action": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "approval_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "disaster_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`pending`, `approved`, `rejected`, `expired`, ..."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_DocumentRef": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -173490,6 +174498,76 @@
           }
         }
       },
+      "PaginatedResponse_OfferedTemplate": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One template the caller may use.",
+              "required": [
+                "id",
+                "label_en",
+                "prompts",
+                "children"
+              ],
+              "properties": {
+                "children": {
+                  "type": "integer",
+                  "description": "How many child records it creates with the record.",
+                  "minimum": 0
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "label_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "label_en": {
+                  "type": "string"
+                },
+                "prompts": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TemplatePrompt"
+                  }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_OpsNode": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -176044,6 +177122,125 @@
           }
         }
       },
+      "PaginatedResponse_RecoveryTarget": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One recovery target and its proof.",
+              "required": [
+                "id",
+                "profile",
+                "scenario",
+                "rpo_seconds",
+                "rto_seconds",
+                "evidence_kind",
+                "proven",
+                "row_version"
+              ],
+              "properties": {
+                "evidence_kind": {
+                  "type": "string",
+                  "description": "The drill kind whose evidence proves it."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "measured_rpo_seconds": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double",
+                  "description": "What the newest passing drill measured."
+                },
+                "measured_rto_seconds": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double"
+                },
+                "profile": {
+                  "type": "string",
+                  "description": "`solo`, `team`, `ha` or `scale`."
+                },
+                "proven": {
+                  "type": "boolean",
+                  "description": "A fresh drill of that kind measured within the target."
+                },
+                "proven_on": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "When that drill finished."
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "rpo_seconds": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "rto_seconds": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "scenario": {
+                  "type": "string",
+                  "description": "`node_loss`, `site_loss`, `corruption`, `ransomware` or `bad_change`."
+                },
+                "updated_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "updated_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_ReferenceView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -176937,6 +178134,73 @@
                 },
                 "user_name": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_RpoSource": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One source's live recovery point.",
+              "required": [
+                "source",
+                "status"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "`wal_archive`, `standby` or `backup`."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`ok`, `over` or `off`."
+                },
+                "target_seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64",
+                  "description": "This profile's target for it."
+                },
+                "value_seconds": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double"
                 }
               }
             }
@@ -187322,6 +188586,91 @@
           }
         }
       },
+      "RecoveryTarget": {
+        "type": "object",
+        "description": "One recovery target and its proof.",
+        "required": [
+          "id",
+          "profile",
+          "scenario",
+          "rpo_seconds",
+          "rto_seconds",
+          "evidence_kind",
+          "proven",
+          "row_version"
+        ],
+        "properties": {
+          "evidence_kind": {
+            "type": "string",
+            "description": "The drill kind whose evidence proves it."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "measured_rpo_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "What the newest passing drill measured."
+          },
+          "measured_rto_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "profile": {
+            "type": "string",
+            "description": "`solo`, `team`, `ha` or `scale`."
+          },
+          "proven": {
+            "type": "boolean",
+            "description": "A fresh drill of that kind measured within the target."
+          },
+          "proven_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When that drill finished."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rpo_seconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rto_seconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scenario": {
+            "type": "string",
+            "description": "`node_loss`, `site_loss`, `corruption`, `ransomware` or `bad_change`."
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "RectifyBody": {
         "type": "object",
         "description": "`POST …/rectify`.",
@@ -190059,6 +191408,39 @@
           },
           "p99_ms": {
             "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "RpoSource": {
+        "type": "object",
+        "description": "One source's live recovery point.",
+        "required": [
+          "source",
+          "status"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "`wal_archive`, `standby` or `backup`."
+          },
+          "status": {
+            "type": "string",
+            "description": "`ok`, `over` or `off`."
+          },
+          "target_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "This profile's target for it."
+          },
+          "value_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
             "format": "double"
           }
         }
@@ -199469,6 +200851,33 @@
           }
         }
       },
+      "TemplatePrompt": {
+        "type": "object",
+        "description": "One question a template asks.",
+        "required": [
+          "field",
+          "label_en",
+          "required"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "The field it fills."
+          },
+          "label_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label_en": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      },
       "TemplateRecord": {
         "type": "object",
         "description": "One record a template created.",
@@ -202196,6 +203605,27 @@
             ]
           }
         }
+      },
+      "UpdateRecoveryTarget": {
+        "type": "object",
+        "description": "A target's new numbers; absent ones stay.",
+        "properties": {
+          "rpo_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "rto_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
       },
       "UpdateRelationshipBody": {
         "type": "object",
@@ -204959,6 +206389,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -205011,6 +206442,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }

@@ -16841,6 +16841,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/lists/{id}/email/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start an email campaign to a list.
+         * @description Renders the design once, fixes the consenting recipients and starts
+         *     sending on the bulk stream in the background, at most three marketing
+         *     messages per person per week.
+         */
+        post: operations["start_email_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/lists/{id}/explain/{person_id}": {
         parameters: {
             query?: never;
@@ -17052,6 +17074,33 @@ export interface paths {
          *     finding names a guidance key; nothing is sent or stored.
          */
         post: operations["post_marketing_precheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/unsubscribe/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unsubscribe page
+         * @description The page an email's unsubscribe link opens: one button that confirms.
+         *     Public; opening it changes nothing (link scanners open links).
+         */
+        get: operations["show_email_unsubscribe"];
+        put?: never;
+        /**
+         * Unsubscribe from marketing email
+         * @description The page's button, or a mail client's one-click request (RFC 8058):
+         *     the address stops getting bulk mail. Public; the token is the
+         *     credential, and an unknown one answers the same page.
+         */
+        post: operations["email_unsubscribe"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18363,7 +18412,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List disasters
+         * @description AB3-T10: every declared disaster, open ones first, newest first. Needs
+         *     `ops.read`.
+         */
+        get: operations["list_ops_disasters"];
         put?: never;
         /**
          * Declare a disaster
@@ -18403,7 +18457,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * A disaster's actions
+         * @description AB3-T10: the actions asked for on one disaster (newest first, at most
+         *     100), each with its approval's status. Needs `ops.read`.
+         */
+        get: operations["list_ops_disaster_actions"];
         put?: never;
         /**
          * Ask for a disaster action
@@ -18432,6 +18491,28 @@ export interface paths {
          * @description AB3-T7: `If-Match` names the row version. Audited.
          */
         post: operations["close_ops_disaster"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/dr-runbook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The disaster runbook
+         * @description AB3-T8: this deployment's runbook, from its profile, recovery targets,
+         *     contacts and backup folder, in English or Arabic, as HTML or (when the
+         *     render service answers) PDF. Needs `ops.read`.
+         */
+        get: operations["get_ops_dr_runbook"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18623,6 +18704,69 @@ export interface paths {
          *     `ops.read`.
          */
         get: operations["list_ops_failovers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/recovery-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List recovery targets
+         * @description AB3-T1: one profile's recovery point and time per scenario, each with
+         *     whether a fresh drill proved it. Needs `ops.read`.
+         */
+        get: operations["list_ops_recovery_targets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/recovery-targets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a recovery target
+         * @description AB3-T1: its recovery point or time, in seconds. `If-Match` names the
+         *     row version. Needs `ops.drill.manage`. Audited.
+         */
+        patch: operations["update_ops_recovery_target"];
+        trace?: never;
+    };
+    "/api/v1/ops/rpo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Live recovery point
+         * @description AB3-T2: each source's live recovery point in seconds, this profile's
+         *     target and `ok`, `over` or `off`. Needs `ops.read`.
+         */
+        get: operations["get_ops_live_rpo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -19392,6 +19536,28 @@ export interface paths {
          * @description Accepts or rejects the quote a guest link shows.
          */
         post: operations["post_decision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/record-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List record templates
+         * @description B8-T3: the published templates of an entity the caller may create
+         *     records of, those whose condition holds for the new record's type and
+         *     stage and the caller's roles, each with its prompts.
+         */
+        get: operations["list_record_templates"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -33302,6 +33468,27 @@ export interface components {
         EmailBody: {
             email: string;
         };
+        /** @description A campaign to start. */
+        EmailCampaignBody: {
+            /** @description The email designer's JSON (E2-T1): blocks, direction, width, colour. */
+            design: Record<string, never>;
+            /** @description `en` (default) or `ar`: how values are formatted. */
+            locale?: string | null;
+            /** @description The consent purpose the email is sent under. */
+            purpose_key: string;
+            /** @description The subject line (at most 200 characters). */
+            subject: string;
+        };
+        /** @description A campaign started. */
+        EmailCampaignStarted: {
+            /**
+             * Format: int64
+             * @description People who will be emailed, before caps and later withdrawals.
+             */
+            recipients: number;
+            /** Format: uuid */
+            send_id: string;
+        };
         /**
          * @description The caller's signature. `body` is empty and `row_version` is 0 when none
          *     is set.
@@ -38390,6 +38577,16 @@ export interface components {
             /** @description People told, when sent. */
             told: number;
         };
+        /** @description One template the caller may use. */
+        OfferedTemplate: {
+            /** @description How many child records it creates with the record. */
+            children: number;
+            /** Format: uuid */
+            id: string;
+            label_ar?: string | null;
+            label_en: string;
+            prompts: components["schemas"]["TemplatePrompt"][];
+        };
         /** @description A published offering's version. */
         OfferingPublished: {
             /** Format: uuid */
@@ -41464,6 +41661,59 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Disaster: {
+            items: {
+                /** Format: date-time */
+                closed_at?: string | null;
+                /** Format: date-time */
+                declared_at: string;
+                /** Format: uuid */
+                declared_by: string;
+                exclusion_evidence?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: int64 */
+                row_version: number;
+                scenario: string;
+                sla_excluded: boolean;
+                summary: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DisasterApproval: {
+            items: {
+                action?: string | null;
+                /** Format: uuid */
+                approval_id: string;
+                /** Format: uuid */
+                disaster_id?: string | null;
+                /** @description `pending`, `approved`, `rejected`, `expired`, ... */
+                status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_DocumentRef: {
             items: {
                 /**
@@ -43376,6 +43626,29 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_OfferedTemplate: {
+            items: {
+                /** @description How many child records it creates with the record. */
+                children: number;
+                /** Format: uuid */
+                id: string;
+                label_ar?: string | null;
+                label_en: string;
+                prompts: components["schemas"]["TemplatePrompt"][];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_OpsNode: {
             items: {
                 /** @description It stored its metrics in the last three minutes. */
@@ -44312,6 +44585,54 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RecoveryTarget: {
+            items: {
+                /** @description The drill kind whose evidence proves it. */
+                evidence_kind: string;
+                /** Format: uuid */
+                id: string;
+                /**
+                 * Format: double
+                 * @description What the newest passing drill measured.
+                 */
+                measured_rpo_seconds?: number | null;
+                /** Format: double */
+                measured_rto_seconds?: number | null;
+                /** @description `solo`, `team`, `ha` or `scale`. */
+                profile: string;
+                /** @description A fresh drill of that kind measured within the target. */
+                proven: boolean;
+                /**
+                 * Format: date-time
+                 * @description When that drill finished.
+                 */
+                proven_on?: string | null;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: int32 */
+                rpo_seconds: number;
+                /** Format: int32 */
+                rto_seconds: number;
+                /** @description `node_loss`, `site_loss`, `corruption`, `ransomware` or `bad_change`. */
+                scenario: string;
+                /** Format: date-time */
+                updated_at?: string | null;
+                /** Format: uuid */
+                updated_by?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ReferenceView: {
             items: {
                 /** Format: date-time */
@@ -44664,6 +44985,33 @@ export interface components {
                 /** Format: uuid */
                 user_id: string;
                 user_name: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RpoSource: {
+            items: {
+                /** @description `wal_archive`, `standby` or `backup`. */
+                source: string;
+                /** @description `ok`, `over` or `off`. */
+                status: string;
+                /**
+                 * Format: int64
+                 * @description This profile's target for it.
+                 */
+                target_seconds?: number | null;
+                /** Format: double */
+                value_seconds?: number | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -48682,6 +49030,41 @@ export interface components {
         RecoveryCodesBody: {
             recovery_codes: string[];
         };
+        /** @description One recovery target and its proof. */
+        RecoveryTarget: {
+            /** @description The drill kind whose evidence proves it. */
+            evidence_kind: string;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: double
+             * @description What the newest passing drill measured.
+             */
+            measured_rpo_seconds?: number | null;
+            /** Format: double */
+            measured_rto_seconds?: number | null;
+            /** @description `solo`, `team`, `ha` or `scale`. */
+            profile: string;
+            /** @description A fresh drill of that kind measured within the target. */
+            proven: boolean;
+            /**
+             * Format: date-time
+             * @description When that drill finished.
+             */
+            proven_on?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: int32 */
+            rpo_seconds: number;
+            /** Format: int32 */
+            rto_seconds: number;
+            /** @description `node_loss`, `site_loss`, `corruption`, `ransomware` or `bad_change`. */
+            scenario: string;
+            /** Format: date-time */
+            updated_at?: string | null;
+            /** Format: uuid */
+            updated_by?: string | null;
+        };
         /** @description `POST …/rectify`. */
         RectifyBody: {
             /** @description `fulfilled` (the records were corrected) or `rejected`. */
@@ -49831,6 +50214,20 @@ export interface components {
             p95_ms: number;
             /** Format: double */
             p99_ms: number;
+        };
+        /** @description One source's live recovery point. */
+        RpoSource: {
+            /** @description `wal_archive`, `standby` or `backup`. */
+            source: string;
+            /** @description `ok`, `over` or `off`. */
+            status: string;
+            /**
+             * Format: int64
+             * @description This profile's target for it.
+             */
+            target_seconds?: number | null;
+            /** Format: double */
+            value_seconds?: number | null;
         };
         /**
          * @description M45 Phase 2 (D-472) — `rule`, keyed by `"{entity}:{name}"`.
@@ -53326,6 +53723,14 @@ export interface components {
             /** Format: uuid */
             team_id: string;
         };
+        /** @description One question a template asks. */
+        TemplatePrompt: {
+            /** @description The field it fills. */
+            field: string;
+            label_ar?: string | null;
+            label_en: string;
+            required: boolean;
+        };
         /** @description One record a template created. */
         TemplateRecord: {
             entity: string;
@@ -54349,6 +54754,13 @@ export interface components {
             /** Format: uuid */
             owner?: string | null;
             status?: string | null;
+        };
+        /** @description A target's new numbers; absent ones stay. */
+        UpdateRecoveryTarget: {
+            /** Format: int32 */
+            rpo_seconds?: number | null;
+            /** Format: int32 */
+            rto_seconds?: number | null;
         };
         UpdateRelationshipBody: {
             cascade?: string | null;
@@ -106974,6 +107386,69 @@ export interface operations {
             };
         };
     };
+    start_email_campaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailCampaignBody"];
+            };
+        };
+        responses: {
+            /** @description The send has started */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailCampaignStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No subject or purpose, a design that does not render, or nobody to email */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_marketing_list_explain: {
         parameters: {
             query?: never;
@@ -107635,6 +108110,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    show_email_unsubscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token from the email's unsubscribe link */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page with one unsubscribe button */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+        };
+    };
+    email_unsubscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token from the email's unsubscribe link */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unsubscribed (the same page for any token) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
         };
@@ -110769,6 +111290,55 @@ export interface operations {
             };
         };
     };
+    list_ops_disasters: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of disasters */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Disaster"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     declare_ops_disaster: {
         parameters: {
             query?: never;
@@ -110861,6 +111431,47 @@ export interface operations {
             };
             /** @description No such disaster approval */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ops_disaster_actions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The declared disaster */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The actions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DisasterApproval"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -111003,6 +111614,58 @@ export interface operations {
                 };
             };
             /** @description If-Match is missing or not a row_version */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ops_dr_runbook: {
+        parameters: {
+            query?: {
+                /** @description `en` (default) or `ar`. */
+                lang?: string;
+                /** @description `html` (default) or `pdf`. */
+                format?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The runbook (text/html, or application/pdf when asked and available) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown language or format */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -111473,6 +112136,172 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedResponse_FailoverEvent"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ops_recovery_targets: {
+        parameters: {
+            query?: {
+                /**
+                 * @description `solo`, `team`, `ha` or `scale`; the configured `ops.profile` when
+                 *     absent.
+                 */
+                profile?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The profile's targets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RecoveryTarget"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown profile */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_ops_recovery_target: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The target's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The target */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRecoveryTarget"];
+            };
+        };
+        responses: {
+            /** @description The target, with its proof */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryTarget"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.drill.manage */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such target */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing If-Match, a negative number or nothing to change */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ops_live_rpo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RpoSource"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -114176,6 +115005,51 @@ export interface operations {
             };
             /** @description Rate limited */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_record_templates: {
+        parameters: {
+            query: {
+                /** @description The entity's logical name. */
+                entity: string;
+                /** @description The new record's type, for a template whose condition reads `type`. */
+                type?: string;
+                /** @description The new record's stage, for a template whose condition reads `stage`. */
+                stage?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The templates offered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OfferedTemplate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or one the caller cannot create records of */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
