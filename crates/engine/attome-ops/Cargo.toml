@@ -11,18 +11,24 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
-attome-core.workspace    = true
-attome-modules.workspace = true
-attome-types.workspace   = true
+attome-audit.workspace    = true
+attome-core.workspace     = true
+attome-db.workspace       = true
+attome-modules.workspace  = true
+attome-outbound.workspace = true
+attome-types.workspace    = true
 axum.workspace           = true
 base64.workspace         = true
 chrono.workspace         = true
 ed25519-dalek.workspace  = true
 hex.workspace            = true
+reqwest.workspace        = true
 serde.workspace          = true
 serde_json.workspace     = true
 sha2.workspace           = true
+sqlx.workspace           = true
 thiserror.workspace      = true
+tracing.workspace        = true
 utoipa.workspace         = true
 uuid.workspace           = true
 

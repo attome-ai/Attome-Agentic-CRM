@@ -8,6 +8,8 @@
 //! (`attome_config::OpsSection`); privileges and the Operations and Auditor
 //! roles come from the `attome-ops` platform bundle.
 
+/// AB2-T6: failovers and switchovers recorded from Patroni.
+pub mod cluster;
 pub mod error;
 /// AB4-T2: the signed `attome-evidence/v1` record every drill writes.
 pub mod evidence;

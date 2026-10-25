@@ -2982,6 +2982,8 @@ const DEDUP_KEY_FULFILMENT_TRACKING: &str = "fulfilment-tracking";
 /// O1-T2: the weekly drift check of active prediction models.
 const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
+/// AB2-T6: the Patroni cluster poll (a registered job type).
+const DEDUP_KEY_OPS_CLUSTER_POLL: &str = "ops-cluster-poll";
 /// Z12-T8: the daily calendar feed fetch (a registered job type).
 const DEDUP_KEY_CALENDAR_FEED_FETCH: &str = "calendar-feed-fetch";
 /// E13-T10: the daily search-console pull (a registered job type).
@@ -3281,6 +3283,10 @@ pub const CONTENT_SITEMAP: attome_jobs::JobType =
 /// E13-T9: every published page re-audited when `content.seo_audit` is on.
 pub const CONTENT_SEO_AUDIT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_content::seo::audit::NIGHTLY_JOB, 1);
+
+/// AB2-T6: the database leader read from Patroni, every 15 seconds.
+pub const OPS_CLUSTER_POLL: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ops::cluster::JOB, 1);
 
 /// Z12-T8: holidays read from calendar iCal feeds, daily.
 pub const CALENDAR_FEED_FETCH: attome_jobs::JobType =
@@ -4291,6 +4297,29 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            OPS_CLUSTER_POLL,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if state
+                    .modules
+                    .load()
+                    .require(attome_modules::MODULE_OPS)
+                    .is_err()
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                match attome_ops::cluster::poll(&state).await {
+                    Ok(true) => tracing::info!("database leader recorded"),
+                    Ok(false) => {}
+                    // A node that does not answer is the operator's alert,
+                    // not a job failure to retry every 15 seconds.
+                    Err(error) => tracing::warn!(%error, "ops cluster poll: no Patroni node answered"),
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CALENDAR_FEED_FETCH,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let read = attome_api::calendar_feed::fetch_all(&state)
@@ -4860,6 +4889,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
+        }
+        EngineJob::Registered(job) if job.name == OPS_CLUSTER_POLL.name => {
+            DEDUP_KEY_OPS_CLUSTER_POLL
         }
         EngineJob::Registered(job) if job.name == CALENDAR_FEED_FETCH.name => {
             DEDUP_KEY_CALENDAR_FEED_FETCH
@@ -5922,6 +5954,21 @@ pub fn spawn_content_seo_audit_scheduler(db: DbPool, interval: std::time::Durati
             "content seo audit",
         ),
         Err(error) => tracing::error!(%error, "content seo audit: not scheduled"),
+    }
+}
+
+/// AB2-T6: every 15 seconds, the Patroni cluster's leader.
+pub fn spawn_ops_cluster_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(OPS_CLUSTER_POLL.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_OPS_CLUSTER_POLL,
+            "ops cluster poll",
+        ),
+        Err(error) => tracing::error!(%error, "ops cluster poll: not scheduled"),
     }
 }
 

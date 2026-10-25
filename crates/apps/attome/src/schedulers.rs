@@ -230,6 +230,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(86_400),
     );
+    // AB2-T6: the Patroni cluster's leader every 15 seconds, only when a
+    // cluster is configured: a single server pays nothing (V2-D100).
+    if !config.ops.patroni_api_urls.is_empty() {
+        crate::jobs::spawn_ops_cluster_scheduler(db.clone(), std::time::Duration::from_secs(15));
+    }
     // Z12-T8: holidays from calendar iCal feeds, daily.
     crate::jobs::spawn_calendar_feed_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // E13-T10: yesterday's search statistics, daily.

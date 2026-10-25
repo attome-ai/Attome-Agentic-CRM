@@ -1617,19 +1617,25 @@ dependencies = [
 name = "attome-ops"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
  "attome-core",
+ "attome-db",
  "attome-modules",
+ "attome-outbound",
  "attome-types",
  "axum",
  "base64 0.23.1",
  "chrono",
  "ed25519-dalek",
  "hex",
+ "reqwest",
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "sqlx",
  "thiserror 2.0.21",
  "tokio",
+ "tracing",
  "utoipa",
  "uuid",
 ]
