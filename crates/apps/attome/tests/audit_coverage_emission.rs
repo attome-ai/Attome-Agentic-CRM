@@ -6189,6 +6189,53 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 "matter_reference": uniq("matter"),
             })),
         ),
+        // R4-T1: custodians told, and a custodian's acknowledgement.
+        "POST /api/v1/admin/legal-holds/{id}/custodians" => {
+            let placed = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/legal-holds",
+                Some(json!({
+                    "entity_logicalname": fx.entity,
+                    "record_id": fx.record_id,
+                    "matter_reference": uniq("matter"),
+                })),
+            )
+            .await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/legal-holds/{}/custodians", id_of(&placed)),
+                t,
+                Some(json!({"user_ids": [fx.admin_id]})),
+            )
+        }
+        "POST /api/v1/legal-holds/{id}/acknowledge" => {
+            let placed = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/legal-holds",
+                Some(json!({
+                    "entity_logicalname": fx.entity,
+                    "record_id": fx.record_id,
+                    "matter_reference": uniq("matter"),
+                })),
+            )
+            .await;
+            let id = id_of(&placed);
+            admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/legal-holds/{id}/custodians"),
+                Some(json!({"user_ids": [fx.admin_id]})),
+            )
+            .await;
+            request(
+                "POST",
+                &format!("/api/v1/legal-holds/{id}/acknowledge"),
+                t,
+                None,
+            )
+        }
         "POST /api/v1/admin/legal-holds/{id}/release" => {
             let placed = admin(
                 fx,

@@ -51,11 +51,18 @@ pub async fn record_is_held<'e, E>(
 where
     E: sqlx::Executor<'e, Database = Postgres>,
 {
+    // R4-T1: a communication (a captured email) is also held while any
+    // record it is linked to (`communication_link`) is held, so a hold on an
+    // account keeps the mail captured about it.
     let row: Option<(Uuid, String, Option<Uuid>)> = sqlx::query_as(
-        "SELECT id, matter_reference, record_id FROM legal_hold \
-         WHERE entity_logicalname = $1 AND (record_id = $2 OR record_id IS NULL) \
-           AND released_at IS NULL AND is_deleted = false \
-         ORDER BY record_id NULLS LAST LIMIT 1",
+        "SELECT h.id, h.matter_reference, h.record_id FROM legal_hold h \
+         WHERE h.released_at IS NULL AND h.is_deleted = false \
+           AND ((h.entity_logicalname = $1 AND (h.record_id = $2 OR h.record_id IS NULL)) \
+             OR ($1 = 'communication' AND EXISTS ( \
+                   SELECT 1 FROM communication_link l \
+                    WHERE l.communication_id = $2 AND l.entity_name = h.entity_logicalname \
+                      AND (h.record_id = l.record_id OR h.record_id IS NULL)))) \
+         ORDER BY h.record_id NULLS LAST LIMIT 1",
     )
     .bind(entity_logicalname)
     .bind(record_id)

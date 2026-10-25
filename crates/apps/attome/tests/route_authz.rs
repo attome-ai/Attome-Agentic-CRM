@@ -1040,6 +1040,8 @@ const AUTHZ_CALLS: &[&str] = &[
     "require_master_steward",
     // Q17-T2: an administrator, or an auditor scoped to their units.
     "require_audit_reader",
+    // R4-T1: only a custodian of the hold acknowledges it.
+    "require_custodian",
 ];
 
 fn body_has_direct_check(body: &str) -> bool {

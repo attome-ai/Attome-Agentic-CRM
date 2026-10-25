@@ -710,6 +710,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Legal hold scope and custodians (R4-T1, migration 0248): a hold on a record (or a whole entity) now
+  also keeps every captured email linked to it, on top of the record and its file versions; chat holds
+  already applied. `POST /api/v1/admin/legal-holds/{id}/custodians` emails each new custodian a
+  bilingual notice, `GET` lists who was told and who acknowledged, and a custodian acknowledges with
+  `POST /api/v1/legal-holds/{id}/acknowledge`.
 - UAE Pass sign-in adapter (AJ2-T1, sign-in part): staging and production endpoints, the authorization
   URL, the code exchange and the profile read, with the Emirates ID checked (784, 15 digits, Luhn) and
   trusted only from a verified (SOP2/SOP3) account. Document signing through UAE Pass is not built.
