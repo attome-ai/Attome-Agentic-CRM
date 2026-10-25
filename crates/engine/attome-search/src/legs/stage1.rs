@@ -228,6 +228,10 @@ pub struct FuzzyLeg {
     /// threshold; it is named here rather than relying on the session GUC,
     /// which a pooled connection may carry over from another caller.
     pub threshold: f32,
+    /// AA6-T1: run in the second statement, only when the first found
+    /// nothing (a typo is the fallback, not a contender). Off by default, so
+    /// a caller that fuses everything at once keeps doing so.
+    pub deferred: bool,
 }
 
 impl std::fmt::Debug for FuzzyLeg {
@@ -241,6 +245,7 @@ impl Default for FuzzyLeg {
         Self {
             normalized_query: String::new(),
             threshold: 0.3,
+            deferred: false,
         }
     }
 }
@@ -250,15 +255,25 @@ impl SqlLeg for FuzzyLeg {
         "R5.fuzzy"
     }
     fn phase(&self) -> LegPhase {
-        LegPhase::Immediate
+        if self.deferred {
+            LegPhase::AfterEmbedding
+        } else {
+            LegPhase::Immediate
+        }
     }
     fn push_candidates(&self, qb: &mut QueryBuilder<'_, Postgres>) {
+        // AA6-T1: `%` is what the `search_index_title_trgm_idx` GIN index
+        // answers (at the session's `pg_trgm.similarity_threshold`, 0.3
+        // unless the caller set it); the explicit `similarity > threshold`
+        // keeps the bar this leg names whatever the session says.
         qb.push(
             "SELECT t.record_id, t.entity_logicalname, \
              similarity(t.title_norm, ",
         );
         qb.push_bind(self.normalized_query.clone());
-        qb.push(")::real AS score FROM search_index t WHERE similarity(t.title_norm, ");
+        qb.push(")::real AS score FROM search_index t WHERE t.title_norm % ");
+        qb.push_bind(self.normalized_query.clone());
+        qb.push(" AND similarity(t.title_norm, ");
         qb.push_bind(self.normalized_query.clone());
         qb.push(") > ");
         qb.push_bind(self.threshold);
@@ -384,6 +399,21 @@ mod tests {
     /// is slow and meaningless — every long text is somewhat similar to every
     /// query — so this would turn a typo corrector into a random-result
     /// generator.
+    /// AA6-T1: the fuzzy leg filters with the indexed `%` operator, and a
+    /// deferred one waits for the second statement.
+    #[test]
+    fn the_fuzzy_leg_uses_the_trigram_index_and_can_wait() {
+        let mut qb: QueryBuilder<Postgres> = QueryBuilder::new("");
+        FuzzyLeg::default().push_candidates(&mut qb);
+        assert!(qb.into_sql().contains("t.title_norm % "));
+        assert_eq!(FuzzyLeg::default().phase(), LegPhase::Immediate);
+        let deferred = FuzzyLeg {
+            deferred: true,
+            ..FuzzyLeg::default()
+        };
+        assert_eq!(deferred.phase(), LegPhase::AfterEmbedding);
+    }
+
     #[test]
     fn the_fuzzy_leg_never_touches_the_body() {
         let mut qb: QueryBuilder<Postgres> = QueryBuilder::new("");

@@ -125,6 +125,7 @@ fn legs_for_route(
             }),
             Box::new(FuzzyLeg {
                 normalized_query: normalized.to_owned(),
+                deferred: true,
                 ..FuzzyLeg::default()
             }),
         ],
@@ -142,6 +143,7 @@ fn legs_for_route(
                 }),
                 Box::new(FuzzyLeg {
                     normalized_query: normalized.to_owned(),
+                    deferred: true,
                     ..FuzzyLeg::default()
                 }),
             ];
@@ -556,13 +558,39 @@ pub async fn execute_search(
             tracing::warn!(error = %e, route = route_name(&route), "search query failed");
             AppError::internal("search failed")
         })?;
-    tx.commit().await.map_err(AppError::internal)?;
-
     let leg_counts = fused
         .first()
         .map(|(_, _, _, _, counts)| counts.clone())
         .unwrap_or_else(|| serde_json::json!({}));
-    let per_leg = interpret_counts(&leg_refs, LegPhase::Immediate, &leg_counts);
+    let mut per_leg = interpret_counts(&leg_refs, LegPhase::Immediate, &leg_counts);
+    // AA6-T1: the deferred legs (the fuzzy typo leg) run only when the exact,
+    // prefix and lexical legs found nothing, in the same transaction.
+    if fused.is_empty()
+        && let Some(mut later) = build_phase_with_shape(
+            &leg_refs,
+            LegPhase::AfterEmbedding,
+            &visibility,
+            shape,
+            "t.entity_logicalname",
+            "t.record_id",
+            tuning.ceiling,
+        )
+    {
+        fused = later.build_query_as().fetch_all(&mut *tx).await.map_err(|e| {
+            tracing::warn!(error = %e, route = route_name(&route), "search fallback query failed");
+            AppError::internal("search failed")
+        })?;
+        let later_counts = fused
+            .first()
+            .map(|(_, _, _, _, counts)| counts.clone())
+            .unwrap_or_else(|| serde_json::json!({}));
+        per_leg.extend(interpret_counts(
+            &leg_refs,
+            LegPhase::AfterEmbedding,
+            &later_counts,
+        ));
+    }
+    tx.commit().await.map_err(AppError::internal)?;
     let degraded: Vec<String> = per_leg
         .iter()
         .filter(|(_, c)| **c != crate::Completeness::Complete)
