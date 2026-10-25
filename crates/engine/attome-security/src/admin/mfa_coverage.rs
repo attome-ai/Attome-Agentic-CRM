@@ -2,10 +2,9 @@
 //! second factor, by role, and which administrators lack a
 //! phishing-resistant one. Read-only; administrators only.
 //!
-//! The factors this deployment records are a TOTP app (`user_mfa`) and
-//! recovery codes (`user_mfa_recovery_code`, the unused ones). There is no
-//! passkey store yet, so no account has a phishing-resistant factor and
-//! every administrator is flagged until passkeys land (Q5).
+//! The factors this deployment records are a TOTP app (`user_mfa`),
+//! recovery codes (`user_mfa_recovery_code`, the unused ones) and passkeys
+//! (`webauthn_credential`, Z4-T6), the phishing-resistant factor.
 
 use attome_core::EngineState;
 use attome_server::authz::{Admin, Authorized};
@@ -29,8 +28,7 @@ pub struct MfaCoverageRow {
     pub email: Option<String>,
     /// The names of the account's roles.
     pub roles: Vec<String>,
-    /// `totp`, `recovery` (unused recovery codes left); `passkey` when
-    /// passkeys exist.
+    /// `totp`, `recovery` (unused recovery codes left) and `passkey`.
     pub factors: Vec<String>,
     pub is_admin: bool,
     /// An administrator with no phishing-resistant factor (a passkey).
@@ -89,7 +87,9 @@ rows AS (
                                   WHERE m.user_ref = u.id AND NOT m.is_deleted
                                     AND m.confirmed_at IS NOT NULL) THEN 'totp' END,
                CASE WHEN EXISTS (SELECT 1 FROM user_mfa_recovery_code c
-                                  WHERE c.user_ref = u.id AND c.used_at IS NULL) THEN 'recovery' END
+                                  WHERE c.user_ref = u.id AND c.used_at IS NULL) THEN 'recovery' END,
+               CASE WHEN EXISTS (SELECT 1 FROM webauthn_credential w
+                                  WHERE w.user_ref = u.id AND NOT w.is_deleted) THEN 'passkey' END
            ], NULL) AS factors,
            EXISTS (SELECT 1 FROM admins a WHERE a.user_id = u.id) AS is_admin
       FROM user_account u

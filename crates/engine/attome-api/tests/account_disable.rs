@@ -679,6 +679,44 @@ fn coverage_flags_admin_without_passkey() {
         assert_eq!(target["factors"], serde_json::json!(["totp"]));
         assert_eq!(target["admin_missing_phishing_resistant"], false);
 
+        // A registered passkey (Z4-T6) is the phishing-resistant factor.
+        sqlx::query(
+            "INSERT INTO webauthn_credential (user_ref, credential_id, public_key, dynamic_state) VALUES ($1, $2, $3, $3)",
+        )
+        .bind(admin_id)
+        .bind(Uuid::now_v7().as_bytes().to_vec())
+        .bind(vec![0u8])
+        .execute(&db)
+        .await
+        .expect("insert throwaway passkey");
+        let req = Request::builder()
+            .method("GET")
+            .uri("/api/v1/admin/security/mfa/coverage")
+            .header("cookie", &admin_cookie)
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let admin = body["items"]
+            .as_array()
+            .expect("items")
+            .iter()
+            .find(|r| r["user_id"] == admin_id.to_string())
+            .cloned()
+            .expect("the admin is listed");
+        assert!(
+            admin["factors"]
+                .as_array()
+                .unwrap()
+                .contains(&serde_json::json!("passkey")),
+            "{admin}"
+        );
+        assert_eq!(admin["admin_missing_phishing_resistant"], false);
+
         let req = Request::builder()
             .method("GET")
             .uri("/api/v1/admin/security/mfa/coverage/summary")
