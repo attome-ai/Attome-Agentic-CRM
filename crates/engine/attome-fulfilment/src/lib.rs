@@ -15,6 +15,8 @@ pub mod hold;
 pub mod model;
 /// F6-T8: pick lists and packing.
 pub mod pack;
+/// F6-T12: non-goods and drop-ship lines handed to their owners.
+pub mod routing;
 pub mod sourcing;
 /// F6-T3: confirmed orders split into fulfilment orders.
 pub mod split;

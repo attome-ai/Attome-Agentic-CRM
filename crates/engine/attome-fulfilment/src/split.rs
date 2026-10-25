@@ -12,16 +12,20 @@
 //! else the deployment's only live `stock_location`; with neither, the order
 //! is left unsplit and a warning names it (sourcing across locations, F6-T4,
 //! takes over once order lines carry what it needs). Order lines carry no
-//! delivery group yet, so each location's lines are one group. A line with
-//! a product is `goods`; one without is `service`, routed rather than
-//! shipped (F6-T12).
+//! delivery group yet, so each location's lines are one group. A line's kind
+//! is its product's `fulfilment_kind`, `goods` when unset; a line with no
+//! product is `service`. Every line that is not goods is routed to its
+//! owner rather than shipped ([`crate::routing`], F6-T12).
 
 use std::collections::BTreeMap;
 
 use attome_core::EngineState;
-use attome_core::change_feed::{self, ChangeOperation};
+use attome_core::change_feed::{self, ChangeOperation, ChangePayload};
 use attome_types::AppError;
+use serde_json::json;
 use uuid::Uuid;
+
+use crate::routing;
 
 /// The change-feed consumer.
 pub const CONSUMER: &str = "attome-fulfilment/split";
@@ -39,6 +43,8 @@ pub struct OrderLine {
     pub product: Option<Uuid>,
     pub quantity: f64,
     pub delivery_group: Option<String>,
+    /// F6-T12: the product's `fulfilment_kind`, when set.
+    pub kind: Option<String>,
 }
 
 /// One fulfilment order to write: its location and group, and its lines
@@ -50,13 +56,18 @@ pub struct Group {
     pub lines: Vec<(OrderLine, &'static str)>,
 }
 
-/// A line's kind: `goods` with a product, else `service`. Pure.
+/// A line's kind: its product's `fulfilment_kind` (one of
+/// [`routing::KINDS`]), `goods` for a product without one, `service` for a
+/// line with no product. Pure.
 pub fn line_kind(line: &OrderLine) -> &'static str {
-    if line.product.is_some() {
-        "goods"
-    } else {
-        "service"
+    if line.product.is_none() {
+        return "service";
     }
+    line.kind
+        .as_deref()
+        .and_then(|k| routing::KINDS.iter().find(|known| **known == k))
+        .copied()
+        .unwrap_or("goods")
 }
 
 /// The fulfilment orders for `lines` shipped from `location`, one per
@@ -106,9 +117,10 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
     };
     // The lines and their promises are read before the transaction: the
     // stock seam may do its own reads, never while the split holds its lock.
-    let rows: Vec<(Uuid, Option<Uuid>, Option<f64>)> = sqlx::query_as(
-        "SELECT id, product_ref, quantity::float8 FROM order_line \
-          WHERE order_ref = $1 AND (is_active IS NULL OR is_active = true) ORDER BY id",
+    let rows: Vec<(Uuid, Option<Uuid>, Option<f64>, Option<String>)> = sqlx::query_as(
+        "SELECT l.id, l.product_ref, l.quantity::float8, p.fulfilment_kind::text \
+           FROM order_line l LEFT JOIN product p ON p.id = l.product_ref \
+          WHERE l.order_ref = $1 AND (l.is_active IS NULL OR l.is_active = true) ORDER BY l.id",
     )
     .bind(order)
     .fetch_all(&state.base.db)
@@ -116,11 +128,12 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
     .map_err(AppError::internal)?;
     let lines: Vec<OrderLine> = rows
         .into_iter()
-        .map(|(id, product, quantity)| OrderLine {
+        .map(|(id, product, quantity, kind)| OrderLine {
             id,
             product,
             quantity: quantity.unwrap_or(1.0),
             delivery_group: None,
+            kind,
         })
         .collect();
     let planned = groups(&lines, location);
@@ -241,6 +254,32 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
                 ChangeOperation::Create,
             )
             .await?;
+            // F6-T12: a line that does not ship from stock goes to its owner.
+            if let Some(event) = routing::route_event(kind) {
+                let after = json!({
+                    "line_kind": kind,
+                    "fulfilment_order_line_id": id,
+                    "fulfilment_order_id": fulfilment_order,
+                    "order_id": order,
+                    "order_line_id": line.id,
+                    "product_id": line.product,
+                    "quantity": line.quantity,
+                });
+                change_feed::emit_with(
+                    &mut tx,
+                    "fulfilment_order_line",
+                    id,
+                    ChangeOperation::Update,
+                    Some(event),
+                    &ChangePayload {
+                        changed_attributes: Vec::new(),
+                        before: None,
+                        after: Some(after),
+                        row_version: None,
+                    },
+                )
+                .await?;
+            }
         }
     }
     attome_db::tx::commit(tx).await?;
@@ -260,6 +299,11 @@ pub async fn sweep(state: &EngineState) -> Result<usize, AppError> {
     let mut written = 0;
     let mut seen = std::collections::HashSet::new();
     for e in &events {
+        // F6-T12: an owner reports a routed line done.
+        if e.event_name.as_deref() == Some(routing::FULFILLED_EVENT) {
+            routing::mark_fulfilled(state, e.record_id).await?;
+            continue;
+        }
         if e.entity_logicalname != "order"
             || !matches!(
                 e.operation(),
@@ -296,7 +340,22 @@ mod tests {
             product: product.then(Uuid::now_v7),
             quantity,
             delivery_group: group.map(str::to_owned),
+            kind: None,
         }
+    }
+
+    #[test]
+    fn line_kind_follows_the_products_fulfilment_kind() {
+        let mut l = line(true, 1.0, None);
+        assert_eq!(line_kind(&l), "goods");
+        l.kind = Some("subscription".into());
+        assert_eq!(line_kind(&l), "subscription");
+        l.kind = Some("drop_ship".into());
+        assert_eq!(line_kind(&l), "drop_ship");
+        l.kind = Some("unknown".into());
+        assert_eq!(line_kind(&l), "goods");
+        l.product = None;
+        assert_eq!(line_kind(&l), "service");
     }
 
     #[test]

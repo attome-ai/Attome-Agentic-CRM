@@ -1,0 +1,59 @@
+{
+  "author": "packs",
+  "checksum": "sha256:c8edb02dc637dbf361e8765d349db2473966013dfc57742cab59fa26335164d2",
+  "closed_at": "2026-10-25T00:00:00Z",
+  "description": "Fulfilment routing (F6-T12): a product's fulfilment kind. Goods ship from stock; service, subscription, warranty, licence and digital lines are handed to the module that owns them, and drop-ship lines to the vendor, through change-feed events.",
+  "format": "attome-changeset/v1",
+  "id": "01a17290-5c3e-7a41-9b52-3f8e2d6c1a07",
+  "layer": "product",
+  "name": "fulfilment-routing",
+  "opened_at": "2026-10-25T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Fulfilment kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "fulfilment_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "goods",
+              "service",
+              "subscription",
+              "warranty",
+              "licence",
+              "digital",
+              "drop_ship"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "product",
+        "field": "fulfilment_kind"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "fulfilment",
+  "seq": 5,
+  "title": "Pack: product fulfilment kind"
+}
