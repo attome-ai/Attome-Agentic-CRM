@@ -331,6 +331,12 @@
   @if (checkError(); as failure) {
     <p class="field-error" role="alert" data-testid="field-check-error">{{ failure.key | translate: failure.params }}</p>
   }
+  @if (clearedNote(); as note) {
+    <p class="field-error" role="status" data-testid="field-cleared-note">
+      {{ 'fieldPolicy.cleared' | translate: { value: note.previous } }}
+      <button type="button" class="btn-ghost" (click)="undoClear()">{{ 'fieldPolicy.undo' | translate }}</button>
+    </p>
+  }
   @if (serverError(); as message) {
     <p class="field-error" role="alert" data-testid="field-server-error">{{ message }}</p>
   }

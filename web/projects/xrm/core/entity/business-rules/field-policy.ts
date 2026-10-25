@@ -34,6 +34,24 @@ export interface FieldRuleMessage {
 export interface FieldPolicyOutcome {
   locks: ReadonlyMap<string, FieldLockState>;
   errors: ReadonlyMap<string, readonly FieldRuleMessage[]>;
+  /** A6-T2: field to the values the firing `allowed_values` policies allow (their intersection). */
+  allowed: ReadonlyMap<string, readonly string[]>;
+}
+
+/** A6-T2: what to do with a field's value under its allowed list. Pure. */
+export type AllowedAction = { kind: 'keep' } | { kind: 'clear' } | { kind: 'fill'; value: string };
+
+/**
+ * An empty field with exactly one allowed value is filled with it; a value
+ * that is not allowed is cleared; anything else stays. A multi-choice value
+ * is cleared when any of its items is not allowed.
+ */
+export function reconcileAllowed(value: unknown, allowed: readonly string[]): AllowedAction {
+  if (isEmptyFieldValue(value)) {
+    return allowed.length === 1 ? { kind: 'fill', value: allowed[0] } : { kind: 'keep' };
+  }
+  const items = Array.isArray(value) ? value.map(String) : [String(value)];
+  return items.every(v => allowed.includes(v)) ? { kind: 'keep' } : { kind: 'clear' };
 }
 
 const RANK: Record<FieldLockEffect, number> = { disabled: 1, hidden: 2 };
@@ -56,6 +74,7 @@ export function computeFieldPolicies(
 ): FieldPolicyOutcome {
   const locks = new Map<string, FieldLockState>();
   const errors = new Map<string, FieldRuleMessage[]>();
+  const allowed = new Map<string, string[]>();
   for (const rule of rules) {
     if (evaluateBusinessRuleCondition(rule.condition, record, kindOf) === false) continue;
     const label = ruleLabel(rule);
@@ -70,10 +89,14 @@ export function computeFieldPolicies(
         const list = errors.get(p.field) ?? [];
         list.push({ message: p.message ?? '', severity: p.severity ?? 'error', ruleName: label });
         errors.set(p.field, list);
+      } else if (p.type === 'allowed_values') {
+        const codes = Array.isArray(p.value) ? p.value.map(String) : [];
+        const earlier = allowed.get(p.field);
+        allowed.set(p.field, earlier ? earlier.filter(c => codes.includes(c)) : codes);
       }
     }
   }
-  return { locks, errors };
+  return { locks, errors, allowed };
 }
 
 /**
@@ -92,6 +115,12 @@ export interface XrmFieldPolicy {
   requiredLocked(field: string): boolean;
   /** The field's current value (stored overlaid with the form's), for a read-only display. */
   value(field: string): unknown;
+  /** A6-T2: the values the rules allow for `field` now, or `null` when they do not limit it. */
+  allowedValues?(field: string): readonly string[] | null;
+  /** A6-T2: the value the rules just cleared from `field`, while it can be undone. */
+  clearedValue?(field: string): { previous: string } | null;
+  /** A6-T2: puts the cleared value back. */
+  undoClear?(field: string): void;
 }
 
 export const XRM_FIELD_POLICY = new InjectionToken<XrmFieldPolicy>('XRM_FIELD_POLICY');

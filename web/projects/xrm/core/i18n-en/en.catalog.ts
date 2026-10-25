@@ -3369,6 +3369,8 @@ export const xrmEn = {
     lockedBy: 'Locked by the rule "{rule}"',
     requiredLocked: '{field} is required, but the rule "{rule}" locks it for you. Saving will be refused until it has a value.',
     noValue: 'No value',
+    cleared: '"{value}" was cleared: the other values on this record no longer allow it.',
+    undo: 'Undo',
     fileCount: '{count, plural, one {# file} other {# files}}',
     savedWithWarnings: 'Saved, with warnings from business rules:',
     byRule: '(rule "{rule}")',

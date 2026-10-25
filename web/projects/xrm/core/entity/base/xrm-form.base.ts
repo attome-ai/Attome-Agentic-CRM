@@ -10,7 +10,7 @@ import { firstValueFrom } from 'rxjs';
 import { BusinessRuleClient, ChoiceOptions, EntitySchema, FieldSchema } from '@attome/xrm';
 import { fieldKindResolver } from '../business-rules/business-rule-condition';
 import {
-  computeFieldPolicies, fieldErrorsFromApiError, isEmptyFieldValue, writeWarnings,
+  computeFieldPolicies, fieldErrorsFromApiError, isEmptyFieldValue, reconcileAllowed, writeWarnings,
   type FieldLockState, type FieldRuleMessage, type RuleWriteWarning,
 } from '../business-rules/field-policy';
 import { withGoldenTab } from '../record-tabs/record-tabs';
@@ -163,6 +163,12 @@ export abstract class EngineFormBase implements OnInit {
   /** Field to its field-attached `error` policies firing now (shown live, never blocking). */
   readonly fieldErrors = computed(() => this.ruleOutcome().errors);
 
+  /** A6-T2: field to the values its `allowed_values` rules allow now. */
+  readonly allowedValues = computed(() => this.ruleOutcome().allowed);
+
+  /** A6-T2: field to the value a rule just cleared from it, for undo. */
+  readonly clearedValues = signal<ReadonlyMap<string, unknown>>(new Map());
+
   /** Field to the last save's refusal naming it (`field_locked*`, `rule_violation`). */
   readonly serverFieldErrors = signal<ReadonlyMap<string, string>>(new Map());
 
@@ -240,6 +246,48 @@ export abstract class EngineFormBase implements OnInit {
       const fg = this.form();
       untracked(() => this.applyFieldLocks(fg, locks));
     });
+    // A6-T2: once the person changes something (or on a new record), a
+    // value the rules no longer allow is cleared (with undo), and an empty
+    // field with one allowed value is filled. A loaded record is left as
+    // stored until then; the server refuses a value that does not fit.
+    effect(() => {
+      const allowed = this.allowedValues();
+      const fg = this.form();
+      untracked(() => this.applyAllowedValues(fg, allowed));
+    });
+  }
+
+  private applyAllowedValues(fg: FormGroup, allowed: ReadonlyMap<string, readonly string[]>): void {
+    if (!fg.dirty && this.id()) return;
+    for (const [field, values] of allowed) {
+      const ctrl = fg.get(field);
+      if (!ctrl || ctrl.disabled) continue;
+      const action = reconcileAllowed(ctrl.value, values);
+      if (action.kind === 'clear') {
+        const previous: unknown = ctrl.value;
+        ctrl.setValue(Array.isArray(previous) ? [] : null);
+        ctrl.markAsDirty();
+        this.clearedValues.update(m => new Map(m).set(field, previous));
+      } else if (action.kind === 'fill') {
+        ctrl.setValue(action.value);
+        ctrl.markAsDirty();
+      }
+    }
+  }
+
+  /** A6-T2: puts back the value a rule cleared from `field`. */
+  undoClear(field: string): void {
+    const cleared = this.clearedValues();
+    if (!cleared.has(field)) return;
+    const previous = cleared.get(field);
+    const next = new Map(cleared);
+    next.delete(field);
+    this.clearedValues.set(next);
+    const ctrl = this.form().get(field);
+    if (ctrl) {
+      ctrl.setValue(previous);
+      ctrl.markAsDirty();
+    }
   }
 
   /**
@@ -535,6 +583,7 @@ export abstract class EngineFormBase implements OnInit {
     this.saving.set(true);
     this.error.set(null);
     this.serverFieldErrors.set(new Map());
+    this.clearedValues.set(new Map());
     this.saveWarnings.set([]);
     this.duplicateNotice.set(null);
     this.mergedOver.set([]);

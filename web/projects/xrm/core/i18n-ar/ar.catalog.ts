@@ -3288,6 +3288,8 @@ export const xrmAr = {
     lockedBy: 'مقفل بالقاعدة "{rule}"',
     requiredLocked: '{field} مطلوب، لكن القاعدة "{rule}" تقفله لك. سيُرفض الحفظ حتى تكون له قيمة.',
     noValue: 'لا توجد قيمة',
+    cleared: 'أُزيلت القيمة "{value}": القيم الأخرى في هذا السجل لم تعد تسمح بها.',
+    undo: 'تراجع',
     fileCount: '{count, plural, one {ملف واحد} other {# ملفات}}',
     savedWithWarnings: 'تم الحفظ، مع تحذيرات من قواعد العمل:',
     byRule: '(القاعدة "{rule}")',

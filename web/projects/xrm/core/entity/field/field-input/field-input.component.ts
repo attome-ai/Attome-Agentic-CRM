@@ -342,7 +342,19 @@ export class FieldInputComponent implements OnInit, OnDestroy {
 
   isMulti():     boolean  { return !!(this.choiceOpts?.multi); }
   isFileMulti(): boolean  { return !!(this.fileOpts?.multi); }
-  choices():     string[] { return this.choiceOpts?.choices ?? []; }
+  /** The choices, limited to what the record's rules allow now (A6-T2). */
+  choices(): string[] {
+    const all = this.choiceOpts?.choices ?? [];
+    const allowed = this.policy?.allowedValues?.(this.field().name);
+    return allowed ? all.filter(c => allowed.includes(c)) : all;
+  }
+
+  /** A6-T2: the value a rule just cleared from this field, while it can be undone. */
+  readonly clearedNote = computed(() => this.policy?.clearedValue?.(this.field().name) ?? null);
+
+  undoClear(): void {
+    this.policy?.undoClear?.(this.field().name);
+  }
 
   /** M05/D-426 — `c`'s resolved label, falling back to the raw stored value
    * when no translation exists (untouched behavior for an untranslated

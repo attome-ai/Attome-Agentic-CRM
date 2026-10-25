@@ -205,6 +205,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Forms follow allowed values (A6-T2): `allowed_values` business rules (and so A6-T1 dependencies)
+  now reach the form, which offers only the allowed choices, fills a field that has exactly one, and
+  clears a value the other fields no longer allow, with a note and Undo.
 - Backorders (F6-T7): a fulfilment order's `ship_policy` decides whether short lines wait for the
   rest (`ship_complete`) or ship what is there and backorder the remainder (`ship_as_available`).
   `POST /api/v1/fulfilment/backorders/allocate` gives arrived stock of a product at a location to

@@ -86,7 +86,9 @@ struct EntitySchemaDef {
 }
 
 /// One business rule as the form evaluates it (design §5): `set_value`
-/// policies and advanced-expression conditions stay server-only.
+/// policies and advanced-expression conditions stay server-only. A6-T2:
+/// field-attached `allowed_values` policies are sent, so the form offers
+/// only the allowed choices.
 #[derive(Serialize, ToSchema)]
 struct BusinessRuleClient {
     name: String,
@@ -129,7 +131,9 @@ async fn client_business_rules(
         return Ok(Vec::new());
     };
     let client_policy = |p: &PolicyDef| {
-        p.policy_type.is_lock() || (p.policy_type == PolicyType::Error && p.field.is_some())
+        p.policy_type.is_lock()
+            || (matches!(p.policy_type, PolicyType::Error | PolicyType::AllowedValues)
+                && p.field.is_some())
     };
     let candidates: Vec<_> = entry
         .business

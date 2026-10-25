@@ -154,5 +154,13 @@ function fieldPolicyOfBaseForm(): XrmFieldPolicy {
     serverError:    name => host.form().serverFieldErrors().get(name) ?? null,
     requiredLocked: name => host.form().isRequiredLocked(name),
     value:          name => host.form().recordValue()[name],
+    allowedValues:  name => host.form().allowedValues().get(name) ?? null,
+    clearedValue:   name => {
+      const cleared = host.form().clearedValues();
+      if (!cleared.has(name)) return null;
+      const previous = cleared.get(name);
+      return { previous: Array.isArray(previous) ? previous.join(', ') : String(previous ?? '') };
+    },
+    undoClear:      name => host.form().undoClear(name),
   };
 }
