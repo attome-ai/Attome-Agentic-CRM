@@ -27,4 +27,6 @@ pub mod video;
 pub mod voice;
 /// AJ4-T1: Wathq commercial registration lookups mapped to accounts.
 pub mod wathq;
+/// AJ3-T1: Yakeen identity checks with consent, keeping only the outcome.
+pub mod yakeen;
 pub mod webchat;

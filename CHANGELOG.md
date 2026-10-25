@@ -710,6 +710,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   change ("changes 1,240 city values"), pinned values left out, without writing anything; and
   `master.propose_release` releases a held contribution only after a person approves it, through the
   same release the steward route uses.
+- Yakeen identity checks (AJ3-T1): a national ID or iqama and birth date (Hijri year and month for a
+  citizen, Gregorian for a resident) answer matched, not matched or not found, and nothing else; a check
+  needs the person's consent first, and `identity_verification` (migration 0246, append-only) keeps the
+  outcome with that consent and the ID's last four digits, never the register's data. Checked against
+  recorded answers; no Yakeen account is wired yet.
 - Wathq commercial registration client (AJ4-T1): looks a CR number up (ten digits, Arabic-Indic digits
   accepted) and reads the legal names, status, legal form, city, dates, ISIC activities and contact details;
   `account_patch` maps them onto the CRM `account` fields, and a branch's main CR becomes a
