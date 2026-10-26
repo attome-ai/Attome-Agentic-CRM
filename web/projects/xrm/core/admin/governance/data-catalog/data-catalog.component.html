@@ -7,6 +7,20 @@
   </div>
 </div>
 
+<nav class="gov-tabs" role="tablist" [attr.aria-label]="'governance.catalog.assets.viewsLabel' | translate">
+  @for (v of views; track v) {
+    <button type="button" role="tab" class="btn-ghost" [class.active]="tab() === v"
+            [attr.aria-selected]="tab() === v" [attr.data-view]="v" (click)="setTab(v)">
+      {{ 'governance.catalog.assets.views.' + v | translate }}
+    </button>
+  }
+</nav>
+
+@if (tab() === 'assets') {
+  <xrm-catalog-search />
+} @else if (tab() === 'personal') {
+  <xrm-catalog-personal-data-map />
+} @else {
 <form class="gov-filters dc-search" role="search" (ngSubmit)="search()">
   <label for="dc-q">{{ 'governance.catalog.search' | translate }}</label>
   <input id="dc-q" name="q" class="mono-input" type="search"
@@ -125,7 +139,13 @@
           <tbody>
             @for (f of d.fields; track f.logicalname) {
               <tr>
-                <td>{{ f.display_name }}</td>
+                <td>
+                  {{ f.display_name }}
+                  @if (f.hidden) {
+                    <span class="badge">{{ 'governance.catalog.assets.hiddenField' | translate }}</span>
+                    <xrm-catalog-request-access [entity]="d.logicalname" [attribute]="f.logicalname" />
+                  }
+                </td>
                 <td class="cell-mono">{{ f.logicalname }}</td>
                 <td>{{ 'fieldTypes.' + f.field_type | translate }}</td>
                 <td><span class="badge">{{ 'governance.catalog.classifications.' + f.data_classification | translate }}</span></td>
@@ -180,3 +200,4 @@
     }
   </section>
 </div>
+}

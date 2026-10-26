@@ -1,0 +1,78 @@
+/* L4-T6: the asset catalogue. Logical properties only, so Arabic mirrors. */
+
+.ca-layout {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.ca-facets { display: flex; flex-direction: column; gap: 12px; }
+.ca-facets h4 { margin-block: 0 4px; font-size: 13px; }
+.ca-facets ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.ca-facet {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  inline-size: 100%;
+  padding-block: 4px;
+  padding-inline: 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary, #94a3b8);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ca-facet--on {
+  border-color: var(--color-accent, #14b8a6);
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.ca-results ul { list-style: none; margin: 0; padding: 0; }
+
+.ca-asset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  inline-size: 100%;
+  padding-block: 8px;
+  padding-inline: 4px;
+  border: 0;
+  border-block-end: 1px solid var(--color-border, #24324d);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ca-asset--active { background: color-mix(in srgb, var(--color-accent, #14b8a6) 10%, transparent); }
+.ca-asset__desc { flex-basis: 100%; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+
+.ca-panel { margin-block-start: 12px; }
+.ca-panel h4 { margin-block: 0 6px; }
+
+.ca-desc {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.ca-desc textarea { inline-size: 100%; min-block-size: 96px; font: inherit; }
+.ca-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 8px; }
+
+.ca-request { display: inline-flex; flex-direction: column; gap: 6px; }
+.ca-request textarea { min-inline-size: 220px; font: inherit; }
+
+/* Read-only browse on a phone: one column, the facets above the results. */
+@media (max-width: 720px) {
+  .ca-layout { grid-template-columns: minmax(0, 1fr); }
+  .ca-desc { grid-template-columns: minmax(0, 1fr); }
+  .ca-edit-only { display: none; }
+}

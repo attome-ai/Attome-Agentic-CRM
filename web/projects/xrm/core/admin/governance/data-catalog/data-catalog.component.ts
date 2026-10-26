@@ -11,6 +11,13 @@ import {
 } from '@attome/xrm/core/admin/data';
 import { GovernanceNavComponent } from '../nav/governance-nav.component';
 import { ProfilePanelComponent } from './profile-panel.component';
+import { CatalogSearchComponent } from './catalog-search.component';
+import { PersonalDataMapComponent } from './personal-data-map.component';
+import { RequestAccessButtonComponent } from './request-access-button.component';
+
+/** L4-T6: the catalogue's views: the entity browser, every asset, and the personal data map. */
+export const CATALOG_VIEWS = ['entities', 'assets', 'personal'] as const;
+export type CatalogView = (typeof CATALOG_VIEWS)[number];
 
 /** `attribute_info.data_classification`'s vocabulary
  * (P-data-protection-governance §4). */
@@ -28,7 +35,10 @@ export const DATA_CLASSIFICATIONS = ['general', 'personal', 'sensitive_special_c
   selector: 'xrm-data-catalog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, LocalDatePipe, LocalNumberPipe, TranslatePipe, GovernanceNavComponent, ProfilePanelComponent],
+  imports: [
+    FormsModule, LocalDatePipe, LocalNumberPipe, TranslatePipe, GovernanceNavComponent, ProfilePanelComponent,
+    CatalogSearchComponent, PersonalDataMapComponent, RequestAccessButtonComponent,
+  ],
   styleUrls: ['../../../../styles/admin-page.css', '../governance.css', './data-catalog.component.css'],
   templateUrl: './data-catalog.component.html',
 })
@@ -39,6 +49,11 @@ export class DataCatalogComponent implements OnInit {
 
   /** Query param `?entity=` — the entity whose detail is open on load. */
   readonly entity = input<string | undefined>(undefined);
+  /** Query param `?view=` — `assets` or `personal`; the entity browser otherwise. */
+  readonly view = input<string | undefined>(undefined);
+
+  readonly views = CATALOG_VIEWS;
+  readonly tab = signal<CatalogView>('entities');
 
   readonly classifications = DATA_CLASSIFICATIONS;
 
@@ -60,6 +75,8 @@ export class DataCatalogComponent implements OnInit {
   readonly pages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
 
   ngOnInit(): void {
+    const view = this.view();
+    if (view === 'assets' || view === 'personal') this.tab.set(view);
     this.search();
     const initial = this.entity();
     if (initial) this.openDetail(initial, false);
@@ -106,6 +123,14 @@ export class DataCatalogComponent implements OnInit {
     this.svc.getEntity(logicalname).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: d => { this.detail.set(d); this.detailLoading.set(false); },
       error: (e: ApiError) => { this.detailError.set(e.message); this.detailLoading.set(false); },
+    });
+  }
+
+  /** Switches view and records it in the URL so it can be shared. */
+  setTab(view: CatalogView): void {
+    this.tab.set(view);
+    void this.router.navigate([], {
+      queryParams: { view: view === 'entities' ? null : view }, queryParamsHandling: 'merge',
     });
   }
 

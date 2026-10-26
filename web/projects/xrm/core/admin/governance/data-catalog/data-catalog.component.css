@@ -67,3 +67,10 @@
 
 .dc-glossary dt { font-weight: 600; margin-block-start: 8px; }
 .dc-glossary dd { margin: 2px 0 0; color: var(--color-text-secondary); font-size: 13px; }
+
+/* L4-T6: the catalogue's views. */
+.gov-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-block-end: 12px; }
+.gov-tabs .active {
+  border-color: var(--color-accent, #14b8a6);
+  color: var(--color-text-primary, #e5eefc);
+}

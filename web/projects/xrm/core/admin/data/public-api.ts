@@ -115,6 +115,8 @@ export { DataCatalogService } from './services/data-catalog.service';
 export type {
   CatalogEntitySummary, CatalogEntityDetail, CatalogField, CatalogLineageEntry,
   CatalogGlossaryTerm, CatalogSearch,
+  CatalogAssetSearch, CatalogAssetSummary, CatalogAssetPage, CatalogFacet, CatalogAccessRequest,
+  PersonalDataItem, PersonalDataReader, AssetSearch, AssetDescription,
 } from './services/data-catalog.service';
 // L6-T7 — data profiles: the catalog's profile panel and the field list's fill-rate badge.
 export { DataProfileService, fillRate, fillRates, profileFields } from './services/data-profile.service';

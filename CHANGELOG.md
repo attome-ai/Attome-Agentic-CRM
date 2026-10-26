@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Data catalogue screens (L4-T6): the catalogue page gains All assets (search in English or Arabic
+  with kind, domain and label facets, and each asset's page with only the panels that have data,
+  a bilingual description editor saving drafts with `If-Match` and an Approve button) and Personal
+  data (the personal data map); hidden fields offer Request access. Read-only and one column on a phone.
 - Configuration explained (AD6-T1): the AI action `builder.explain` answers "how does case escalation
   work?" by searching the data catalogue for the question's words as the person, walking the found
   entities' and flows' lineage, and citing the flows, rules, queries and entities involved; it changes
