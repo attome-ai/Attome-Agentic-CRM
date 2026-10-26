@@ -48,7 +48,7 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-bg);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-text-primary) 12%, transparent);
 }
 .ab-menu .ab-item { justify-content: space-between; border: 0; }
 
