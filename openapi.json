@@ -160373,6 +160373,13 @@
             "type": "string",
             "format": "uuid"
           },
+          "mask_format": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Q15-T1: `last4`, `email`, `phone` or `full` when the profile shows the\nfield only masked; absent when it shows it in full."
+          },
           "owner_layer": {
             "type": "string",
             "description": "Solution 7 (D-785): the layer that owns this member row."
@@ -181266,6 +181273,13 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "mask_format": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Q15-T1: `last4`, `email`, `phone` or `full` when the profile shows the\nfield only masked; absent when it shows it in full."
                 },
                 "owner_layer": {
                   "type": "string",
@@ -207616,13 +207630,24 @@
             "type": "boolean"
           },
           "can_update": {
-            "type": "boolean"
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Omitted: true (P-field-write-security, D-141: an admin caller that only\never sent `can_read` keeps behaving as before, matching the column\ndefault), or false when `mask_format` is set (a masked field cannot be\nchanged)."
           },
           "entity_logicalname": {
             "type": "string"
           },
           "field_logicalname": {
             "type": "string"
+          },
+          "mask_format": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Q15-T1: show the field only masked: `last4`, `email`, `phone` or\n`full`. Needs `can_read`; omitted or null shows it in full."
           }
         }
       },
@@ -218970,6 +218995,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -219022,6 +219048,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }
