@@ -314,6 +314,7 @@ pub(crate) const GOVERNED_READ_ACTIONS: &[&str] = &[
     crate::actions::search_ask::SEARCH_PARSE_FILTER,
     crate::actions::search_ask::SEARCH_ANSWER_RECORDS,
     crate::builder::explain::BUILDER_EXPLAIN,
+    crate::actions::help::HELP_ANSWER,
 ];
 
 /// Read-side admission for one MCP invocation: a snapshot of the setting,
@@ -1024,6 +1025,7 @@ mod tests {
                 include_str!("../actions/search_ask.rs"),
             ),
             ("builder/explain.rs", include_str!("../builder/explain.rs")),
+            ("actions/help.rs", include_str!("../actions/help.rs")),
         ] {
             // The test module, not a test-only helper above it.
             let production = source

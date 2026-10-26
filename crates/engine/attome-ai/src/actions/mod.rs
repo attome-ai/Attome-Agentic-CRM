@@ -49,6 +49,8 @@ pub mod followup;
 /// L3-T8: governance.list_overdue, governance.propose_domains, governance.draft_policy.
 pub mod governance;
 pub mod graph;
+/// B14-T2: `help.answer`, from the documentation and the configuration.
+pub mod help;
 /// Q2-T5: identity.broker_steps, identity.explain_signin_failure.
 pub mod identity_assist;
 /// AI3-T1: filing an inbound email on the records made from it.
@@ -142,6 +144,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(catalog::descriptors());
     all.extend(timeline::descriptors());
     all.push(changes::descriptor());
+    all.push(help::descriptor());
     all.push(crate::builder::explain::descriptor());
     all.extend(record_write::descriptors());
     all.extend(bulk::descriptors());
@@ -237,6 +240,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(catalog::executors());
     all.extend(timeline::executors());
     all.push(Box::new(changes::ChangesSince));
+    all.push(Box::new(help::HelpAnswer));
     all.push(Box::new(crate::builder::explain::BuilderExplain));
     all.extend(record_write::executors());
     all.extend(bulk::executors());

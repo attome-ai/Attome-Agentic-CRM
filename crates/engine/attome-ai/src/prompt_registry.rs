@@ -100,6 +100,11 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::agent_playground::playground_system_prompt(),
         },
         PromptEntry {
+            action_id: crate::actions::help::HELP_ANSWER,
+            version: crate::actions::help::HELP_PROMPT_VERSION,
+            text: crate::actions::help::help_system_prompt(),
+        },
+        PromptEntry {
             action_id: crate::builder::explain::BUILDER_EXPLAIN,
             version: crate::builder::explain::EXPLAIN_PROMPT_VERSION,
             text: crate::builder::explain::explain_system_prompt(),

@@ -16,6 +16,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Help answers (B14-T2): the AI action `help.answer` answers how-to questions from the user and
+  builder documentation built into the binary (ranked by section) and this deployment's configuration
+  from the data catalogue, citing document sections and objects; no evidence means no model call.
 - Agent catch-up tool (L7-T8): the AI action `changes.since` returns the records created, updated and
   deleted in one entity since a delta token, as the person sees the entity's list, up to 500 per call,
   with `next_token` and `has_more`.
