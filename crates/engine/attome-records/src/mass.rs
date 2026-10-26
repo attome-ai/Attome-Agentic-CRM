@@ -1089,6 +1089,8 @@ pub async fn run_chunk(
     chunk_no: i32,
     after: Option<Uuid>,
 ) -> Result<i64, AppError> {
+    // AA10-T6: wait as long as the node is busy before each chunk.
+    attome_jobs::throttle::global().pace().await;
     let Some(entries) = plan_chunk(state, operation, chunk_no, after).await? else {
         return Ok(0);
     };
@@ -1409,6 +1411,7 @@ pub async fn run_undo_chunk(
     operation: Uuid,
     chunk_no: i32,
 ) -> Result<i64, AppError> {
+    attome_jobs::throttle::global().pace().await;
     let Some(work) = work_row(state, operation).await? else {
         return Ok(0);
     };
