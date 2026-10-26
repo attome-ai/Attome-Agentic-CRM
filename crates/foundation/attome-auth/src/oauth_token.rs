@@ -93,6 +93,9 @@ pub struct TokenRequest {
     pub client_assertion: Option<String>,
     /// `Authorization: Basic` credentials, decoded.
     pub basic: Option<(String, String)>,
+    /// S11-T3: the thumbprint of the verified client certificate the request
+    /// came with, when `s2s.mtls.enabled`. The token issued is bound to it.
+    pub client_certificate: Option<String>,
 }
 
 /// An RFC 6749 §5.1 token response.
@@ -177,6 +180,18 @@ pub struct AccessClaims {
     pub client_id: String,
     /// Space-separated scopes.
     pub scope: String,
+    /// S11-T3: the certificate the token is bound to (RFC 8705 §3), absent
+    /// on an unbound token. [`crate::mtls::check_binding`] enforces it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<Confirmation>,
+}
+
+/// An RFC 7800 confirmation claim holding an RFC 8705 certificate
+/// thumbprint.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Confirmation {
+    #[serde(rename = "x5t#S256")]
+    pub x5t_s256: String,
 }
 
 fn decoding_key(alg: Algorithm, pem: &str) -> Option<DecodingKey> {
@@ -342,6 +357,12 @@ pub async fn issue<D: ClientDirectory>(
         },
         client_id: client.client_id,
         scope: scope.clone(),
+        cnf: request
+            .client_certificate
+            .as_ref()
+            .map(|thumbprint| Confirmation {
+                x5t_s256: thumbprint.clone(),
+            }),
     };
     let access_token =
         crate::jwt::encode_claims(&claims, at.ring).map_err(|_| OAuthError::Server)?;
@@ -506,6 +527,42 @@ nJq+v4xau8PWz8TvW3qRj14fdpYjEVoaZQ8F5LeLoV3ItjnD7qvJaKmU
         assert!(
             validate_access_token(&response.access_token, &ring, "attome-test", "other").is_err()
         );
+    }
+
+    /// S11-T3: a request with a client certificate gets a token bound to it,
+    /// which then passes only with that certificate.
+    #[tokio::test]
+    async fn mtls_bound_token_is_issued_for_the_presented_certificate() {
+        let now = chrono::Utc::now().timestamp();
+        let ring = ring();
+        let mut at = at(&ring);
+        at.now = now;
+        let dir = directory();
+        let mut request = jwt_request(assertion(CLIENT_KEY, ENDPOINT, now + 120, "m-1"));
+        request.client_certificate = Some("thumb-a".into());
+        let response = issue(&dir, &request, &at).await.expect("a token");
+        let claims =
+            validate_access_token(&response.access_token, &ring, "attome-test", "attome-test")
+                .unwrap();
+        assert_eq!(
+            claims.cnf.as_ref().map(|c| c.x5t_s256.as_str()),
+            Some("thumb-a")
+        );
+        assert!(crate::mtls::check_binding(&claims, Some("thumb-a")).is_ok());
+        assert!(crate::mtls::check_binding(&claims, Some("thumb-b")).is_err());
+        assert!(crate::mtls::check_binding(&claims, None).is_err());
+
+        let unbound = issue(
+            &dir,
+            &jwt_request(assertion(CLIENT_KEY, ENDPOINT, now + 120, "m-2")),
+            &at,
+        )
+        .await
+        .expect("a token");
+        let claims =
+            validate_access_token(&unbound.access_token, &ring, "attome-test", "attome-test")
+                .unwrap();
+        assert!(claims.cnf.is_none(), "no certificate, no binding");
     }
 
     #[tokio::test]

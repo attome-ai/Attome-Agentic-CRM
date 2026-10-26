@@ -20,9 +20,18 @@
 //! and renews in the background. Every certificate's expiry is logged at
 //! `info` when it is loaded and when it is renewed, and exported as the gauge
 //! `tls_certificate_expiry_seconds` (the Unix time it expires).
+//!
+//! S11-T3: with `s2s.mtls.enabled` the listener asks every client for a
+//! certificate chaining to `s2s.mtls.client_ca_path` (asked, not required:
+//! a browser connects without one), and [`TlsMakeService`] hands each
+//! request on a connection with a verified certificate its thumbprint as an
+//! [`attome_auth::mtls::ClientCertificate`] extension, beside the usual
+//! `ConnectInfo<SocketAddr>`.
 
+use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 use arc_swap::ArcSwap;
@@ -30,6 +39,8 @@ use attome_config::TlsSection;
 use rustls::ServerConfig;
 use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use rustls::server::WebPkiClientVerifier;
+use rustls::server::danger::ClientCertVerifier;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio_rustls::TlsAcceptor;
@@ -54,10 +65,53 @@ pub enum TlsError {
     Key { path: String, reason: String },
     #[error("the certificate and key do not form a usable TLS configuration: {0}")]
     Config(String),
+    #[error("s2s.mtls.client_ca_path {path:?}: {reason}")]
+    ClientCa { path: String, reason: String },
 }
 
-/// The rustls server configuration `tls` describes.
+/// S11-T3: a verifier asking for (not requiring) a client certificate that
+/// chains to the CA certificates in `path`.
+pub fn client_verifier(path: &str) -> Result<Arc<dyn ClientCertVerifier>, TlsError> {
+    let path = path.trim();
+    let failed = |reason: String| TlsError::ClientCa {
+        path: path.to_owned(),
+        reason,
+    };
+    let mut roots = rustls::RootCertStore::empty();
+    for cert in CertificateDer::pem_file_iter(path).map_err(|e| failed(e.to_string()))? {
+        roots
+            .add(cert.map_err(|e| failed(e.to_string()))?)
+            .map_err(|e| failed(e.to_string()))?;
+    }
+    if roots.is_empty() {
+        return Err(failed("no CA certificate in the file".into()));
+    }
+    WebPkiClientVerifier::builder_with_provider(
+        Arc::new(roots),
+        Arc::new(rustls::crypto::ring::default_provider()),
+    )
+    .allow_unauthenticated()
+    .build()
+    .map_err(|e| failed(e.to_string()))
+}
+
+/// The client verifier `client_ca` names, or none.
+fn verifier_for(client_ca: Option<&str>) -> Result<Option<Arc<dyn ClientCertVerifier>>, TlsError> {
+    client_ca.map(client_verifier).transpose()
+}
+
+/// The rustls server configuration `tls` describes, without client
+/// certificates.
 pub fn server_config(tls: &TlsSection) -> Result<Arc<ServerConfig>, TlsError> {
+    server_config_with(tls, None)
+}
+
+/// [`server_config`], asking for client certificates chaining to the CA
+/// file `client_ca` when it is given (S11-T3).
+pub fn server_config_with(
+    tls: &TlsSection,
+    client_ca: Option<&str>,
+) -> Result<Arc<ServerConfig>, TlsError> {
     let cert_path = tls.cert_path.trim();
     let key_path = tls.key_path.trim();
     let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_file_iter(cert_path)
@@ -87,13 +141,17 @@ pub fn server_config(tls: &TlsSection) -> Result<Arc<ServerConfig>, TlsError> {
     } else {
         &[&rustls::version::TLS13, &rustls::version::TLS12]
     };
-    let mut config =
+    let builder =
         ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
             .with_protocol_versions(versions)
-            .map_err(|e| TlsError::Config(e.to_string()))?
-            .with_no_client_auth()
-            .with_single_cert(certs, key)
             .map_err(|e| TlsError::Config(e.to_string()))?;
+    let builder = match verifier_for(client_ca)? {
+        Some(verifier) => builder.with_client_cert_verifier(verifier),
+        None => builder.with_no_client_auth(),
+    };
+    let mut config = builder
+        .with_single_cert(certs, key)
+        .map_err(|e| TlsError::Config(e.to_string()))?;
     config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     Ok(Arc::new(config))
 }
@@ -117,12 +175,22 @@ impl TlsListener {
     /// Starts accepting on `tcp` with the configuration `tls` describes, and
     /// the periodic (and, on Unix, SIGHUP) reload of its files.
     pub fn start(tcp: TcpListener, tls: &TlsSection) -> Result<Self, TlsError> {
+        Self::start_with(tcp, tls, None)
+    }
+
+    /// [`TlsListener::start`], asking clients for certificates chaining to
+    /// the CA file `client_ca` when it is given (S11-T3).
+    pub fn start_with(
+        tcp: TcpListener,
+        tls: &TlsSection,
+        client_ca: Option<&str>,
+    ) -> Result<Self, TlsError> {
         let current = if tls.acme.enabled {
             // Z5-T7: the ACME resolver swaps the certificate itself.
-            Arc::new(ArcSwap::new(acme::start(tls)?))
+            Arc::new(ArcSwap::new(acme::start(tls, verifier_for(client_ca)?)?))
         } else {
-            let current = Arc::new(ArcSwap::new(server_config(tls)?));
-            spawn_reload(current.clone(), tls.clone());
+            let current = Arc::new(ArcSwap::new(server_config_with(tls, client_ca)?));
+            spawn_reload(current.clone(), tls.clone(), client_ca.map(str::to_owned));
             current
         };
         let local_addr = tcp
@@ -190,6 +258,93 @@ pub fn check_http3(tls: &TlsSection) -> Result<(), TlsError> {
     Ok(())
 }
 
+/// S11-T3: the make-service the server serves a [`TlsListener`] with. Each
+/// connection's requests carry `ConnectInfo<SocketAddr>` (as
+/// `into_make_service_with_connect_info` gives them) and, when the client
+/// presented a verified certificate, its
+/// [`attome_auth::mtls::ClientCertificate`].
+#[derive(Clone)]
+pub struct TlsMakeService {
+    app: axum::Router,
+}
+
+impl std::fmt::Debug for TlsMakeService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TlsMakeService").finish_non_exhaustive()
+    }
+}
+
+impl TlsMakeService {
+    pub fn new(app: axum::Router) -> Self {
+        Self { app }
+    }
+}
+
+impl<'a> tower::Service<axum::serve::IncomingStream<'a, TlsListener>> for TlsMakeService {
+    type Response = WithConnection;
+    type Error = Infallible;
+    type Future = std::future::Ready<Result<WithConnection, Infallible>>;
+
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Infallible>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, stream: axum::serve::IncomingStream<'a, TlsListener>) -> Self::Future {
+        // rustls verified the chain in the handshake; the leaf comes first.
+        let certificate = stream
+            .io()
+            .get_ref()
+            .1
+            .peer_certificates()
+            .and_then(|chain| chain.first())
+            .map(|leaf| attome_auth::mtls::ClientCertificate {
+                thumbprint: attome_auth::mtls::thumbprint(leaf),
+            });
+        std::future::ready(Ok(WithConnection {
+            app: self.app.clone(),
+            peer: *stream.remote_addr(),
+            certificate,
+        }))
+    }
+}
+
+/// One connection's service: the app, with the connection's peer address and
+/// client certificate put on every request.
+#[derive(Clone)]
+pub struct WithConnection {
+    app: axum::Router,
+    peer: SocketAddr,
+    certificate: Option<attome_auth::mtls::ClientCertificate>,
+}
+
+impl std::fmt::Debug for WithConnection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WithConnection")
+            .field("peer", &self.peer)
+            .field("certificate", &self.certificate)
+            .finish_non_exhaustive()
+    }
+}
+
+impl tower::Service<axum::extract::Request> for WithConnection {
+    type Response = axum::response::Response;
+    type Error = Infallible;
+    type Future = <axum::Router as tower::Service<axum::extract::Request>>::Future;
+
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Infallible>> {
+        <axum::Router as tower::Service<axum::extract::Request>>::poll_ready(&mut self.app, cx)
+    }
+
+    fn call(&mut self, mut req: axum::extract::Request) -> Self::Future {
+        req.extensions_mut()
+            .insert(axum::extract::ConnectInfo(self.peer));
+        if let Some(certificate) = &self.certificate {
+            req.extensions_mut().insert(certificate.clone());
+        }
+        tower::Service::call(&mut self.app, req)
+    }
+}
+
 impl axum::serve::Listener for TlsListener {
     type Io = TlsStream<tokio::net::TcpStream>;
     type Addr = SocketAddr;
@@ -208,8 +363,8 @@ impl axum::serve::Listener for TlsListener {
     }
 }
 
-fn spawn_reload(current: Arc<ArcSwap<ServerConfig>>, tls: TlsSection) {
-    let reload = move |why: &str| match server_config(&tls) {
+fn spawn_reload(current: Arc<ArcSwap<ServerConfig>>, tls: TlsSection, client_ca: Option<String>) {
+    let reload = move |why: &str| match server_config_with(&tls, client_ca.as_deref()) {
         Ok(config) => {
             current.store(config);
             tracing::info!(why, "tls: certificate reloaded");
@@ -350,7 +505,10 @@ mod acme {
 
     /// The server configuration whose certificate the ACME state keeps
     /// current, and the task that orders and renews it.
-    pub(super) fn start(tls: &TlsSection) -> Result<Arc<ServerConfig>, TlsError> {
+    pub(super) fn start(
+        tls: &TlsSection,
+        client_verifier: Option<Arc<dyn rustls::server::danger::ClientCertVerifier>>,
+    ) -> Result<Arc<ServerConfig>, TlsError> {
         let acme = &tls.acme;
         let provider = Arc::new(rustls::crypto::ring::default_provider());
         let domains: Vec<String> = acme
@@ -369,11 +527,14 @@ mod acme {
         } else {
             &[&rustls::version::TLS13, &rustls::version::TLS12]
         };
-        let mut config = ServerConfig::builder_with_provider(provider)
+        let builder = ServerConfig::builder_with_provider(provider)
             .with_protocol_versions(versions)
-            .map_err(|e| TlsError::Config(e.to_string()))?
-            .with_no_client_auth()
-            .with_cert_resolver(state.resolver());
+            .map_err(|e| TlsError::Config(e.to_string()))?;
+        let builder = match client_verifier {
+            Some(verifier) => builder.with_client_cert_verifier(verifier),
+            None => builder.with_no_client_auth(),
+        };
+        let mut config = builder.with_cert_resolver(state.resolver());
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), ALPN.to_vec()];
         tracing::info!(?domains, directory = %acme.directory_url, "tls: certificates over ACME (TLS-ALPN-01)");
         // Process-lifetime supervision (guidelines §10): the state orders,

@@ -113,3 +113,111 @@ fn http3_feature_off_rejects_config() {
         "{err}"
     );
 }
+
+/// S11-T3: the thumbprint of a fixture client certificate, as the token
+/// endpoint binds it.
+fn fixture_thumbprint(name: &str) -> String {
+    use rustls::pki_types::{CertificateDer, pem::PemObject};
+    let der = CertificateDer::from_pem_file(fixture(name)).unwrap();
+    attome_auth::mtls::thumbprint(&der)
+}
+
+fn mtls_client(identity: Option<&str>) -> reqwest::Client {
+    let pem = std::fs::read(fixture("cert.pem")).unwrap();
+    let mut builder = reqwest::Client::builder()
+        .add_root_certificate(reqwest::Certificate::from_pem(&pem).unwrap())
+        .resolve("localhost", "127.0.0.1:0".parse().unwrap());
+    if let Some(name) = identity {
+        let mut both = std::fs::read(fixture(&format!("{name}.key"))).unwrap();
+        both.extend(std::fs::read(fixture(&format!("{name}.pem"))).unwrap());
+        builder = builder.identity(reqwest::Identity::from_pem(&both).unwrap());
+    }
+    builder.build().unwrap()
+}
+
+/// S11-T3: with a client CA the listener asks for a certificate, puts the
+/// verified one's thumbprint on each request, and a token bound to client
+/// A's certificate passes only over that certificate: client B's
+/// certificate, or none, is refused. A client without a certificate still
+/// connects (asked, not required).
+#[tokio::test]
+async fn mtls_bound_token_fails_with_another_certificate() {
+    use attome_auth::mtls::{ClientCertificate, check_binding};
+    use attome_auth::oauth_token::{AccessClaims, Confirmation};
+    use axum::Extension;
+
+    let bound_to = fixture_thumbprint("client-a.pem");
+    assert_ne!(bound_to, fixture_thumbprint("client-b.pem"));
+    let claims = AccessClaims {
+        claims: attome_auth::SessionClaims {
+            sub: uuid::Uuid::nil(),
+            iat: 0,
+            exp: 600,
+            jti: uuid::Uuid::nil(),
+            epoch: 0,
+            iss: "attome-test".into(),
+            aud: "attome-test".into(),
+            typ: attome_auth::TokenType::S2sAccess,
+        },
+        client_id: "erp-sync".into(),
+        scope: String::new(),
+        cnf: Some(Confirmation {
+            x5t_s256: bound_to.clone(),
+        }),
+    };
+
+    let tcp = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = tcp.local_addr().unwrap().port();
+    let listener = TlsListener::start_with(tcp, &section(), Some(&fixture("client-ca.pem")))
+        .expect("the fixtures build a config");
+    let app = Router::new().route(
+        "/bound",
+        get(move |certificate: Option<Extension<ClientCertificate>>| {
+            let claims = claims.clone();
+            async move {
+                let presented = certificate.map(|Extension(c)| c.thumbprint);
+                match check_binding(&claims, presented.as_deref()) {
+                    Ok(()) => (axum::http::StatusCode::OK, presented.unwrap_or_default()),
+                    Err(_) => (axum::http::StatusCode::UNAUTHORIZED, String::new()),
+                }
+            }
+        }),
+    );
+    tokio::spawn(async move { axum::serve(listener, attome::tls::TlsMakeService::new(app)).await });
+    let url = format!("https://localhost:{port}/bound");
+
+    let a = mtls_client(Some("client-a"))
+        .get(&url)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(a.status(), 200, "the bound certificate passes");
+    assert_eq!(
+        a.text().await.unwrap(),
+        bound_to,
+        "the thumbprint reached the request"
+    );
+    let b = mtls_client(Some("client-b"))
+        .get(&url)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(b.status(), 401, "another certificate is refused");
+    let none = mtls_client(None).get(&url).send().await.unwrap();
+    assert_eq!(
+        none.status(),
+        401,
+        "no certificate is refused, but connects"
+    );
+}
+
+/// S11-T3: a client CA file that holds no certificate fails at boot and
+/// names the setting.
+#[test]
+fn mtls_client_ca_names_the_setting() {
+    let err = attome::tls::server_config_with(&section(), Some(&fixture("key.pem")))
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("s2s.mtls.client_ca_path"), "{err}");
+    assert!(attome::tls::server_config_with(&section(), Some(&fixture("client-ca.pem"))).is_ok());
+}

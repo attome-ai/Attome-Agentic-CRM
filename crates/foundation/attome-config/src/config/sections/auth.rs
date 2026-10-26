@@ -421,6 +421,7 @@ impl std::fmt::Debug for S2SSection {
             .field("failure_alert_threshold", &self.failure_alert_threshold)
             .field("access_log_enabled", &self.access_log_enabled)
             .field("seeded_clients", &self.seeded_clients)
+            .field("mtls", &self.mtls)
             .finish()
     }
 }
@@ -452,6 +453,34 @@ pub struct S2SSection {
     /// editing `.env`. Empty by default.
     #[serde(default)]
     pub seeded_clients: Vec<S2sSeededClient>,
+
+    /// S11-T3: mutual TLS client certificates and certificate-bound OAuth
+    /// access tokens (RFC 8705). Off by default.
+    #[serde(default)]
+    pub mtls: S2sMtlsSection,
+}
+
+/// S11-T3: `s2s.mtls`. With `enabled`, a client that presents a verified
+/// TLS client certificate at `POST /api/v1/oauth/token` gets an access
+/// token bound to it (`cnf.x5t#S256`), and that token is refused on a
+/// request that does not present the same certificate.
+#[derive(Debug, Clone, Default, Deserialize, schemars::JsonSchema)]
+pub struct S2sMtlsSection {
+    #[serde(default)]
+    pub enabled: bool,
+    /// PEM file of the CA certificate(s) client certificates must chain to,
+    /// when the built-in TLS edge (`app.tls`) terminates TLS. Client
+    /// certificates are requested, not required: a browser or an unbound
+    /// client connects without one.
+    #[serde(default)]
+    pub client_ca_path: String,
+    /// When TLS ends at a reverse proxy: the request header carrying the
+    /// verified client certificate, URL-escaped PEM (nginx
+    /// `$ssl_client_escaped_cert`), e.g. `x-client-cert`. Read only from a
+    /// peer in `security.trusted_proxy_cidrs`; from any other peer it is
+    /// ignored.
+    #[serde(default)]
+    pub proxy_header: String,
 }
 
 /// One config-declared S2S client (D-771). `secret` is a `${VAR}` reference;
@@ -542,6 +571,7 @@ impl Default for S2SSection {
             failure_alert_threshold: default_s2s_failure_threshold(),
             access_log_enabled: default_true(),
             seeded_clients: Vec::new(),
+            mtls: S2sMtlsSection::default(),
         }
     }
 }

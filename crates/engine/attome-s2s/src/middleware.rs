@@ -567,6 +567,17 @@ async fn oauth_authn(state: AppState, req: Request, next: Next, token: AccessCla
     if req.headers().contains_key(H_ACT_AS) {
         return AppError::Forbidden.into_response();
     }
+    // S11-T3: a certificate-bound token works only over its certificate.
+    let presented =
+        crate::mtls::presented_certificate(req.extensions(), req.headers(), &state.config);
+    if attome_auth::mtls::check_binding(&token, presented.as_deref()).is_err() {
+        tracing::warn!(
+            client = %token.client_id,
+            presented = presented.is_some(),
+            "s2s: a certificate-bound token without its certificate"
+        );
+        return AppError::Unauthorized.into_response();
+    }
     let correlation_id = optional_header(&req, H_CORR_ID);
     let ip_addr = client_ip(&req, &state.config);
     let ip_address = ip_addr.map(|ip| ip.to_string());

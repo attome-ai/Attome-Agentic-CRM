@@ -19,7 +19,10 @@ entities and fields.
   most five minutes ahead, a `jti` used once) or with one of its keys' secrets in
   `Authorization: Basic`. An administrator sets the client's public key and scopes with
   `PATCH /api/v1/admin/s2s/clients/{id}` (`oauth_public_key_pem`, `oauth_scopes`). Each bearer
-  request is checked against the client's present state like a signed one.
+  request is checked against the client's present state like a signed one. When the deployment
+  turns on `s2s.mtls`, a client that asks for its token over a TLS client certificate gets a token
+  bound to that certificate (RFC 8705, `cnf.x5t#S256`), which is then refused on any request that
+  does not present the same certificate; see [the edge guide](../edge.md#client-certificates-for-s2s-s2smtls).
 - **Records**: `GET/POST /api/v1/{entity}`, `GET/PATCH/DELETE /api/v1/{entity}/{id}`. An update needs
   `If-Match: "<row_version>"` from the record you read; a stale version answers 409.
 - **Queries**: `POST /api/v1/query/execute` runs a stored query or a view with filters, keyset

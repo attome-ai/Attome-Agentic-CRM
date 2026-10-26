@@ -80,6 +80,49 @@ a message naming the feature.
 - The QUIC endpoint keeps the certificate it started with: after a renewal, HTTP/3 uses the new
   certificate from the next restart (HTTP/1.1 and HTTP/2 use it at once).
 
+## Client certificates for S2S (`s2s.mtls`)
+
+With `s2s.mtls.enabled`, an S2S client that presents a TLS client certificate when it asks for an
+OAuth access token (`POST /api/v1/oauth/token`) gets a token bound to that certificate
+(RFC 8705: the token's `cnf.x5t#S256` is the certificate's SHA-256 thumbprint). Each request with
+a bound token must present the same certificate; another certificate, or none, answers 401. A
+token asked for without a certificate is unbound and works as before, as do HMAC-signed requests.
+
+On the built-in edge:
+
+```json
+"s2s": { "mtls": { "enabled": true, "client_ca_path": "/etc/attome/tls/client-ca.pem" } }
+```
+
+- The server asks every client for a certificate chaining to a CA in `client_ca_path`, but does
+  not require one, so browsers and unbound clients connect as before. A certificate that does not
+  chain to the CA fails the handshake.
+- Boot refuses `s2s.mtls.enabled` with `app.tls.enabled` and no `client_ca_path`, and names the
+  file when it holds no CA certificate.
+- HTTP/3 connections carry no client certificate: a client using a bound token stays on HTTP/2
+  or HTTP/1.1.
+
+Behind nginx, nginx verifies the certificate and forwards it in a header the server believes
+only from `security.trusted_proxy_cidrs`:
+
+```json
+"s2s": { "mtls": { "enabled": true, "proxy_header": "x-client-cert" } },
+"security": { "trusted_proxy_cidrs": ["10.0.0.5/32"] }
+```
+
+```nginx
+ssl_client_certificate /etc/nginx/client-ca.pem;
+ssl_verify_client      optional;
+location /api/ {
+    # Always set it, so a client cannot supply its own; empty when no certificate.
+    proxy_set_header X-Client-Cert $ssl_client_escaped_cert;
+    proxy_pass http://attome;
+}
+```
+
+Use `ssl_verify_client optional`, not `optional_no_ca`: the server trusts that nginx verified
+the chain. From a peer outside `trusted_proxy_cidrs` the header is ignored.
+
 ## Certificate expiry
 
 Every certificate, from files or ACME, logs its expiry at `info` when it is loaded and when it is

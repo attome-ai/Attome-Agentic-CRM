@@ -431,6 +431,41 @@ fn acme_config_requires_domains() {
     assert!(err.contains("app.tls.http3"), "{err}");
 }
 
+/// S11-T3: `s2s.mtls` is off by default; on, the certificate needs a way
+/// in: the TLS edge with a client CA, or a proxy header from trusted
+/// proxies only.
+#[test]
+fn mtls_config_needs_a_certificate_source() {
+    let mut config = minimal_valid_config();
+    assert!(!config.s2s.mtls.enabled);
+    config.s2s.mtls.enabled = true;
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("s2s.mtls.enabled"), "{err}");
+
+    config.s2s.mtls.proxy_header = "x-client-cert".into();
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("security.trusted_proxy_cidrs"), "{err}");
+    config.security.trusted_proxy_cidrs = vec!["10.0.0.5/32".into()];
+    config
+        .validate()
+        .expect("a proxy header from a trusted proxy");
+    config.s2s.mtls.proxy_header = "x client cert".into();
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("s2s.mtls.proxy_header"), "{err}");
+
+    // On the built-in edge it needs the client CA.
+    let mut edge = minimal_valid_config();
+    edge.app.tls.enabled = true;
+    edge.app.tls.acme.enabled = true;
+    edge.app.tls.acme.domains = vec!["crm.example.com".into()];
+    edge.app.tls.acme.contact_email = "ops@example.com".into();
+    edge.s2s.mtls.enabled = true;
+    let err = edge.validate().unwrap_err().to_string();
+    assert!(err.contains("s2s.mtls.client_ca_path"), "{err}");
+    edge.s2s.mtls.client_ca_path = "/etc/attome/tls/client-ca.pem".into();
+    edge.validate().expect("the edge with a client CA");
+}
+
 #[test]
 fn storage_backend_defaults_to_s3_and_parses_by_name() {
     use crate::config::StorageBackend;

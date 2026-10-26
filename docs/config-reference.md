@@ -549,6 +549,9 @@ P-retention-archive-completion — partition archive/drop, entity purge, and leg
 | `s2s.enabled` | boolean | `false` |  | Enable S2S HMAC authentication. When false the middleware is a no-op. |
 | `s2s.failure_alert_threshold` | integer | `100` |  | Number of 401 failures from one client in 5 minutes that triggers the admin failure alert. Default: 100. |
 | `s2s.key_encryption_key` | string \| object |  | yes | 64-hex-char AES-256 master key(s) used to encrypt HMAC secrets at rest. Required when enabled = true. Generate with: openssl rand -hex 32. P-key-rotation-and-jwt (a): a `KeyRing` — see that type's doc. |
+| `s2s.mtls.client_ca_path` | string | `""` |  | PEM file of the CA certificate(s) client certificates must chain to, when the built-in TLS edge (`app.tls`) terminates TLS. Client certificates are requested, not required: a browser or an unbound client connects without one. |
+| `s2s.mtls.enabled` | boolean | `false` |  |  |
+| `s2s.mtls.proxy_header` | string | `""` |  | When TLS ends at a reverse proxy: the request header carrying the verified client certificate, URL-escaped PEM (nginx `$ssl_client_escaped_cert`), e.g. `x-client-cert`. Read only from a peer in `security.trusted_proxy_cidrs`; from any other peer it is ignored. |
 | `s2s.seeded_clients` | array of object |  |  | D-771: S2S clients declared here are reconciled at every boot (client, one key with a fixed `public_id`, permission rows), so a machine caller's credential survives a database reset and is rotated by editing `.env`. Empty by default. |
 
 ## `security`

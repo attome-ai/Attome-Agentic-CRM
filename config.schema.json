@@ -2865,12 +2865,36 @@
           "description": "64-hex-char AES-256 master key(s) used to encrypt HMAC secrets at\nrest. Required when enabled = true. Generate with: openssl rand -hex 32.\nP-key-rotation-and-jwt (a): a `KeyRing` — see that type's doc.",
           "writeOnly": true
         },
+        "mtls": {
+          "$ref": "#/$defs/S2sMtlsSection",
+          "description": "S11-T3: mutual TLS client certificates and certificate-bound OAuth\naccess tokens (RFC 8705). Off by default."
+        },
         "seeded_clients": {
           "description": "D-771: S2S clients declared here are reconciled at every boot (client,\none key with a fixed `public_id`, permission rows), so a machine\ncaller's credential survives a database reset and is rotated by\nediting `.env`. Empty by default.",
           "items": {
             "$ref": "#/$defs/S2sSeededClient"
           },
           "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "S2sMtlsSection": {
+      "description": "S11-T3: `s2s.mtls`. With `enabled`, a client that presents a verified\nTLS client certificate at `POST /api/v1/oauth/token` gets an access\ntoken bound to it (`cnf.x5t#S256`), and that token is refused on a\nrequest that does not present the same certificate.",
+      "properties": {
+        "client_ca_path": {
+          "default": "",
+          "description": "PEM file of the CA certificate(s) client certificates must chain to,\nwhen the built-in TLS edge (`app.tls`) terminates TLS. Client\ncertificates are requested, not required: a browser or an unbound\nclient connects without one.",
+          "type": "string"
+        },
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "proxy_header": {
+          "default": "",
+          "description": "When TLS ends at a reverse proxy: the request header carrying the\nverified client certificate, URL-escaped PEM (nginx\n`$ssl_client_escaped_cert`), e.g. `x-client-cert`. Read only from a\npeer in `security.trusted_proxy_cidrs`; from any other peer it is\nignored.",
+          "type": "string"
         }
       },
       "type": "object"

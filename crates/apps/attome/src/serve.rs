@@ -538,7 +538,11 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     > = if config.app.tls.enabled {
         attome::tls::check_http3(&config.app.tls)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
-        let listener = attome::tls::TlsListener::start(listener, &config.app.tls)
+        // S11-T3: ask for client certificates when S2S mTLS is on.
+        let client_ca = (config.s2s.mtls.enabled
+            && !config.s2s.mtls.client_ca_path.trim().is_empty())
+        .then_some(config.s2s.mtls.client_ca_path.as_str());
+        let listener = attome::tls::TlsListener::start_with(listener, &config.app.tls, client_ca)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
         // Z5-T8: HTTP/3 on the same port over UDP, advertised on every
         // TCP response with `Alt-Svc`.
@@ -573,16 +577,12 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         } else {
             app
         };
-        // `TapIo` carries the peer address through to `ConnectInfo`; the
-        // tap itself does nothing.
-        let listener = axum::serve::ListenerExt::tap_io(listener, |_| {});
         tracing::info!("serving HTTPS on {addr}");
+        // S11-T3: `ConnectInfo<SocketAddr>` as before, plus the client
+        // certificate of a connection that presented one.
         Box::pin(std::future::IntoFuture::into_future(
-            axum::serve(
-                listener,
-                app.into_make_service_with_connect_info::<SocketAddr>(),
-            )
-            .with_graceful_shutdown(attome::boot::wait_for_shutdown(server_shutdown)),
+            axum::serve(listener, attome::tls::TlsMakeService::new(app))
+                .with_graceful_shutdown(attome::boot::wait_for_shutdown(server_shutdown)),
         ))
     } else {
         Box::pin(std::future::IntoFuture::into_future(

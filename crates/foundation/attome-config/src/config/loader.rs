@@ -806,6 +806,8 @@ impl AppConfig {
         validate_model_catalogue(&self.inference.catalogue)?;
         // Z5-T6 — see `validate_tls`.
         validate_tls(&self.app.tls)?;
+        // S11-T3 — see `validate_mtls`.
+        validate_mtls(self)?;
         Self::check_secret_ring("auth.jwt_secret", &self.auth.jwt_secret, production)?;
         Self::check_signing_seeds("auth.jwt_signing_keys", &self.auth.jwt_signing_keys)?;
         // P-api-key-hashing (D-112, revised) — unconditional, unlike the
@@ -2595,6 +2597,55 @@ pub(crate) const IPV6_BUCKET_PREFIX_MAX: u8 = 128;
 /// Z5-T6: with `app.tls.enabled`, both files are named and exist, and the
 /// minimum version is one the server speaks. Checked at boot, so a typo in a
 /// path is a refusal to start naming the field, not a failed handshake.
+/// S11-T3: `s2s.mtls.enabled` needs a way for the client certificate to
+/// arrive: the built-in TLS edge with a client CA, or a proxy header read
+/// from trusted proxies only.
+pub(crate) fn validate_mtls(config: &AppConfig) -> Result<(), ConfigError> {
+    let mtls = &config.s2s.mtls;
+    if !mtls.enabled {
+        return Ok(());
+    }
+    let invalid = |field: &str, reason: &str| ConfigError::Invalid {
+        field: field.into(),
+        reason: reason.into(),
+    };
+    let header = mtls.proxy_header.trim();
+    if !header.is_empty() {
+        if !header_name_ok(header) {
+            return Err(invalid(
+                "s2s.mtls.proxy_header",
+                "must be a valid HTTP header name",
+            ));
+        }
+        if config.security.trusted_proxy_cidrs.is_empty() {
+            return Err(invalid(
+                "s2s.mtls.proxy_header",
+                "needs security.trusted_proxy_cidrs: the header is believed only from the proxy",
+            ));
+        }
+    }
+    if config.app.tls.enabled {
+        if mtls.client_ca_path.trim().is_empty() {
+            return Err(invalid(
+                "s2s.mtls.client_ca_path",
+                "must name the client CA PEM when app.tls.enabled and s2s.mtls.enabled",
+            ));
+        }
+    } else if header.is_empty() {
+        return Err(invalid(
+            "s2s.mtls.enabled",
+            "needs app.tls.enabled with s2s.mtls.client_ca_path, or s2s.mtls.proxy_header behind a TLS-terminating proxy",
+        ));
+    }
+    Ok(())
+}
+
+/// Whether `name` is made of header-name characters only.
+fn header_name_ok(name: &str) -> bool {
+    name.bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
 pub(crate) fn validate_tls(tls: &super::TlsSection) -> Result<(), ConfigError> {
     let invalid = |field: &str, reason: &str| ConfigError::Invalid {
         field: field.into(),

@@ -264,8 +264,13 @@ async fn audit_issue(state: &EngineState, claims: &AccessClaims) -> Result<(), A
 async fn token(
     State(state): State<EngineState>,
     headers: HeaderMap,
+    extensions: axum::http::Extensions,
     Form(form): Form<TokenForm>,
 ) -> Response {
+    // S11-T3: a token asked for over a verified client certificate is bound
+    // to it.
+    let client_certificate =
+        crate::mtls::presented_certificate(&extensions, &headers, &state.base.config);
     let basic = match basic_credentials(&headers) {
         Ok(basic) => basic,
         Err(e) => return oauth_error(&e),
@@ -277,6 +282,7 @@ async fn token(
         client_assertion_type: form.client_assertion_type,
         client_assertion: form.client_assertion,
         basic,
+        client_certificate,
     };
     let base = &state.base;
     let secrets = base.secrets.load();

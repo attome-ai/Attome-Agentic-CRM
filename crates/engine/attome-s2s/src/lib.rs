@@ -6,6 +6,7 @@ pub mod config_clients;
 pub mod crypto;
 pub mod db;
 pub mod middleware;
+pub mod mtls;
 pub mod oauth_clients;
 pub mod rate_limit;
 pub mod rewrap;

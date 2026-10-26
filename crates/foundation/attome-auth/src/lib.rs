@@ -73,6 +73,8 @@ pub mod epoch;
 pub mod invitation;
 pub mod jwt;
 pub mod mfa;
+/// S11-T3: certificate-bound access tokens (RFC 8705).
+pub mod mtls;
 /// S11-T1: the OAuth client credentials token endpoint's core.
 pub mod oauth_token;
 pub mod oidc;

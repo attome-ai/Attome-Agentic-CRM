@@ -29,7 +29,7 @@ pub use error::ConfigError;
 pub use sections::audit::{AnchorStoreSection, NotificationSection};
 pub use sections::auth::{
     ApiKeyPepper, AuthSection, KdfSection, OidcProviderConfig, OidcSection, RateLimitSection,
-    S2SSection, S2sSeededClient, S2sSeededPermission, cidr_contains,
+    S2SSection, S2sMtlsSection, S2sSeededClient, S2sSeededPermission, cidr_contains,
 };
 pub use sections::backup::BackupSection;
 pub use sections::cache::{CacheBackend, CacheRole, CacheRoleOverride, CacheRoles, CacheSection};
