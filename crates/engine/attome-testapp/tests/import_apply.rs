@@ -296,3 +296,43 @@ fn undo_skips_edited_rows() {
         assert!(import_undo::undo(&app.state, job).await.is_err());
     });
 }
+
+// feature: A23
+#[test]
+fn quiet_hours_defers_apply() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = fixture(&app).await;
+        // Quiet all day: two windows that together cover every minute.
+        sqlx::query("INSERT INTO import_policy (entity_logicalname, quiet_hours) VALUES ($1, $2)")
+            .bind(&entity)
+            .bind(json!([
+                {"start": "00:00", "end": "12:00"},
+                {"start": "12:00", "end": "00:00"},
+            ]))
+            .execute(app.db())
+            .await
+            .unwrap();
+        let before = live(&app, &entity).await;
+        let job = validated_job(&app, &entity, &[["later", "2"]], false).await;
+        let phase = attome_document::import_jobs::PhaseJob {
+            job_id: job,
+            dry_run: false,
+        };
+        attome_document::import_jobs::run(
+            &app.state,
+            attome_document::import_jobs::Phase::Apply,
+            &phase,
+        )
+        .await
+        .expect("the apply phase defers");
+        assert_eq!(
+            job_status(&app, job).await,
+            "validated",
+            "nothing applied yet"
+        );
+        assert_eq!(live(&app, &entity).await, before);
+    });
+}

@@ -3074,6 +3074,8 @@ const DEDUP_KEY_CATALOG_ASSET_REBUILD: &str = "catalog-asset-rebuild";
 const DEDUP_KEY_EMAIL_DOMAIN_CHECK: &str = "email-domain-check";
 /// Z12-T8: the daily calendar feed fetch (a registered job type).
 const DEDUP_KEY_CALENDAR_FEED_FETCH: &str = "calendar-feed-fetch";
+/// A23-T7: the recurring-import tick (a registered job type).
+const DEDUP_KEY_IMPORT_SCHEDULE_TICK: &str = "import-schedule-tick";
 /// E13-T10: the daily search-console pull (a registered job type).
 const DEDUP_KEY_CONTENT_SEARCH_CONSOLE: &str = "content-search-console";
 /// R11-T1: evidence collectors (a registered job type).
@@ -3414,6 +3416,20 @@ pub const CONTENT_SEARCH_CONSOLE: attome_jobs::JobType =
 /// E13-T10: an IndexNow submission after a publish.
 pub const CONTENT_INDEXNOW: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_content::seo::console::PING_JOB, 1);
+
+/// A23-T7: a file import's phases, each queued by the one before it.
+pub const IMPORT_STAGE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_document::import_jobs::STAGE_JOB, 1);
+pub const IMPORT_VALIDATE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_document::import_jobs::VALIDATE_JOB, 1);
+pub const IMPORT_APPLY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_document::import_jobs::APPLY_JOB, 1);
+pub const IMPORT_UNDO: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_document::import_jobs::UNDO_JOB, 1);
+
+/// A23-T7: recurring imports that are due, every minute.
+pub const IMPORT_SCHEDULE_TICK: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_document::import_jobs::SCHEDULE_JOB, 1);
 
 /// R11-T1: evidence collectors writing evidence and, on failure, findings.
 pub const GRC_EVIDENCE_COLLECT: attome_jobs::JobType =
@@ -4569,6 +4585,42 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            IMPORT_SCHEDULE_TICK,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let started = attome_document::import_jobs::run_schedules(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if started > 0 {
+                    tracing::info!(started, "recurring imports started");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        // A23-T7: one handler per import phase; the payload names the job.
+        {
+            use attome_document::import_jobs::{Phase, PhaseJob};
+            for (job_type, phase) in [
+                (IMPORT_STAGE, Phase::Stage),
+                (IMPORT_VALIDATE, Phase::Validate),
+                (IMPORT_APPLY, Phase::Apply),
+                (IMPORT_UNDO, Phase::Undo),
+            ] {
+                if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+                    job_type,
+                    move |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                        let payload: PhaseJob = job.payload()?;
+                        attome_document::import_jobs::run(&state, phase, &payload)
+                            .await
+                            .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+                    },
+                ) {
+                    tracing::error!(%error, "job type registration failed");
+                }
+            }
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CALENDAR_FEED_FETCH,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let read = attome_api::calendar_feed::fetch_all(&state)
@@ -5161,6 +5213,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == CALENDAR_FEED_FETCH.name => {
             DEDUP_KEY_CALENDAR_FEED_FETCH
+        }
+        EngineJob::Registered(job) if job.name == IMPORT_SCHEDULE_TICK.name => {
+            DEDUP_KEY_IMPORT_SCHEDULE_TICK
         }
         EngineJob::Registered(job) if job.name == CONTENT_SEARCH_CONSOLE.name => {
             DEDUP_KEY_CONTENT_SEARCH_CONSOLE
@@ -6551,6 +6606,21 @@ pub fn spawn_email_domain_check_scheduler(db: DbPool, interval: std::time::Durat
             "email domain check",
         ),
         Err(error) => tracing::error!(%error, "email domain check: not scheduled"),
+    }
+}
+
+/// A23-T7: every minute, the recurring imports that are due.
+pub fn spawn_import_schedule_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(IMPORT_SCHEDULE_TICK.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_IMPORT_SCHEDULE_TICK,
+            "recurring imports",
+        ),
+        Err(error) => tracing::error!(%error, "recurring imports: not scheduled"),
     }
 }
 

@@ -263,6 +263,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     }
     // L4-T2: the catalog asset index, every 15 minutes.
     crate::jobs::spawn_catalog_asset_scheduler(db.clone(), std::time::Duration::from_secs(900));
+    // A23-T7: recurring imports that are due, every minute.
+    crate::jobs::spawn_import_schedule_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // Z12-T8: holidays from calendar iCal feeds, daily.
     crate::jobs::spawn_calendar_feed_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // E13-T10: yesterday's search statistics, daily.

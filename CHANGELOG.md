@@ -13,6 +13,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Import jobs and recurring imports (A23-T7): stage, validate, apply and undo run as registered
+  jobs (`import_stage`, `import_validate`, `import_apply`, `import_undo`, dedup key
+  `attome-records/import:{job_id}:{phase}`), each queuing the next; a dry run stops after validation
+  and a job over `import_policy.approval_over_rows` waits in `awaiting_approval`. An apply due inside
+  the entity's `import_policy.quiet_hours` re-queues itself for the window's end. A job whose
+  `counts.schedule` holds `{cron, time_zone?, source: {kind: storage|https, location}}` is a
+  template: the minute tick `import_schedule_tick` fetches the file when due (https through the
+  SSRF-guarded client) and starts a new job with the saved mapping; an unchanged file starts none.
 - Import apply and undo (A23-T5, A23-T6): `attome_records::import_apply::apply` writes a validated
   import's rows 500 per transaction through the bulk worker's per-item create and update (record
   rules, field security, row versions, creator share, file mirror, audit), each row with its

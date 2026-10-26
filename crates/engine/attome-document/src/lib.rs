@@ -48,6 +48,8 @@ pub mod files;
 pub mod files_scan;
 /// A23-T2: CSV and XLSX import files read into rows of text cells.
 pub mod import_reader;
+/// A23-T7: import phases as durable jobs, and recurring imports.
+pub mod import_jobs;
 /// A23-T3: staging an import file's rows into import_stage with COPY.
 pub mod import_stage;
 /// Z6-T3: the weekly read-back of a sample of stored files.
