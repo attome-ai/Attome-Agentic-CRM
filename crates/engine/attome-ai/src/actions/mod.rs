@@ -109,6 +109,8 @@ pub mod system_status;
 pub mod table;
 /// B1-T3: a record's timeline, summarised and asked.
 pub mod timeline;
+/// B13-T11: a theme drafted from brand guidelines.
+pub mod brand_draft;
 pub mod transition;
 pub mod translate;
 // T2-T5: a page drafted from a description.
@@ -143,6 +145,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
     all.extend(timeline::descriptors());
+    all.extend(brand_draft::descriptors());
     all.push(changes::descriptor());
     all.push(help::descriptor());
     all.push(crate::builder::explain::descriptor());
@@ -239,6 +242,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(search_ask::executors());
     all.extend(catalog::executors());
     all.extend(timeline::executors());
+    all.extend(brand_draft::executors());
     all.push(Box::new(changes::ChangesSince));
     all.push(Box::new(help::HelpAnswer));
     all.push(Box::new(crate::builder::explain::BuilderExplain));

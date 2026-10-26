@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Theme from brand guidelines (B13-T11): the AI action `brand.draft_from_document` reads a theme's
+  `guidelines_pdf` asset, asks the model for theme tokens and saves them as a new draft of that
+  theme's scope (administrators only, a Configuration audit event); a reply that is not a valid
+  theme saves nothing, and publishing stays a person's step.
 - Loyalty points as deferred revenue (F11-T9): with revenue contracts on and the new setting
   `revrec.loyalty_point_value` above 0, a nightly job adds a `loyalty_points` obligation to the
   contract of each order that earned points (priced net of `revrec.loyalty_breakage_percent`) and

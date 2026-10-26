@@ -21,6 +21,7 @@ attome-content.workspace      = true
 attome-config.workspace       = true
 attome-core.workspace         = true
 attome-db.workspace           = true
+attome-storage.workspace      = true
 attome-field.workspace        = true
 attome-fulfilment.workspace   = true
 attome-inference.workspace    = true

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:35a49913c80f77b432e1aa5190af95718c33d932dadbe3c40f4e3ca601fd4753",
+  "checksum": "sha256:ffb32a6409fbc87e262929f1673c92ca7b3c6ebe5283f17ccf81b891fb48690e",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -322,6 +322,7 @@
               "billing.subscription.read",
               "billing.usage.read",
               "bot.handoff",
+              "brand.draft_from_document",
               "builder.explain",
               "calendar.list_holidays",
               "calendar.propose_holiday",
