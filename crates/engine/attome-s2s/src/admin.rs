@@ -49,15 +49,25 @@ struct CreateClientBody {
     name: String,
     #[serde(default)]
     description: Option<String>,
-    /// Required. The `user_account` this client acts as: every
-    /// S2S-authenticated request runs with that user's privileges and is
-    /// attributed to it in the audit trail. Must reference an existing user.
-    /// (`Option` only so a missing value is reported through the JSON
-    /// validation contract — `422 validation_error` naming the field — rather
-    /// than axum's plain-text body-rejection.)
+    /// The `user_account` this client acts as: every S2S-authenticated
+    /// request runs with that user's privileges and is attributed to it in
+    /// the audit trail. S11-T4: omit it and the client gets a service user
+    /// of its own with no role, so it can do nothing until granted one.
     #[serde(default)]
-    #[schema(required = true)]
     service_user_ref: Option<Uuid>,
+    /// S11-T4: the person answerable for the client; the caller by default.
+    #[serde(default)]
+    owner_user_ref: Option<Uuid>,
+    /// S11-T4: what the client is for.
+    #[serde(default)]
+    purpose: Option<String>,
+    /// S11-T4: `production`, `staging`, `development` or `test`.
+    #[serde(default)]
+    environment: Option<String>,
+    /// S11-T4: when the client stops working; its owner is reminded 14 days
+    /// before.
+    #[serde(default)]
+    expires_at: Option<DateTime<Utc>>,
     #[serde(default = "default_rpm")]
     rate_limit_rpm: i32,
     #[serde(default = "default_concurrent")]
@@ -95,6 +105,14 @@ struct UpdateClientBody {
     oauth_public_key_pem: Option<String>,
     /// S11-T1: the scopes an access token may carry.
     oauth_scopes: Option<Vec<String>>,
+    /// S11-T4: a new owner.
+    owner_user_ref: Option<Uuid>,
+    /// S11-T4: a new purpose.
+    purpose: Option<String>,
+    /// S11-T4: a new environment.
+    environment: Option<String>,
+    /// S11-T4: a new expiry (in the future); the owner is reminded again.
+    expires_at: Option<DateTime<Utc>>,
     row_version: i64,
 }
 
@@ -204,6 +222,11 @@ struct ClientDetail {
     oauth_public_key_set: bool,
     /// S11-T1: the scopes an access token may carry.
     oauth_scopes: Vec<String>,
+    /// S11-T4: the person answerable for the client.
+    owner_user_ref: Option<Uuid>,
+    purpose: Option<String>,
+    environment: Option<String>,
+    expires_at: Option<DateTime<Utc>>,
     last_used_at: Option<DateTime<Utc>>,
     row_version: i64,
     created_at: DateTime<Utc>,
@@ -384,12 +407,22 @@ async fn create_client(
     }
     // B9: a client without a service user has no principal to act as, and the
     // middleware rejects it — so the row is never allowed to exist that way.
-    let service_user_ref = body.service_user_ref.ok_or_else(|| {
-        AppError::Validation(
-            "service_user_ref is required: the user_account this client acts as".into(),
-        )
-    })?;
-    ensure_service_user_exists(&state.base.db, service_user_ref).await?;
+    // S11-T4: without one named, the client gets its own (below).
+    if let Some(user) = body.service_user_ref {
+        ensure_service_user_exists(&state.base.db, user).await?;
+    }
+    let owner = body.owner_user_ref.unwrap_or(ctx.user_id);
+    if body.owner_user_ref.is_some() {
+        ensure_owner_exists(&state.base.db, owner).await?;
+    }
+    let environment = crate::service_account::checked_environment(body.environment.as_deref())?;
+    let expires_at = crate::service_account::checked_expiry(body.expires_at, Utc::now())?;
+    let purpose = body
+        .purpose
+        .as_deref()
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .map(str::to_owned);
 
     // Audit plan 3.3 (D-542 rule 4): the client insert and its Credential
     // event commit together; the row id is filled in after the insert.
@@ -419,14 +452,19 @@ async fn create_client(
         ));
     }
 
+    let service_user_ref = match body.service_user_ref {
+        Some(user) => user,
+        None => crate::service_account::create_service_user(&mut tx, &slug, ctx.user_id).await?,
+    };
     let now = Utc::now();
     let id: Uuid = sqlx::query_scalar(
         r#"
         INSERT INTO s2s_client
             (client_id, name, description, service_user_ref,
              rate_limit_rpm, max_concurrent, allowed_cidrs,
-             max_payload_bytes, auto_disable_days, created_at, updated_at, can_act_as_user)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, $11)
+             max_payload_bytes, auto_disable_days, created_at, updated_at, can_act_as_user,
+             owner_user_ref, purpose, environment, expires_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, $11, $12, $13, $14, $15)
         RETURNING id
         "#,
     )
@@ -441,6 +479,10 @@ async fn create_client(
     .bind(body.auto_disable_days)
     .bind(now)
     .bind(body.can_act_as_user)
+    .bind(owner)
+    .bind(&purpose)
+    .bind(&environment)
+    .bind(expires_at)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
@@ -471,6 +513,10 @@ async fn create_client(
             can_act_as_user: body.can_act_as_user,
             oauth_public_key_set: false,
             oauth_scopes: Vec::new(),
+            owner_user_ref: Some(owner),
+            purpose,
+            environment,
+            expires_at,
             last_used_at: None,
             row_version: 0,
             created_at: now,
@@ -537,13 +583,26 @@ async fn get_client(
 
     let keys = fetch_keys(&state.base.db, client_db_id).await?;
     let permissions = fetch_permissions(&state.base.db, client_db_id).await?;
-    let (oauth_public_key_set, oauth_scopes) = sqlx::query_as::<_, (bool, Vec<String>)>(
-        "SELECT oauth_public_key_pem IS NOT NULL, oauth_scopes FROM s2s_client WHERE id = $1",
-    )
-    .bind(client_db_id)
-    .fetch_one(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
+    let (oauth_public_key_set, oauth_scopes, owner_user_ref, purpose, environment, expires_at) =
+        sqlx::query_as::<
+            _,
+            (
+                bool,
+                Vec<String>,
+                Option<Uuid>,
+                Option<String>,
+                Option<String>,
+                Option<DateTime<Utc>>,
+            ),
+        >(
+            "SELECT oauth_public_key_pem IS NOT NULL, oauth_scopes, owner_user_ref, purpose, \
+                    environment, expires_at \
+             FROM s2s_client WHERE id = $1",
+        )
+        .bind(client_db_id)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
 
     Ok(Json(ClientDetail {
         id: row.0,
@@ -560,6 +619,10 @@ async fn get_client(
         can_act_as_user: row.15,
         oauth_public_key_set,
         oauth_scopes,
+        owner_user_ref,
+        purpose,
+        environment,
+        expires_at,
         last_used_at: row.11,
         row_version: row.12,
         created_at: row.13,
@@ -600,6 +663,11 @@ async fn update_client(
     if let Some(user_id) = body.service_user_ref {
         ensure_service_user_exists(&state.base.db, user_id).await?;
     }
+    if let Some(owner) = body.owner_user_ref {
+        ensure_owner_exists(&state.base.db, owner).await?;
+    }
+    let environment = crate::service_account::checked_environment(body.environment.as_deref())?;
+    let expires_at = crate::service_account::checked_expiry(body.expires_at, Utc::now())?;
     let oauth_key = match body.oauth_public_key_pem.as_deref().map(str::trim) {
         None => None,
         Some("") => Some(None),
@@ -703,6 +771,12 @@ async fn update_client(
             can_act_as_user   = $12,
             oauth_public_key_pem = CASE WHEN $13 THEN $14 ELSE oauth_public_key_pem END,
             oauth_scopes      = COALESCE($15, oauth_scopes),
+            owner_user_ref    = COALESCE($16, owner_user_ref),
+            purpose           = COALESCE($17, purpose),
+            environment       = COALESCE($18, environment),
+            expires_at        = COALESCE($19, expires_at),
+            expiry_reminded_at = CASE WHEN $19::timestamptz IS NULL
+                                      THEN expiry_reminded_at ELSE NULL END,
             updated_at        = NOW(),
             row_version       = row_version + 1
         WHERE id = $1 AND row_version = $10 AND is_deleted = FALSE
@@ -723,6 +797,15 @@ async fn update_client(
     .bind(oauth_key.is_some())
     .bind(oauth_key.flatten())
     .bind(body.oauth_scopes.as_deref())
+    .bind(body.owner_user_ref)
+    .bind(
+        body.purpose
+            .as_deref()
+            .map(str::trim)
+            .filter(|p| !p.is_empty()),
+    )
+    .bind(&environment)
+    .bind(expires_at)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?
@@ -1283,6 +1366,22 @@ async fn list_logs(
 /// D-786 follow-up L1: it must also not be a platform service principal (an
 /// `@internal.attome` row such as `metric-service@`): those act only for the
 /// engine that owns them, never for an external S2S caller.
+/// S11-T4: an owner must be an active user.
+async fn ensure_owner_exists(db: &attome_db::DbPool, user_id: Uuid) -> Result<(), AppError> {
+    let active: Option<bool> =
+        sqlx::query_scalar("SELECT is_active FROM user_account WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    if active != Some(true) {
+        return Err(AppError::Validation(
+            "owner_user_ref does not reference an active user".into(),
+        ));
+    }
+    Ok(())
+}
+
 async fn ensure_service_user_exists(db: &attome_db::DbPool, user_id: Uuid) -> Result<(), AppError> {
     let email: Option<Option<String>> =
         sqlx::query_scalar("SELECT email FROM user_account WHERE id = $1")

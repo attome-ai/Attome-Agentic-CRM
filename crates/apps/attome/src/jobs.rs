@@ -2990,6 +2990,7 @@ const DEDUP_KEY_OPS_CLUSTER_POLL: &str = "ops-cluster-poll";
 const DEDUP_KEY_OPS_DRILL_SKIP_CHECK: &str = "ops-drill-skip-check";
 /// AB4-T9: the daily drill freshness notice (a registered job type).
 const DEDUP_KEY_OPS_DRILL_FRESHNESS: &str = "ops-drill-freshness";
+const DEDUP_KEY_S2S_CLIENT_EXPIRY: &str = "s2s-client-expiry";
 /// AB3-T2: the one-minute live recovery point (a registered job type).
 const DEDUP_KEY_OPS_LIVE_RPO: &str = "ops-live-rpo";
 /// L4-T2: the catalog asset index rebuild (a registered job type).
@@ -3309,6 +3310,11 @@ pub const OPS_DRILL_SKIP_CHECK: attome_jobs::JobType =
 /// AB4-T9: stale or failed drill kinds told to `ops.read` holders, daily.
 pub const OPS_DRILL_FRESHNESS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ops::freshness::JOB, 1);
+
+/// S11-T4: S2S clients expiring in 14 days told to their owners, and
+/// expired ones suspended, daily.
+pub const S2S_CLIENT_EXPIRY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_s2s::service_account::JOB, 1);
 
 /// AB3-T2: the live recovery point, every minute.
 pub const OPS_LIVE_RPO: attome_jobs::JobType =
@@ -4441,6 +4447,23 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            S2S_CLIENT_EXPIRY,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let notices = attome_s2s::service_account::expiry_sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                for notice in &notices {
+                    notify_s2s_client_owner(&state, notice).await;
+                }
+                if !notices.is_empty() {
+                    tracing::info!(clients = notices.len(), "s2s client expiry sweep");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CATALOG_ASSET_REBUILD,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let counts = attome_api::catalog_index::rebuild_assets(&state)
@@ -5050,6 +5073,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == OPS_DRILL_FRESHNESS.name => {
             DEDUP_KEY_OPS_DRILL_FRESHNESS
+        }
+        EngineJob::Registered(job) if job.name == S2S_CLIENT_EXPIRY.name => {
+            DEDUP_KEY_S2S_CLIENT_EXPIRY
         }
         EngineJob::Registered(job) if job.name == OPS_LIVE_RPO.name => DEDUP_KEY_OPS_LIVE_RPO,
         EngineJob::Registered(job) if job.name == CATALOG_ASSET_REBUILD.name => {
@@ -6314,6 +6340,82 @@ pub fn spawn_ops_live_rpo_scheduler(db: DbPool, interval: std::time::Duration) {
             "ops live rpo",
         ),
         Err(error) => tracing::error!(%error, "ops live rpo: not scheduled"),
+    }
+}
+
+/// S11-T4: tells one client's owner it expires soon, or has expired and was
+/// suspended. A client with no owner (created before S11-T4) is only
+/// logged; a failed dispatch is logged, never fatal to the sweep.
+async fn notify_s2s_client_owner(
+    state: &EngineState,
+    notice: &attome_s2s::service_account::ExpiryNotice,
+) {
+    use attome_s2s::service_account::ExpiryAction;
+    let Some(owner) = notice.owner else {
+        tracing::warn!(client = %notice.client_id, action = ?notice.action, "s2s client expiry: no owner to tell");
+        return;
+    };
+    let date = notice.expires_at.format("%Y-%m-%d");
+    let (subject, body) = match notice.action {
+        ExpiryAction::Remind => (
+            format!("Integration client \"{}\" expires on {date}", notice.name),
+            format!(
+                "The integration client \"{}\" ({}) that you own stops working on {date}. \
+                 Extend its expiry on the client's admin page if it is still needed.",
+                notice.name, notice.client_id
+            ),
+        ),
+        ExpiryAction::Suspend => (
+            format!(
+                "Integration client \"{}\" expired and was suspended",
+                notice.name
+            ),
+            format!(
+                "The integration client \"{}\" ({}) that you own expired on {date} and was \
+                 suspended. Set a new expiry and reactivate it if it is still needed.",
+                notice.name, notice.client_id
+            ),
+        ),
+    };
+    let request = attome_notification::dispatch::DispatchRequest {
+        template_key: None,
+        locale: "en".to_owned(),
+        recipient_user_ref: Some(owner),
+        is_global: false,
+        organization_ref: None,
+        channels: None,
+        subject: Some(subject),
+        body_html: None,
+        body_text: Some(body),
+        route: Some(format!("/xrm/admin/s2s/clients/{}", notice.client_db_id)),
+        variables: std::collections::HashMap::new(),
+        priority: "high".to_owned(),
+        escalate_after_minutes: None,
+        escalate_channels: None,
+    };
+    if let Err(error) = attome_notification::dispatch::create_dispatch(
+        &state.base.db,
+        &state.base.config.notification,
+        request,
+    )
+    .await
+    {
+        tracing::error!(%error, %owner, client = %notice.client_id, "s2s client expiry: notification failed");
+    }
+}
+
+/// S11-T4: daily, S2S client expiry reminders and suspensions.
+pub fn spawn_s2s_client_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(S2S_CLIENT_EXPIRY.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_S2S_CLIENT_EXPIRY,
+            "s2s client expiry",
+        ),
+        Err(error) => tracing::error!(%error, "s2s client expiry: not scheduled"),
     }
 }
 

@@ -243,6 +243,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     // AB3-T2: the live recovery point, every minute (nothing without the
     // ops module).
     crate::jobs::spawn_ops_live_rpo_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // S11-T4: S2S client expiry reminders and suspensions, daily.
+    crate::jobs::spawn_s2s_client_expiry_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // AB4-T9: stale or failed drills told to operations, daily.
     crate::jobs::spawn_ops_drill_freshness_scheduler(
         db.clone(),

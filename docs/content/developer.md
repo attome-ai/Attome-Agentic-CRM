@@ -33,6 +33,12 @@ entities and fields.
   in the provider's JWKS (never a shared secret), with exactly that issuer, audience and subject,
   and not expired; anything else answers `invalid_grant`. If the provider's keys cannot be fetched
   and none are cached, the token is refused.
+- **Service accounts**: every integration client is a service account with an owner (the
+  administrator who creates it, unless `owner_user_ref` names another), a `purpose`, an
+  `environment` (`production`, `staging`, `development` or `test`) and an optional `expires_at`.
+  Create it without `service_user_ref` and it gets a service user of its own that holds no role,
+  so it can do nothing until you assign it a role (and share records with it) like a person. Its
+  owner is told 14 days before it expires; once expired it is suspended.
 - **Records**: `GET/POST /api/v1/{entity}`, `GET/PATCH/DELETE /api/v1/{entity}/{id}`. An update needs
   `If-Match: "<row_version>"` from the record you read; a stale version answers 409.
 - **Queries**: `POST /api/v1/query/execute` runs a stored query or a view with filters, keyset

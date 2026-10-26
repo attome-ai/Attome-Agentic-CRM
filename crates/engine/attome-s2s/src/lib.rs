@@ -12,6 +12,7 @@ pub mod mtls;
 pub mod oauth_clients;
 pub mod rate_limit;
 pub mod rewrap;
+pub mod service_account;
 pub mod telemetry;
 
 pub use claims::S2SClaims;
