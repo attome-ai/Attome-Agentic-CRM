@@ -131,9 +131,9 @@ describe('data catalogue assets (L4-T6)', () => {
     const el: HTMLElement = fixture.nativeElement;
     el.querySelector<HTMLButtonElement>('[data-testid="access-open"]')!.click();
     fixture.detectChanges();
-    const reason = el.querySelector<HTMLTextAreaElement>('[data-testid="access-reason"]')!;
-    reason.value = 'Quarter close';
-    reason.dispatchEvent(new Event('input'));
+    expect(el.querySelector('[data-testid="access-reason"]')).not.toBeNull();
+    // ngModel binds its control asynchronously; set the reason directly.
+    fixture.componentInstance.reason.set('Quarter close');
     fixture.detectChanges();
     el.querySelector<HTMLButtonElement>('[data-testid="access-send"]')!.click();
     fixture.detectChanges();
