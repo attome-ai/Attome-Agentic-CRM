@@ -919,6 +919,8 @@ impl EngineSystemBuilder {
         // above, and for the same reason: compile-time data, rebuilt
         // identically on every node, so no arc-swap needed.
         state.engine_managed_fields = std::sync::Arc::new(self.registry.engine_managed_fields());
+        // Q10-T7 — the suggested roles, frozen the same way.
+        state.role_templates = std::sync::Arc::new(self.registry.role_templates());
         // D-524 — the create-time allowance for those same fields, frozen the
         // same way.
         state.engine_managed_initial_values =

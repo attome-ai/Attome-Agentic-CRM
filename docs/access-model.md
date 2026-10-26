@@ -40,6 +40,13 @@ several roles give business-unit level, child units count when any of them inclu
 **Ownership.** A role can let owners see the records they own (`{operation}_owner_visible`), whatever
 its level.
 
+## Suggested roles
+
+Modules suggest roles (`GET /api/v1/admin/security/role-templates`, for the licensed modules): a sales
+rep and a sales manager, and an auditor. Installing one (`POST .../role-templates/{key}/install`)
+creates an ordinary role with the template's privileges and levels, which administrators then own;
+upgrades never change it. A privilege or entity the deployment does not have is skipped and named.
+
 ## Permission sets
 
 A permission set is an additive bundle of privileges and entity levels, assigned to a user or a team,

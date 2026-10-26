@@ -38,6 +38,72 @@ impl EngineModel for SalesModel {
         &["points_model", "points_rule", "points_score"]
     }
 
+    /// Q10-T7: a rep works their team's accounts, contacts, leads and deals;
+    /// a manager the whole unit's, and may delete within the team.
+    fn role_templates(&self) -> &'static [attome_core::model::RoleTemplate] {
+        const ENTITIES: [&str; 4] = ["account", "contact", "lead", "opportunity"];
+        const REP_ACCESS: [(&str, [i16; 3]); 4] = [
+            (ENTITIES[0], [1, 1, 0]),
+            (ENTITIES[1], [1, 1, 0]),
+            (ENTITIES[2], [1, 1, 0]),
+            (ENTITIES[3], [1, 1, 0]),
+        ];
+        const MANAGER_ACCESS: [(&str, [i16; 3]); 4] = [
+            (ENTITIES[0], [2, 2, 1]),
+            (ENTITIES[1], [2, 2, 1]),
+            (ENTITIES[2], [2, 2, 1]),
+            (ENTITIES[3], [2, 2, 1]),
+        ];
+        &[
+            attome_core::model::RoleTemplate {
+                key: "sales_rep",
+                name: "Sales rep",
+                name_ar: "مندوب مبيعات",
+                description: "Works the team's accounts, contacts, leads and opportunities; deletes nothing.",
+                entity_access: &REP_ACCESS,
+                privileges: &[
+                    "account.read",
+                    "account.create",
+                    "account.update",
+                    "contact.read",
+                    "contact.create",
+                    "contact.update",
+                    "lead.read",
+                    "lead.create",
+                    "lead.update",
+                    "opportunity.read",
+                    "opportunity.create",
+                    "opportunity.update",
+                ],
+            },
+            attome_core::model::RoleTemplate {
+                key: "sales_manager",
+                name: "Sales manager",
+                name_ar: "مدير مبيعات",
+                description: "Works the unit's accounts, contacts, leads and opportunities, and deletes within the team.",
+                entity_access: &MANAGER_ACCESS,
+                privileges: &[
+                    "account.read",
+                    "account.create",
+                    "account.update",
+                    "account.delete",
+                    "contact.read",
+                    "contact.create",
+                    "contact.update",
+                    "contact.delete",
+                    "lead.read",
+                    "lead.create",
+                    "lead.update",
+                    "lead.delete",
+                    "opportunity.read",
+                    "opportunity.create",
+                    "opportunity.update",
+                    "opportunity.delete",
+                ],
+            },
+        ]
+    }
+
     /// D7-T4: splits are written only through `PUT .../splits`, which checks
     /// their rules and stores their amounts. D7-T2: team members only
     /// through the team routes, which grant and revoke their share of the

@@ -43,6 +43,18 @@ impl EngineModel for SecurityModel {
         MODULE_CORE
     }
 
+    /// Q10-T7: an auditor reads the audit trail and changes nothing.
+    fn role_templates(&self) -> &'static [attome_core::model::RoleTemplate] {
+        &[attome_core::model::RoleTemplate {
+            key: "auditor",
+            name: "Auditor",
+            name_ar: "مدقق",
+            description: "Reads the audit trail through the Audit administration area; changes nothing.",
+            entity_access: &[],
+            privileges: &["admin.audit"],
+        }]
+    }
+
     fn routes(&self) -> Router<EngineState> {
         Router::new()
     }

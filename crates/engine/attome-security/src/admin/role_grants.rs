@@ -32,7 +32,7 @@ use super::shared::{
 
 /// `role_mm_privilege`'s snapshot, with the role and privilege by
 /// logical key.
-const GRANT_SNAPSHOT: &str = "SELECT rp.id, rp.role_ref, r.name AS role, rp.privilege_ref, \
+pub(super) const GRANT_SNAPSHOT: &str = "SELECT rp.id, rp.role_ref, r.name AS role, rp.privilege_ref, \
      p.key AS privilege, rp.is_deleted, rp.row_version, rp.owner_layer \
      FROM role_mm_privilege rp \
      JOIN role r ON r.id = rp.role_ref \

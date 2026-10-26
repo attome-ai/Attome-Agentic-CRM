@@ -61,6 +61,17 @@ impl ModelRegistry {
         map
     }
 
+    /// Q10-T7 — every role template a registered model suggests, with its
+    /// model's module, in registration order. Call once at boot.
+    pub fn role_templates(
+        &self,
+    ) -> Vec<(attome_modules::ModuleId, attome_core::model::RoleTemplate)> {
+        self.models
+            .iter()
+            .flat_map(|m| m.role_templates().iter().map(|t| (m.module_id(), *t)))
+            .collect()
+    }
+
     /// R-03 (`document/module-master-plans/M26-dashboard-remediation.md`) —
     /// every `(entity_logicalname, attribute_logicalname)` pair a registered
     /// model declared via `EngineModel::engine_managed_fields`, folded into one

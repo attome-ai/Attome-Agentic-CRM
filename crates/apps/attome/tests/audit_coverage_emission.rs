@@ -2520,6 +2520,13 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        // ── role templates (Q10-T7) ─────────────────────────────────────────
+        "POST /api/v1/admin/security/role-templates/{key}/install" => request(
+            "POST",
+            &format!("{S}/role-templates/auditor/install"),
+            t,
+            Some(json!({"name": uniq("auditor")})),
+        ),
         // ── conflict rules (Q10-T8) ─────────────────────────────────────────
         "POST /api/v1/admin/security/role-conflicts/rules" => {
             let (left, right) = (role(fx).await, role(fx).await);

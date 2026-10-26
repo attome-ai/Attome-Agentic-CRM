@@ -23,6 +23,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Suggested roles (Q10-T7): modules suggest roles (sales rep and sales manager in sales, auditor in
+  core), listed at `GET /api/v1/admin/security/role-templates` for the licensed modules and installed
+  as an ordinary, editable copy with `POST .../role-templates/{key}/install` (recorded in the
+  changeset like any role; migration `0296` remembers the template). Upgrades never change an
+  installed copy, and nothing installs a template on its own.
 - Conflicting-access rules (Q10-T8): migration `0295` adds `role_conflict_rule`, a pair of roles,
   privileges or permission sets one person must not hold together, managed under
   `/api/v1/admin/security/role-conflicts/rules` with `GET .../current` listing who holds a pair

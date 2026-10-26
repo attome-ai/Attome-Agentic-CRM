@@ -65,6 +65,8 @@ pub const METADATA_AUTHORING_PREFIXES: &[&str] = &[
     // Q10-T5: permission sets travel in changesets; their assignments
     // (`/api/v1/admin/security/permission-set-assignments`) are environment data.
     "/api/v1/admin/security/permission-sets",
+    // Q10-T7: installing a role template creates a role.
+    "/api/v1/admin/security/role-templates",
     "/api/v1/admin/security/role-entity-access",
     "/api/v1/workflow/definitions",
     // BSV-F02 / BSV-D2 (B4): bundle-applied metadata, so production changes it

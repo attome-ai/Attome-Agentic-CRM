@@ -10169,6 +10169,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/role-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggested roles
+         * @description The roles the licensed, installed modules suggest, to install as editable copies. Administrators only.
+         */
+        get: operations["list_templates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/role-templates/{key}/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Install a suggested role
+         * @description Creates a new, independent role from a module's template; edit it freely afterwards, upgrades never change it. Administrators only; audited and recorded in the changeset.
+         */
+        post: operations["install_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/roles": {
         parameters: {
             query?: never;
@@ -38648,6 +38688,10 @@ export interface components {
              */
             duplicates: number;
         };
+        InstallTemplateBody: {
+            /** @description The new role's name; the template's name when omitted. */
+            name?: string | null;
+        };
         /** @description One installed configuration pack. */
         InstalledPack: {
             /** @description `product`, `project` or `customer`. */
@@ -38659,6 +38703,18 @@ export interface components {
              * @description The highest changeset of the pack applied.
              */
             version: number;
+        };
+        /** @description What an install created. */
+        InstalledRole: {
+            name: string;
+            /** Format: uuid */
+            role_id: string;
+            /**
+             * @description Privileges and entities the template names that this deployment does
+             *     not have, left out.
+             */
+            skipped: string[];
+            template: string;
         };
         InstanceDetail: {
             /** Format: date-time */
@@ -53558,6 +53614,21 @@ export interface components {
              * @description Portal users holding this role.
              */
             user_count: number;
+        };
+        /** @description One suggested role. */
+        RoleTemplateItem: {
+            description: string;
+            /** @description `{entity: [read, write, delete]}` levels, 0 None .. 3 Global. */
+            entity_access: [
+                string,
+                number[]
+            ][];
+            key: string;
+            /** @description The module that suggests it. */
+            module: string;
+            name: string;
+            name_ar: string;
+            privileges: string[];
         };
         RoleUserItem: {
             email?: string | null;
@@ -91938,6 +92009,107 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_templates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleTemplateItem"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    install_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The template key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallTemplateBody"];
+            };
+        };
+        responses: {
+            /** @description The new role */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstalledRole"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such template among the licensed modules */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A role with this name exists, or no open changeset */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

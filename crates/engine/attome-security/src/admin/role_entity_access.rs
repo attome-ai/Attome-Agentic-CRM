@@ -34,7 +34,7 @@ use super::shared::{
 
 /// `role_mm_entity_access`'s snapshot, role and entity by logical
 /// key.
-const ENTITY_ACCESS_SNAPSHOT: &str = "SELECT ea.id, ea.role_ref, r.name AS role, \
+pub(super) const ENTITY_ACCESS_SNAPSHOT: &str = "SELECT ea.id, ea.role_ref, r.name AS role, \
      ea.entity_ref, ei.logicalname AS entity, ea.read_access_level, ea.write_access_level, \
      ea.delete_access_level, ea.read_owner_visible, ea.write_owner_visible, \
      ea.delete_owner_visible, ea.is_deleted, ea.row_version, ea.owner_layer \

@@ -52739,6 +52739,171 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/role-templates": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Suggested roles",
+        "description": "The roles the licensed, installed modules suggest, to install as editable copies. Administrators only.",
+        "operationId": "list_templates",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleTemplateItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/role-templates/{key}/install": {
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Install a suggested role",
+        "description": "Creates a new, independent role from a module's template; edit it freely afterwards, upgrades never change it. Administrators only; audited and recorded in the changeset.",
+        "operationId": "install_template",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The template key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallTemplateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstalledRole"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such template among the licensed modules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A role with this name exists, or no open changeset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/roles": {
       "get": {
         "tags": [
@@ -165984,6 +166149,18 @@
           }
         }
       },
+      "InstallTemplateBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The new role's name; the template's name when omitted."
+          }
+        }
+      },
       "InstalledPack": {
         "type": "object",
         "description": "One installed configuration pack.",
@@ -166005,6 +166182,35 @@
             "type": "integer",
             "format": "int32",
             "description": "The highest changeset of the pack applied."
+          }
+        }
+      },
+      "InstalledRole": {
+        "type": "object",
+        "description": "What an install created.",
+        "required": [
+          "role_id",
+          "name",
+          "template",
+          "skipped"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Privileges and entities the template names that this deployment does\nnot have, left out."
+          },
+          "template": {
+            "type": "string"
           }
         }
       },
@@ -205020,6 +205226,63 @@
           }
         }
       },
+      "RoleTemplateItem": {
+        "type": "object",
+        "description": "One suggested role.",
+        "required": [
+          "key",
+          "module",
+          "name",
+          "name_ar",
+          "description",
+          "privileges",
+          "entity_access"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "entity_access": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": false,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
+                }
+              ]
+            },
+            "description": "`{entity: [read, write, delete]}` levels, 0 None .. 3 Global."
+          },
+          "key": {
+            "type": "string"
+          },
+          "module": {
+            "type": "string",
+            "description": "The module that suggests it."
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": "string"
+          },
+          "privileges": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "RoleUserItem": {
         "type": "object",
         "required": [
@@ -221620,7 +221883,6 @@
     }
   ],
   "x-api-version": "2026-10",
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -221672,5 +221934,6 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": []
 }

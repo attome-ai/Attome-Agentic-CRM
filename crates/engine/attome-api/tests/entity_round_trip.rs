@@ -10742,3 +10742,116 @@ fn set_with_admin_privilege_is_refused() {
         );
     })
 }
+
+/// Q10-T7: installing a module's suggested role makes an ordinary,
+/// independent role: it carries the template's privileges, it can be
+/// changed like any role, and installing again needs another name.
+// op: GET /api/v1/admin/security/role-templates, POST /api/v1/admin/security/role-templates/{key}/install, PATCH /api/v1/admin/security/roles/{id}
+#[test]
+fn install_template_creates_independent_role() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin = seed_admin(&system).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+
+        let res = app
+            .clone()
+            .oneshot(json_req(
+                "GET",
+                "/api/v1/admin/security/role-templates",
+                &admin,
+                None,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let templates = body_json(res).await;
+        assert!(
+            templates
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|t| t["key"] == "auditor"),
+            "{templates}"
+        );
+
+        // Boot seeds `admin.audit` (changeset 0071); a test database may not
+        // have reached it.
+        sqlx::query(
+            "INSERT INTO privilege (id, key, name, is_active, created_at, owner_layer)              VALUES ($1, 'admin.audit', 'Audit administration', true, NOW(), 'platform')              ON CONFLICT DO NOTHING",
+        )
+        .bind(Uuid::now_v7())
+        .execute(&db)
+        .await
+        .unwrap();
+        let name = format!("Auditor {}", Uuid::now_v7());
+        let install = |body: Value| {
+            json_req(
+                "POST",
+                "/api/v1/admin/security/role-templates/auditor/install",
+                &admin,
+                Some(body),
+            )
+        };
+        let res = app
+            .clone()
+            .oneshot(install(serde_json::json!({ "name": name })))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let installed = body_json(res).await;
+        let role_id: Uuid = installed["role_id"].as_str().unwrap().parse().unwrap();
+
+        let key: String = sqlx::query_scalar(
+            "SELECT p.key FROM role_mm_privilege rp JOIN privilege p ON p.id = rp.privilege_ref \
+             WHERE rp.role_ref = $1 AND rp.is_deleted = false",
+        )
+        .bind(role_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(key, "admin.audit");
+        let from: String = sqlx::query_scalar(
+            "SELECT template_key FROM role_template_install WHERE role_ref = $1",
+        )
+        .bind(role_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(from, "auditor");
+
+        let res = app
+            .clone()
+            .oneshot(json_req(
+                "PATCH",
+                &format!("/api/v1/admin/security/roles/{role_id}"),
+                &admin,
+                Some(serde_json::json!({ "description": "our own auditor" })),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK, "the copy is an ordinary role");
+
+        let res = app
+            .clone()
+            .oneshot(install(serde_json::json!({ "name": name })))
+            .await
+            .unwrap();
+        assert_eq!(
+            res.status(),
+            StatusCode::CONFLICT,
+            "a second copy needs its own name"
+        );
+        let res = app
+            .oneshot(json_req(
+                "POST",
+                "/api/v1/admin/security/role-templates/no_such/install",
+                &admin,
+                Some(serde_json::json!({})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    })
+}

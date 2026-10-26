@@ -125,6 +125,9 @@ pub struct EngineState {
     /// `EngineState`), which enforces nothing, same posture as `entity_modules`
     /// starting empty.
     pub engine_managed_fields: Arc<HashSet<(String, String)>>,
+    /// Q10-T7 — each model's suggested roles with its module, collected from
+    /// `EngineModel::role_templates` and frozen by `EngineSystemBuilder::build`.
+    pub role_templates: Arc<Vec<(attome_modules::ModuleId, crate::model::RoleTemplate)>>,
     /// D-524 — the initial value an engine-managed field may be created with,
     /// keyed by `(entity_logicalname, attribute_logicalname)`, collected from
     /// `EngineModel::engine_managed_initial_values` and frozen by
@@ -322,6 +325,7 @@ impl EngineState {
             )),
             entity_modules: Arc::new(EntityModuleMap::default()),
             engine_managed_fields: Arc::new(HashSet::new()),
+            role_templates: Arc::new(Vec::new()),
             engine_managed_initial_values: Arc::new(std::collections::HashMap::new()),
             engine_owned_entities: Arc::new(HashSet::new()),
             record_validators: Arc::new(std::collections::HashMap::new()),

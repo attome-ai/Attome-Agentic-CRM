@@ -334,7 +334,17 @@ const RECORDED: &[(&str, &[&str])] = &[
     (
         "DELETE /api/v1/admin/security/field-profiles/{id}/assignments/{role_id}",
         &["unassign_field_profile"],
-    ), // Q10-T5: permission sets. Assignments are environment data (excluded).
+    ),
+    // Q10-T5: permission sets; their assignments are environment data.
+    // Q10-T7: installing a template creates a role with its grants and levels.
+    (
+        "POST /api/v1/admin/security/role-templates/{key}/install",
+        &[
+            "upsert_role",
+            "grant_role_privilege",
+            "set_role_entity_access",
+        ],
+    ),
     (
         "POST /api/v1/admin/security/permission-sets",
         &["upsert_permission_set"],

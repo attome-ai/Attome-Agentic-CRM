@@ -14,6 +14,24 @@ pub type RecordValidator = fn(
     &crate::meta_registry::EntityMetaRegistry,
 ) -> Result<(), String>;
 
+/// Q10-T7: a role a module suggests. An administrator installs it as a
+/// copy (`POST /api/v1/admin/security/role-templates/{key}/install`) and then
+/// owns that copy: upgrades never change it, and nothing installs a template
+/// on its own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RoleTemplate {
+    /// Stable across releases; the install route's key.
+    pub key: &'static str,
+    pub name: &'static str,
+    pub name_ar: &'static str,
+    pub description: &'static str,
+    /// `(entity, [read, write, delete])` levels, 0 None .. 3 Global. An
+    /// entity this deployment does not have is skipped at install.
+    pub entity_access: &'static [(&'static str, [i16; 3])],
+    /// Privilege keys; one this deployment does not have is skipped.
+    pub privileges: &'static [&'static str],
+}
+
 /// Every XRM engine/model implements this trait.
 /// Return a `Router<EngineState>` — handlers use `State<EngineState>` (or `State<AppState>`
 /// via FromRef) as extractors. `.with_state()` is applied once by EngineSystem::core_routes.
@@ -37,6 +55,12 @@ pub trait EngineModel: Send + Sync + 'static {
     /// already covers. A model that seeds an entity and does not list it here
     /// is a licence hole; `entity_module_gate.rs` is the test that says so.
     fn owned_entities(&self) -> &'static [&'static str] {
+        &[]
+    }
+
+    /// Q10-T7: the roles this model suggests. Listed only while its module
+    /// is licensed and installed. `&[]` (the default) suggests none.
+    fn role_templates(&self) -> &'static [RoleTemplate] {
         &[]
     }
 
