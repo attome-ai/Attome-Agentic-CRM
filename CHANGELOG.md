@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Identity links (E24-T1): `marketing_identity_link` (migration 0287) ties an email, tracking
+  visitor, portal user or phone to one contact, linked only by deterministic events (a form with an
+  email now links its email and visitor; sign-in and email-click callers use the same rules). A
+  second contact claiming a linked identifier is kept as a conflict, never moved:
+  `GET /api/v1/marketing/identity/conflicts` lists them and
+  `POST /api/v1/marketing/identity/conflicts/{id}/resolve` keeps the link or moves it.
 - Profile event ingestion and contact traits (E23-T2): `POST /api/v1/marketing/profile-events`
   takes up to 500 events per batch (60 batches a minute per caller, `contact.update`), each for a
   readable contact or an anonymous id within the last 7 days; events that fail a check come back

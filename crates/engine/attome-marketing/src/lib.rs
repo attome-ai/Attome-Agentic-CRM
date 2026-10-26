@@ -25,6 +25,8 @@ pub mod email_render;
 pub mod events;
 /// E10-T1: marketing forms and their public submission.
 pub mod forms;
+/// E24-T1: identity links and their deterministic rules.
+pub mod identity;
 pub mod handoff_sla;
 pub mod journey;
 pub mod landing;
@@ -69,6 +71,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<profile::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<identity::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<forms::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dynamic_blocks::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<tracking_script::ApiDocFragment as utoipa::OpenApi>::openapi());

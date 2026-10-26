@@ -356,6 +356,27 @@ pub async fn submit(
         "contact" => Some(crate::tracking::identify::IdentifyTarget::Contact(person)),
         _ => None,
     };
+    // E24-T1: a form with an email links the email (and the visitor) to the
+    // contact; a clash is kept for review, never moved.
+    if def.target == "contact" {
+        let mut identifiers = vec![(crate::identity::IdentifierType::Email, mapped.email.clone())];
+        if let Some(visitor) = visitor {
+            identifiers.push((
+                crate::identity::IdentifierType::Visitor,
+                visitor.to_string(),
+            ));
+        }
+        if let Err(error) = crate::identity::link(
+            state,
+            person,
+            crate::identity::LinkSource::FormEmail,
+            &identifiers,
+        )
+        .await
+        {
+            tracing::warn!(%error, form = %def.id, "form identity not linked");
+        }
+    }
     if let (Some(visitor), Some(target)) = (visitor, target)
         && let Err(error) = crate::tracking::identify::identify(
             state,
