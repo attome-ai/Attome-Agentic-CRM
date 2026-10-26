@@ -29,6 +29,9 @@ chrono.workspace          = true
 fred.workspace            = true
 hex.workspace             = true
 hmac.workspace            = true
+# S11-T2: identity-provider tokens and their JWKS.
+jsonwebtoken.workspace    = true
+reqwest.workspace         = true
 metrics.workspace         = true
 rand.workspace            = true
 serde.workspace           = true

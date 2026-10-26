@@ -1423,6 +1423,8 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/s2s/clients/{client_db_id}/logs",
             get(list_logs),
         )
+        // S11-T2: identity-provider trusts
+        .merge(crate::federated_admin::routes())
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file

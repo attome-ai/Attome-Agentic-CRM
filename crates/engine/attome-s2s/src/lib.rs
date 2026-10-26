@@ -5,6 +5,8 @@ pub mod concurrency;
 pub mod config_clients;
 pub mod crypto;
 pub mod db;
+pub mod federated;
+pub mod federated_admin;
 pub mod middleware;
 pub mod mtls;
 pub mod oauth_clients;

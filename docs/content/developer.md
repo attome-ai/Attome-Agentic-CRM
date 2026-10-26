@@ -23,6 +23,16 @@ entities and fields.
   turns on `s2s.mtls`, a client that asks for its token over a TLS client certificate gets a token
   bound to that certificate (RFC 8705, `cnf.x5t#S256`), which is then refused on any request that
   does not present the same certificate; see [the edge guide](../edge.md#client-certificates-for-s2s-s2smtls).
+- **Your own identity provider**: a workload with an identity token from your provider (Entra ID
+  workload identity, a Google service account, AWS through an OIDC provider) needs no secret of
+  ours. An administrator registers a trust on the S2S client with
+  `POST /api/v1/admin/s2s/clients/{id}/trusts` (`issuer`, `audience`, the workload's exact
+  `subject`, the provider's `https://` `jwks_uri`); the workload then sends
+  `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer` with its token as `assertion` to
+  `POST /api/v1/oauth/token` and gets the client's access token. The token must be signed by a key
+  in the provider's JWKS (never a shared secret), with exactly that issuer, audience and subject,
+  and not expired; anything else answers `invalid_grant`. If the provider's keys cannot be fetched
+  and none are cached, the token is refused.
 - **Records**: `GET/POST /api/v1/{entity}`, `GET/PATCH/DELETE /api/v1/{entity}/{id}`. An update needs
   `If-Match: "<row_version>"` from the record you read; a stale version answers 409.
 - **Queries**: `POST /api/v1/query/execute` runs a stored query or a view with filters, keyset

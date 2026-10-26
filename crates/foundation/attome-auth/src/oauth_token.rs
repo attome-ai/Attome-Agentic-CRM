@@ -119,6 +119,9 @@ pub enum OAuthError {
     UnsupportedGrantType,
     #[error("invalid_scope")]
     InvalidScope,
+    /// S11-T2: an identity-provider token no trust accepts.
+    #[error("invalid_grant")]
+    InvalidGrant,
     #[error("server_error")]
     Server,
 }
@@ -131,6 +134,7 @@ impl OAuthError {
             Self::InvalidClient => "invalid_client",
             Self::UnsupportedGrantType => "unsupported_grant_type",
             Self::InvalidScope => "invalid_scope",
+            Self::InvalidGrant => "invalid_grant",
             Self::Server => "server_error",
         }
     }
@@ -342,6 +346,18 @@ pub async fn issue<D: ClientDirectory>(
         (None, Some((id, secret))) => authenticate_secret(dir, id, secret).await?,
         (None, None) => return Err(OAuthError::InvalidClient),
     };
+    mint(client, request, at)
+}
+
+/// The access token for `client`, already authenticated (by [`issue`], or by
+/// a trusted identity-provider token, S11-T2): the scopes `request` asks for
+/// among those the client holds, bound to `request.client_certificate` when
+/// there is one.
+pub fn mint(
+    client: ClientRecord,
+    request: &TokenRequest,
+    at: &Issuer<'_>,
+) -> Result<TokenResponse, OAuthError> {
     let scopes = grant_scopes(request.scope.as_deref(), &client.scopes)?;
     let scope = scopes.join(" ");
     let claims = AccessClaims {

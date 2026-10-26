@@ -155,7 +155,8 @@ impl ClientDirectory for PgClientDirectory<'_> {
 /// A token request (RFC 6749 §4.4.2, RFC 7523 §2.2), form-encoded.
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct TokenForm {
-    /// Always `client_credentials`.
+    /// `client_credentials`, or `urn:ietf:params:oauth:grant-type:jwt-bearer`
+    /// with a token from a trusted identity provider in `assertion`.
     grant_type: String,
     /// Space-separated scopes; omit for every scope the client holds.
     scope: Option<String>,
@@ -164,6 +165,8 @@ pub struct TokenForm {
     client_assertion_type: Option<String>,
     /// The client's signed JWT.
     client_assertion: Option<String>,
+    /// S11-T2: the identity provider's token (jwt-bearer grant).
+    assertion: Option<String>,
 }
 
 /// An issued access token (RFC 6749 §5.1).
@@ -181,7 +184,7 @@ pub struct TokenBody {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct OAuthErrorBody {
     /// `invalid_request`, `invalid_client`, `unsupported_grant_type`,
-    /// `invalid_scope` or `server_error`.
+    /// `invalid_scope`, `invalid_grant` or `server_error`.
     error: String,
 }
 
@@ -227,6 +230,41 @@ fn oauth_error(error: &OAuthError) -> Response {
         );
     }
     no_store(response)
+}
+
+/// S11-T2: a token for the client whose trust accepts `assertion`, a token
+/// from the customer's own identity provider.
+async fn federated_issue(
+    state: &EngineState,
+    assertion: Option<&str>,
+    request: &TokenRequest,
+    at: &Issuer<'_>,
+    directory: &PgClientDirectory<'_>,
+) -> Result<oauth_token::TokenResponse, OAuthError> {
+    let assertion = assertion.ok_or(OAuthError::InvalidRequest("assertion is required"))?;
+    if request.basic.is_some() || request.client_assertion.is_some() {
+        return Err(OAuthError::InvalidRequest(
+            "use one client authentication method",
+        ));
+    }
+    let issuer = crate::federated::unverified_issuer(assertion).ok_or(OAuthError::InvalidGrant)?;
+    let trusts = crate::federated::trusts_for_issuer(&state.base.db, &issuer)
+        .await
+        .map_err(|_| OAuthError::Server)?;
+    let trust = crate::federated::verify(&trusts, assertion)
+        .await
+        .map_err(|e| {
+            tracing::warn!(error = %e, trusts = trusts.len(), "s2s: identity-provider token refused");
+            OAuthError::InvalidGrant
+        })?;
+    let client = directory
+        .find(&trust.client_id)
+        .await
+        .map_err(|_| OAuthError::Server)?
+        .filter(|c| c.active)
+        .ok_or(OAuthError::InvalidGrant)?;
+    tracing::info!(client = %trust.client_id, trust = %trust.id, "s2s: identity-provider token accepted");
+    oauth_token::mint(client, request, at)
 }
 
 /// Writes the issuance's security event; a token is never handed out
@@ -275,6 +313,7 @@ async fn token(
         Ok(basic) => basic,
         Err(e) => return oauth_error(&e),
     };
+    let assertion = form.assertion;
     let request = TokenRequest {
         grant_type: form.grant_type,
         scope: form.scope,
@@ -307,7 +346,12 @@ async fn token(
         redis: &base.redis_coordination,
         key_ring: &secrets.s2s_key_encryption_key,
     };
-    let issued = match oauth_token::issue(&directory, &request, &at).await {
+    let issued = if request.grant_type == crate::federated::JWT_BEARER_GRANT {
+        federated_issue(&state, assertion.as_deref(), &request, &at, &directory).await
+    } else {
+        oauth_token::issue(&directory, &request, &at).await
+    };
+    let issued = match issued {
         Ok(issued) => issued,
         Err(e) => {
             // The client is named only by what it sent; nothing secret.

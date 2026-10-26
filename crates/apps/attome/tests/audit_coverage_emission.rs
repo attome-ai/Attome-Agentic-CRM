@@ -1762,6 +1762,16 @@ async fn change_stream_fixture(fx: &Fx) -> Value {
     .await
 }
 
+/// S11-T2: a trust body unique to this call.
+fn trust_body() -> serde_json::Value {
+    json!({
+        "issuer": "https://login.example.com/audit/v2.0",
+        "audience": "api://attome-audit",
+        "subject": uniq("workload"),
+        "jwks_uri": "https://login.example.com/audit/keys",
+    })
+}
+
 async fn s2s_client(fx: &Fx) -> Uuid {
     let (service_user, _) = seed_user(&fx.base, "s2s-service").await;
     id_of(
@@ -2969,6 +2979,31 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 &format!("/api/v1/admin/s2s/clients/{id}/permissions"),
                 t,
                 Some(json!({"entity_name": "role", "can_read": true})),
+            )
+        }
+        "POST /api/v1/admin/s2s/clients/{client_db_id}/trusts" => {
+            let id = s2s_client(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/s2s/clients/{id}/trusts"),
+                t,
+                Some(trust_body()),
+            )
+        }
+        "DELETE /api/v1/admin/s2s/clients/{client_db_id}/trusts/{trust_id}" => {
+            let id = s2s_client(fx).await;
+            let trust = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/s2s/clients/{id}/trusts"),
+                Some(trust_body()),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/s2s/clients/{id}/trusts/{}", id_of(&trust)),
+                t,
+                None,
             )
         }
         "DELETE /api/v1/admin/s2s/clients/{client_db_id}/permissions/{entity_name}" => {
