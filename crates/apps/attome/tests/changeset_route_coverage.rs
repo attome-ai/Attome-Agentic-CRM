@@ -46,6 +46,8 @@ const EXTRA_PREFIXES: &[&str] = &[
     "/api/v1/admin/governance/domains",
     "/api/v1/process/case-defs",
     "/api/v1/admin/security/entity-default-shares",
+    // B13-T7: brand themes travel in changesets.
+    "/api/v1/admin/themes",
 ];
 
 /// Solution 7 Phase 2 (D-787 rule 7): the generic entity routes, in scope
@@ -170,6 +172,18 @@ const RECORDED: &[(&str, &[&str])] = &[
     ("POST /api/v1/admin/apps", &["upsert_app"]),
     ("PATCH /api/v1/admin/apps/{id}", &["upsert_app"]),
     ("DELETE /api/v1/admin/apps/{id}", &["retire_app"]),
+    // B13-T7: brand themes.
+    ("POST /api/v1/admin/themes", &["upsert_theme"]),
+    ("PATCH /api/v1/admin/themes/{id}", &["upsert_theme"]),
+    (
+        "POST /api/v1/admin/themes/{id}/publish",
+        &["upsert_theme", "publish_theme"],
+    ),
+    (
+        "POST /api/v1/admin/themes/rollback",
+        &["upsert_theme", "publish_theme"],
+    ),
+    ("POST /api/v1/admin/themes/{id}/assets", &["upsert_theme"]),
     ("POST /api/v1/admin/calendars", &["upsert_calendar"]),
     ("PATCH /api/v1/admin/calendars/{id}", &["upsert_calendar"]),
     ("DELETE /api/v1/admin/calendars/{id}", &["retire_calendar"]),
@@ -326,6 +340,10 @@ const RECORDED: &[(&str, &[&str])] = &[
 /// In-scope mutating routes that record nothing, with the reason (design
 /// §1.3 and §7).
 const EXCLUDED: &[(&str, &str)] = &[
+    (
+        "POST /api/v1/admin/themes/preview-check",
+        "B13-T5: checks unsaved tokens and writes nothing",
+    ),
     (
         "PUT /api/v1/admin/governance/domains/{id}/roles",
         "L3-T2: a governance role names a person of this deployment; promoted metadata never \

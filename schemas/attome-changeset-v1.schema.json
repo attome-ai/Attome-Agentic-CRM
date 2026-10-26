@@ -220,7 +220,10 @@
             "remove_choice_value",
             "set_view_columns",
             "data_step",
-            "delete_field"
+            "delete_field",
+            "upsert_theme",
+            "publish_theme",
+            "retire_theme"
           ]
         },
         "phase": {
@@ -445,6 +448,15 @@
         },
         {
           "$ref": "#/$defs/op_delete_field"
+        },
+        {
+          "$ref": "#/$defs/op_upsert_theme"
+        },
+        {
+          "$ref": "#/$defs/op_publish_theme"
+        },
+        {
+          "$ref": "#/$defs/op_retire_theme"
         }
       ]
     },
@@ -3258,6 +3270,96 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {}
+        }
+      }
+    },
+    "op_upsert_theme": {
+      "description": "upsert_theme (stage 1)",
+      "properties": {
+        "op": {
+          "const": "upsert_theme"
+        },
+        "phase": {
+          "const": "expand"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "theme_scope"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "theme_scope": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        },
+        "args": {
+          "type": "object",
+          "required": [
+            "definition"
+          ]
+        }
+      },
+      "required": [
+        "args"
+      ]
+    },
+    "op_publish_theme": {
+      "description": "publish_theme (stage 1)",
+      "properties": {
+        "op": {
+          "const": "publish_theme"
+        },
+        "phase": {
+          "const": "expand"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "theme_scope"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "theme_scope": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        }
+      }
+    },
+    "op_retire_theme": {
+      "description": "retire_theme (stage 1)",
+      "properties": {
+        "op": {
+          "const": "retire_theme"
+        },
+        "phase": {
+          "const": "contract"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "theme_scope"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "theme_scope": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
         }
       }
     }

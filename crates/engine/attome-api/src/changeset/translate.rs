@@ -335,6 +335,9 @@ pub(crate) async fn translate(
             args_definition(c.definition(&def, &[])?)
         }
         Op::SetWorkflowDraft => Some(json!({ "graph": c.required("graph")? })),
+        // B13-T7: the hook records the definition itself (scope, tokens and
+        // asset references by storage key and hash), with no ids.
+        Op::UpsertTheme => args_definition(Value::Object(c.snap.clone())),
         Op::UpsertWorkflow
         | Op::UpsertCaseDef
         | Op::SetEntityDefaultShare
@@ -458,6 +461,8 @@ pub(crate) async fn translate(
         | Op::RetireCaseDef
         | Op::RetireSidebarItem
         | Op::RetireApp
+        | Op::PublishTheme
+        | Op::RetireTheme
         | Op::RetireCalendar
         | Op::RemoveCalendarHoliday
         | Op::RemoveCalendarException

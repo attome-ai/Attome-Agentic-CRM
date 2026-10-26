@@ -246,6 +246,9 @@ fn sentence(op_name: &str, target: &Map<String, Value>, args: &Map<String, Value
         Op::RetireSidebarItem => format!("Remove the menu item {}.", c.qt("path")),
         Op::UpsertApp => format!("Create or update the app {}.", c.qt("app")),
         Op::RetireApp => format!("Remove the app {}.", c.qt("app")),
+        Op::UpsertTheme => format!("Create or update the theme of {}.", c.qt("theme_scope")),
+        Op::PublishTheme => format!("Publish the theme of {}.", c.qt("theme_scope")),
+        Op::RetireTheme => format!("Retire the published theme of {}.", c.qt("theme_scope")),
         Op::UpsertCalendar => format!("Create or update the calendar {}.", c.qt("calendar")),
         Op::RetireCalendar => format!("Remove the calendar {}.", c.qt("calendar")),
         Op::AddCalendarHoliday => format!(

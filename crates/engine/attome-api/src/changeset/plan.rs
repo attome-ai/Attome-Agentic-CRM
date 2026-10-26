@@ -194,7 +194,8 @@ pub fn required_args(op: Op) -> &'static [&'static str] {
         | Op::AddRoleGrantCondition
         | Op::SetEntityDefaultShare
         | Op::UpsertFieldProfile
-        | Op::UpsertDataDomain => &["definition"],
+        | Op::UpsertDataDomain
+        | Op::UpsertTheme => &["definition"],
         Op::SetEntityDomain => &["domain"],
         Op::SetEntityMasterData => &["is_master"],
         Op::SetLabel => &["display_name"],

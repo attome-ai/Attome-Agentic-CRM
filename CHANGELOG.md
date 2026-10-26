@@ -13,6 +13,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Themes travel in changesets (B13-T7): three new operations, `upsert_theme` (a scope's tokens and
+  its assets by storage key and SHA-256, never the bytes), `publish_theme` and `retire_theme`,
+  targeted by `theme_scope` (`deployment` or `<kind>:<ref>`). Saving, editing, publishing, rolling
+  back a theme and uploading an asset record them; applying refuses an asset whose object is not
+  in the target's file store (`theme_asset_missing`).
 - Approval request responses now carry `policy_version` and `parent_request_id` (Z10-T14), and the
   approval engine has end-to-end HTTP tests: a policy with a skipped step and a two-branch group,
   a policy edited while a request waits, and recall then resubmit.

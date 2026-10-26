@@ -195,6 +195,10 @@ op_catalogue! {
     SetViewColumns => "set_view_columns", Expand, 2, ["entity", "view"];
     DataStep => "data_step", Expand, 2, ["entity"];
     DeleteField => "delete_field", Contract, 2, ["entity", "field"];
+    // B13-T7: brand themes, by scope (`deployment`, or `<kind>:<ref>`).
+    UpsertTheme => "upsert_theme", Expand, 1, ["theme_scope"];
+    PublishTheme => "publish_theme", Expand, 1, ["theme_scope"];
+    RetireTheme => "retire_theme", Contract, 1, ["theme_scope"];
 }
 
 /// The highest op stage this binary records and applies (design §4.1): stage 2

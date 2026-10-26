@@ -443,6 +443,7 @@ async fn put_my_setting(
 // ── Brand themes (B13-T3/T4/T5) ──────────────────────────────────────────────
 
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
+use attome_core::changeset::{Op, RecordedOp, RecordingCtx};
 use attome_core::theme_store::{self, ThemeRow};
 use attome_core::theme_tokens::{ContrastReport, ThemeTokens};
 
@@ -484,6 +485,249 @@ struct PublicBranding {
 fn required_row_version(headers: &axum::http::HeaderMap) -> Result<i64, AppError> {
     attome_records::entity_crud::optional_expected_row_version(headers)?
         .ok_or_else(|| AppError::Validation("If-Match: \"<row_version>\" is required".into()))
+}
+
+// ── B13-T7: themes in changesets ────────────────────────────────────────────
+
+/// B13-T7: one brand asset as a changeset carries it: by reference, never
+/// its bytes. The target deployment must already hold the object.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ThemeAssetDef {
+    pub kind: String,
+    pub storage_key: String,
+    pub content_type: String,
+    pub byte_size: i64,
+    pub sha256: String,
+}
+
+/// B13-T7: a theme version as a changeset carries it (`upsert_theme`'s
+/// definition): its scope, tokens and assets.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct ThemeDef {
+    pub scope_kind: String,
+    #[serde(default)]
+    pub scope_ref: String,
+    pub tokens: ThemeTokens,
+    #[serde(default)]
+    pub assets: Vec<ThemeAssetDef>,
+}
+
+/// The changeset target of a scope: `deployment`, or `<kind>:<ref>`.
+fn theme_scope_key(scope_kind: &str, scope_ref: &str) -> String {
+    if scope_ref.is_empty() {
+        scope_kind.to_owned()
+    } else {
+        format!("{scope_kind}:{scope_ref}")
+    }
+}
+
+/// The scope a changeset target names.
+fn parse_theme_scope(key: &str) -> (&str, &str) {
+    key.split_once(':').unwrap_or((key, ""))
+}
+
+/// Theme `id` as a changeset definition, read in the writer's transaction.
+async fn theme_def_in_tx(conn: &mut sqlx::PgConnection, id: Uuid) -> Result<ThemeDef, AppError> {
+    let (scope_kind, scope_ref, tokens): (String, String, sqlx::types::Json<ThemeTokens>) =
+        sqlx::query_as("SELECT scope_kind, scope_ref, tokens FROM theme WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&mut *conn)
+            .await
+            .map_err(AppError::internal)?
+            .ok_or(AppError::NotFound)?;
+    let assets: Vec<(String, String, String, i64, String)> = sqlx::query_as(
+        "SELECT kind, storage_key, content_type, byte_size, sha256 FROM brand_asset \
+         WHERE theme_id = $1 ORDER BY kind",
+    )
+    .bind(id)
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(ThemeDef {
+        scope_kind,
+        scope_ref,
+        tokens: tokens.0,
+        assets: assets
+            .into_iter()
+            .map(
+                |(kind, storage_key, content_type, byte_size, sha256)| ThemeAssetDef {
+                    kind,
+                    storage_key,
+                    content_type,
+                    byte_size,
+                    sha256,
+                },
+            )
+            .collect(),
+    })
+}
+
+/// The `upsert_theme` op for theme `id` as it now stands.
+async fn theme_upsert_op(
+    conn: &mut sqlx::PgConnection,
+    id: Uuid,
+) -> Result<(RecordedOp, String), AppError> {
+    let def = theme_def_in_tx(conn, id).await?;
+    let key = theme_scope_key(&def.scope_kind, &def.scope_ref);
+    let op = crate::admin_hooks::recorded(
+        Op::UpsertTheme,
+        "theme",
+        id,
+        serde_json::json!({ "theme_scope": key }),
+        &def,
+    )?;
+    Ok((op, key))
+}
+
+/// The `publish_theme` op for theme `id`'s scope.
+fn theme_publish_op(id: Uuid, key: &str) -> RecordedOp {
+    RecordedOp {
+        op: Op::PublishTheme,
+        object_kind: "theme",
+        object_ref: Some(id),
+        target: serde_json::json!({ "theme_scope": key }),
+        snapshot: serde_json::json!({}),
+        changed: Vec::new(),
+    }
+}
+
+/// B13-T7, apply side: makes the scope's newest version carry `def`. When
+/// it already does, nothing changes; otherwise a new draft is saved with
+/// `def`'s tokens and exactly its assets. An asset whose object is not in
+/// this deployment's file store is refused before anything is written: the
+/// changeset carries the reference, not the bytes.
+pub(crate) async fn reconcile_theme(
+    state: &EngineState,
+    def: &ThemeDef,
+) -> Result<attome_metadata::provision::ReconcileOutcome, AppError> {
+    use attome_metadata::provision::ReconcileOutcome;
+    use object_store::ObjectStoreExt;
+    for asset in &def.assets {
+        let path =
+            object_store::path::Path::parse(&asset.storage_key).map_err(AppError::internal)?;
+        match state.base.storage.store().head(&path).await {
+            Ok(_) => {}
+            Err(object_store::Error::NotFound { .. }) => {
+                return Err(AppError::Validation(format!(
+                    "theme_asset_missing: the {} of the {} theme ({}) is not in this \
+                     deployment's file store; copy the object there, then apply again",
+                    asset.kind,
+                    theme_scope_key(&def.scope_kind, &def.scope_ref),
+                    asset.storage_key
+                )));
+            }
+            Err(e) => return Err(AppError::internal(e)),
+        }
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
+    let newest: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM theme WHERE scope_kind = $1 AND scope_ref = $2 \
+         ORDER BY version DESC LIMIT 1",
+    )
+    .bind(&def.scope_kind)
+    .bind(&def.scope_ref)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if let Some(id) = newest {
+        let current = theme_def_in_tx(&mut tx, id).await?;
+        let mut wanted = def.assets.clone();
+        wanted.sort_by(|a, b| a.kind.cmp(&b.kind));
+        if current.tokens == def.tokens && current.assets == wanted {
+            return Ok(ReconcileOutcome::Unchanged);
+        }
+    }
+    let row = theme_store::save_draft(
+        &mut tx,
+        &def.scope_kind,
+        &def.scope_ref,
+        &def.tokens,
+        Uuid::nil(),
+    )
+    .await?;
+    // The new draft has exactly the definition's assets, not the ones it
+    // inherited from the version before it.
+    sqlx::query("DELETE FROM brand_asset WHERE theme_id = $1")
+        .bind(row.id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    for asset in &def.assets {
+        theme_store::put_asset(
+            &mut tx,
+            row.id,
+            &asset.kind,
+            &asset.storage_key,
+            &asset.content_type,
+            asset.byte_size,
+            &asset.sha256,
+        )
+        .await?;
+    }
+    attome_db::tx::commit(tx).await?;
+    tracing::info!(scope_kind = %def.scope_kind, version = row.version, "theme reconcile: draft saved");
+    Ok(if newest.is_some() {
+        ReconcileOutcome::Updated
+    } else {
+        ReconcileOutcome::Created
+    })
+}
+
+/// B13-T7, apply side: publishes the scope's newest version (behind the
+/// same contrast gate as the route); nothing when it is already published.
+pub(crate) async fn publish_theme_scope(
+    state: &EngineState,
+    key: &str,
+) -> Result<attome_metadata::provision::ReconcileOutcome, AppError> {
+    use attome_metadata::provision::ReconcileOutcome;
+    let (scope_kind, scope_ref) = parse_theme_scope(key);
+    let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
+    let newest: Option<(Uuid, String, i64)> = sqlx::query_as(
+        "SELECT id, status, row_version FROM theme WHERE scope_kind = $1 AND scope_ref = $2 \
+         ORDER BY version DESC LIMIT 1",
+    )
+    .bind(scope_kind)
+    .bind(scope_ref)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((id, status, row_version)) = newest else {
+        return Err(AppError::Validation(format!(
+            "the {key} theme has no version to publish; an upsert_theme must come first"
+        )));
+    };
+    if status == "published" {
+        return Ok(ReconcileOutcome::Unchanged);
+    }
+    theme_store::publish(&mut tx, id, row_version).await?;
+    attome_db::tx::commit(tx).await?;
+    tracing::info!(theme_scope = %key, "theme reconcile: published");
+    Ok(ReconcileOutcome::Updated)
+}
+
+/// B13-T7, apply side: retires the scope's published version, so the scope
+/// falls back to the theme above it; nothing when none is published.
+pub(crate) async fn retire_theme_scope(
+    state: &EngineState,
+    key: &str,
+) -> Result<attome_metadata::provision::ReconcileOutcome, AppError> {
+    use attome_metadata::provision::ReconcileOutcome;
+    let (scope_kind, scope_ref) = parse_theme_scope(key);
+    let n = sqlx::query(
+        "UPDATE theme SET status = 'retired', row_version = row_version + 1 \
+         WHERE scope_kind = $1 AND scope_ref = $2 AND status = 'published'",
+    )
+    .bind(scope_kind)
+    .bind(scope_ref)
+    .execute(&state.base.db_migrator)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    Ok(if n == 0 {
+        ReconcileOutcome::Unchanged
+    } else {
+        ReconcileOutcome::Updated
+    })
 }
 
 fn theme_event(operation: AuditOperation, actor: Uuid, id: Uuid, name: &str) -> SecurityEvent {
@@ -548,8 +792,11 @@ async fn list_themes(
 async fn create_theme(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
+    recording: RecordingCtx,
     Json(body): Json<ThemeDraftBody>,
 ) -> Result<(axum::http::StatusCode, Json<ThemeRow>), AppError> {
+    // B13-T7: resolve the changeset (or refuse) before any write.
+    recording.preflight(&state.base.db).await?;
     let event = theme_event(
         AuditOperation::Create,
         ctx.user_id,
@@ -566,6 +813,8 @@ async fn create_theme(
     )
     .await?;
     stx.event_mut().set_record_id(row.id);
+    let (op, _) = theme_upsert_op(&mut stx, row.id).await?;
+    recording.record(stx.tx(), op).await?;
     stx.commit().await?;
     Ok((axum::http::StatusCode::CREATED, Json(row)))
 }
@@ -617,11 +866,13 @@ async fn get_theme(
 async fn update_theme(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
+    recording: RecordingCtx,
     Path(id): Path<Uuid>,
     headers: axum::http::HeaderMap,
     Json(body): Json<ThemeTokensBody>,
 ) -> Result<Json<ThemeRow>, AppError> {
     let expected = required_row_version(&headers)?;
+    recording.preflight(&state.base.db).await?;
     let event = theme_event(
         AuditOperation::Update,
         ctx.user_id,
@@ -630,6 +881,8 @@ async fn update_theme(
     );
     let mut stx = SecurityTx::begin(&state, event).await?;
     let row = theme_store::update_draft(&mut stx, id, expected, &body.tokens).await?;
+    let (op, _) = theme_upsert_op(&mut stx, row.id).await?;
+    recording.record(stx.tx(), op).await?;
     stx.commit().await?;
     Ok(Json(row))
 }
@@ -658,13 +911,22 @@ async fn update_theme(
 async fn publish_theme(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
+    recording: RecordingCtx,
     Path(id): Path<Uuid>,
     headers: axum::http::HeaderMap,
 ) -> Result<Json<ThemeRow>, AppError> {
     let expected = required_row_version(&headers)?;
+    recording.preflight(&state.base.db).await?;
     let event = theme_event(AuditOperation::Update, ctx.user_id, id, "theme.published");
     let mut stx = SecurityTx::begin(&state, event).await?;
     let (row, _) = theme_store::publish(&mut stx, id, expected).await?;
+    // B13-T7: the published content, then the publish, so the target
+    // publishes this content even when it was not the scope's newest draft.
+    let (op, key) = theme_upsert_op(&mut stx, row.id).await?;
+    recording.record(stx.tx(), op).await?;
+    recording
+        .record(stx.tx(), theme_publish_op(row.id, &key))
+        .await?;
     stx.commit().await?;
     Ok(Json(row))
 }
@@ -700,8 +962,10 @@ struct ThemeRollbackBody {
 async fn rollback_theme(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
+    recording: RecordingCtx,
     Json(body): Json<ThemeRollbackBody>,
 ) -> Result<Json<ThemeRow>, AppError> {
+    recording.preflight(&state.base.db).await?;
     let event = theme_event(
         AuditOperation::Update,
         ctx.user_id,
@@ -717,6 +981,11 @@ async fn rollback_theme(
     )
     .await?;
     stx.event_mut().set_record_id(row.id);
+    let (op, key) = theme_upsert_op(&mut stx, row.id).await?;
+    recording.record(stx.tx(), op).await?;
+    recording
+        .record(stx.tx(), theme_publish_op(row.id, &key))
+        .await?;
     stx.commit().await?;
     Ok(Json(row))
 }
@@ -892,6 +1161,7 @@ struct AssetKindQuery {
 async fn upload_theme_asset(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
+    recording: RecordingCtx,
     Path(id): Path<Uuid>,
     axum::extract::Query(query): axum::extract::Query<AssetKindQuery>,
     headers: axum::http::HeaderMap,
@@ -913,6 +1183,7 @@ async fn upload_theme_asset(
         })
         .unwrap_or_default();
     theme_store::check_asset(&query.kind, &content_type, &body)?;
+    recording.preflight(&state.base.db).await?;
     let sha256 = hex::encode(Sha256::digest(&body));
     let key = theme_store::asset_storage_key(id, &query.kind, &sha256);
     // The bytes go to the object store before the transaction opens; a
@@ -943,6 +1214,8 @@ async fn upload_theme_asset(
         &sha256,
     )
     .await?;
+    let (op, _) = theme_upsert_op(&mut stx, id).await?;
+    recording.record(stx.tx(), op).await?;
     stx.commit().await?;
     Ok(Json(asset))
 }

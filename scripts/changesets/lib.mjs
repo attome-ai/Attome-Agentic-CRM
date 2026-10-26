@@ -246,6 +246,10 @@ export const OPS = {
   data_step: op(E, ['entity'], ['kind'], 2, 'data_step'),
   // real delete: values archived 30 days, references removed, column dropped (D-788)
   delete_field: op(C, ['entity', 'field'], [], 2, 'delete_field'),
+  // brand themes (B13-T7): the scope's tokens and asset references; publish; retire
+  upsert_theme: op(E, ['theme_scope'], ['definition']),
+  publish_theme: op(E, ['theme_scope']),
+  retire_theme: op(C, ['theme_scope']),
 };
 
 // Ops a customer changeset may never carry (rulings 0.4/0.5: no structure).

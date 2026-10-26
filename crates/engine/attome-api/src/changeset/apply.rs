@@ -1074,6 +1074,17 @@ impl Ctx<'_> {
             Op::RetireApp => {
                 with_lock_retry!(crate::app_admin::retire_app(state, op.t("app")).await)?
             }
+            // B13-T7: brand themes, through the theme store the admin routes use.
+            Op::UpsertTheme => {
+                let def: crate::settings_admin::ThemeDef = op.definition().map_err(def_err)?;
+                with_lock_retry!(crate::settings_admin::reconcile_theme(state, &def).await)?
+            }
+            Op::PublishTheme => with_lock_retry!(
+                crate::settings_admin::publish_theme_scope(state, op.t("theme_scope")).await
+            )?,
+            Op::RetireTheme => with_lock_retry!(
+                crate::settings_admin::retire_theme_scope(state, op.t("theme_scope")).await
+            )?,
             Op::RetireCalendar => with_lock_retry!(
                 crate::calendar_admin::retire_calendar(state, op.t("calendar")).await
             )?,
