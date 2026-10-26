@@ -93,6 +93,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/caching.md"),
     ),
     (
+        "docs/change-data-capture.md",
+        include_str!("../../../../../docs/change-data-capture.md"),
+    ),
+    (
         "docs/config-reference.md",
         include_str!("../../../../../docs/config-reference.md"),
     ),

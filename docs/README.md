@@ -25,6 +25,7 @@
 - [Data catalogue](data-catalog.md): the asset index, who sees what, search, descriptions, access requests, usage, the personal data map, agent tools and the export.
 - [Record timeline](record-timeline.md): what a record's timeline shows, who sees what, related records, filters, pins and the panel.
 - [Delta tokens](delta-tokens.md): keeping a copy of a list up to date with only what changed.
+- [Change data capture](change-data-capture.md): change-stream subscriptions, erasure and schema events, a first copy without gaps, resync and consumer health.
 - [Data lineage](lineage.md): the graph of what uses what, impact before a field change, hand-documented links and the OpenLineage export.
 - [Imports and exports](imports-and-exports.md): import jobs (upload, dry run, apply, undo, error file, policy, recurring sources, agent tools) and exports (CSV, XLSX, JSON, Parquet, parts, labels).
 - [Data profiling](data-profiling.md): what a profile measures, masking, personal-data proposals, drift and schedules.

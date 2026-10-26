@@ -16,6 +16,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Change data capture documentation (L7-T10): `docs/change-data-capture.md` covers change-stream
+  subscriptions, reading events, erasure and schema events, the export-to-stream handover,
+  `410 resync_needed`, consumer expiry and health, and links the delta-token and timeline pages.
 - Documentation per publish (AD6-T2): each publish that records a metadata version enqueues a job
   (`metadata_publish_docs`) that writes the version's documentation in English and Arabic (entities and
   fields, flows, rules, changes since the previous version) to `metadata_version_doc` (migration 0285);
