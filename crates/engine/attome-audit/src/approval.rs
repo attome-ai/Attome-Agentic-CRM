@@ -1088,7 +1088,7 @@ pub async fn apply_and_audit_step_timeout_due(
     state: &EngineState,
     request_id: Uuid,
     extra: &dyn attome_db::BeforeCommit<(ApprovalRequest, attome_approval::TimeoutOutcome)>,
-    due: &attome_approval::StepDue,
+    due: &attome_approval::StepDue<'_>,
 ) -> Result<Option<(ApprovalRequest, attome_approval::TimeoutOutcome, Vec<Uuid>)>, AppError> {
     // The event names the request's organization, and the hook cannot look
     // it up itself: it runs on the timeout's own connection, inside its

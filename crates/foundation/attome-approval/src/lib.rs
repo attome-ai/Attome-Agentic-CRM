@@ -2770,8 +2770,9 @@ pub async fn apply_step_timeout_at(
 /// Z10-T8: when a step's `minutes` run out, given when it started, or
 /// `None` when that cannot be known now (a business-hours step whose
 /// calendar is unresolved): the step is then not due this tick.
-pub type StepDue =
-    dyn Fn(&ApprovalRequest, &ApprovalStep, DateTime<Utc>, i64) -> Option<DateTime<Utc>> + Sync;
+pub type StepDue<'a> = dyn Fn(&ApprovalRequest, &ApprovalStep, DateTime<Utc>, i64) -> Option<DateTime<Utc>>
+    + Sync
+    + 'a;
 
 /// Wall-clock minutes, the due time of a step that does not count business
 /// hours.
@@ -2794,7 +2795,7 @@ pub async fn apply_step_timeout_due_at(
     request_id: Uuid,
     hook: &dyn attome_db::BeforeCommit<(ApprovalRequest, TimeoutOutcome)>,
     clock: &dyn attome_types::Clock,
-    due: &StepDue,
+    due: &StepDue<'_>,
 ) -> Result<Option<(ApprovalRequest, TimeoutOutcome)>, AppError> {
     let now = clock.now();
     let mut tx = attome_db::tx::begin(pool).await?;
