@@ -53,3 +53,48 @@ Disabled secrets are skipped.
 
 Both stores are built into the release binary (cargo features `aws-secrets` and
 `azure-keyvault`, on by default); neither adds a native dependency.
+
+## Key rings
+
+A secret that signs or encrypts (the session key, the MFA and S2S encryption keys, the API-key
+pepper and the others `attome secrets` lists) can hold several keys at once, so a rotation never
+breaks what the old key made. In the environment it is one string:
+
+```text
+JWT_SECRET=ring:k2=<new key>;k1=<old key>
+```
+
+The first key is the active one: it signs and encrypts from the next start. The others are only
+read, so a session or a stored value made with them keeps working until it is moved onto the new
+key. Every key needs an id and a value, and ids are unique. A plain value (no `ring:`) is a ring of
+one key.
+
+## Rotating a secret
+
+1. `attome secrets rotate JWT_SECRET --env-file .env` writes a new active key in front of the
+   current one (`ring:<new id>=<new>;<old id>=<old>`), after copying the file to `.env.bak`. With a
+   cloud store or a secret file, put the same ring into the store or the file yourself.
+2. Restart every server and worker, so they all sign and encrypt with the new key.
+3. Move stored data onto the new key:
+   `attome secrets rewrap <domain> --api-key <key>` (`POST /api/v1/admin/security/rewrap/{domain}`,
+   for example `mfa`, `s2s` or `erasure`). When rewraps need approval, a second administrator
+   approves the request first.
+4. Once the rewrap has finished and old sessions have expired, drop the old key from the ring and
+   restart again.
+
+`attome secrets generate --env-file .env` fills the secrets the platform makes itself (encryption
+keys, peppers, the application roles' passwords) where they are missing; it never invents a
+provider's credential and never changes a value already there. No command prints a secret.
+
+## The inventory
+
+Each start records every secret that is set, with its key ids, never a value or anything derived
+from one. `GET /api/v1/admin/secrets` lists them with the age of each active key; a new active key
+id is a rotation. A daily job reminds administrators of a secret whose active key is older than
+`security.secret_max_age_days` (365 by default, `0` turns the reminder off).
+
+## A secret typed into the file
+
+On the `production` profile, a secret written into `config.json` as a value, not a `${NAME}`
+placeholder, stops the start and names the path. Move it into the environment, a secret file or the
+cloud store.
