@@ -136,7 +136,18 @@ pub fn load_custom_actions() {
         .map(|doc| (*doc).clone())
         .collect();
     let loaded = attome_ai::custom_action::install(&definitions);
-    tracing::info!(loaded, "custom actions loaded");
+    // G6-T2: macros follow the same version.
+    let prefix = format!("{}:", attome_model::kinds::MACRO.0);
+    let macros: Vec<serde_json::Value> = snapshot
+        .manifest
+        .artefacts
+        .keys()
+        .filter(|key| key.starts_with(&prefix))
+        .filter_map(|key| cooked.get::<serde_json::Value>(attome_model::kinds::MACRO.0, key))
+        .map(|doc| (*doc).clone())
+        .collect();
+    let macros_loaded = attome_ai::macros::install(&macros);
+    tracing::info!(loaded, macros_loaded, "custom actions and macros loaded");
 }
 
 /// Loads the deployment's current metadata version on this node when it is

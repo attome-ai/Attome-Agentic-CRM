@@ -69,6 +69,8 @@ impl EngineModel for ActionModel {
             .route("/api/v1/actions", get(list_invocable_actions))
             .route("/api/v1/actions/{id}/invoke", post(invoke_action))
             .route("/api/v1/actions/{name}", post(invoke_custom_action))
+            .route("/api/v1/macros/{name}/preview", post(preview_macro))
+            .route("/api/v1/macros/{name}/run", post(run_macro))
             // S1-T12: a record-bound action, invoked on one record.
             .route(
                 "/api/v1/{entity}/{id}/actions/{name}",
@@ -537,6 +539,75 @@ async fn invoke_custom_action(
     Ok((status, Json(outcome)))
 }
 
+/// Preview a macro
+///
+/// G6-T2: what running the macro on these records would do, step by step,
+/// with each step's filled-in arguments and the problems found. Runs nothing.
+#[utoipa::path(
+    post,
+    path = "/api/v1/macros/{name}/preview",
+    tag = "action",
+    params(("name" = String, Path, description = "The macro")),
+    request_body = crate::macros::MacroRecords,
+    responses(
+        (status = 200, description = "The plan", body = crate::macros::MacroPreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No published macro by that name", body = ErrorResponse),
+        (status = 422, description = "No records, or more than 200", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "lists the steps a macro would run; runs and writes nothing",
+    )))),
+)]
+async fn preview_macro(
+    _ctx: Authorized<SelfService>,
+    Path(name): Path<String>,
+    Json(body): Json<crate::macros::MacroRecords>,
+) -> Result<Json<crate::macros::MacroPreview>, AppError> {
+    crate::macros::preview(name.trim(), &body.record_ids).map(Json)
+}
+
+/// Run a macro
+///
+/// G6-T2: runs the macro's steps on each record as the caller, through the
+/// action gate; each step is held for the macro's undo window first, so it
+/// can be cancelled. Each record's outcomes are listed.
+#[utoipa::path(
+    post,
+    path = "/api/v1/macros/{name}/run",
+    tag = "action",
+    params(("name" = String, Path, description = "The macro")),
+    request_body = crate::macros::MacroRecords,
+    responses(
+        (status = 200, description = "Each record's outcomes", body = crate::macros::MacroRun),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No published macro by that name", body = ErrorResponse),
+        (status = 422, description = "No records, or more than 200", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("dispatch -> each step's own action"),
+        "every step is an action dispatched as the calling human, audited by its own executor \
+         (a record write through entity_crud), exactly as when the action is invoked alone",
+    )))),
+)]
+async fn run_macro(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(name): Path<String>,
+    Json(body): Json<crate::macros::MacroRecords>,
+) -> Result<Json<crate::macros::MacroRun>, AppError> {
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
+    let action_ctx = ActionContext::user(ctx.into_inner());
+    crate::macros::run(&state, &action_ctx, name.trim(), &body.record_ids)
+        .await
+        .map(Json)
+}
+
 /// S1-T12: whether an action works on one record: its arguments require
 /// `entity` and `record_id`.
 pub fn is_record_bound(input_schema: &str) -> bool {
@@ -857,6 +928,8 @@ async fn get_model_comparison(
     list_invocable_actions,
     invoke_action,
     invoke_custom_action,
+    preview_macro,
+    run_macro,
     invoke_record_action,
     record_suggestion_outcome,
     list_prompts,

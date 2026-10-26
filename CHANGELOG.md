@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Macros (G6-T2): a new metadata kind, `macro`, lists actions to run on records of one entity, with
+  `{{entity}}` and `{{record_id}}` filled in. `POST /api/v1/macros/{name}/preview` shows each record's
+  steps, arguments and problems without running anything; `POST /api/v1/macros/{name}/run` (at most
+  200 records) runs the steps through the action gate as the caller, each held for the macro's undo
+  window (10 minutes by default) so it can be cancelled.
 - Custom actions as routes (AE1-T2): `POST /api/v1/actions/{name}` runs the published custom action
   `custom.{name}` as the caller. Its arguments are checked against the input schema with every
   problem by field (`422` in the field-validation shape), a consequential one needs an

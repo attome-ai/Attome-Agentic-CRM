@@ -126,6 +126,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   Each is also a route, `POST /api/v1/actions/{name}`, with its arguments checked against the schema
   and an `Idempotency-Key` required when it is consequential, and it is listed in the deployment's
   OpenAPI document.
+- Macros (G6-T2): a `macro` metadata object lists actions (such as `record.update` and
+  `record.transition`) to run on records of one entity, with `{{entity}}` and `{{record_id}}` filled
+  in per record. Preview it with `POST /api/v1/macros/{name}/preview`, run it on up to 200 records
+  with `POST /api/v1/macros/{name}/run`; each step is held for the macro's undo window (10 minutes by
+  default) and can be cancelled like any deferred action.
 - Branding (B13-T11): `brand.draft_from_document` reads a theme's brand guidelines PDF and saves the
   colours, fonts and density it finds as a new draft theme; it never publishes, and only an
   administrator may run it.

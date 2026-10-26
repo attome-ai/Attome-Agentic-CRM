@@ -90,6 +90,8 @@ pub mod context;
 pub mod context_window;
 /// AE1-T1: published custom actions, the registry's second source.
 pub mod custom_action;
+/// G6-T2: macros, published lists of actions run on records.
+pub mod macros;
 /// C2 (D-552, I-12) — the durable conversational ledger: conversations,
 /// the append-only message transcript, and the `context_messages` projection
 /// that is the only thing permitted to shape model input from it (I-15).
