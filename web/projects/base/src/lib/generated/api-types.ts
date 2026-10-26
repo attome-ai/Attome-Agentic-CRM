@@ -7954,6 +7954,58 @@ export interface paths {
         patch: operations["update_query"];
         trace?: never;
     };
+    "/api/v1/admin/queries/{id}/spec": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a stored query's QuerySpec
+         * @description A14-T2: changes a stored query's QuerySpec and parameters, never its SQL,
+         *     privilege or mappings. An administrator, or a holder of an `edit` share
+         *     (one of their roles or teams); the change republishes the query like
+         *     `PATCH /api/v1/admin/queries/{id}`, through the same approval gate, and is
+         *     audited. A spec runs with each caller's own security, so editing one
+         *     grants no data access.
+         */
+        patch: operations["edit_query_spec"];
+        trace?: never;
+    };
+    "/api/v1/admin/query-shares/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a stored query's shares
+         * @description A14-T2: the roles and teams a stored query is shared with. Administrators
+         *     only.
+         */
+        get: operations["list_query_shares"];
+        /**
+         * Replace a stored query's shares
+         * @description A14-T2: shares a stored query with roles and teams, to read (run it by id)
+         *     or to edit (also change its QuerySpec and parameters). The list replaces
+         *     the stored one; an empty list stops sharing. Administrators only; audited.
+         */
+        put: operations["put_query_shares"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/rate-limits/bans": {
         parameters: {
             query?: never;
@@ -19498,6 +19550,27 @@ export interface paths {
         };
         /** The key a browser subscribes with; 404 while Web Push is not configured. */
         get: operations["vapid_public_key"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/queries/shared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the stored queries shared with me
+         * @description A14-T2: every live stored query shared with one of the caller's roles or
+         *     teams, with the access the shares give and the parameters a run takes.
+         */
+        get: operations["list_shared_queries"];
         put?: never;
         post?: never;
         delete?: never;
@@ -33566,6 +33639,13 @@ export interface components {
             op: string;
             value?: unknown;
         };
+        /** @description A14-T2: the part of a stored query a shared editor may change. */
+        EditQuerySpecBody: {
+            /** @description Replaces the declared parameters; absent keeps them. */
+            parameters?: components["schemas"]["ParamDecl"][] | null;
+            /** @description Replaces the saved QuerySpec; absent keeps it. */
+            query_spec?: Record<string, never> | null;
+        };
         /**
          * @description What the action touches, independent of how risky it is. Kept separate from
          *     [`RiskTier`] because they answer different questions: `Effect` decides
@@ -45755,6 +45835,30 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SharedQuery: {
+            items: {
+                /** @description The most any of the caller's shares allows. */
+                access: components["schemas"]["QueryShareAccess"];
+                /** Format: uuid */
+                id: string;
+                name: string;
+                parameters: components["schemas"]["ParamDecl"][];
+                /** @description Whether it holds a QuerySpec, so `query/run` can run it by id. */
+                runnable: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SidebarAdminItem: {
             items: {
                 color?: string | null;
@@ -46895,6 +46999,12 @@ export interface components {
         };
         /** @description One declared parameter. */
         ParamDecl: {
+            /**
+             * @description A14-T2: the value a run that leaves the parameter out gets; of the
+             *     parameter's type. A required parameter with a default never fails
+             *     for being left out.
+             */
+            default?: Record<string, never> | null;
             /** @description `^[a-z][a-z0-9_]*$`. */
             name: string;
             required?: boolean;
@@ -48472,6 +48582,10 @@ export interface components {
              */
             row_version: number;
         };
+        /** @description The whole share list of a query; it replaces the stored one. */
+        PutQuerySharesBody: {
+            shares: components["schemas"]["QueryShare"][];
+        };
         PutSelfSettingRequest: {
             value: unknown;
         };
@@ -48702,6 +48816,29 @@ export interface components {
         QueryRef: {
             entity?: string | null;
             name: string;
+        };
+        /** @description One share of a stored query. */
+        QueryShare: {
+            access: components["schemas"]["QueryShareAccess"];
+            /** Format: uuid */
+            principal_id: string;
+            principal_type: components["schemas"]["QuerySharePrincipal"];
+        };
+        /**
+         * @description What a share lets its holders do; `edit` includes `read`.
+         * @enum {string}
+         */
+        QueryShareAccess: "read" | "edit";
+        /**
+         * @description Who a share is with.
+         * @enum {string}
+         */
+        QuerySharePrincipal: "role" | "team";
+        /** @description A query's shares. */
+        QuerySharesResponse: {
+            /** Format: uuid */
+            query_id: string;
+            shares: components["schemas"]["QueryShare"][];
         };
         /** @description M13-T4: what a test send or a replay queued. */
         QueuedDeliveries: {
@@ -52207,6 +52344,17 @@ export interface components {
             download_url: string;
             /** Format: int64 */
             expires_in_secs: number;
+        };
+        /** @description A stored query shared with the caller. */
+        SharedQuery: {
+            /** @description The most any of the caller's shares allows. */
+            access: components["schemas"]["QueryShareAccess"];
+            /** Format: uuid */
+            id: string;
+            name: string;
+            parameters: components["schemas"]["ParamDecl"][];
+            /** @description Whether it holds a QuerySpec, so `query/run` can run it by id. */
+            runnable: boolean;
         };
         SidebarAdminItem: {
             color?: string | null;
@@ -81061,6 +81209,196 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    edit_query_spec: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The stored query */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditQuerySpecBody"];
+            };
+        };
+        responses: {
+            /** @description The query as republished */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Waiting for approval */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither an administrator nor holding an edit share */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such stored query */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description row_version mismatch, no open changeset to record into, or the query is owned by another layer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither field given, or a spec or parameter that fails validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_query_shares: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The stored query */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The query's shares */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuerySharesResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such stored query */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_query_shares: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The stored query */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutQuerySharesBody"];
+            };
+        };
+        responses: {
+            /** @description The query's shares as stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuerySharesResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such stored query */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many shares, a principal listed twice, or a role or team that does not exist */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -115280,6 +115618,55 @@ export interface operations {
             };
             /** @description Web Push is not configured */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_shared_queries: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The queries shared with the caller */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SharedQuery"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -40976,6 +40976,302 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/queries/{id}/spec": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Edit a stored query's QuerySpec",
+        "description": "A14-T2: changes a stored query's QuerySpec and parameters, never its SQL,\nprivilege or mappings. An administrator, or a holder of an `edit` share\n(one of their roles or teams); the change republishes the query like\n`PATCH /api/v1/admin/queries/{id}`, through the same approval gate, and is\naudited. A spec runs with each caller's own security, so editing one\ngrants no data access.",
+        "operationId": "edit_query_spec",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The stored query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditQuerySpecBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The query as republished"
+          },
+          "202": {
+            "description": "Waiting for approval"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither an administrator nor holding an edit share",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such stored query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "row_version mismatch, no open changeset to record into, or the query is owned by another layer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Neither field given, or a spec or parameter that fails validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/query-shares/{id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List a stored query's shares",
+        "description": "A14-T2: the roles and teams a stored query is shared with. Administrators\nonly.",
+        "operationId": "list_query_shares",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The stored query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The query's shares",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuerySharesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such stored query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Replace a stored query's shares",
+        "description": "A14-T2: shares a stored query with roles and teams, to read (run it by id)\nor to edit (also change its QuerySpec and parameters). The list replaces\nthe stored one; an empty list stops sharing. Administrators only; audited.",
+        "operationId": "put_query_shares",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The stored query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutQuerySharesBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The query's shares as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuerySharesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such stored query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Too many shares, a principal listed twice, or a role or team that does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/rate-limits/bans": {
       "get": {
         "tags": [
@@ -96823,6 +97119,85 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/queries/shared": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "List the stored queries shared with me",
+        "description": "A14-T2: every live stored query shared with one of the caller's roles or\nteams, with the access the shares give and the parameters a run takes.",
+        "operationId": "list_shared_queries",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The queries shared with the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SharedQuery"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/query/changes": {
       "post": {
         "tags": [
@@ -148899,6 +149274,30 @@
           "value": {}
         }
       },
+      "EditQuerySpecBody": {
+        "type": "object",
+        "description": "A14-T2: the part of a stored query a shared editor may change.",
+        "properties": {
+          "parameters": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ParamDecl"
+            },
+            "description": "Replaces the declared parameters; absent keeps them."
+          },
+          "query_spec": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Replaces the saved QuerySpec; absent keeps it."
+          }
+        },
+        "additionalProperties": false
+      },
       "Effect": {
         "type": "string",
         "description": "What the action touches, independent of how risky it is. Kept separate from\n[`RiskTier`] because they answer different questions: `Effect` decides\nwhether an air-gapped deployment can run it at all (I-7), `RiskTier`\ndecides who has to approve it.",
@@ -180544,6 +180943,74 @@
           }
         }
       },
+      "PaginatedResponse_SharedQuery": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A stored query shared with the caller.",
+              "required": [
+                "id",
+                "name",
+                "access",
+                "runnable",
+                "parameters"
+              ],
+              "properties": {
+                "access": {
+                  "$ref": "#/components/schemas/QueryShareAccess",
+                  "description": "The most any of the caller's shares allows."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParamDecl"
+                  }
+                },
+                "runnable": {
+                  "type": "boolean",
+                  "description": "Whether it holds a QuerySpec, so `query/run` can run it by id."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_SidebarAdminItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -183544,6 +184011,13 @@
           "type"
         ],
         "properties": {
+          "default": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "A14-T2: the value a run that leaves the parameter out gets; of the\nparameter's type. A required parameter with a default never fails\nfor being left out."
+          },
           "name": {
             "type": "string",
             "description": "`^[a-z][a-z0-9_]*$`."
@@ -187488,6 +187962,22 @@
           }
         }
       },
+      "PutQuerySharesBody": {
+        "type": "object",
+        "description": "The whole share list of a query; it replaces the stored one.",
+        "required": [
+          "shares"
+        ],
+        "properties": {
+          "shares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueryShare"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "PutSelfSettingRequest": {
         "type": "object",
         "required": [
@@ -188079,6 +188569,64 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "QueryShare": {
+        "type": "object",
+        "description": "One share of a stored query.",
+        "required": [
+          "principal_type",
+          "principal_id",
+          "access"
+        ],
+        "properties": {
+          "access": {
+            "$ref": "#/components/schemas/QueryShareAccess"
+          },
+          "principal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "principal_type": {
+            "$ref": "#/components/schemas/QuerySharePrincipal"
+          }
+        },
+        "additionalProperties": false
+      },
+      "QueryShareAccess": {
+        "type": "string",
+        "description": "What a share lets its holders do; `edit` includes `read`.",
+        "enum": [
+          "read",
+          "edit"
+        ]
+      },
+      "QuerySharePrincipal": {
+        "type": "string",
+        "description": "Who a share is with.",
+        "enum": [
+          "role",
+          "team"
+        ]
+      },
+      "QuerySharesResponse": {
+        "type": "object",
+        "description": "A query's shares.",
+        "required": [
+          "query_id",
+          "shares"
+        ],
+        "properties": {
+          "query_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueryShare"
+            }
           }
         }
       },
@@ -197110,6 +197658,40 @@
             "type": "integer",
             "format": "int64",
             "minimum": 0
+          }
+        }
+      },
+      "SharedQuery": {
+        "type": "object",
+        "description": "A stored query shared with the caller.",
+        "required": [
+          "id",
+          "name",
+          "access",
+          "runnable",
+          "parameters"
+        ],
+        "properties": {
+          "access": {
+            "$ref": "#/components/schemas/QueryShareAccess",
+            "description": "The most any of the caller's shares allows."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParamDecl"
+            }
+          },
+          "runnable": {
+            "type": "boolean",
+            "description": "Whether it holds a QuerySpec, so `query/run` can run it by id."
           }
         }
       },
@@ -207651,6 +208233,6 @@
       }
     }
   },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  "x-version-adapters": [],
+  "x-api-version": "2026-10"
 }
