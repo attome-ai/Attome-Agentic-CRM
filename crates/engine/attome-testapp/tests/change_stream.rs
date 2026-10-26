@@ -218,3 +218,113 @@ fn delta_token_returns_changes_and_next_token() {
         );
     });
 }
+
+async fn grant(app: &TestApp, user: Uuid, key: &str) {
+    attome_security::db::ensure_privilege(
+        app.db(),
+        key,
+        key,
+        "test grant",
+        attome_core::changeset::Layer::Project,
+    )
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+         SELECT uuidv7(), $1, id, true, now() FROM privilege WHERE key = $2",
+    )
+    .bind(user)
+    .bind(key)
+    .execute(app.db())
+    .await
+    .unwrap();
+}
+
+// feature: L7
+#[test]
+fn secret_attribute_never_in_payload() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = format!(
+            "delta_secret_{}",
+            &Uuid::now_v7().simple().to_string()[..12]
+        );
+        let entity_id = create_entity(&app, &entity).await;
+        for field in [
+            json!({ "logicalname": "code", "name": "code", "field_type": "text" }),
+            json!({ "logicalname": "secret", "name": "secret", "field_type": "text", "is_sensitive": true }),
+        ] {
+            let (status, body) = app
+                .request(
+                    Method::POST,
+                    &format!("/api/v1/admin/entities/{entity_id}/fields"),
+                    Some(field),
+                )
+                .await;
+            assert_eq!(status, StatusCode::CREATED, "{body}");
+        }
+        let registry = attome_core::build_registry(app.db()).await.unwrap();
+        app.state.entities.swap(registry);
+
+        // A reader who may read and create the entity, with no grant on the
+        // sensitive field; the record is theirs, so only the field is hidden.
+        let reader = attome_testapp::seed_user(app.db(), "delta-reader").await;
+        grant(&app, reader.id, &format!("{entity}.read")).await;
+        grant(&app, reader.id, &format!("{entity}.create")).await;
+        let as_reader = |path: String| {
+            let app = app.clone();
+            let cookie = reader.cookie.clone();
+            async move {
+                let (status, body) = app.request_as(&cookie, Method::GET, &path, None).await;
+                assert_eq!(status, StatusCode::OK, "{path}: {body}");
+                body
+            }
+        };
+        let first = as_reader(format!("/api/v1/{entity}?delta_token=latest")).await;
+        let token = first["next_token"].as_str().unwrap().to_owned();
+        let (status, created) = app
+            .request_as(
+                &reader.cookie,
+                Method::POST,
+                &format!("/api/v1/{entity}"),
+                Some(json!({ "code": "S1", "secret": "s3cr3t-value" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{created}");
+        let id = created["id"].clone();
+
+        let mut delta = Value::Null;
+        for _ in 0..50 {
+            delta = as_reader(format!("/api/v1/{entity}?delta_token={token}")).await;
+            if ids(&delta, "created").contains(&id) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        assert!(
+            ids(&delta, "created").contains(&id),
+            "the record came back: {delta}"
+        );
+        let text = delta.to_string();
+        assert!(
+            !text.contains("s3cr3t-value"),
+            "the secret never travels: {text}"
+        );
+        let row = &delta["created"][0];
+        assert_eq!(row["code"], "S1", "{row}");
+
+        // The same through query/execute's delta and the changes route.
+        let (status, executed) = app
+            .request_as(
+                &reader.cookie,
+                Method::POST,
+                "/api/v1/query/execute",
+                Some(json!({ "entity": entity, "delta_token": token })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{executed}");
+        assert!(!executed.to_string().contains("s3cr3t-value"), "{executed}");
+    });
+}
