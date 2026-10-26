@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Org charts documented (D23-T14, `docs/org-chart.md`): what is off by default, the reports-to rule
+  (the same account or another account in its group, no further), and the routes
+  `GET /api/v1/sales/accounts/{id}/org-chart` (`group`, `expand`, `cursor`),
+  `PUT /api/v1/sales/contacts/{id}/manager`, `POST /api/v1/sales/contacts/{id}/left`, the committee
+  map, drafts and export, and `?field=` on `GET /api/v1/{entity}/{id}/ancestors` and `/descendants`.
 - Mass operations (AA10-T3): `POST /api/v1/{entity}/mass/estimate` and `POST /api/v1/{entity}/mass`
   (update, delete, reassign or restore every record a filter selects; inline with each record's
   outcome up to `limits.heavy_op.inline_max_rows`, queued with `202` past it once
