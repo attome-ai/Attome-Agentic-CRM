@@ -1288,8 +1288,10 @@ pub async fn compute_and_record(
 /// ([`crate::principal::METRIC_PRINCIPAL_ID`], a real `user_account`
 /// row since D-786; it was the nil UUID before) as `evaluated_by` — plan §5:
 /// "metrics are deployment-level facts, not per-viewer — record the
-/// evaluation principal." Only `source_kind = "query"` metrics are swept
-/// automatically; a `manual` metric has no value to derive on a timer, so it
+/// evaluation principal." `query` and `formula` metrics are swept, in
+/// dependency order (P9-T8: children and formula inputs first, so a formula
+/// reads this run's snapshots); a `manual` metric has no value to derive on
+/// a timer, so it
 /// is only ever written via an explicit `/compute` call. Failure isolation
 /// (guidelines §10/plan §8): one metric's failure (a timeout, a bad query, a
 /// missing grant, a disabled principal) is recorded as that metric's `failed`
