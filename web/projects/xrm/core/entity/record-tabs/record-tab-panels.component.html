@@ -177,3 +177,21 @@
     }
   </div>
 }
+
+@if (has('lines')) {
+  <div [id]="panelId('lines')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('lines')" [hidden]="activeTab() !== 'lines'"
+       data-testid="lines-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'lines') {
+        @if (sales(); as m) {
+          <ng-container *ngComponentOutlet="m.LineGridComponent; inputs: activityInputs()" />
+        } @else if (salesLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'xrm.sales.lines.loadFailed' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrm.sales.lines.saveFirst' | translate }}</p>
+    }
+  </div>
+}

@@ -13,12 +13,12 @@ import type { XrmFormTabDef } from '../base/xrm-form.base';
  */
 export type RecordTabId =
   'documents' | 'communications' | 'notes' | 'activities' | 'tags' | 'consent' | 'relationships'
-  | 'timeline' | 'history' | 'approvals' | 'golden' | 'fulfilment';
+  | 'timeline' | 'history' | 'approvals' | 'golden' | 'fulfilment' | 'lines';
 
 /** Every record tab, in the order the generic form has always shown them. */
 export const RECORD_TAB_IDS: readonly RecordTabId[] = [
   'documents', 'communications', 'notes', 'activities', 'tags', 'consent', 'relationships', 'timeline', 'history',
-  'approvals', 'fulfilment',
+  'approvals', 'fulfilment', 'lines',
 ];
 
 const ICONS: Record<RecordTabId, string> = {
@@ -34,6 +34,7 @@ const ICONS: Record<RecordTabId, string> = {
   approvals:      'las la-user-check',
   golden:         'las la-fingerprint',
   fulfilment:     'las la-truck',
+  lines:          'las la-list',
 };
 
 const LABEL_KEYS: Record<RecordTabId, string> = {
@@ -49,6 +50,7 @@ const LABEL_KEYS: Record<RecordTabId, string> = {
   approvals:      'xrmForm.tabs.approvals',
   golden:         'xrmForm.tabs.golden',
   fulfilment:     'xrmForm.tabs.fulfilment',
+  lines:          'xrmForm.tabs.lines',
 };
 
 /**
@@ -67,6 +69,8 @@ function hiddenOn(tab: RecordTabId, entityName: string): boolean {
     case 'consent':   return entityName === 'audit_consent' || entityName === 'audit_consent_purpose';
     // F6-T17: a sales order's fulfilment, line by line; only orders have it.
     case 'fulfilment': return entityName !== 'order';
+    // D6-T10: an opportunity's lines.
+    case 'lines':      return entityName !== 'opportunity';
     default:          return false;
   }
 }

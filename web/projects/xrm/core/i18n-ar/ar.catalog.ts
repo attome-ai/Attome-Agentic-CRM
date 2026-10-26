@@ -175,7 +175,7 @@ export const xrmAr = {
       documents: 'المستندات', communications: 'المراسلات', notes: 'الملاحظات', activities: 'الأنشطة',
       tags: 'الوسوم', consent: 'الموافقة', relationships: 'العلاقات',
       timeline: 'الخط الزمني', history: 'سجل التغييرات', approvals: 'الموافقات', golden: 'السجل الذهبي',
-      fulfilment: 'التنفيذ',
+      fulfilment: 'التنفيذ', lines: 'البنود',
     },
     entity: {
       document: 'مستند', note: 'ملاحظة', organization: 'مؤسسة', privilege: 'صلاحية',
@@ -3223,6 +3223,28 @@ export const xrmAr = {
     loading: 'جاري التحميل…',
     loadFailed: 'تعذّر تحميل آخر المستجدات.',
     more: 'عرض الأقدم',
+  },
+  // ── D6-T10 — بنود الفرصة ──
+  xrm: {
+    sales: {
+      lines: {
+        off: 'بنود الفرص غير مفعّلة (الميزة sales.opportunity_lines).',
+        loading: 'جاري تحميل البنود…',
+        empty: 'لا توجد بنود بعد. أضف منتجًا من الأعلى.',
+        addProduct: 'أضف منتجًا بالاسم',
+        noPriceList: 'حدّد قائمة أسعار الفرصة لإضافة المنتجات.',
+        syncQuote: 'المزامنة مع عرض السعر',
+        product: 'المنتج', quantity: 'الكمية', listPrice: 'سعر القائمة', salesPrice: 'سعر البيع',
+        discount: 'الخصم %', cost: 'تكلفة الوحدة', lineTotal: 'إجمالي البند', kind: 'النوع',
+        actions: 'إجراءات', copy: 'نسخ البند', total: 'الإجمالي',
+        kinds: { one_time: 'مرة واحدة', recurring: 'متكرر' },
+        conflict: 'تغيّرت بنود هذه الفرصة وبنود عرض السعر منذ آخر مزامنة. أيّ البنود يبقى في الاثنين؟',
+        keepOpportunity: 'الإبقاء على بنود الفرصة',
+        takeQuote: 'أخذ بنود عرض السعر',
+        loadFailed: 'تعذّر تحميل البنود.',
+        saveFirst: 'احفظ الفرصة لإضافة البنود.',
+      },
+    },
   },
   // ── D17-T2 — تسلسلات المبيعات ──
   sequences: {

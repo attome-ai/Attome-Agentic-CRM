@@ -42,6 +42,16 @@ While a deal has lines, every line change sets its `amount` to the one-time tota
 recurring value. A hand edit of the amount is kept only until the next line change, and removing the
 last line leaves the amount as it was.
 
+### The Lines tab
+
+An opportunity's form has a Lines tab (while `sales.opportunity_lines` is on). It lists the lines
+with quantity, list price, sales price, discount and line total; the total follows the typing at
+once, and a field is saved when it loses focus, after which the server's prices replace what was
+typed. Products are added by name from the deal's price list, and a line can be copied. Amounts show
+in the deal's currency with its minor units (three for KWD, BHD and OMR), and numbers stay left to
+right in Arabic. A unit cost column shows only when the server sends the cost to the person. Sync
+with the quote asks, when both sides changed, whether to keep the deal's lines or take the quote's.
+
 ## Pricing order
 
 Pricing is fixed, in this order, at full precision:

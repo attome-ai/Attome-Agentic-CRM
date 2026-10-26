@@ -198,7 +198,7 @@ export const xrmEn = {
       documents: 'Documents', communications: 'Communications', notes: 'Notes', activities: 'Activities',
       tags: 'Tags', consent: 'Consent', relationships: 'Relationships',
       timeline: 'Timeline', history: 'History', approvals: 'Approvals', golden: 'Golden record',
-      fulfilment: 'Fulfilment',
+      fulfilment: 'Fulfilment', lines: 'Lines',
     },
     entity: {
       document: 'Document', note: 'Note', organization: 'Organization', privilege: 'Privilege',
@@ -3302,6 +3302,28 @@ export const xrmEn = {
     loading: 'Loading…',
     loadFailed: 'The feed could not be loaded.',
     more: 'Show older',
+  },
+  // ── D6-T10: an opportunity's lines ──
+  xrm: {
+    sales: {
+      lines: {
+        off: 'Opportunity lines are not turned on (feature sales.opportunity_lines).',
+        loading: 'Loading lines…',
+        empty: 'No lines yet. Add a product above.',
+        addProduct: 'Add a product by name',
+        noPriceList: "Set the opportunity's price list to add products.",
+        syncQuote: 'Sync with the quote',
+        product: 'Product', quantity: 'Quantity', listPrice: 'List price', salesPrice: 'Sales price',
+        discount: 'Discount %', cost: 'Unit cost', lineTotal: 'Line total', kind: 'Kind',
+        actions: 'Actions', copy: 'Copy line', total: 'Total',
+        kinds: { one_time: 'One time', recurring: 'Recurring' },
+        conflict: "Both this opportunity's lines and the quote's changed since the last sync. Which lines should both keep?",
+        keepOpportunity: 'Keep opportunity lines',
+        takeQuote: 'Take quote lines',
+        loadFailed: 'Could not load the lines.',
+        saveFirst: 'Save the opportunity to add lines.',
+      },
+    },
   },
   // ── D17-T2: sales sequences ──
   sequences: {

@@ -1,0 +1,108 @@
+<section class="lg-wrap" data-testid="line-grid">
+  @if (enabled() === false) {
+    <p class="lg-note" data-testid="line-grid-off">{{ 'xrm.sales.lines.off' | translate }}</p>
+  } @else if (lines() === null || enabled() === null) {
+    <p class="lg-note">{{ 'xrm.sales.lines.loading' | translate }}</p>
+  } @else {
+    @if (error(); as message) {
+      <p class="lg-error" role="alert" data-testid="line-grid-error">{{ message }}</p>
+    }
+
+    <div class="lg-toolbar">
+      <label class="lg-search">
+        <span class="lg-sr">{{ 'xrm.sales.lines.addProduct' | translate }}</span>
+        <input type="search" [value]="query()" (input)="search($any($event.target).value)"
+               [placeholder]="'xrm.sales.lines.addProduct' | translate" [disabled]="!priceList() || busy()"
+               data-testid="line-grid-search" />
+      </label>
+      <button type="button" class="lg-btn" (click)="syncToQuote()" [disabled]="busy()"
+              data-testid="line-grid-sync">{{ 'xrm.sales.lines.syncQuote' | translate }}</button>
+    </div>
+    @if (!priceList()) {
+      <p class="lg-note">{{ 'xrm.sales.lines.noPriceList' | translate }}</p>
+    }
+    @if (results().length) {
+      <ul class="lg-results" role="listbox" data-testid="line-grid-results">
+        @for (p of results(); track p.product_id) {
+          <li>
+            <button type="button" role="option" class="lg-result" (click)="add(p)" [attr.data-product]="p.product_id">
+              <span>{{ p.name ?? p.sku ?? p.product_id }}</span>
+              @if (p.list_price) { <span dir="ltr">{{ p.list_price }}</span> }
+            </button>
+          </li>
+        }
+      </ul>
+    }
+
+    <div class="lg-scroll">
+      <table class="lg-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'xrm.sales.lines.product' | translate }}</th>
+            <th scope="col">{{ 'xrm.sales.lines.quantity' | translate }}</th>
+            <th scope="col">{{ 'xrm.sales.lines.listPrice' | translate }}</th>
+            <th scope="col">{{ 'xrm.sales.lines.salesPrice' | translate }}</th>
+            <th scope="col">{{ 'xrm.sales.lines.discount' | translate }}</th>
+            @if (showCost()) {
+              <th scope="col" data-testid="line-grid-cost">{{ 'xrm.sales.lines.cost' | translate }}</th>
+            }
+            <th scope="col">{{ 'xrm.sales.lines.lineTotal' | translate }}</th>
+            <th scope="col">{{ 'xrm.sales.lines.kind' | translate }}</th>
+            <th scope="col"><span class="lg-sr">{{ 'xrm.sales.lines.actions' | translate }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (line of lines(); track line.id) {
+            <tr [attr.data-line]="line.id">
+              <td>{{ line.name ?? line.product_ref }}</td>
+              <td><input class="lg-num" dir="ltr" inputmode="decimal" [value]="draft(line).quantity"
+                         (input)="edit(line, 'quantity', $any($event.target).value)" (blur)="commit(line)"
+                         [attr.aria-label]="'xrm.sales.lines.quantity' | translate" data-field="quantity" /></td>
+              <td><span dir="ltr">{{ line.list_price }}</span></td>
+              <td><input class="lg-num" dir="ltr" inputmode="decimal" [value]="draft(line).sales_price"
+                         [placeholder]="line.list_price ?? ''"
+                         (input)="edit(line, 'sales_price', $any($event.target).value)" (blur)="commit(line)"
+                         [attr.aria-label]="'xrm.sales.lines.salesPrice' | translate" data-field="sales_price" /></td>
+              <td><input class="lg-num" dir="ltr" inputmode="decimal" [value]="draft(line).discount_percent"
+                         (input)="edit(line, 'discount_percent', $any($event.target).value)" (blur)="commit(line)"
+                         [attr.aria-label]="'xrm.sales.lines.discount' | translate" data-field="discount_percent" /></td>
+              @if (showCost()) {
+                <td><span dir="ltr">{{ line.unit_cost }}</span></td>
+              }
+              <td><span dir="ltr" data-field="total">{{ lineMoney(line) }}</span></td>
+              <td>{{ ('xrm.sales.lines.kinds.' + (line.line_kind ?? 'one_time')) | translate }}</td>
+              <td>
+                <button type="button" class="lg-btn" (click)="copy(line)" [disabled]="busy() || !line.product_ref"
+                        [attr.aria-label]="'xrm.sales.lines.copy' | translate">
+                  <i class="las la-copy" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td [attr.colspan]="showCost() ? 9 : 8" class="lg-note">{{ 'xrm.sales.lines.empty' | translate }}</td></tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" [attr.colspan]="showCost() ? 6 : 5">{{ 'xrm.sales.lines.total' | translate }}</th>
+            <td><strong dir="ltr" data-testid="line-grid-total">{{ money(total()) }}</strong></td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    @if (conflict()) {
+      <div class="lg-dialog" role="alertdialog" aria-modal="true" aria-labelledby="lg-conflict-title"
+           data-testid="line-grid-conflict">
+        <p id="lg-conflict-title">{{ 'xrm.sales.lines.conflict' | translate }}</p>
+        <div class="lg-actions">
+          <button type="button" class="lg-btn lg-primary" (click)="keepOpportunityLines()" [disabled]="busy()"
+                  data-testid="line-grid-keep">{{ 'xrm.sales.lines.keepOpportunity' | translate }}</button>
+          <button type="button" class="lg-btn" (click)="takeQuoteLines()" [disabled]="busy()"
+                  data-testid="line-grid-take">{{ 'xrm.sales.lines.takeQuote' | translate }}</button>
+        </div>
+      </div>
+    }
+  }
+</section>

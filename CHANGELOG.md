@@ -16,6 +16,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Opportunity Lines tab (D6-T10): the new `@attome/xrm/sales` entry point's line grid on the
+  opportunity form, with totals that follow the typing, saves on blur, products from the price list,
+  copy, currency minor units and the quote sync choice. See `docs/opportunity-lines.md`.
 - Sourcing rules (F6-T4): the setting `fulfilment.sourcing.rules` places a confirmed order's goods
   lines (fixed location, nearest with stock from the order's new delivery coordinates, or fewest
   shipments), each fulfilment order keeps its `sourcing_reason`, and

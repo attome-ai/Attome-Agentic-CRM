@@ -37,6 +37,7 @@ type RecordActivityModule = typeof import('@attome/xrm/core/entity/record-activi
 type ApprovalsModule = typeof import('@attome/xrm/core/approvals');
 type MasterDataModule = typeof import('@attome/xrm/core/admin/governance/master-data');
 type FulfilmentModule = typeof import('@attome/xrm/fulfilment');
+type SalesModule = typeof import('@attome/xrm/sales');
 
 @Component({
   selector: 'xrm-record-tab-panels',
@@ -84,6 +85,10 @@ export class RecordTabPanelsComponent {
   readonly fulfilment = signal<FulfilmentModule | null>(null);
   readonly fulfilmentLoadFailed = signal(false);
   private fulfilmentRequested = false;
+  /** D6-T10: the sales entry point, once an opportunity's Lines tab has asked for it. */
+  readonly sales = signal<SalesModule | null>(null);
+  readonly salesLoadFailed = signal(false);
+  private salesRequested = false;
 
   constructor() {
     effect(() => {
@@ -102,6 +107,15 @@ export class RecordTabPanelsComponent {
         import('@attome/xrm/core/approvals').then(
           m => this.approvals.set(m),
           () => this.approvalsLoadFailed.set(true),
+        );
+      }
+    });
+    effect(() => {
+      if (this.activeTab() === 'lines' && this.recordId() && !this.salesRequested) {
+        this.salesRequested = true;
+        import('@attome/xrm/sales').then(
+          m => this.sales.set(m),
+          () => this.salesLoadFailed.set(true),
         );
       }
     });
