@@ -1572,3 +1572,158 @@ async fn field_mask_sql_matches_the_rust_mask() {
         assert_eq!(null, None, "{name} keeps NULL");
     }
 }
+
+// ── Q10-T4: permission sets ──
+
+/// A set granting `privilege_id`, with its own access row on `entity_id`
+/// whose export level is `export`, assigned to `user_id` until `ends_at`.
+async fn assign_permission_set(
+    db: &DbPool,
+    user_id: Uuid,
+    entity_id: Uuid,
+    privilege_id: Uuid,
+    export: i16,
+    ends_at: Option<chrono::DateTime<chrono::Utc>>,
+) -> Uuid {
+    let set_id = Uuid::now_v7();
+    sqlx::query("INSERT INTO permission_set (id, name) VALUES ($1, $2)")
+        .bind(set_id)
+        .bind(format!("test-set-{set_id}"))
+        .execute(db)
+        .await
+        .expect("insert throwaway permission set");
+    sqlx::query("INSERT INTO permission_set_privilege (set_ref, privilege_ref) VALUES ($1, $2)")
+        .bind(set_id)
+        .bind(privilege_id)
+        .execute(db)
+        .await
+        .expect("grant the privilege to the set");
+    sqlx::query(
+        "INSERT INTO permission_set_entity_access (set_ref, entity_ref, export_access_level) \
+         VALUES ($1, $2, $3)",
+    )
+    .bind(set_id)
+    .bind(entity_id)
+    .bind(export)
+    .execute(db)
+    .await
+    .expect("insert the set's access row");
+    sqlx::query(
+        "INSERT INTO permission_set_assignment (set_ref, user_ref, ends_at, reason) \
+         VALUES ($1, $2, $3, 'test')",
+    )
+    .bind(set_id)
+    .bind(user_id)
+    .bind(ends_at)
+    .execute(db)
+    .await
+    .expect("assign the set");
+    set_id
+}
+
+/// A role that reads an entity but may not export it gains export from a
+/// permission set, which adds to the role like one more role would.
+#[tokio::test]
+async fn permission_set_adds_export() {
+    let db = skip_if_no_db!(test_db().await);
+    let (entity_id, logicalname, read_priv) = provision_entity_with_privilege(&db, "read").await;
+    let user_id = seed_bare_user(&db).await;
+    let role_id = seed_role(&db).await;
+    set_bulk_field_mode(&db, role_id, 1).await;
+    link_user_to_role(&db, user_id, role_id).await;
+    grant_privilege_to_role(&db, role_id, read_priv).await;
+    set_role_entity_ops(&db, role_id, entity_id, 3, 3, None, 0, true).await;
+
+    let export = |db: DbPool, name: String| async move {
+        resolve_entity_access_level(&db, user_id, entity_id, &name, RecordAction::Export)
+            .await
+            .expect("export level")
+    };
+    assert_eq!(
+        export(db.clone(), logicalname.clone()).await,
+        AccessLevel::None
+    );
+
+    assign_permission_set(&db, user_id, entity_id, read_priv, 2, None).await;
+    assert_eq!(
+        export(db.clone(), logicalname.clone()).await,
+        AccessLevel::BusinessUnit,
+        "the set adds its export level"
+    );
+    assert_eq!(
+        resolve_entity_access_level(&db, user_id, entity_id, &logicalname, RecordAction::Read)
+            .await
+            .expect("read level"),
+        AccessLevel::Global,
+        "the role's read level is not lowered by the set"
+    );
+
+    // A privilege the user holds only through a set counts too.
+    let (other_entity, other_name, other_priv) =
+        provision_entity_with_privilege(&db, "update").await;
+    assign_permission_set(&db, user_id, other_entity, other_priv, 0, None).await;
+    let privileges = resolve_privileges(&db, user_id).await.expect("privileges");
+    assert!(
+        privileges.contains(&format!("{other_name}.update")),
+        "{privileges:?}"
+    );
+}
+
+/// An assignment whose end date has passed gives nothing.
+#[tokio::test]
+async fn expired_assignment_is_ignored() {
+    let db = skip_if_no_db!(test_db().await);
+    let (entity_id, logicalname, update_priv) =
+        provision_entity_with_privilege(&db, "update").await;
+    let user_id = seed_bare_user(&db).await;
+    let ended = chrono::Utc::now() - chrono::Duration::hours(1);
+    assign_permission_set(&db, user_id, entity_id, update_priv, 3, Some(ended)).await;
+
+    let privileges = resolve_privileges(&db, user_id).await.expect("privileges");
+    assert!(
+        !privileges.contains(&format!("{logicalname}.update")),
+        "an ended assignment grants no privilege: {privileges:?}"
+    );
+    assert_eq!(
+        resolve_entity_access_level(&db, user_id, entity_id, &logicalname, RecordAction::Update)
+            .await
+            .expect("update level"),
+        AccessLevel::None
+    );
+
+    // The same set without an end date does grant.
+    let live_user = seed_bare_user(&db).await;
+    let future = chrono::Utc::now() + chrono::Duration::days(1);
+    assign_permission_set(&db, live_user, entity_id, update_priv, 3, Some(future)).await;
+    assert!(
+        resolve_privileges(&db, live_user)
+            .await
+            .expect("privileges")
+            .contains(&format!("{logicalname}.update"))
+    );
+}
+
+/// A set can never carry system administration, even when a row says so.
+#[tokio::test]
+async fn permission_set_never_grants_system_admin() {
+    let db = skip_if_no_db!(test_db().await);
+    let (entity_id, _, _) = provision_entity_with_privilege(&db, "read").await;
+    // Boot seeds `system.admin`; a migrated test database may not have it.
+    sqlx::query(
+        "INSERT INTO privilege (id, key, name, is_active, created_at, owner_layer) \n         VALUES ($1, 'system.admin', 'System Admin', true, NOW(), 'platform') \n         ON CONFLICT DO NOTHING",
+    )
+    .bind(Uuid::now_v7())
+    .execute(&db)
+    .await
+    .expect("ensure system.admin");
+    let admin_priv: Uuid = sqlx::query_scalar(
+        "SELECT id FROM privilege WHERE key = 'system.admin' AND is_active = true",
+    )
+    .fetch_one(&db)
+    .await
+    .expect("system.admin exists");
+    let user_id = seed_bare_user(&db).await;
+    assign_permission_set(&db, user_id, entity_id, admin_priv, 0, None).await;
+    let privileges = resolve_privileges(&db, user_id).await.expect("privileges");
+    assert!(!privileges.contains("system.admin"), "{privileges:?}");
+}

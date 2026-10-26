@@ -23,6 +23,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Permission sets (Q10-T4): migration `0294` adds `permission_set` with its entity levels,
+  privileges and assignments to a user or a team, optionally until an end date. A live assignment
+  adds the set's privileges and levels to the person exactly like one more role; an ended one gives
+  nothing, and a set never carries `system.admin`. The admin routes come with Q10-T5.
 - Access explainer (Q14-T4): `GET /api/v1/{entity}/{id}/access/explain?user=&action=` lists why a
   person can or cannot read, change or delete a record: administrator, privilege, role level,
   business unit, ownership, user and team shares, default share, sharing rule and deny, with the

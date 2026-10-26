@@ -53,10 +53,8 @@ async fn require_active_user(db: &DbPool, user_id: Uuid) -> Result<(), AppError>
 pub async fn resolve_privileges(db: &DbPool, user_id: Uuid) -> Result<HashSet<String>, AppError> {
     require_active_user(db, user_id).await?;
 
-    let keys: Vec<String> = tokio::time::timeout(
-        QUERY_TIMEOUT,
-        sqlx::query_scalar(
-            r#"
+    let sql = format!(
+        r#"
             SELECT DISTINCT p.key
             FROM privilege p
             JOIN user_account_mm_privilege up ON up.privilege_ref = p.id
@@ -81,10 +79,21 @@ pub async fn resolve_privileges(db: &DbPool, user_id: Uuid) -> Result<HashSet<St
             WHERE ut.user_ref = $1 AND ut.is_deleted = false
               AND rt.is_deleted = false AND rp.is_deleted = false
               AND p.is_active = true
-            "#,
-        )
-        .bind(user_id)
-        .fetch_all(db),
+
+            UNION
+
+            -- Q10-T4: a live permission set assigned to the user or one of
+            -- their teams. A set never carries system administration.
+            SELECT DISTINCT p.key
+            FROM privilege p
+            JOIN permission_set_privilege sp ON sp.privilege_ref = p.id AND sp.is_deleted = false
+            WHERE sp.set_ref IN ({HELD_SET_IDS})
+              AND p.is_active = true AND p.key <> 'system.admin'
+            "#
+    );
+    let keys: Vec<String> = tokio::time::timeout(
+        QUERY_TIMEOUT,
+        sqlx::query_scalar(&sql).bind(user_id).fetch_all(db),
     )
     .await
     .map_err(|_| AppError::internal("privilege resolution query timed out"))?
@@ -704,6 +713,23 @@ pub(crate) const HELD_ROLES_CTE: &str = r#"
           AND rt.is_deleted = false AND r.is_deleted = false
     )"#;
 
+/// Q10-T4: the ids of the live permission sets assigned to the user bound as
+/// `$1`, directly or through a team, whose assignment has not ended. A
+/// subquery rather than a CTE so it splices into any statement that binds
+/// the user as `$1`; a fixed literal, like [`HELD_ROLES_CTE`].
+pub(crate) const HELD_SET_IDS: &str = "SELECT a.set_ref \
+     FROM permission_set_assignment a \
+     JOIN permission_set s ON s.id = a.set_ref AND s.is_deleted = false \
+     WHERE a.is_deleted = false AND (a.ends_at IS NULL OR a.ends_at > now()) \
+       AND (a.user_ref = $1 OR a.team_ref IN ( \
+            SELECT ut.team_ref FROM user_account_mm_team ut \
+            WHERE ut.user_ref = $1 AND ut.is_deleted = false))";
+
+/// Q10-T4: a permission set's depth reads its own access row with
+/// [`role_depth_sql`], as a role that is not in D-589 legacy mode: a set is
+/// new, so export and bulk are only what it grants.
+const SET_AS_ROLE: &str = "(SELECT 1::smallint AS bulk_field_mode)";
+
 /// Q10-T2: one role's depth for the operation bound at `action` (a
 /// `RecordAction::as_str`), over `ea` (its `role_mm_entity_access` row,
 /// LEFT JOINed) and `r` (the `role` row). A role with no row keeps D-133's
@@ -806,12 +832,25 @@ pub async fn resolve_entity_access_level(
                 JOIN privilege p ON p.id = up.privilege_ref
                   AND p.is_active = true AND p.key = $3
                 WHERE up.user_ref = $1 AND up.is_active = true
+            ),
+            -- Q10-T4: a permission set counts like one more role.
+            set_depth AS (
+                SELECT {depth} AS depth
+                FROM permission_set_privilege sp
+                CROSS JOIN {SET_AS_ROLE} r
+                JOIN privilege p ON p.id = sp.privilege_ref
+                  AND p.is_active = true AND p.key = $3
+                LEFT JOIN permission_set_entity_access ea
+                    ON ea.set_ref = sp.set_ref AND ea.entity_ref = $2 AND ea.is_deleted = false
+                WHERE sp.is_deleted = false AND sp.set_ref IN ({HELD_SET_IDS})
             )
             SELECT
                 (SELECT MAX(depth) FROM (
                     SELECT depth FROM role_depth
                     UNION ALL
                     SELECT depth FROM direct_depth
+                    UNION ALL
+                    SELECT depth FROM set_depth
                 ) combined),
                 (SELECT confined FROM wall_confined)
             "#
@@ -1075,12 +1114,27 @@ pub async fn resolve_all_entity_access_levels(
                     ON p.key = ei.logicalname || $2::text
                    AND (ei.is_active IS NULL OR ei.is_active = true)
                 WHERE up.user_ref = $1 AND up.is_active = true
+            ),
+            -- Q10-T4: a permission set counts like one more role.
+            set_depth AS (
+                SELECT ei.logicalname, ei.id AS entity_ref, {depth} AS depth
+                FROM permission_set_privilege sp
+                CROSS JOIN {SET_AS_ROLE} r
+                JOIN privilege p ON p.id = sp.privilege_ref AND p.is_active = true
+                JOIN entity_info ei
+                    ON p.key = ei.logicalname || $2::text
+                   AND (ei.is_active IS NULL OR ei.is_active = true)
+                LEFT JOIN permission_set_entity_access ea
+                    ON ea.set_ref = sp.set_ref AND ea.entity_ref = ei.id AND ea.is_deleted = false
+                WHERE sp.is_deleted = false AND sp.set_ref IN ({HELD_SET_IDS})
             )
             SELECT logicalname, entity_ref, MAX(depth) AS depth
             FROM (
                 SELECT logicalname, entity_ref, depth FROM role_depth
                 UNION ALL
                 SELECT logicalname, entity_ref, depth FROM direct_depth
+                UNION ALL
+                SELECT logicalname, entity_ref, depth FROM set_depth
             ) combined
             GROUP BY logicalname, entity_ref
             "#
@@ -1198,6 +1252,15 @@ pub async fn any_role_uses_business_unit_scope(
                       ea.create_access_level, ea.assign_access_level, ea.share_access_level,
                       ea.export_access_level, ea.bulk_access_level
                   )
+            ) OR EXISTS(
+                -- Q10-T4: a permission set's levels count too.
+                SELECT 1 FROM permission_set_entity_access ea
+                WHERE ea.is_deleted = false AND ea.set_ref IN ({HELD_SET_IDS})
+                  AND 2 IN (
+                      ea.read_access_level, ea.write_access_level, ea.delete_access_level,
+                      ea.create_access_level, ea.assign_access_level, ea.share_access_level,
+                      ea.export_access_level, ea.bulk_access_level
+                  )
             )
             "#
     );
@@ -1246,6 +1309,27 @@ pub async fn resolve_own_units_only(
                 JOIN privilege p ON p.id = rp.privilege_ref AND p.is_active = true
                   AND p.key = ei.logicalname || '.' || a.privilege_action
                 WHERE a.depth = 2
+
+                UNION ALL
+
+                -- Q10-T4: a permission set's flags count like a role's.
+                SELECT ea.entity_ref, a.action, a.children
+                FROM permission_set_entity_access ea
+                JOIN entity_info ei ON ei.id = ea.entity_ref
+                CROSS JOIN LATERAL (VALUES
+                    ('read',   'read',   ea.read_access_level, ea.read_bu_children),
+                    ('update', 'update', ea.write_access_level, ea.write_bu_children),
+                    ('delete', 'delete', ea.delete_access_level, ea.delete_bu_children),
+                    ('assign', 'update',
+                        COALESCE(ea.assign_access_level, ea.write_access_level), ea.assign_bu_children),
+                    ('share',  'share',
+                        COALESCE(ea.share_access_level, ea.write_access_level), ea.share_bu_children)
+                ) AS a(action, privilege_action, depth, children)
+                JOIN permission_set_privilege sp ON sp.set_ref = ea.set_ref AND sp.is_deleted = false
+                JOIN privilege p ON p.id = sp.privilege_ref AND p.is_active = true
+                  AND p.key = ei.logicalname || '.' || a.privilege_action
+                WHERE ea.is_deleted = false AND a.depth = 2
+                  AND ea.set_ref IN ({HELD_SET_IDS})
             )
             SELECT entity_ref::text || '.' || action
             FROM depths
