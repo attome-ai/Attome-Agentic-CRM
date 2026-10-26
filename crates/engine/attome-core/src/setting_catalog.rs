@@ -436,6 +436,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!("SA"),
         ),
+        // L4-T3: whether the catalogue names attributes a person may not read.
+        SettingDescriptor::new(
+            "catalog.show_hidden_existence",
+            "Whether the data catalogue lists an attribute the person may not read by its name only, \
+         marked hidden so they can ask for access (L4-T3). Off by default: a hidden attribute is \
+         never named.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         // P13-T1: the entities the warehouse export writes; none by default.
         SettingDescriptor::new(
             "integration.warehouse_entities",

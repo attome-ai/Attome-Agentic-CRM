@@ -19,16 +19,20 @@
 //!   impressions) into `catalog_usage_rollup` (migration `0358`),
 //!   read by the entity-detail endpoint below.
 //!
-//! Routes are admin-gated (`Authorized<Admin>`), same shape as the closest
-//! sibling read surface, `schema.rs`'s `GET /api/v1/schema/{logicalname}` —
-//! a dedicated "metadata read" privilege bit is reasonable future work, not
-//! built here (this is a new surface, not a behavior change to an existing
-//! one, so erring toward the more restrictive existing gate is the safe
-//! Phase 1 default).
+//! L4-T3: the two catalogue routes need the `metadata.read` privilege (an
+//! administrator holds every privilege) and show only what the caller may
+//! read: entities they may read, and of those entities the attributes they
+//! may read (a sensitive attribute needs its field read grant). A hidden
+//! attribute is never named, not in the fields, not in the lineage. With the
+//! setting `catalog.show_hidden_existence` on (off by default) a hidden
+//! attribute is listed by its name only, marked `hidden` so the screen can
+//! offer to request access. The lineage impact route stays administrators'.
 
 use attome_core::{EngineState, change_feed};
 use attome_db::DbPool;
-use attome_server::authz::{Admin, Authorized};
+use attome_security::SecurityContextExt;
+use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::security::SecurityContext;
 use attome_types::ErrorResponse;
 use attome_types::{AppError, DEFAULT_PAGE_SIZE, PageBase, PageWindow, PaginatedResponse};
 use axum::{
@@ -42,6 +46,48 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 // ── Catalog browse/detail routes ────────────────────────────────────────────
+
+/// L4-T3: the privilege the catalogue routes need.
+pub const METADATA_READ: &str = "metadata.read";
+
+/// L4-T3: whether a hidden attribute is listed by name, marked hidden.
+const SHOW_HIDDEN_SETTING: &str = "catalog.show_hidden_existence";
+
+/// The entities `ctx` may read, by logical name; `None` for an
+/// administrator, who may read every one.
+fn readable_entities(state: &EngineState, ctx: &SecurityContext) -> Option<Vec<String>> {
+    if ctx.is_admin {
+        return None;
+    }
+    let registry = state.entities.load();
+    Some(
+        registry
+            .iter()
+            .map(|meta| meta.logicalname.as_str())
+            .filter(|name| ctx.require(name, "read").is_ok())
+            .map(str::to_owned)
+            .collect(),
+    )
+}
+
+/// Whether `ctx` may read attribute `field` of `entity`: any attribute that
+/// is not sensitive, a sensitive one with its field read grant. Pure.
+fn attribute_readable(
+    ctx: &SecurityContext,
+    entity: &str,
+    field: &str,
+    is_sensitive: bool,
+) -> bool {
+    !is_sensitive || ctx.is_admin || ctx.has_field_read_grant(entity, field)
+}
+
+fn show_hidden_existence(state: &EngineState) -> bool {
+    attome_core::setting_registry()
+        .get(SHOW_HIDDEN_SETTING)
+        .map(|d| state.settings.load().resolve(d, None, None).0)
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+}
 
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
@@ -72,7 +118,7 @@ struct CatalogEntitySummary {
 
 /// Entity catalogue
 ///
-/// Entity catalogue. Administrators only.
+/// Entity catalogue: the entities the caller may read. Needs `metadata.read`.
 #[utoipa::path(
     get,
     path = "/api/v1/catalog/entities",
@@ -95,9 +141,11 @@ struct CatalogEntitySummary {
 )]
 async fn list_entities(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    ctx: Authorized<SelfService>,
     Query(query): Query<CatalogListQuery>,
 ) -> Result<Json<PaginatedResponse<CatalogEntitySummary>>, AppError> {
+    ctx.require_key(METADATA_READ)?;
+    let readable = readable_entities(&state, &ctx);
     let PageWindow {
         page,
         page_size,
@@ -126,6 +174,7 @@ async fn list_entities(
                      AND (a.is_active IS NULL OR a.is_active = true)
                      AND a.data_classification = $3
                  ))
+             AND ($6::text[] IS NULL OR e.logicalname = ANY($6))
            ORDER BY e.logicalname
            LIMIT $4 OFFSET $5"#,
     )
@@ -134,6 +183,7 @@ async fn list_entities(
     .bind(query.classification.as_deref())
     .bind(page_size)
     .bind(offset)
+    .bind(readable.as_deref())
     .fetch_all(pool)
     .await
     .map_err(AppError::internal)?;
@@ -150,11 +200,13 @@ async fn list_entities(
                    WHERE a.entity_ref = e.id
                      AND (a.is_active IS NULL OR a.is_active = true)
                      AND a.data_classification = $3
-                 ))"#,
+                 ))
+             AND ($4::text[] IS NULL OR e.logicalname = ANY($4))"#,
     )
     .bind(query.q.as_deref())
     .bind(query.domain)
     .bind(query.classification.as_deref())
+    .bind(readable.as_deref())
     .fetch_one(pool)
     .await
     .map_err(AppError::internal)?;
@@ -169,6 +221,9 @@ struct CatalogFieldSummary {
     field_type: String,
     data_classification: String,
     is_required: bool,
+    /// L4-T3: listed by name only because the caller may not read it (only
+    /// when the deployment shows hidden attributes; ask for access).
+    hidden: bool,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -230,6 +285,7 @@ struct AttributeSummaryRow {
     field_type_int: Option<i32>,
     data_classification: String,
     required: Option<bool>,
+    is_sensitive: Option<bool>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -242,7 +298,8 @@ struct GlossaryTermRow {
 
 /// One entity in the catalogue
 ///
-/// One entity in the catalogue. Administrators only.
+/// One entity in the catalogue, with the attributes the caller may read.
+/// Needs `metadata.read` and read access to the entity.
 #[utoipa::path(
     get,
     path = "/api/v1/catalog/entities/{logicalname}",
@@ -263,9 +320,15 @@ struct GlossaryTermRow {
 )]
 async fn get_entity(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    ctx: Authorized<SelfService>,
     Path(logicalname): Path<String>,
 ) -> Result<Json<CatalogEntityDetail>, AppError> {
+    ctx.require_key(METADATA_READ)?;
+    // An entity the caller may not read is as absent as one that is not there.
+    if !ctx.is_admin && ctx.require(&logicalname, "read").is_err() {
+        return Err(AppError::NotFound);
+    }
+    let show_hidden = show_hidden_existence(&state);
     let meta_pool = &state.base.db_migrator;
 
     let entity_row: Option<EntityInfoRow> = sqlx::query_as(
@@ -285,7 +348,7 @@ async fn get_entity(
 
     let field_rows: Vec<AttributeSummaryRow> = sqlx::query_as(
         "SELECT a.logicalname, a.name, a.\"type\" AS field_type_int, a.data_classification, \
-                a.required \
+                a.required, a.is_sensitive \
          FROM attribute_info a \
          WHERE a.entity_ref = $1 AND (a.is_active IS NULL OR a.is_active = true) \
          ORDER BY a.sort_order ASC, a.created_at ASC NULLS LAST, a.logicalname",
@@ -294,17 +357,38 @@ async fn get_entity(
     .fetch_all(meta_pool)
     .await
     .map_err(AppError::internal)?;
+    let entity_name = logicalname.clone();
+    let mut hidden_names: Vec<String> = Vec::new();
     let fields = field_rows
         .into_iter()
-        .map(|row| {
+        .filter_map(|row| {
             let logicalname = row.logicalname.unwrap_or_default();
-            CatalogFieldSummary {
-                display_name: row.name.unwrap_or_else(|| logicalname.clone()),
-                field_type: crate::schema::int_to_type(row.field_type_int.unwrap_or(3)).to_owned(),
-                logicalname,
-                data_classification: row.data_classification,
-                is_required: row.required.unwrap_or(false),
+            if attribute_readable(
+                &ctx,
+                &entity_name,
+                &logicalname,
+                row.is_sensitive.unwrap_or(false),
+            ) {
+                return Some(CatalogFieldSummary {
+                    display_name: row.name.unwrap_or_else(|| logicalname.clone()),
+                    field_type: crate::schema::int_to_type(row.field_type_int.unwrap_or(3))
+                        .to_owned(),
+                    logicalname,
+                    data_classification: row.data_classification,
+                    is_required: row.required.unwrap_or(false),
+                    hidden: false,
+                });
             }
+            hidden_names.push(logicalname.clone());
+            // L4-T3: by name only, when the deployment shows that it exists.
+            show_hidden.then(|| CatalogFieldSummary {
+                display_name: logicalname.clone(),
+                field_type: String::new(),
+                logicalname,
+                data_classification: String::new(),
+                is_required: false,
+                hidden: true,
+            })
         })
         .collect();
 
@@ -316,6 +400,8 @@ async fn get_entity(
     let lineage = attome_core::references_to_entity(runtime_pool, &logicalname, LINEAGE_LIMIT)
         .await?
         .into_iter()
+        // A hidden attribute is never named through its lineage.
+        .filter(|r| !hidden_names.contains(&r.to_attribute))
         .map(|r| CatalogLineageEntry {
             from_kind: r.from_kind,
             from_ref: r.from_ref,

@@ -9,7 +9,8 @@
     { "key": "sidebar.manage", "name": "Manage Sidebar", "description": "Create, edit, order, activate, and permission sidebar navigation items" },
     { "key": "system.admin", "name": "System Admin", "description": "Full administrative access to every gated route" },
     { "key": "duplicate.bypass", "name": "Bypass Duplicate Check", "description": "Save a record without the write-time duplicate check (the `Attome-Duplicate-Check: skip` header, audited)" },
-    { "key": "metadata.rollout", "name": "Metadata Rollout", "description": "Plan and apply changesets, follow the changeset ledger, read and decide release-report items, read the rollout status and the caller's own approval requests (D-792). Never approves; reads no records." }
+    { "key": "metadata.rollout", "name": "Metadata Rollout", "description": "Plan and apply changesets, follow the changeset ledger, read and decide release-report items, read the rollout status and the caller's own approval requests (D-792). Never approves; reads no records." },
+    { "key": "metadata.read", "name": "Read Metadata", "description": "Browse the data catalogue: the entities and attributes the holder may read, their lineage, usage and glossary terms (L4-T3). Shows no records." }
   ],
   "roles": [
     {

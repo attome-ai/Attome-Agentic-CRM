@@ -13,6 +13,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Catalogue access for non-administrators (L4-T3): `GET /api/v1/catalog/entities[/{name}]` need the
+  new `metadata.read` privilege instead of administrator, list only entities the caller may read,
+  and never name an attribute the caller may not read (in its fields or its lineage). The setting
+  `catalog.show_hidden_existence` (off) lists such an attribute by name only, marked `hidden`.
 - Warehouse export (P13-T1): with `integration.warehouse_entities` set, record changes are
   exported every five minutes from the change feed to Parquet files per entity and hour of change
   (`warehouse/{entity}/...`), deletes as tombstones, a schema version per file, and a manifest

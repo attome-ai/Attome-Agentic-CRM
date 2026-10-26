@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:bafb7490d6912126bd2d6ebbd4b25591c29b6c29ca8610533f1601526f02bd58",
+  "checksum": "sha256:484241fc18186d930665224bb6bcae88b5867a07688a1b9de9ee1c35e11152f4",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-security.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -42,6 +42,21 @@
     {
       "args": {
         "definition": {
+          "description": "Browse the data catalogue: the entities and attributes the holder may read, their lineage, usage and glossary terms (L4-T3). Shows no records.",
+          "key": "metadata.read",
+          "name": "Read Metadata"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "metadata.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "description": "Create, edit, order, activate, and permission sidebar navigation items",
           "key": "sidebar.manage",
           "name": "Manage Sidebar"
@@ -49,7 +64,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 3,
+      "seq": 4,
       "target": {
         "privilege": "sidebar.manage"
       }
@@ -64,7 +79,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 4,
+      "seq": 5,
       "target": {
         "privilege": "system.admin"
       }
@@ -81,7 +96,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 5,
+      "seq": 6,
       "target": {
         "entity": "organization"
       }
@@ -98,7 +113,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 6,
+      "seq": 7,
       "target": {
         "entity": "privilege"
       }
@@ -115,7 +130,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 7,
+      "seq": 8,
       "target": {
         "entity": "role"
       }
@@ -132,7 +147,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 8,
+      "seq": 9,
       "target": {
         "entity": "user_account"
       }
@@ -148,7 +163,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "entity": "user_account_mm_privilege"
       }
@@ -164,7 +179,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "entity": "user_account_mm_team"
       }
@@ -181,7 +196,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "entity": "team"
       }
@@ -198,7 +213,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "entity": "organization",
         "field": "name"
@@ -214,7 +229,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "entity": "privilege",
         "field": "description"
@@ -233,7 +248,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "entity": "privilege",
         "field": "key"
@@ -252,7 +267,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "entity": "privilege",
         "field": "name"
@@ -268,7 +283,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "entity": "role",
         "field": "description"
@@ -287,7 +302,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "entity": "role",
         "field": "name"
@@ -304,7 +319,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "entity": "role",
         "field": "position_hierarchy_enabled"
@@ -320,7 +335,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 19,
+      "seq": 20,
       "target": {
         "entity": "user_account",
         "field": "auth_type"
@@ -336,7 +351,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 20,
+      "seq": 21,
       "target": {
         "entity": "user_account",
         "field": "currency"
@@ -354,7 +369,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 21,
+      "seq": 22,
       "target": {
         "entity": "user_account",
         "field": "email"
@@ -372,7 +387,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 22,
+      "seq": 23,
       "target": {
         "entity": "user_account",
         "field": "is_active"
@@ -388,7 +403,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 23,
+      "seq": 24,
       "target": {
         "entity": "user_account",
         "field": "language"
@@ -406,7 +421,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 24,
+      "seq": 25,
       "target": {
         "entity": "user_account",
         "field": "last_login"
@@ -422,7 +437,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 25,
+      "seq": 26,
       "target": {
         "entity": "user_account",
         "field": "locale"
@@ -438,7 +453,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 26,
+      "seq": 27,
       "target": {
         "entity": "user_account",
         "field": "max_page_size"
@@ -454,7 +469,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 27,
+      "seq": 28,
       "target": {
         "entity": "user_account",
         "field": "phone"
@@ -470,7 +485,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 28,
+      "seq": 29,
       "target": {
         "entity": "user_account",
         "field": "profile_image"
@@ -496,7 +511,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 29,
+      "seq": 30,
       "target": {
         "entity": "user_account",
         "field": "status"
@@ -512,7 +527,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 30,
+      "seq": 31,
       "target": {
         "entity": "user_account",
         "field": "theme"
@@ -528,7 +543,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 31,
+      "seq": 32,
       "target": {
         "entity": "user_account",
         "field": "timezone"
@@ -546,7 +561,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 32,
+      "seq": 33,
       "target": {
         "entity": "user_account",
         "field": "user_name"
@@ -562,7 +577,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 33,
+      "seq": 34,
       "target": {
         "entity": "team",
         "field": "description"
@@ -581,7 +596,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 34,
+      "seq": 35,
       "target": {
         "entity": "team",
         "field": "name"
@@ -598,7 +613,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 35,
+      "seq": 36,
       "target": {
         "entity": "organization",
         "field": "organization_ref"
@@ -615,7 +630,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 36,
+      "seq": 37,
       "target": {
         "entity": "user_account",
         "field": "organization_ref"
@@ -635,7 +650,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 37,
+      "seq": 38,
       "target": {
         "entity": "user_account_mm_privilege",
         "field": "privilege_ref"
@@ -655,7 +670,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 38,
+      "seq": 39,
       "target": {
         "entity": "user_account_mm_privilege",
         "field": "user_ref"
@@ -675,7 +690,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 39,
+      "seq": 40,
       "target": {
         "entity": "user_account_mm_team",
         "field": "team_ref"
@@ -695,7 +710,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 40,
+      "seq": 41,
       "target": {
         "entity": "user_account_mm_team",
         "field": "user_ref"
@@ -712,7 +727,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 41,
+      "seq": 42,
       "target": {
         "entity": "team",
         "field": "organization_ref"
@@ -730,7 +745,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 42,
+      "seq": 43,
       "target": {
         "entity": "organization",
         "query": "Active Organizations"
@@ -748,7 +763,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 43,
+      "seq": 44,
       "target": {
         "entity": "organization",
         "query": "Inactive Organizations"
@@ -766,7 +781,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 44,
+      "seq": 45,
       "target": {
         "entity": "privilege",
         "query": "Active Privileges"
@@ -784,7 +799,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 45,
+      "seq": 46,
       "target": {
         "entity": "privilege",
         "query": "Inactive Privileges"
@@ -802,7 +817,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 46,
+      "seq": 47,
       "target": {
         "entity": "role",
         "query": "Active Roles"
@@ -820,7 +835,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 47,
+      "seq": 48,
       "target": {
         "entity": "role",
         "query": "Inactive Roles"
@@ -838,7 +853,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 48,
+      "seq": 49,
       "target": {
         "entity": "user_account",
         "query": "Active Users"
@@ -856,7 +871,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 49,
+      "seq": 50,
       "target": {
         "entity": "user_account",
         "query": "Inactive Users"
@@ -874,7 +889,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 50,
+      "seq": 51,
       "target": {
         "entity": "user_account",
         "query": "Users (Related)"
@@ -892,7 +907,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 51,
+      "seq": 52,
       "target": {
         "entity": "user_account_mm_privilege",
         "query": "Active Privilege Grants"
@@ -910,7 +925,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 52,
+      "seq": 53,
       "target": {
         "entity": "user_account_mm_privilege",
         "query": "Inactive Privilege Grants"
@@ -928,7 +943,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 53,
+      "seq": 54,
       "target": {
         "entity": "user_account_mm_privilege",
         "query": "Privilege Grants (Related)"
@@ -946,7 +961,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 54,
+      "seq": 55,
       "target": {
         "entity": "user_account_mm_team",
         "query": "Active Team Memberships"
@@ -964,7 +979,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 55,
+      "seq": 56,
       "target": {
         "entity": "user_account_mm_team",
         "query": "Inactive Team Memberships"
@@ -982,7 +997,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 56,
+      "seq": 57,
       "target": {
         "entity": "user_account_mm_team",
         "query": "Team Memberships (Related)"
@@ -1000,7 +1015,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 57,
+      "seq": 58,
       "target": {
         "entity": "team",
         "query": "Active Teams"
@@ -1018,7 +1033,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 58,
+      "seq": 59,
       "target": {
         "entity": "team",
         "query": "Inactive Teams"
@@ -1036,7 +1051,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 59,
+      "seq": 60,
       "target": {
         "entity": "team",
         "query": "Teams (Related)"
@@ -1056,7 +1071,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 60,
+      "seq": 61,
       "target": {
         "entity": "organization",
         "view": "Active Organizations"
@@ -1076,7 +1091,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 61,
+      "seq": 62,
       "target": {
         "entity": "organization",
         "view": "Inactive Organizations"
@@ -1096,7 +1111,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 62,
+      "seq": 63,
       "target": {
         "entity": "privilege",
         "view": "Active Privileges"
@@ -1116,7 +1131,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 63,
+      "seq": 64,
       "target": {
         "entity": "privilege",
         "view": "Inactive Privileges"
@@ -1136,7 +1151,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 64,
+      "seq": 65,
       "target": {
         "entity": "role",
         "view": "Active Roles"
@@ -1156,7 +1171,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 65,
+      "seq": 66,
       "target": {
         "entity": "role",
         "view": "Inactive Roles"
@@ -1176,7 +1191,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 66,
+      "seq": 67,
       "target": {
         "entity": "user_account",
         "view": "Active Users"
@@ -1196,7 +1211,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 67,
+      "seq": 68,
       "target": {
         "entity": "user_account",
         "view": "Inactive Users"
@@ -1216,7 +1231,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 68,
+      "seq": 69,
       "target": {
         "entity": "user_account",
         "view": "Users (Related)"
@@ -1236,7 +1251,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 69,
+      "seq": 70,
       "target": {
         "entity": "user_account_mm_privilege",
         "view": "Active Privilege Grants"
@@ -1256,7 +1271,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 70,
+      "seq": 71,
       "target": {
         "entity": "user_account_mm_privilege",
         "view": "Inactive Privilege Grants"
@@ -1276,7 +1291,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 71,
+      "seq": 72,
       "target": {
         "entity": "user_account_mm_privilege",
         "view": "Privilege Grants (Related)"
@@ -1296,7 +1311,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 72,
+      "seq": 73,
       "target": {
         "entity": "user_account_mm_team",
         "view": "Active Team Memberships"
@@ -1316,7 +1331,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 73,
+      "seq": 74,
       "target": {
         "entity": "user_account_mm_team",
         "view": "Inactive Team Memberships"
@@ -1336,7 +1351,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 74,
+      "seq": 75,
       "target": {
         "entity": "user_account_mm_team",
         "view": "Team Memberships (Related)"
@@ -1356,7 +1371,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 75,
+      "seq": 76,
       "target": {
         "entity": "team",
         "view": "Active Teams"
@@ -1376,7 +1391,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 76,
+      "seq": 77,
       "target": {
         "entity": "team",
         "view": "Inactive Teams"
@@ -1396,7 +1411,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 77,
+      "seq": 78,
       "target": {
         "entity": "team",
         "view": "Teams (Related)"
@@ -1412,7 +1427,7 @@
       },
       "op": "upsert_role",
       "phase": "expand",
-      "seq": 78,
+      "seq": 79,
       "target": {
         "role": "Rollout operator"
       }
@@ -1423,7 +1438,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 79,
+      "seq": 80,
       "target": {
         "privilege": "metadata.rollout",
         "role": "Rollout operator"
