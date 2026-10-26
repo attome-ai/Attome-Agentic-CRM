@@ -9,6 +9,8 @@ pub mod abm;
 pub mod address_check;
 pub mod alerts;
 pub mod attribution;
+/// E15-T1: touchpoints and stored attribution credit for won opportunities.
+pub mod attribution_store;
 pub mod blocklist;
 /// E1-T3: campaign members from a marketing list, and members by status.
 pub mod campaign;
@@ -72,6 +74,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<profile::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<identity::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<attribution_store::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<forms::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dynamic_blocks::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<tracking_script::ApiDocFragment as utoipa::OpenApi>::openapi());

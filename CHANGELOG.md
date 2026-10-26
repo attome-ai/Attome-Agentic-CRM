@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Marketing attribution for won opportunities (E15-T1): a nightly `marketing_attribution` job
+  collects the touches of a won opportunity's account contacts in the year before the close
+  (profile events and form submissions) and stores every model's credit per touch, share and amount
+  (migration 0288); it recomputes an opportunity only when it changed.
+  `GET /api/v1/marketing/opportunities/{id}/attribution?model=` reads one model by touch and by
+  campaign.
 - Identity links (E24-T1): `marketing_identity_link` (migration 0287) ties an email, tracking
   visitor, portal user or phone to one contact, linked only by deterministic events (a form with an
   email now links its email and visitor; sign-in and email-click callers use the same rules). A

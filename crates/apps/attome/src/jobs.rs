@@ -3023,6 +3023,8 @@ const DEDUP_KEY_BLOCKLIST_CHECK: &str = "marketing-blocklist-check";
 const DEDUP_KEY_REPUTATION_FETCH: &str = "marketing-reputation-fetch";
 /// E6-T4: the daily deliverability rollup (a registered job type).
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
+/// E15-T1: the nightly attribution run (a registered job type).
+const DEDUP_KEY_MARKETING_ATTRIBUTION: &str = "marketing-attribution";
 /// E7-T6: the live segment tick (a registered job type).
 const DEDUP_KEY_SEGMENT_LIVE: &str = "marketing-segment-live";
 /// E8-T5: the journey entry tick and the date entry (registered job types).
@@ -3218,6 +3220,10 @@ pub const EMAIL_CAMPAIGN: attome_jobs::JobType = attome_jobs::JobType::new("emai
 /// E6-T4: today's and yesterday's deliverability rollup, recomputed.
 pub const DELIVERABILITY_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new("deliverability_rollup", 1);
+
+/// E15-T1: attribution credit for won opportunities, nightly.
+pub const MARKETING_ATTRIBUTION: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::attribution_store::JOB, 1);
 
 /// E7-T6: live segments re-checked for the people a change-feed batch touched.
 pub const SEGMENT_LIVE: attome_jobs::JobType =
@@ -4969,6 +4975,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MARKETING_ATTRIBUTION,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                attome_marketing::attribution_store::run(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             DELIVERABILITY_ROLLUP,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 // Marketing only: an unlicensed deployment has nothing to roll up.
@@ -5367,6 +5387,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == DELIVERABILITY_ROLLUP.name => {
             DEDUP_KEY_DELIVERABILITY_ROLLUP
+        }
+        EngineJob::Registered(job) if job.name == MARKETING_ATTRIBUTION.name => {
+            DEDUP_KEY_MARKETING_ATTRIBUTION
         }
         EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
             DEDUP_KEY_SOCIAL_REVIEWS_SYNC
@@ -6941,6 +6964,25 @@ pub fn spawn_deliverability_rollup_scheduler(db: DbPool, interval: std::time::Du
         job,
         DEDUP_KEY_DELIVERABILITY_ROLLUP,
         "deliverability rollup",
+    );
+}
+
+/// E15-T1: nightly, attribution credit for won opportunities.
+pub fn spawn_marketing_attribution_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(MARKETING_ATTRIBUTION.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "marketing attribution: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_MARKETING_ATTRIBUTION,
+        "marketing attribution",
     );
 }
 

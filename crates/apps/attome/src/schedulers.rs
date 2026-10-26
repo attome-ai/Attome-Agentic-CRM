@@ -309,6 +309,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(3600),
     );
+    // E15-T1: attribution credit for won opportunities, daily.
+    crate::jobs::spawn_marketing_attribution_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // J8-T1: new Google reviews, every 15 minutes.
     crate::jobs::spawn_social_reviews_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // E17-T1: due social posts and their metrics, every five minutes.
