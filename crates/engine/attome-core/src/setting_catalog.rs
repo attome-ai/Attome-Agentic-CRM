@@ -514,6 +514,30 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(null),
         ),
+        // F6-T4: which location a fulfilment order ships from.
+        SettingDescriptor::new(
+            "fulfilment.sourcing.rules",
+            "The sourcing rules, tried in order (F6-T4): each has a `condition` (an attome-rules          expression over the order's fields; empty matches every order), a `strategy` (`fixed`,          `nearest_with_stock` or `fewest_shipments`) and, for `fixed`, a `location_id`. The first          rule whose condition holds decides; with none, the default location is used.",
+            || {
+                json!({
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                        "type": "object",
+                        "required": ["strategy"],
+                        "additionalProperties": false,
+                        "properties": {
+                            "condition": {"type": "string", "maxLength": 2000},
+                            "strategy": {"enum": ["fixed", "nearest_with_stock", "fewest_shipments"]},
+                            "location_id": {"type": "string", "format": "uuid"}
+                        }
+                    }
+                })
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
         // A25-T2: the country a local phone number belongs to.
         SettingDescriptor::new(
             "core.default_country",

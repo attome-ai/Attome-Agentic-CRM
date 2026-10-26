@@ -24,6 +24,8 @@ pub mod pack;
 /// F6-T12: non-goods and drop-ship lines handed to their owners.
 pub mod routing;
 pub mod sourcing;
+/// F6-T4: the sourcing rule table, the decision and its override.
+pub mod sourcing_rules;
 /// F6-T3: confirmed orders split into fulfilment orders.
 pub mod split;
 /// F6-T10: shipment status following the carrier, applied once.
@@ -44,5 +46,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(carrier::openapi_fragment());
     doc.merge(delivery::openapi_fragment());
     doc.merge(order_view::openapi_fragment());
+    doc.merge(sourcing_rules::openapi_fragment());
     doc
 }

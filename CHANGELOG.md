@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Sourcing rules (F6-T4): the setting `fulfilment.sourcing.rules` places a confirmed order's goods
+  lines (fixed location, nearest with stock from the order's new delivery coordinates, or fewest
+  shipments), each fulfilment order keeps its `sourcing_reason`, and
+  `POST /api/v1/fulfilment/orders/{id}/override-sourcing` changes the location before release. See
+  `docs/fulfilment-delivery.md`.
 - State model locks, reasons and record types (M8-T2): a model's `locked_states` make a record
   read-only in those states except the listed fields; `reason_field` and `reasons` require a status
   reason that fits the state; a model with `record_type` governs only records of that type.

@@ -44,3 +44,29 @@ with the fulfilment module). A sales order's form has a Fulfilment tab: each lin
 shipped, delivered and backordered quantities, its promised date in the person's calendar, and its
 shipments with a tracking link where the carrier has one. The tab reads
 `GET /api/v1/fulfilment/orders?order_id=` (`fulfilment_order.read`).
+
+## Where an order ships from
+
+When an order is confirmed, its goods lines are placed by the sourcing rules in the setting
+`fulfilment.sourcing.rules`, tried in order:
+
+```json
+[
+  { "condition": "amount > 50000", "strategy": "fixed", "location_id": "…" },
+  { "condition": "", "strategy": "nearest_with_stock" }
+]
+```
+
+`condition` is an attome-rules expression over the order's fields (empty matches every order).
+`fixed` ships everything from `location_id`; `nearest_with_stock` ships each line from the nearest
+location that has all of it, measured from the order's `delivery_latitude` and
+`delivery_longitude` (without them every location is equally near); `fewest_shipments` uses as few
+locations as cover the lines. With no matching rule, and for every line that is not goods, the order
+ships from `fulfilment.default_location_id` (else the only stock location). Each fulfilment order
+keeps why in `sourcing_reason`: `fulfilment.sourcing.reason.<strategy>:<rule number>`, or
+`fulfilment.sourcing.reason.default`.
+
+Before a fulfilment order is released (`draft` or `on_hold`), a person with
+`fulfilment_order.override_sourcing` can change its location with
+`POST /api/v1/fulfilment/orders/{id}/override-sourcing` and `{"location_id": "…"}`; the order keeps
+who did it in `sourcing_overridden_by`, and the change is audited like any update.

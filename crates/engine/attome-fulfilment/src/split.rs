@@ -8,10 +8,13 @@
 //! 'attome-fulfilment/split:<order>'))` and writes nothing when the order
 //! already has fulfilment orders, so a rerun or a second node is harmless.
 //!
-//! The ship-from location is the setting `fulfilment.default_location_id`,
-//! else the deployment's only live `stock_location`; with neither, the order
-//! is left unsplit and a warning names it (sourcing across locations, F6-T4,
-//! takes over once order lines carry what it needs). Order lines carry no
+//! The ship-from location of each goods line comes from the sourcing rules
+//! (F6-T4, [`crate::sourcing_rules`]); without a matching rule, and for
+//! every line that is not goods, it is the setting
+//! `fulfilment.default_location_id`, else the deployment's only live
+//! `stock_location`. With no location for a line, the order is left
+//! unsplit and a warning names it. Each fulfilment order keeps the
+//! decision's reason in `sourcing_reason`. Order lines carry no
 //! delivery group yet, so each location's lines are one group. A line's kind
 //! is its product's `fulfilment_kind`, `goods` when unset; a line with no
 //! product is `service`. Every line that is not goods is routed to its
@@ -74,21 +77,35 @@ pub fn line_kind(line: &OrderLine) -> &'static str {
 /// delivery group, in group order; lines with no quantity are left out.
 /// Pure.
 pub fn groups(lines: &[OrderLine], location: Uuid) -> Vec<Group> {
-    let mut by_group: BTreeMap<Option<String>, Vec<(OrderLine, &'static str)>> = BTreeMap::new();
+    groups_by(lines, |_| Some(location)).unwrap_or_default()
+}
+
+/// F6-T4: the fulfilment orders for `lines`, one per ship-from location and
+/// delivery group; `None` when a line with a quantity has no location.
+/// Pure.
+pub fn groups_by(
+    lines: &[OrderLine],
+    location_of: impl Fn(&OrderLine) -> Option<Uuid>,
+) -> Option<Vec<Group>> {
+    type Key = (Uuid, Option<String>);
+    let mut by_group: BTreeMap<Key, Vec<(OrderLine, &'static str)>> = BTreeMap::new();
     for line in lines.iter().filter(|l| l.quantity > 0.0) {
+        let location = location_of(line)?;
         by_group
-            .entry(line.delivery_group.clone())
+            .entry((location, line.delivery_group.clone()))
             .or_default()
             .push((line.clone(), line_kind(line)));
     }
-    by_group
-        .into_iter()
-        .map(|(delivery_group, lines)| Group {
-            location,
-            delivery_group,
-            lines,
-        })
-        .collect()
+    Some(
+        by_group
+            .into_iter()
+            .map(|((location, delivery_group), lines)| Group {
+                location,
+                delivery_group,
+                lines,
+            })
+            .collect(),
+    )
 }
 
 async fn default_location(state: &EngineState) -> Result<Option<Uuid>, AppError> {
@@ -111,10 +128,7 @@ async fn default_location(state: &EngineState) -> Result<Option<Uuid>, AppError>
 /// Splits one confirmed order; returns how many fulfilment orders it wrote
 /// (none when they exist, the order is gone, or no location is known).
 pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppError> {
-    let Some(location) = default_location(state).await? else {
-        tracing::warn!(%order, "fulfilment split: no ship-from location; set fulfilment.default_location_id");
-        return Ok(0);
-    };
+    let default = default_location(state).await?;
     // The lines and their promises are read before the transaction: the
     // stock seam may do its own reads, never while the split holds its lock.
     /// Line id, product, quantity and the product's fulfilment kind.
@@ -138,7 +152,24 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
             kind,
         })
         .collect();
-    let planned = groups(&lines, location);
+    // F6-T4: the sourcing rules place the goods lines; everything else ships
+    // from the default location.
+    let goods: Vec<crate::sourcing_rules::GoodsLine> = lines
+        .iter()
+        .filter(|l| line_kind(l) == "goods")
+        .filter_map(|l| l.product.map(|p| (l.id, p, l.quantity)))
+        .collect();
+    let decision = crate::sourcing_rules::decide(state, order, &goods, default).await?;
+    let Some(planned) = groups_by(&lines, |line| {
+        if line_kind(line) == "goods" {
+            decision.location_of(line.id)
+        } else {
+            default.or(decision.fallback)
+        }
+    }) else {
+        tracing::warn!(%order, "fulfilment split: no ship-from location; set fulfilment.default_location_id or the sourcing rules");
+        return Ok(0);
+    };
     let today = chrono::Utc::now().date_naive();
     let mut promises: std::collections::HashMap<Uuid, crate::atp::Promise> =
         std::collections::HashMap::new();
@@ -205,8 +236,8 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
             .max();
         sqlx::query(
             "INSERT INTO fulfilment_order (id, order_ref, location_ref, delivery_group, status, \
-                 ship_policy, promised_date, created_by, owner_ref) \
-             VALUES ($1, $2, $3, $4, 'draft', 'ship_as_available', $6, $5, $5)",
+                 ship_policy, promised_date, created_by, owner_ref, sourcing_reason) \
+             VALUES ($1, $2, $3, $4, 'draft', 'ship_as_available', $6, $5, $5, $7)",
         )
         .bind(fulfilment_order)
         .bind(order)
@@ -214,6 +245,7 @@ pub async fn split_order(state: &EngineState, order: Uuid) -> Result<usize, AppE
         .bind(&group.delivery_group)
         .bind(owner)
         .bind(promised)
+        .bind(&decision.reason)
         .execute(&mut *tx)
         .await
         .map_err(AppError::internal)?;

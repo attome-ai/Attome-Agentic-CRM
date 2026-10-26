@@ -1,0 +1,115 @@
+{
+  "author": "packs",
+  "checksum": "sha256:0f8350c5ab1f9e7f3da0a078773b579e65796294f00917d285dd28b25ace98d6",
+  "closed_at": "2026-10-26T00:00:00Z",
+  "description": "Sourcing rules (F6-T4): an order's delivery coordinates, which the nearest-with-stock rule measures from, and the privilege to change where a fulfilment order ships from before it is released.",
+  "format": "attome-changeset/v1",
+  "id": "01a178ce-b63b-7f48-9e41-130a266778e6",
+  "layer": "product",
+  "name": "fulfilment-sourcing",
+  "opened_at": "2026-10-26T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Delivery latitude",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "delivery_latitude",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "order",
+        "field": "delivery_latitude"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Delivery longitude",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "delivery_longitude",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "order",
+        "field": "delivery_longitude"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خط عرض التسليم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "order.delivery_latitude",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خط طول التسليم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "order.delivery_longitude",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Change the location a fulfilment order ships from before it is released.",
+          "key": "fulfilment_order.override_sourcing",
+          "name": "Override Fulfilment Sourcing"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "fulfilment_order.override_sourcing"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "fulfilment",
+  "seq": 8,
+  "title": "Pack: order delivery coordinates and the sourcing override"
+}
