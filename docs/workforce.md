@@ -80,9 +80,26 @@ The AI agent tools `workforce.coverage`, `workforce.explain_gap`, `workforce.my_
 `workforce.propose_fix` read the same figures. They never change a published schedule:
 `propose_fix` lists the free people who could cover each short interval, for a planner to apply.
 
+## Adherence
+
+Each minute, every person whose presence is known gets one row: what the published schedule said
+(`work`, `break`, `meal`, `training` or `off`), what they were doing, and whether that fits. Being
+logged in and available fits `work`; not working fits a break or time off. A few minutes either side
+of a scheduled change still count (`workforce.adherence_tolerance_minutes`, 3 by default). Minute
+rows are kept 35 days.
+
+Each night, yesterday's rows become each person's day: adherence (minutes that fit over minutes
+seen) and conformance (minutes working over minutes scheduled to work).
+
+- `GET /api/v1/workforce/adherence/live?group=` shows a planning group's people over the last five
+  minutes, to a holder of `wfm_adherence.read` who is a member of that group.
+- `GET /api/v1/workforce/me/adherence` shows the caller's own last 31 days.
+
+Presence comes from a presence source; until the platform's presence events exist, a deployment
+plugs one in, and nothing is written without one.
+
 ## Not built yet
 
-Adherence and conformance (comparing presence with the schedule) wait on presence events. The
-workforce KPIs and their default dashboard, the planner screens (group setup, schedule grid with
+The workforce KPIs and their default dashboard, the planner screens (group setup, schedule grid with
 coverage chart, swaps queue, intraday proposals) and the staff mobile views come later. Until then the
 routes above are the interface.

@@ -82,6 +82,16 @@ published one. `GET /api/v1/admin/themes` lists every version. Each change write
 The Branding page (`/xrm/admin/branding`) does the same: colour pickers, a live contrast check,
 a preview, save as draft, publish, and the version list with each version's changes.
 
+## A draft from brand guidelines
+
+Upload the brand guidelines PDF as the draft's `guidelines_pdf` asset, then run the AI action
+`brand.draft_from_document` with `{"asset_id": "…"}`. It reads the PDF's text (at most 20,000
+characters) and saves the colours, fonts, corner radius and density the guidelines settle as a new
+draft of the same scope. A token the guidelines do not settle stays unset. It never publishes:
+review the draft, check its contrast and publish it yourself. Only an administrator may run it, and
+it writes the same `Configuration` audit event as a save. A PDF whose text is stored as glyph ids
+(many Arabic PDFs) gives no readable text, and nothing is saved.
+
 ## Logo, favicon and fonts
 
 A draft takes one file per kind, sent as the raw request body with its `Content-Type`:

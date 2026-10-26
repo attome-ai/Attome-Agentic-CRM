@@ -163,6 +163,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/lineage.md"),
     ),
     (
+        "docs/marketing-profiles.md",
+        include_str!("../../../../../docs/marketing-profiles.md"),
+    ),
+    (
         "docs/mass-operations.md",
         include_str!("../../../../../docs/mass-operations.md"),
     ),
