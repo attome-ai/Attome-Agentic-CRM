@@ -117,6 +117,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/deal-teams.md"),
     ),
     (
+        "docs/delta-tokens.md",
+        include_str!("../../../../../docs/delta-tokens.md"),
+    ),
+    (
         "docs/dialer.md",
         include_str!("../../../../../docs/dialer.md"),
     ),
@@ -185,6 +189,10 @@ pub const DOCS: &[(&str, &str)] = &[
     (
         "docs/procurement.md",
         include_str!("../../../../../docs/procurement.md"),
+    ),
+    (
+        "docs/record-timeline.md",
+        include_str!("../../../../../docs/record-timeline.md"),
     ),
     (
         "docs/recycle-bin.md",
