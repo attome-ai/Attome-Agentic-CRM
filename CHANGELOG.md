@@ -13,6 +13,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Import routes (A23-T8): `POST /api/v1/{entity}/imports` (multipart: `file` + JSON `options`; the
+  same file answers its existing job with 200), `GET /api/v1/{entity}/imports[/{id}]`,
+  `POST .../imports/{id}/dry-run|apply|undo|cancel` (202), `GET .../imports/{id}/preview`
+  (sensitive attributes masked) and `GET`/`PUT /api/v1/admin/imports/policy/{entity}` (`If-Match`).
+  An apply over the policy's `approval_over_rows`, or mapping a sensitive attribute, opens a
+  `records.import_apply` approval request and waits in `awaiting_approval`. Uploads are held to
+  `http.max_body_bytes`. axum's `multipart` feature is on (adds `multer`).
 - Import jobs and recurring imports (A23-T7): stage, validate, apply and undo run as registered
   jobs (`import_stage`, `import_validate`, `import_apply`, `import_undo`, dedup key
   `attome-records/import:{job_id}:{phase}`), each queuing the next; a dry run stops after validation

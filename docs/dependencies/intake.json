@@ -111,6 +111,14 @@
       "licence": "MIT OR Apache-2.0",
       "maintenance": "Active; image-rs organisation, regular releases.",
       "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "multer",
+      "reason": "A23-T8: axum's multipart feature (the import upload route reads a file and its options as multipart/form-data); pure Rust, the parser axum's own Multipart extractor uses.",
+      "licence": "MIT",
+      "maintenance": "Maintained alongside axum's extractors; stable 3.x line.",
+      "windows_native": true
     }
   ]
 }

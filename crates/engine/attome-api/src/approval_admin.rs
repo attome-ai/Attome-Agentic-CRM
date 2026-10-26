@@ -122,6 +122,9 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     attome_security::admin::ACTION_MFA_RESET_ADMIN,
     attome_compliance::retention_admin::ACTION_RETENTION_APPROVE,
     attome_records::query_admin::ACTION_QUERY_PUBLISH,
+    // A23-T8: an import over its policy's row limit, or mapping a
+    // sensitive attribute.
+    attome_document::import_routes::ACTION_IMPORT_APPLY,
     attome_compliance::erasure_admin::ACTION_SECURITY_ERASURE,
     crate::admin::ACTION_SCHEMA_CHANGE,
     crate::admin::ACTION_ENTITY_DELETE,
@@ -652,6 +655,10 @@ async fn dispatch_approved(
             )
             .await?;
             serde_json::to_value(&item).map_err(AppError::internal)?
+        }
+        attome_document::import_routes::ACTION_IMPORT_APPLY => {
+            attome_document::import_routes::execute_approved_apply(state, &request.payload)
+                .await?
         }
         attome_records::query_admin::ACTION_QUERY_PUBLISH => {
             // Attributed to `request.requested_by` (whoever actually wrote

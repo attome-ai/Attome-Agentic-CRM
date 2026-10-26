@@ -382,6 +382,9 @@ impl EngineSystem {
             .merge(attome_document::files::routes())
             // Z6-T2: resumable multipart uploads.
             .merge(attome_document::multipart_routes::routes())
+            // A23-T8: file imports into any entity, ungated like the
+            // generic record API they write through.
+            .merge(attome_document::import_routes::routes())
             // K1-T1: share links, and their public download routes.
             .merge(attome_document::share::routes())
             // K1-T2: check-out and check-in of a record's file.

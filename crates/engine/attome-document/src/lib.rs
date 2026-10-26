@@ -50,6 +50,8 @@ pub mod files_scan;
 pub mod import_reader;
 /// A23-T7: import phases as durable jobs, and recurring imports.
 pub mod import_jobs;
+/// A23-T8: the import routes.
+pub mod import_routes;
 /// A23-T3: staging an import file's rows into import_stage with COPY.
 pub mod import_stage;
 /// Z6-T3: the weekly read-back of a sample of stored files.
@@ -91,5 +93,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ));
     doc.merge(core(transcribe::openapi_fragment()));
     doc.merge(core(multipart_routes::openapi_fragment()));
+    // A23-T8: file imports, under core like the generic record API.
+    doc.merge(core(import_routes::openapi_fragment()));
     doc
 }

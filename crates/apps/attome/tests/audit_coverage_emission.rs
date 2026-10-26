@@ -4504,6 +4504,16 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"parameters": []})),
             )
         }
+        // A23-T8: an entity's import policy, first written at version 0.
+        "PUT /api/v1/admin/imports/policy/{entity}" => with_if_match(
+            request(
+                "PUT",
+                &format!("/api/v1/admin/imports/policy/{}", fx.entity),
+                t,
+                Some(json!({"max_rows": 1000})),
+            ),
+            0,
+        ),
         "PUT /api/v1/admin/query-shares/{id}" => {
             let id = stored_query(fx).await;
             request(
