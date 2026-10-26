@@ -205,14 +205,28 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
     // only successfully-signed requests were rate-limited: an attacker
     // spamming forged signatures on a valid client_id/key_id now hits the
     // same per-client quota instead of bypassing it entirely.
-    match rate_limit::check_with_nonce(
+    // S11-T5: without Redis the nonce is first claimed in Postgres, so a
+    // restart cannot reopen the replay window.
+    let guard = match rate_limit::claim_nonce_durably(
         &state.redis_coordination,
+        &state.db,
         &record.client_id,
         &nonce,
-        record.rate_limit_rpm,
     )
     .await
     {
+        Ok(()) => {
+            rate_limit::check_with_nonce(
+                &state.redis_coordination,
+                &record.client_id,
+                &nonce,
+                record.rate_limit_rpm,
+            )
+            .await
+        }
+        Err(e) => Err(e),
+    };
+    match guard {
         Ok(()) => {}
         Err(e @ AppError::Conflict(_)) => {
             tracing::warn!(

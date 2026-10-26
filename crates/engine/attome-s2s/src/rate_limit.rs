@@ -142,6 +142,71 @@ pub async fn check_with_nonce(
     verdict(nonce_fresh != 0, count, limit_rpm)
 }
 
+/// S11-T5: on a deployment without Redis (Solo, [`Store::Memory`]) a nonce
+/// is claimed in Postgres (`s2s_nonce`) before the in-process guard runs,
+/// so a restart does not forget it and reopen the replay window. With Redis
+/// the nonce lives there, shared by every node, and this is a no-op.
+///
+/// Fails closed: an unreachable database refuses the request, as an
+/// unreachable Redis does.
+pub async fn claim_nonce_durably(
+    redis: &Store,
+    db: &attome_db::DbPool,
+    client_id: &str,
+    nonce: &str,
+) -> Result<(), AppError> {
+    if matches!(redis, Store::Redis(_)) {
+        return Ok(());
+    }
+    // An expired row is a nonce nobody can replay any more: it may be
+    // claimed again.
+    let claimed = sqlx::query(
+        "INSERT INTO s2s_nonce (client_id, nonce, expires_at) \
+         VALUES ($1, $2, NOW() + make_interval(secs => $3)) \
+         ON CONFLICT (client_id, nonce) DO UPDATE SET expires_at = EXCLUDED.expires_at \
+         WHERE s2s_nonce.expires_at <= NOW()",
+    )
+    .bind(client_id)
+    .bind(nonce)
+    .bind(NONCE_TTL_SECS as f64)
+    .execute(db)
+    .await
+    .map(|done| done.rows_affected());
+    let verdict = nonce_claim_verdict(claimed.map_err(|e| e.to_string()));
+    if verdict.is_ok() && rand::random::<u8>() < 4 {
+        sweep_expired_nonces(db).await;
+    }
+    verdict
+}
+
+/// The decision on a durable nonce claim. Pure: one row written is a fresh
+/// nonce, none a replay, and a store error refuses (fail closed).
+pub fn nonce_claim_verdict(claimed: Result<u64, String>) -> Result<(), AppError> {
+    match claimed {
+        Ok(0) => {
+            metrics::counter!("security_rejection_total", "reason" => "s2s_replay").increment(1);
+            Err(AppError::Conflict("replay: nonce already used"))
+        }
+        Ok(_) => Ok(()),
+        Err(e) => Err(AppError::internal(format!("s2s nonce store failed: {e}"))),
+    }
+}
+
+/// Deletes a small batch of expired nonces (about one call in sixty-four
+/// does it, so the table stays near the live window). A failure is logged;
+/// the rows are swept by a later call.
+async fn sweep_expired_nonces(db: &attome_db::DbPool) {
+    if let Err(e) = sqlx::query(
+        "DELETE FROM s2s_nonce WHERE ctid IN \
+         (SELECT ctid FROM s2s_nonce WHERE expires_at <= NOW() LIMIT 200)",
+    )
+    .execute(db)
+    .await
+    {
+        tracing::warn!(error = %e, "s2s: expired nonce sweep failed");
+    }
+}
+
 /// The decision shared by both backends.
 fn verdict(nonce_fresh: bool, count: i64, limit_rpm: i32) -> Result<(), AppError> {
     if !nonce_fresh {
@@ -165,7 +230,23 @@ fn verdict(nonce_fresh: bool, count: i64, limit_rpm: i32) -> Result<(), AppError
 
 #[cfg(test)]
 mod tests {
-    use super::{NONCE_TTL_SECS, TIMESTAMP_WINDOW_SECS};
+    use super::{NONCE_TTL_SECS, TIMESTAMP_WINDOW_SECS, nonce_claim_verdict};
+    use attome_types::AppError;
+
+    /// S11-T5: a durable claim that wrote its row is fresh, one that wrote
+    /// none is a replay, and an unreachable store refuses.
+    #[test]
+    fn revocation_store_claims_fail_closed() {
+        assert!(nonce_claim_verdict(Ok(1)).is_ok());
+        assert!(matches!(
+            nonce_claim_verdict(Ok(0)),
+            Err(AppError::Conflict(_))
+        ));
+        assert!(matches!(
+            nonce_claim_verdict(Err("connection refused".into())),
+            Err(AppError::Internal(_))
+        ));
+    }
 
     /// B10: a request stamped up to `TIMESTAMP_WINDOW_SECS` in the future is
     /// still inside the window `2·window` seconds after it was received, so

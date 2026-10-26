@@ -142,9 +142,14 @@ impl ClientDirectory for PgClientDirectory<'_> {
         // most five minutes plus leeway). The request counts in the
         // client's per-minute window like a signed call; the endpoint's own
         // limit is its pre-auth budget, so no limit is checked here.
-        match rate_limit::check_with_nonce(self.redis, client_id, &format!("jwt:{jti}"), i32::MAX)
-            .await
-        {
+        let nonce = format!("jwt:{jti}");
+        // S11-T5: durable on a deployment without Redis.
+        match rate_limit::claim_nonce_durably(self.redis, self.db, client_id, &nonce).await {
+            Ok(()) => {}
+            Err(AppError::Conflict(_)) => return Ok(false),
+            Err(e) => return Err(e),
+        }
+        match rate_limit::check_with_nonce(self.redis, client_id, &nonce, i32::MAX).await {
             Ok(()) => Ok(true),
             Err(AppError::Conflict(_)) => Ok(false),
             Err(e) => Err(e),
