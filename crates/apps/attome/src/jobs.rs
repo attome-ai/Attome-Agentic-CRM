@@ -3023,6 +3023,8 @@ const DEDUP_KEY_BLOCKLIST_CHECK: &str = "marketing-blocklist-check";
 const DEDUP_KEY_REPUTATION_FETCH: &str = "marketing-reputation-fetch";
 /// E6-T4: the daily deliverability rollup (a registered job type).
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
+/// F11-T9: the nightly loyalty revenue run (a registered job type).
+const DEDUP_KEY_REVREC_LOYALTY: &str = "revrec-loyalty";
 /// G17-T10: the nightly adherence roll-up (a registered job type).
 const DEDUP_KEY_WFM_ADHERENCE_DAY: &str = "wfm-adherence-day";
 /// E15-T1: the nightly attribution run (a registered job type).
@@ -3222,6 +3224,10 @@ pub const EMAIL_CAMPAIGN: attome_jobs::JobType = attome_jobs::JobType::new("emai
 /// E6-T4: today's and yesterday's deliverability rollup, recomputed.
 pub const DELIVERABILITY_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new("deliverability_rollup", 1);
+
+/// F11-T9: loyalty points deferred and recognised, nightly.
+pub const REVREC_LOYALTY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ledger::revrec::loyalty::JOB, 1);
 
 /// G17-T10: yesterday's adherence and conformance per person, nightly.
 pub const WFM_ADHERENCE_DAY: attome_jobs::JobType =
@@ -4981,6 +4987,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            REVREC_LOYALTY,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_LEDGER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                attome_ledger::revrec::loyalty::sweep(&state, chrono::Utc::now())
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             WFM_ADHERENCE_DAY,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_WORKFORCE) {
@@ -5418,6 +5438,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == WFM_ADHERENCE_DAY.name => {
             DEDUP_KEY_WFM_ADHERENCE_DAY
         }
+        EngineJob::Registered(job) if job.name == REVREC_LOYALTY.name => DEDUP_KEY_REVREC_LOYALTY,
         EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
             DEDUP_KEY_SOCIAL_REVIEWS_SYNC
         }
@@ -6991,6 +7012,25 @@ pub fn spawn_deliverability_rollup_scheduler(db: DbPool, interval: std::time::Du
         job,
         DEDUP_KEY_DELIVERABILITY_ROLLUP,
         "deliverability rollup",
+    );
+}
+
+/// F11-T9: nightly, loyalty points deferred and recognised.
+pub fn spawn_revrec_loyalty_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(REVREC_LOYALTY.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "loyalty revenue: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_REVREC_LOYALTY,
+        "loyalty revenue",
     );
 }
 

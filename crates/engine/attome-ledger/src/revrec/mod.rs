@@ -8,6 +8,8 @@
 pub mod allocation;
 /// F11-T3: contracts from orders and subscriptions, and combining them.
 pub mod contract;
+/// F11-T9: loyalty points deferred as a material right.
+pub mod loyalty;
 /// F11-T5: the recognition patterns, as amounts per period.
 pub mod patterns;
 pub mod schedule;

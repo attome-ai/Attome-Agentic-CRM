@@ -606,6 +606,26 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // F11-T9: loyalty points as a material right.
+        SettingDescriptor::new(
+            "revrec.loyalty_point_value",
+            "The value of one loyalty point in the order's currency, used to defer part of an \
+         order's price for the points it earns (F11-T9). 0 by default: no loyalty revenue is \
+         deferred.",
+            || json!({"type": "number", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+        SettingDescriptor::new(
+            "revrec.loyalty_breakage_percent",
+            "The percent of loyalty points expected never to be used; it lowers the deferred \
+         amount and raises the revenue each used point recognises (F11-T9). 0 by default.",
+            || json!({"type": "number", "minimum": 0, "maximum": 100}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
         // F11-T4: the SSP fallbacks.
         SettingDescriptor::new(
             "revrec.ssp_list_discount_percent",

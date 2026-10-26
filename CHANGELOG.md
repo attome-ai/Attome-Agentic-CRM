@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Loyalty points as deferred revenue (F11-T9): with revenue contracts on and the new setting
+  `revrec.loyalty_point_value` above 0, a nightly job adds a `loyalty_points` obligation to the
+  contract of each order that earned points (priced net of `revrec.loyalty_breakage_percent`) and
+  recognises it as the member's points are redeemed, first in first out, releasing the rest once a
+  lot is used up with some expired.
 - Schedule adherence (G17-T10): minute rows per person (migration 0289) compare presence, read
   through a `PresenceSource` until J10's presence events exist, with the published schedule held
   per node and rebuilt from the database; the tolerance is `workforce.adherence_tolerance_minutes`

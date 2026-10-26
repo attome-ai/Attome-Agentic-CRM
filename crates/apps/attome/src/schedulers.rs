@@ -309,6 +309,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(3600),
     );
+    // F11-T9: loyalty points deferred and recognised, daily.
+    crate::jobs::spawn_revrec_loyalty_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // G17-T10: yesterday's adherence roll-up, daily.
     crate::jobs::spawn_wfm_adherence_day_scheduler(
         db.clone(),
