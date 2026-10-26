@@ -4,6 +4,8 @@
 //! metadata from the matching pack; this crate holds the engine code that acts on them as later
 //! tasks add it. Gated on the `workforce` module.
 
+/// G17-T10: schedule adherence by the minute and by the day.
+pub mod adherence;
 pub mod admin;
 pub mod build_job;
 pub mod intraday;
@@ -27,5 +29,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(what_if::openapi_fragment());
     doc.merge(self_service::openapi_fragment());
     doc.merge(intraday::openapi_fragment());
+    doc.merge(adherence::openapi_fragment());
     doc
 }

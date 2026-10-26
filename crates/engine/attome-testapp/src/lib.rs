@@ -254,6 +254,8 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         .register(attome_einvoice::EinvoiceModel)
         // F6-T11: delivery proof routes.
         .register(attome_fulfilment::FulfilmentModel)
+        // G17-T10: the adherence routes.
+        .register(attome_workforce::WorkforceModel)
         .register(attome_document::engine::DocumentModel)
         // AB4-T6: the ops engine's routes (drill evidence, schedules).
         .register(attome_ops::OpsModel)

@@ -309,6 +309,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(3600),
     );
+    // G17-T10: yesterday's adherence roll-up, daily.
+    crate::jobs::spawn_wfm_adherence_day_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // E15-T1: attribution credit for won opportunities, daily.
     crate::jobs::spawn_marketing_attribution_scheduler(
         db.clone(),

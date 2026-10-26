@@ -1,0 +1,37 @@
+{
+  "author": "packs",
+  "checksum": "sha256:fc51a1fbdd1899cf38d64985ff9ed282d04ee2ee8727f9d0ee8d3ddf68f37dde",
+  "closed_at": "2026-10-26T00:00:00Z",
+  "description": "Workforce adherence (G17-T10): the privilege a supervisor holds to watch their planning group's adherence live.",
+  "format": "attome-changeset/v1",
+  "id": "01a1786e-abab-7839-9f94-ab81fea7ab69",
+  "layer": "product",
+  "name": "workforce-adherence",
+  "opened_at": "2026-10-26T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Watch a planning group's schedule adherence live (members of the group only).",
+          "key": "wfm_adherence.read",
+          "name": "Read Schedule Adherence"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "wfm_adherence.read"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "workforce",
+  "seq": 4,
+  "title": "Pack: workforce adherence privilege"
+}

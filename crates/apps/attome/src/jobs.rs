@@ -3023,6 +3023,8 @@ const DEDUP_KEY_BLOCKLIST_CHECK: &str = "marketing-blocklist-check";
 const DEDUP_KEY_REPUTATION_FETCH: &str = "marketing-reputation-fetch";
 /// E6-T4: the daily deliverability rollup (a registered job type).
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
+/// G17-T10: the nightly adherence roll-up (a registered job type).
+const DEDUP_KEY_WFM_ADHERENCE_DAY: &str = "wfm-adherence-day";
 /// E15-T1: the nightly attribution run (a registered job type).
 const DEDUP_KEY_MARKETING_ATTRIBUTION: &str = "marketing-attribution";
 /// E7-T6: the live segment tick (a registered job type).
@@ -3220,6 +3222,10 @@ pub const EMAIL_CAMPAIGN: attome_jobs::JobType = attome_jobs::JobType::new("emai
 /// E6-T4: today's and yesterday's deliverability rollup, recomputed.
 pub const DELIVERABILITY_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new("deliverability_rollup", 1);
+
+/// G17-T10: yesterday's adherence and conformance per person, nightly.
+pub const WFM_ADHERENCE_DAY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_workforce::adherence::DAY_JOB, 1);
 
 /// E15-T1: attribution credit for won opportunities, nightly.
 pub const MARKETING_ATTRIBUTION: attome_jobs::JobType =
@@ -4975,6 +4981,24 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WFM_ADHERENCE_DAY,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_WORKFORCE) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let today = chrono::Utc::now().date_naive();
+                attome_workforce::adherence::roll_up_day(
+                    &state.base.db,
+                    today.pred_opt().unwrap_or(today),
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             MARKETING_ATTRIBUTION,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
@@ -5390,6 +5414,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == MARKETING_ATTRIBUTION.name => {
             DEDUP_KEY_MARKETING_ATTRIBUTION
+        }
+        EngineJob::Registered(job) if job.name == WFM_ADHERENCE_DAY.name => {
+            DEDUP_KEY_WFM_ADHERENCE_DAY
         }
         EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
             DEDUP_KEY_SOCIAL_REVIEWS_SYNC
@@ -6964,6 +6991,25 @@ pub fn spawn_deliverability_rollup_scheduler(db: DbPool, interval: std::time::Du
         job,
         DEDUP_KEY_DELIVERABILITY_ROLLUP,
         "deliverability rollup",
+    );
+}
+
+/// G17-T10: nightly, yesterday's adherence roll-up.
+pub fn spawn_wfm_adherence_day_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(WFM_ADHERENCE_DAY.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "adherence roll-up: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_WFM_ADHERENCE_DAY,
+        "adherence roll-up",
     );
 }
 

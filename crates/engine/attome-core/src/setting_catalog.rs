@@ -583,6 +583,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(48),
         ),
+        // G17-T10: how far a change of activity may drift.
+        SettingDescriptor::new(
+            "workforce.adherence_tolerance_minutes",
+            "How many minutes before or after a scheduled change of activity (a break, the end of \
+         a shift) a person may still be doing the other activity and count as in adherence \
+         (G17-T10). 3 by default, at most 30.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 30}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(3),
+        ),
         // F6-T11: a one-time code at delivery.
         SettingDescriptor::new(
             "fulfilment.delivery.otp",

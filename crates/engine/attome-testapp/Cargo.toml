@@ -24,6 +24,7 @@ attome-docgen.workspace   = true
 attome-document.workspace = true
 attome-einvoice.workspace = true
 attome-fulfilment.workspace = true
+attome-workforce.workspace = true
 attome-modules.workspace  = true
 attome-ops.workspace      = true
 attome-records.workspace  = true

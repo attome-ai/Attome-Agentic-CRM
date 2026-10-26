@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Schedule adherence (G17-T10): minute rows per person (migration 0289) compare presence, read
+  through a `PresenceSource` until J10's presence events exist, with the published schedule held
+  per node and rebuilt from the database; the tolerance is `workforce.adherence_tolerance_minutes`
+  (3). A nightly job writes each person's adherence and conformance per day and keeps minute rows
+  35 days. `GET /api/v1/workforce/adherence/live?group=` (new privilege `wfm_adherence.read`, workforce
+  pack changeset 0004, members of the group only) and `GET /api/v1/workforce/me/adherence`.
 - KPI trees in dependency order (P9-T8): the scheduled snapshot sweep now also computes formula
   metrics, after their children (`parent_ref`) and formula inputs, so a formula reads the same
   run's snapshots; a cycle leaves formula metrics out and is logged.
