@@ -241,7 +241,7 @@ pub fn area(key: &str) -> &'static str {
         Some("limits") => "operations",
         Some("compliance") => "security",
         Some("email" | "mail_capture" | "voice" | "service" | "marketing") => "channels",
-        Some("scan" | "search") => "data",
+        Some("scan" | "search" | "integration") => "data",
         Some("i18n") => "general",
         Some("notification") => "channels",
         Some("approval" | "jobs") => "operations",
@@ -483,6 +483,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "fulfilment.default_location_id" => {
             "موقع المخزون الذي تُشحن منه أوامر التنفيذ للطلب المؤكد. إن لم يُحدد يُستخدم موقع المخزون الوحيد في النشر؛ وإن تعددت المواقع دون تحديد لا تُقسم الطلبات."
+        }
+        "integration.warehouse_entities" => {
+            "الكيانات التي تُصدَّر تغييرات سجلاتها كل بضع دقائق ملفاتِ Parquet في التخزين، ملفًا لكل ساعة تغيير مع بيان بالملفات؛ فارغة افتراضيًا أي أن التصدير متوقف، ولا تُصدَّر الحقول الحساسة أبدًا."
         }
         "search.personal_weights" => {
             "إضافات صغيرة إلى ترتيب نتيجة البحث لسجل يملكه الشخص أو فتحه من بحث خلال آخر 30 يومًا أو يملكه فريق من فرقه، كل منها من 0 إلى 1؛ كلها 0 افتراضيًا. لا تُعيد إلا ترتيب ما يستطيع الشخص رؤيته أصلًا."

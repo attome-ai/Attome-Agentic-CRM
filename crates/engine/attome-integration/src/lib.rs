@@ -38,6 +38,8 @@ pub mod search_console;
 /// J4-T1: SMS sending and delivery receipts.
 pub mod sms;
 pub mod system;
+/// P13-T1: incremental Parquet export of record changes for a warehouse.
+pub mod warehouse_export;
 pub mod webhook;
 
 /// D-351 — this crate's advisory-lock namespace (registry:

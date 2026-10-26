@@ -436,6 +436,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!("SA"),
         ),
+        // P13-T1: the entities the warehouse export writes; none by default.
+        SettingDescriptor::new(
+            "integration.warehouse_entities",
+            "The entities whose record changes are exported every few minutes as Parquet files \
+         under `warehouse/{entity}/` in object storage, one per hour of change, with a manifest \
+         (P13-T1). Empty by default: the export is off. Sensitive attributes are never exported.",
+            || json!({"type": "array", "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}, "maxItems": 200}),
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
         // A25-T3: personal ranking, off until a deployment sets weights.
         SettingDescriptor::new(
             "search.personal_weights",

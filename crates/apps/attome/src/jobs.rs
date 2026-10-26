@@ -3076,6 +3076,8 @@ const DEDUP_KEY_EMAIL_DOMAIN_CHECK: &str = "email-domain-check";
 const DEDUP_KEY_CALENDAR_FEED_FETCH: &str = "calendar-feed-fetch";
 /// A23-T7: the recurring-import tick (a registered job type).
 const DEDUP_KEY_IMPORT_SCHEDULE_TICK: &str = "import-schedule-tick";
+/// P13-T1: the warehouse export (a registered job type).
+const DEDUP_KEY_WAREHOUSE_EXPORT: &str = "warehouse-export";
 /// E13-T10: the daily search-console pull (a registered job type).
 const DEDUP_KEY_CONTENT_SEARCH_CONSOLE: &str = "content-search-console";
 /// R11-T1: evidence collectors (a registered job type).
@@ -3426,6 +3428,10 @@ pub const IMPORT_APPLY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_document::import_jobs::APPLY_JOB, 1);
 pub const IMPORT_UNDO: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_document::import_jobs::UNDO_JOB, 1);
+
+/// P13-T1: the warehouse export, every five minutes when entities are named.
+pub const WAREHOUSE_EXPORT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_integration::warehouse_export::JOB, 1);
 
 /// A23-T7: recurring imports that are due, every minute.
 pub const IMPORT_SCHEDULE_TICK: attome_jobs::JobType =
@@ -4598,6 +4604,20 @@ pub fn register_job_types() {
         ) {
             tracing::error!(%error, "job type registration failed");
         }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WAREHOUSE_EXPORT,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let files = attome_integration::warehouse_export::run(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if files > 0 {
+                    tracing::info!(files, "warehouse export wrote files");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         // A23-T7: one handler per import phase; the payload names the job.
         {
             use attome_document::import_jobs::{Phase, PhaseJob};
@@ -5216,6 +5236,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == IMPORT_SCHEDULE_TICK.name => {
             DEDUP_KEY_IMPORT_SCHEDULE_TICK
+        }
+        EngineJob::Registered(job) if job.name == WAREHOUSE_EXPORT.name => {
+            DEDUP_KEY_WAREHOUSE_EXPORT
         }
         EngineJob::Registered(job) if job.name == CONTENT_SEARCH_CONSOLE.name => {
             DEDUP_KEY_CONTENT_SEARCH_CONSOLE
@@ -6606,6 +6629,22 @@ pub fn spawn_email_domain_check_scheduler(db: DbPool, interval: std::time::Durat
             "email domain check",
         ),
         Err(error) => tracing::error!(%error, "email domain check: not scheduled"),
+    }
+}
+
+/// P13-T1: every five minutes, the warehouse export (a no-op until the
+/// setting names entities).
+pub fn spawn_warehouse_export_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(WAREHOUSE_EXPORT.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_WAREHOUSE_EXPORT,
+            "warehouse export",
+        ),
+        Err(error) => tracing::error!(%error, "warehouse export: not scheduled"),
     }
 }
 

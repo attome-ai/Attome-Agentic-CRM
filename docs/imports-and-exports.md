@@ -105,3 +105,20 @@ done, a link per file part.
 - `split_rows` (Parquet, 1,000,000 by default): a new file part each time one fills.
 - CSV and XLSX dates follow the person's calendar and digits settings; formula-like text is
   written as text.
+
+## Warehouse export
+
+For a data warehouse, the setting `integration.warehouse_entities` names the entities whose
+record changes are exported (none by default). Every five minutes the server reads the change
+feed after its own cursor (`attome-integration/warehouse-export`) and writes one Parquet file per
+entity and hour of change, `warehouse/{entity}/{yyyy}/{mm}/{dd}/{HH}/{first}-{last}.parquet`:
+
+- columns `_op` (`upsert` or `delete`), `_event_id`, `_changed_at`, `id`, `row_version` and the
+  entity's attributes, every value as text; sensitive attributes are never exported;
+- a record changed several times in one file appears once, as it is now; a deleted record is a
+  tombstone with only its id;
+- each file carries `attome.schema_version` (a hash of its columns) in its metadata.
+
+The manifest is the table `warehouse_export_file` and its copy `warehouse/{entity}/manifest.json`.
+The cursor moves only after the files are stored, and a repeated run writes the same object keys,
+so a loader never sees an event twice under two names.

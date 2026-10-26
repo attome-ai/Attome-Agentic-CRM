@@ -13,6 +13,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Warehouse export (P13-T1): with `integration.warehouse_entities` set, record changes are
+  exported every five minutes from the change feed to Parquet files per entity and hour of change
+  (`warehouse/{entity}/...`), deletes as tombstones, a schema version per file, and a manifest
+  (table `warehouse_export_file`, migration 0278, and `warehouse/{entity}/manifest.json`).
 - Search ranking controls (A25-T3): every full search now applies the administrator's synonyms
   (`search_synonym`, as extra lexical alternatives), stop words (`search_stopword`, dropped unless
   they are the whole query), entity boosts (`search_entity_setting.boost`) and pins (`search_pin`,

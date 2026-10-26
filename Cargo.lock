@@ -1555,6 +1555,8 @@ dependencies = [
 name = "attome-integration"
 version = "0.1.0"
 dependencies = [
+ "arrow-array",
+ "arrow-schema",
  "async-imap",
  "attome-audit",
  "attome-auth",
@@ -1568,10 +1570,12 @@ dependencies = [
  "attome-records",
  "attome-security",
  "attome-server",
+ "attome-storage",
  "attome-testkit",
  "attome-types",
  "axum",
  "base64 0.23.1",
+ "bytes",
  "chrono",
  "fred",
  "futures-util",
@@ -1579,6 +1583,7 @@ dependencies = [
  "hmac 0.12.1",
  "mail-parser",
  "metrics",
+ "parquet",
  "reqwest",
  "serde",
  "serde_json",

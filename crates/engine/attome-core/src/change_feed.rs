@@ -740,6 +740,8 @@ const INTERNAL_PREFIXES: &[&str] = &[
     "attome-commission/",
     "attome-notification/",
     "attome-ai/",
+    // P13-T1: the warehouse export.
+    "attome-integration/",
 ];
 
 /// L7-T1: the lag a new cursor for `consumer` allows.
