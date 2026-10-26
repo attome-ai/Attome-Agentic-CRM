@@ -138,6 +138,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/email.md"),
     ),
     (
+        "docs/fulfilment-delivery.md",
+        include_str!("../../../../../docs/fulfilment-delivery.md"),
+    ),
+    (
         "docs/hijri.md",
         include_str!("../../../../../docs/hijri.md"),
     ),
@@ -173,6 +177,10 @@ pub const DOCS: &[(&str, &str)] = &[
     (
         "docs/metadata-versions.md",
         include_str!("../../../../../docs/metadata-versions.md"),
+    ),
+    (
+        "docs/metrics.md",
+        include_str!("../../../../../docs/metrics.md"),
     ),
     (
         "docs/model-servers.md",
