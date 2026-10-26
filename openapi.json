@@ -73715,6 +73715,690 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/catalog/access-requests/{id}/decide": {
+      "post": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Decide an access request",
+        "description": "The asset's owner (an administrator, or the steward or deputy of its data\ndomain) grants a role or refuses. A grant takes the same path as the\nadmin role assignment: step-up, the grant ceiling and the approval gate,\nso a gated grant waits for a second administrator.",
+        "operationId": "catalog_decide_access",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The access request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogAccessDecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The decided request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogAccessRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The role carries privileges the owner lacks, or step-up is needed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such request the caller owns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request is already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A grant without a role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "grant"
+            },
+            {
+              "category": "business_event",
+              "operation": "rejected"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/catalog/assets": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Search the catalogue",
+        "description": "The assets the caller may see (entities and attributes they may read,\nand every other kind), best match first, with counts by kind, domain and\nlabel. Needs `metadata.read`.",
+        "operationId": "catalog_search_assets",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Words matched against names and descriptions in English and Arabic.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "description": "One asset kind (`entity`, `attribute`, `view`, …).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "description": "One data domain.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "description": "One label.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of assets and the facet counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogAssetSearch"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks metadata.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/catalog/assets/{id}": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "One asset's page",
+        "description": "The asset with its domain, label, glossary terms, quality, profile,\nlineage, usage, certification and history; a fact whose feature this\ndeployment lacks is null. Needs `metadata.read` and sight of the asset.",
+        "operationId": "catalog_get_asset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The asset",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The asset page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogAssetPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks metadata.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such asset the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/catalog/assets/{id}/access-requests": {
+      "post": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Ask for access to an asset",
+        "description": "Records why the caller needs access (and the role, when they know it)\nfor the asset's owner to decide. One pending request per person and\nasset. Needs `metadata.read`.",
+        "operationId": "catalog_request_access",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The asset",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogAccessRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogAccessRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks metadata.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such asset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The caller already has a pending request for it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason, or one too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "submitted"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/catalog/assets/{id}/description": {
+      "patch": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Propose an asset's description",
+        "description": "Sets the English and/or Arabic description of an asset the caller may\nsee; it is a draft until a builder approves it. Send the asset's\n`row_version` in `If-Match`. Needs `metadata.read`.",
+        "operationId": "catalog_set_description",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The asset",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The asset's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogDescriptionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The drafted description",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogAssetSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks metadata.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such asset the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The asset changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing If-Match, no description, or one too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/catalog/assets/{id}/description/approve": {
+      "post": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Approve an asset's description",
+        "description": "Marks a drafted description reviewed. Builders (administrators) only.\nSend the asset's `row_version` in `If-Match`.",
+        "operationId": "catalog_approve_description",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The asset",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The asset's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The approved description",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogAssetSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such asset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The asset changed, or its description is not a draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or malformed If-Match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/catalog/entities": {
       "get": {
         "tags": [
@@ -73894,6 +74578,174 @@
           },
           "422": {
             "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/catalog/export": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Export the catalogue",
+        "description": "Every asset's metadata (names, descriptions, domain, label,\ncertification; never record values) for a harvester such as Purview or\nCollibra. Administrators only, and only while `catalog.export_enabled`\nis on (404 otherwise).",
+        "operationId": "catalog_export",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the catalogue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CatalogExportAsset"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The export is turned off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/catalog/personal-data-map": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "The personal data map",
+        "description": "Every attribute labelled personal, financial or health that the caller\nmay see, with what reads it: stored queries and reports, flows,\ndashboards and rules, from the metadata references (a reader of the\nwhole entity is marked so). Metadata only. Needs `metadata.read`.",
+        "operationId": "catalog_personal_data_map",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of labelled attributes and their readers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PersonalDataItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks metadata.read",
             "content": {
               "application/json": {
                 "schema": {
@@ -127549,7 +128401,7 @@
           "entity"
         ],
         "summary": "A record's timeline",
-        "description": "One record's activity feed: changes, communications, notes, tasks and the rest, for a caller who may read the record.",
+        "description": "One record's activity feed: changes, communications, notes, tasks, approvals, flow and agent runs, with who or what made each entry, and the related records the deployment rolls in; filtered by kind, actor, channel, dates and words. For a caller who may read the record.",
         "operationId": "get_record_timeline",
         "parameters": [
           {
@@ -127593,10 +128445,67 @@
           {
             "name": "kinds",
             "in": "query",
-            "description": "Comma-separated kinds to include (`audit_event`, `state_transition`,\n`communication`, `note`, `activity`, `decision`). Omitted or empty means\nevery kind. An unknown kind is a 422.",
+            "description": "Comma-separated kinds to include (`audit_event`, `state_transition`,\n`communication`, `note`, `activity`, `decision`, `approval`,\n`flow_run`, `agent_run`). Omitted or empty means every kind. An unknown\nkind is a 422.",
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "description": "Only entries this user made (or an agent or flow made for them).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "description": "Only communications on this channel (`email`, `phone`, …).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Only entries at or after this time.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Only entries before this time.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Words to find in the entries' text, up to 200 characters.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "related",
+            "in": "query",
+            "description": "Whether related records roll in (`records.timeline_roll_in`); default\ntrue.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -127642,7 +128551,7 @@
             }
           },
           "422": {
-            "description": "Malformed cursor or unknown kind",
+            "description": "Malformed cursor, unknown kind, from not before to, or q too long",
             "content": {
               "application/json": {
                 "schema": {
@@ -133103,6 +134012,16 @@
             "minimum": 0
           }
         }
+      },
+      "ActorKind": {
+        "type": "string",
+        "description": "B1-T1: who made a timeline entry.",
+        "enum": [
+          "person",
+          "agent",
+          "flow",
+          "system"
+        ]
       },
       "AddChoiceBody": {
         "type": "object",
@@ -141238,6 +142157,326 @@
         },
         "additionalProperties": false
       },
+      "CatalogAccessDecisionBody": {
+        "type": "object",
+        "description": "Decides an access request.",
+        "required": [
+          "grant"
+        ],
+        "properties": {
+          "grant": {
+            "type": "boolean",
+            "description": "`true` grants the role; `false` refuses."
+          },
+          "role_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The role to grant; the one asked for when omitted."
+          },
+          "valid_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the granted role ends (Q10)."
+          }
+        }
+      },
+      "CatalogAccessRequest": {
+        "type": "object",
+        "description": "A request for access to an asset.",
+        "required": [
+          "id",
+          "asset_id",
+          "requester_id",
+          "reason",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "When the grant waits for a second administrator (D-195)."
+          },
+          "asset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decided_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "decided_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "requester_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The role asked for or granted."
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `granted`, `refused` or `withdrawn`."
+          }
+        }
+      },
+      "CatalogAccessRequestBody": {
+        "type": "object",
+        "description": "Asks for access.",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "role_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The role that would give the access, when the requester knows it."
+          }
+        }
+      },
+      "CatalogAssetPage": {
+        "type": "object",
+        "description": "Everything known about one asset, each fact from the feature that owns\nit; a fact whose feature this deployment lacks (its table is absent) is\n`null`, not an error.",
+        "required": [
+          "asset"
+        ],
+        "properties": {
+          "asset": {
+            "$ref": "#/components/schemas/CatalogAssetSummary"
+          },
+          "certification": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Its certification, when certified."
+          },
+          "domain": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The data domain (M15): id, name, description, steward."
+          },
+          "history": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object"
+            },
+            "description": "The entity's latest metadata changes."
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lineage": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object"
+            },
+            "description": "What reads the entity (or the attribute): queries, flows, dashboards, rules."
+          },
+          "profile": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The latest completed profile of the entity (an attribute's own\ncolumn only, for an attribute)."
+          },
+          "quality": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object"
+            },
+            "description": "The latest quality score per dimension of the asset's entity."
+          },
+          "terms": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object"
+            },
+            "description": "Glossary terms of the asset's entity."
+          },
+          "usage": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The entity's nightly usage numbers."
+          }
+        }
+      },
+      "CatalogAssetSearch": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PaginatedResponse_CatalogAssetSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "facets"
+            ],
+            "properties": {
+              "facets": {
+                "$ref": "#/components/schemas/CatalogFacets"
+              }
+            }
+          }
+        ],
+        "description": "A page of assets with the facet counts."
+      },
+      "CatalogAssetSummary": {
+        "type": "object",
+        "description": "One asset as the catalogue lists it.",
+        "required": [
+          "id",
+          "kind",
+          "ref",
+          "description_status",
+          "row_version",
+          "updated_at"
+        ],
+        "properties": {
+          "description_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description_status": {
+            "type": "string",
+            "description": "`missing`, `draft` (proposed, by a person or an agent) or `reviewed`\n(approved by a builder)."
+          },
+          "domain_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`entity`, `attribute`, `option_set`, `view`, `saved_query`, `report`,\n`dashboard`, `metric`, `flow` or `agent_tool`."
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parent_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "description": "The asset's own reference: a logical name, `entity.field` or an id."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CatalogDescriptionBody": {
+        "type": "object",
+        "description": "A description edit.",
+        "properties": {
+          "description_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "CatalogEntityDetail": {
         "type": "object",
         "required": [
@@ -141336,6 +142575,123 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "CatalogExportAsset": {
+        "type": "object",
+        "description": "One asset as the export lists it: metadata only, never record values.",
+        "required": [
+          "kind",
+          "ref",
+          "description_status",
+          "certified",
+          "updated_at"
+        ],
+        "properties": {
+          "certified": {
+            "type": "boolean"
+          },
+          "description_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description_status": {
+            "type": "string"
+          },
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parent_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ref": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CatalogFacet": {
+        "type": "object",
+        "description": "One facet value and its count.",
+        "required": [
+          "value",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "CatalogFacets": {
+        "type": "object",
+        "description": "Counts by kind, domain and label over the visible assets the query matches.",
+        "required": [
+          "kind",
+          "domain",
+          "label"
+        ],
+        "properties": {
+          "domain": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogFacet"
+            }
+          },
+          "kind": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogFacet"
+            }
+          },
+          "label": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogFacet"
+            }
           }
         }
       },
@@ -141485,6 +142841,8 @@
         "required": [
           "record_count",
           "search_impressions_30d",
+          "readers",
+          "unused",
           "computed_at"
         ],
         "properties": {
@@ -141499,6 +142857,10 @@
             ],
             "format": "date-time"
           },
+          "readers": {
+            "type": "object",
+            "description": "L4-T5: readers by kind (`query`, `workflow`, `dashboard`, `rule`)."
+          },
           "record_count": {
             "type": "integer",
             "format": "int64"
@@ -141506,6 +142868,10 @@
           "search_impressions_30d": {
             "type": "integer",
             "format": "int64"
+          },
+          "unused": {
+            "type": "boolean",
+            "description": "L4-T5: no write in 90 days, no search in 30 and no reader."
           }
         }
       },
@@ -148290,11 +149656,25 @@
                 "source_entity",
                 "source_id",
                 "summary",
-                "detail"
+                "detail",
+                "actor_kind",
+                "source_record"
               ],
               "properties": {
+                "actor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "B1-T1: who acted — the user, or the user an agent or flow acted for."
+                },
+                "actor_kind": {
+                  "$ref": "#/components/schemas/ActorKind",
+                  "description": "B1-T1: what kind of actor made the entry."
+                },
                 "detail": {
-                  "description": "Kind-specific detail (audit operation and readable changed fields,\ncommunication subject/channel, note title, activity type, decision\nstatus, …). A JSON object rather than one struct with mostly-empty\nfields across six unrelated shapes."
+                  "description": "Kind-specific detail (audit operation and readable changed fields,\ncommunication subject/channel, note title, activity type, decision\nstatus, approval action and status, flow name, agent actions, …). A\nJSON object rather than one struct with mostly-empty fields across\nunrelated shapes."
                 },
                 "kind": {
                   "$ref": "#/components/schemas/TimelineEntryKind"
@@ -148303,13 +149683,25 @@
                   "type": "string",
                   "format": "date-time"
                 },
+                "run_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "B1-T1: the agent session or flow instance, when the entry came from one."
+                },
                 "source_entity": {
                   "type": "string",
-                  "description": "The entity or ledger table the underlying row belongs to —\n`audit_header`, `audit_detail` (state transitions),\n`communication`, `note`, `activity` or\n`dashboard_decision`."
+                  "description": "The entity or ledger table the underlying row belongs to —\n`audit_header`, `audit_detail` (state transitions),\n`communication`, `note`, `activity`, `dashboard_decision`,\n`approval_request`, `workflow_instance` or `agent_session`."
                 },
                 "source_id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "source_record": {
+                  "$ref": "#/components/schemas/SourceRecord",
+                  "description": "B1-T1: the record the underlying row belongs to: this record, or a\nrelated record rolled in."
                 },
                 "summary": {
                   "type": "string",
@@ -171431,6 +172823,121 @@
           }
         }
       },
+      "PaginatedResponse_CatalogAssetSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One asset as the catalogue lists it.",
+              "required": [
+                "id",
+                "kind",
+                "ref",
+                "description_status",
+                "row_version",
+                "updated_at"
+              ],
+              "properties": {
+                "description_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description_en": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description_status": {
+                  "type": "string",
+                  "description": "`missing`, `draft` (proposed, by a person or an agent) or `reviewed`\n(approved by a builder)."
+                },
+                "domain_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`entity`, `attribute`, `option_set`, `view`, `saved_query`, `report`,\n`dashboard`, `metric`, `flow` or `agent_tool`."
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name_en": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "parent_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ref": {
+                  "type": "string",
+                  "description": "The asset's own reference: a logical name, `entity.field` or an id."
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_CatalogEntitySummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -171475,6 +172982,111 @@
                     "string",
                     "null"
                   ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_CatalogExportAsset": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One asset as the export lists it: metadata only, never record values.",
+              "required": [
+                "kind",
+                "ref",
+                "description_status",
+                "certified",
+                "updated_at"
+              ],
+              "properties": {
+                "certified": {
+                  "type": "boolean"
+                },
+                "description_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description_en": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description_status": {
+                  "type": "string"
+                },
+                "domain": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name_en": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "parent_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ref": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
                 }
               }
             }
@@ -180802,6 +182414,68 @@
           }
         }
       },
+      "PaginatedResponse_PersonalDataItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "An attribute labelled personal, financial or health, and what reads it.",
+              "required": [
+                "entity",
+                "attribute",
+                "sensitivity",
+                "readers"
+              ],
+              "properties": {
+                "attribute": {
+                  "type": "string"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "readers": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalDataReader"
+                  }
+                },
+                "sensitivity": {
+                  "type": "string",
+                  "description": "`personal`, `financial` or `health` (A1-T1)."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_PlanListItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -186855,11 +188529,25 @@
                 "source_entity",
                 "source_id",
                 "summary",
-                "detail"
+                "detail",
+                "actor_kind",
+                "source_record"
               ],
               "properties": {
+                "actor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "B1-T1: who acted — the user, or the user an agent or flow acted for."
+                },
+                "actor_kind": {
+                  "$ref": "#/components/schemas/ActorKind",
+                  "description": "B1-T1: what kind of actor made the entry."
+                },
                 "detail": {
-                  "description": "Kind-specific detail (audit operation and readable changed fields,\ncommunication subject/channel, note title, activity type, decision\nstatus, …). A JSON object rather than one struct with mostly-empty\nfields across six unrelated shapes."
+                  "description": "Kind-specific detail (audit operation and readable changed fields,\ncommunication subject/channel, note title, activity type, decision\nstatus, approval action and status, flow name, agent actions, …). A\nJSON object rather than one struct with mostly-empty fields across\nunrelated shapes."
                 },
                 "kind": {
                   "$ref": "#/components/schemas/TimelineEntryKind"
@@ -186868,13 +188556,25 @@
                   "type": "string",
                   "format": "date-time"
                 },
+                "run_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "B1-T1: the agent session or flow instance, when the entry came from one."
+                },
                 "source_entity": {
                   "type": "string",
-                  "description": "The entity or ledger table the underlying row belongs to —\n`audit_header`, `audit_detail` (state transitions),\n`communication`, `note`, `activity` or\n`dashboard_decision`."
+                  "description": "The entity or ledger table the underlying row belongs to —\n`audit_header`, `audit_detail` (state transitions),\n`communication`, `note`, `activity`, `dashboard_decision`,\n`approval_request`, `workflow_instance` or `agent_session`."
                 },
                 "source_id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "source_record": {
+                  "$ref": "#/components/schemas/SourceRecord",
+                  "description": "B1-T1: the record the underlying row belongs to: this record, or a\nrelated record rolled in."
                 },
                 "summary": {
                   "type": "string",
@@ -188676,6 +190376,61 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PersonalDataItem": {
+        "type": "object",
+        "description": "An attribute labelled personal, financial or health, and what reads it.",
+        "required": [
+          "entity",
+          "attribute",
+          "sensitivity",
+          "readers"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "readers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataReader"
+            }
+          },
+          "sensitivity": {
+            "type": "string",
+            "description": "`personal`, `financial` or `health` (A1-T1)."
+          }
+        }
+      },
+      "PersonalDataReader": {
+        "type": "object",
+        "description": "One reader of a labelled attribute.",
+        "required": [
+          "kind",
+          "ref",
+          "label",
+          "whole_entity"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`query` (a stored query or report), `workflow`, `dashboard` or `rule`."
+          },
+          "label": {
+            "type": "string"
+          },
+          "ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "whole_entity": {
+            "type": "boolean",
+            "description": "It reads the whole entity, not only this attribute."
           }
         }
       },
@@ -204284,6 +206039,23 @@
           }
         }
       },
+      "SourceRecord": {
+        "type": "object",
+        "description": "B1-T1: the record an entry's row belongs to.",
+        "required": [
+          "entity",
+          "id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "SpaceTemplatesBody": {
         "type": "object",
         "description": "Full-set replace for which templates a space's editors may pick from.",
@@ -207811,11 +209583,25 @@
           "source_entity",
           "source_id",
           "summary",
-          "detail"
+          "detail",
+          "actor_kind",
+          "source_record"
         ],
         "properties": {
+          "actor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "B1-T1: who acted — the user, or the user an agent or flow acted for."
+          },
+          "actor_kind": {
+            "$ref": "#/components/schemas/ActorKind",
+            "description": "B1-T1: what kind of actor made the entry."
+          },
           "detail": {
-            "description": "Kind-specific detail (audit operation and readable changed fields,\ncommunication subject/channel, note title, activity type, decision\nstatus, …). A JSON object rather than one struct with mostly-empty\nfields across six unrelated shapes."
+            "description": "Kind-specific detail (audit operation and readable changed fields,\ncommunication subject/channel, note title, activity type, decision\nstatus, approval action and status, flow name, agent actions, …). A\nJSON object rather than one struct with mostly-empty fields across\nunrelated shapes."
           },
           "kind": {
             "$ref": "#/components/schemas/TimelineEntryKind"
@@ -207824,13 +209610,25 @@
             "type": "string",
             "format": "date-time"
           },
+          "run_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "B1-T1: the agent session or flow instance, when the entry came from one."
+          },
           "source_entity": {
             "type": "string",
-            "description": "The entity or ledger table the underlying row belongs to —\n`audit_header`, `audit_detail` (state transitions),\n`communication`, `note`, `activity` or\n`dashboard_decision`."
+            "description": "The entity or ledger table the underlying row belongs to —\n`audit_header`, `audit_detail` (state transitions),\n`communication`, `note`, `activity`, `dashboard_decision`,\n`approval_request`, `workflow_instance` or `agent_session`."
           },
           "source_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "source_record": {
+            "$ref": "#/components/schemas/SourceRecord",
+            "description": "B1-T1: the record the underlying row belongs to: this record, or a\nrelated record rolled in."
           },
           "summary": {
             "type": "string",
@@ -207840,14 +209638,17 @@
       },
       "TimelineEntryKind": {
         "type": "string",
-        "description": "The source an entry came from. Entries sort by their wire name within one\ntimestamp, so the order is stable and documented: `activity`,\n`audit_event`, `communication`, `decision`, `note`, `state_transition`.",
+        "description": "The source an entry came from. Entries sort by their wire name within one\ntimestamp, so the order is stable and documented: `activity`,\n`agent_run`, `approval`, `audit_event`, `communication`, `decision`,\n`flow_run`, `note`, `state_transition`.",
         "enum": [
           "audit_event",
           "state_transition",
           "communication",
           "decision",
           "note",
-          "activity"
+          "activity",
+          "approval",
+          "flow_run",
+          "agent_run"
         ]
       },
       "TimesheetDecisionResponse": {
@@ -213135,6 +214936,6 @@
       }
     }
   },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  "x-version-adapters": [],
+  "x-api-version": "2026-10"
 }
