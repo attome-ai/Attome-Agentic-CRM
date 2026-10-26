@@ -740,6 +740,8 @@ const INTERNAL_PREFIXES: &[&str] = &[
     "attome-commission/",
     "attome-notification/",
     "attome-ai/",
+    // M8-T1: transition exit and entry actions.
+    "attome-state/",
     // P13-T1: the warehouse export.
     "attome-integration/",
 ];
