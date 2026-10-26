@@ -126122,6 +126122,128 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/{entity}/{id}/access/explain": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Explain record access",
+        "description": "Lists the sources of access the record filter applies (administrator, privilege, role level, business unit, ownership, user and team shares, default share, sharing rule, deny) for one person, record and operation, each granting, denying or not applying, with the deciding one marked (Q14-T4). Read only. Another person needs the Security administration area; yourself needs read access to the record.",
+        "operationId": "explain_record_access",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "user",
+            "in": "path",
+            "description": "The person to explain for; the caller when omitted. Someone else\nneeds the Security administration area.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "description": "`read` (default), `update` or `delete`.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The explanation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessExplanation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Asking about someone else without the Security administration area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller cannot read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "{entity}.read",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/{entity}/{id}/actions/{name}": {
       "post": {
         "tags": [
@@ -135635,6 +135757,35 @@
           }
         }
       },
+      "AccessExplanation": {
+        "type": "object",
+        "description": "The answer for one person, record and operation.",
+        "required": [
+          "user_id",
+          "action",
+          "allowed",
+          "sources"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "`read`, `update` or `delete`."
+          },
+          "allowed": {
+            "type": "boolean"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessSource"
+            }
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "AccessLogItem": {
         "type": "object",
         "required": [
@@ -135863,6 +136014,33 @@
           "subject_user_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "AccessSource": {
+        "type": "object",
+        "description": "One source of access, in the order the filter applies them.",
+        "required": [
+          "source",
+          "effect",
+          "detail",
+          "winning"
+        ],
+        "properties": {
+          "detail": {
+            "type": "string",
+            "description": "A short reason, in English."
+          },
+          "effect": {
+            "$ref": "#/components/schemas/Effect"
+          },
+          "source": {
+            "type": "string",
+            "description": "`admin`, `privilege`, `role_level`, `business_unit`, `ownership`,\n`user_share`, `team_share`, `default_share`, `sharing_rule` or `deny`."
+          },
+          "winning": {
+            "type": "boolean",
+            "description": "The source that decides the outcome."
           }
         }
       },
@@ -156672,11 +156850,11 @@
       },
       "Effect": {
         "type": "string",
-        "description": "What the action touches, independent of how risky it is. Kept separate from\n[`RiskTier`] because they answer different questions: `Effect` decides\nwhether an air-gapped deployment can run it at all (I-7), `RiskTier`\ndecides who has to approve it.",
+        "description": "What one source does for the record.",
         "enum": [
-          "Read",
-          "Write",
-          "External"
+          "grants",
+          "denies",
+          "not_applicable"
         ]
       },
       "EffectiveAccess": {
@@ -218995,7 +219173,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -219048,5 +219225,6 @@
       }
     }
   },
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }

@@ -23,6 +23,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Access explainer (Q14-T4): `GET /api/v1/{entity}/{id}/access/explain?user=&action=` lists why a
+  person can or cannot read, change or delete a record: administrator, privilege, role level,
+  business unit, ownership, user and team shares, default share, sharing rule and deny, with the
+  deciding source marked. Asking about someone else needs the Security administration area; asking
+  about yourself needs read access to the record (404 otherwise).
 - Masked fields (Q15-T1): a field-security profile can show a sensitive field masked
   (`mask_format`: `last4`, `email`, `phone` or `full`; migration `0293`). PostgreSQL computes the
   mask in the projection, so the raw value never reaches the client; record get, list, related,

@@ -5,6 +5,7 @@ use attome_core::EngineState;
 use axum::{Router, routing::get};
 
 mod access;
+mod access_explain;
 /// Y12-T8: a renamed attribute's old name during its alias period.
 pub(crate) mod aliases;
 /// A27-T3 — changing a record's type, with a preview.
@@ -179,6 +180,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(timeline_pins::openapi_fragment());
     doc.merge(feed::openapi_fragment());
     doc.merge(record_shares::openapi_fragment());
+    doc.merge(access_explain::openapi_fragment());
     doc.merge(history::openapi_fragment());
     doc.merge(favourites::openapi_fragment());
     doc.merge(clone::openapi_fragment());
@@ -352,6 +354,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/{entity}/{id}/shares",
             get(record_shares::list_shares).post(record_shares::share_record),
+        )
+        .route(
+            "/api/v1/{entity}/{id}/access/explain",
+            get(access_explain::explain_access),
         )
         .route(
             "/api/v1/{entity}/{id}/shares/{share_id}",

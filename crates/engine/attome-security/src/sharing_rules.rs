@@ -96,7 +96,7 @@ impl SharingRule {
     }
 
     /// Whether `ctx` is someone this rule shares with.
-    fn targets(&self, ctx: &SecurityContext) -> bool {
+    pub(crate) fn targets(&self, ctx: &SecurityContext) -> bool {
         match self.target {
             RuleTarget::Unit(unit) => ctx.unit_scope.own_org_ids.contains(&unit),
             RuleTarget::Team(team) => ctx.team_ids.contains(&team),
@@ -130,6 +130,11 @@ pub fn targets_units() -> bool {
         .values()
         .flatten()
         .any(|rule| matches!(rule.target, RuleTarget::Unit(_)))
+}
+
+/// The installed rules for one entity (Q14-T4's explainer).
+pub(crate) fn rules_for(entity_ref: Uuid) -> Vec<SharingRule> {
+    current().get(&entity_ref).cloned().unwrap_or_default()
 }
 
 /// The installed rule set.

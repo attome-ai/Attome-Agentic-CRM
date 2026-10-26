@@ -25366,6 +25366,26 @@ export interface paths {
         patch: operations["update_record"];
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/access/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Explain record access
+         * @description Lists the sources of access the record filter applies (administrator, privilege, role level, business unit, ownership, user and team shares, default share, sharing rule, deny) for one person, record and operation, each granting, denying or not applying, with the deciding one marked (Q14-T4). Read only. Another person needs the Security administration area; yourself needs read access to the record.
+         */
+        get: operations["explain_record_access"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/actions/{name}": {
         parameters: {
             query?: never;
@@ -27076,6 +27096,15 @@ export interface components {
             /** @description The renders, at `GET /api/v1/docgen/renders/{id}`. */
             render_ids: string[];
         };
+        /** @description The answer for one person, record and operation. */
+        AccessExplanation: {
+            /** @description `read`, `update` or `delete`. */
+            action: string;
+            allowed: boolean;
+            sources: components["schemas"]["AccessSource"][];
+            /** Format: uuid */
+            user_id: string;
+        };
         AccessLogItem: {
             correlation_id?: string | null;
             /** Format: date-time */
@@ -27149,6 +27178,19 @@ export interface components {
             revoked_at?: string | null;
             /** Format: uuid */
             subject_user_id: string;
+        };
+        /** @description One source of access, in the order the filter applies them. */
+        AccessSource: {
+            /** @description A short reason, in English. */
+            detail: string;
+            effect: components["schemas"]["Effect"];
+            /**
+             * @description `admin`, `privilege`, `role_level`, `business_unit`, `ownership`,
+             *     `user_share`, `team_share`, `default_share`, `sharing_rule` or `deny`.
+             */
+            source: string;
+            /** @description The source that decides the outcome. */
+            winning: boolean;
         };
         AccountActionResult: {
             otpauth_uri?: string | null;
@@ -35253,13 +35295,10 @@ export interface components {
             query_spec?: Record<string, never> | null;
         };
         /**
-         * @description What the action touches, independent of how risky it is. Kept separate from
-         *     [`RiskTier`] because they answer different questions: `Effect` decides
-         *     whether an air-gapped deployment can run it at all (I-7), `RiskTier`
-         *     decides who has to approve it.
+         * @description What one source does for the record.
          * @enum {string}
          */
-        Effect: "Read" | "Write" | "External";
+        Effect: "grants" | "denies" | "not_applicable";
         /**
          * @description The "effective" half: `SecurityContext` fields as actually resolved right
          *     now, uncached. `privileges` is sorted (the resolver's `HashSet` has no
@@ -135988,6 +136027,74 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    explain_record_access: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record */
+                id: string;
+                /**
+                 * @description The person to explain for; the caller when omitted. Someone else
+                 *     needs the Security administration area.
+                 */
+                user: string | null;
+                /** @description `read` (default), `update` or `delete`. */
+                action: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The explanation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessExplanation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Asking about someone else without the Security administration area */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller cannot read it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown action */
             422: {
                 headers: {
                     [name: string]: unknown;

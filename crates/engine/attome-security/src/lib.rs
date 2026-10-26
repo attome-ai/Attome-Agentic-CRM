@@ -10,6 +10,7 @@ pub mod conditions;
 pub mod context;
 pub mod db;
 pub mod entity_privileges;
+pub mod explain;
 pub mod field_gate;
 pub mod grant_expiry;
 /// Q12-T3: a delegated administrator cannot grant more than they hold.
