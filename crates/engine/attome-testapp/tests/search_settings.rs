@@ -148,3 +148,73 @@ fn pin_hidden_from_unauthorized() {
         );
     });
 }
+
+async fn alerts_for(app: &TestApp, owner: Uuid, name: &str) -> i64 {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM notification_dispatch WHERE recipient_user_ref = $1 AND subject = $2",
+    )
+    .bind(owner)
+    .bind(format!("New results: \"{name}\""))
+    .fetch_one(app.db())
+    .await
+    .unwrap()
+}
+
+/// A25-T8: a saved search with an alert tells its owner once per new match,
+/// not on every run.
+// feature: A25
+#[test]
+fn alert_sends_once_for_new_match() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let tag = &Uuid::now_v7().simple().to_string()[..8];
+        let word = format!("alertword{tag}");
+        let (entity, _) = indexed(&app, &[&format!("{word} first")]).await;
+        let name = format!("Alert {tag}");
+        sqlx::query(
+            "INSERT INTO saved_search (name, query_text, alert_enabled, owner_ref) \
+             VALUES ($1, $2, true, $3)",
+        )
+        .bind(&name)
+        .bind(&word)
+        .bind(app.admin.id)
+        .execute(app.db())
+        .await
+        .unwrap();
+
+        attome_search::saved_search::sweep_alerts(&app.state)
+            .await
+            .unwrap();
+        assert_eq!(alerts_for(&app, app.admin.id, &name).await, 1);
+        attome_search::saved_search::sweep_alerts(&app.state)
+            .await
+            .unwrap();
+        assert_eq!(
+            alerts_for(&app, app.admin.id, &name).await,
+            1,
+            "nothing new"
+        );
+
+        // A second match is new.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}"),
+                Some(json!({ "title": format!("{word} second") })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        let record: Uuid = body["id"].as_str().unwrap().parse().unwrap();
+        let title = format!("{word} second");
+        let row = attome_search::project(&title, None, &title, Vec::new());
+        attome_search::upsert_row(app.db(), &entity, record, &row, None, None, None)
+            .await
+            .unwrap();
+        attome_search::saved_search::sweep_alerts(&app.state)
+            .await
+            .unwrap();
+        assert_eq!(alerts_for(&app, app.admin.id, &name).await, 2);
+    });
+}

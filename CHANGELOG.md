@@ -16,6 +16,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Search quality (A25-T8): `GET /api/v1/admin/search/quality?days=30` answers the zero-result and
+  refinement rates (a second search by the same person within 30 s) overall and per entity, from
+  the impression log; a DB test confirms a saved-search alert tells its owner once per new match.
 - Accessibility checks at publish (B22-T2): validating or publishing a form or a page lists
   findings with their fixes in `warnings` (a section, tab or related list without a label, a page
   title or component name missing in English or Arabic, a field shown twice, an empty section,

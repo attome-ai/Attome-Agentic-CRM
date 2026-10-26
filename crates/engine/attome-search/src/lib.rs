@@ -45,6 +45,8 @@ pub mod lang;
 pub mod legs;
 pub mod metrics;
 pub mod project;
+/// A25-T8: zero-result and refinement rates from the impression log.
+pub mod quality;
 pub mod ranking;
 pub mod router;
 pub mod routes;

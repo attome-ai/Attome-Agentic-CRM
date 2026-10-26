@@ -62,6 +62,7 @@ impl EngineModel for SearchModel {
             .merge(crate::graph::routes())
             .merge(crate::saved_search::routes())
             .merge(crate::suggest::routes())
+            .merge(crate::quality::routes())
     }
 }
 
@@ -73,6 +74,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(crate::graph::openapi_fragment());
     doc.merge(<crate::saved_search::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<crate::suggest::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<crate::quality::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
 
