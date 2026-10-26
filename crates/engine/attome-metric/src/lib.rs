@@ -15,6 +15,8 @@ pub mod lineage;
 pub mod lineage_graph;
 pub mod metric;
 pub mod model;
+/// P9-T8: the order KPI trees compute in.
+pub mod order;
 pub mod principal;
 /// P9-T7: a period's total target spread to a dimension's members.
 pub mod targets;

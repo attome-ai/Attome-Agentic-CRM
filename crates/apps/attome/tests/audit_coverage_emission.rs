@@ -2142,6 +2142,16 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({})),
             )
         }
+        // P9-T8: the tree compute writes its own Execute event.
+        "POST /api/v1/metrics/{id}/compute-tree" => {
+            let id = query_metric(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/metrics/{id}/compute-tree"),
+                t,
+                None,
+            )
+        }
         // P9-T7: a spread writes the total and member targets.
         "POST /api/v1/metrics/{id}/targets/spread" => {
             let id = query_metric(fx).await;

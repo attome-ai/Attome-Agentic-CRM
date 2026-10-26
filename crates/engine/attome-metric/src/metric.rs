@@ -1298,11 +1298,35 @@ pub async fn run_scheduled_snapshot_sweep(state: &EngineState) -> Result<u32, Ap
     let db = &state.base.db;
     let metrics: Vec<MetricDefinitionRow> = sqlx::query_as(&format!(
         "SELECT {METRIC_DEFINITION_COLUMNS} FROM dashboard_metric_definition \
-         WHERE source_kind = 'query' AND (is_active IS NULL OR is_active = true)"
+         WHERE source_kind IN ('query', 'formula') AND (is_active IS NULL OR is_active = true)"
     ))
     .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
+    // P9-T8: children and formula inputs before their parents, so a formula
+    // reads this run's snapshots. With a cycle, only query metrics run.
+    let metrics = match crate::order::load_nodes(db)
+        .await
+        .and_then(|nodes| crate::order::evaluation_order(&nodes))
+    {
+        Ok(order) => {
+            let rank: std::collections::HashMap<Uuid, usize> = order
+                .into_iter()
+                .enumerate()
+                .map(|(i, id)| (id, i))
+                .collect();
+            let mut metrics = metrics;
+            metrics.sort_by_key(|m| rank.get(&m.id).copied().unwrap_or(usize::MAX));
+            metrics
+        }
+        Err(error) => {
+            tracing::warn!(%error, "metric snapshot sweep: no evaluation order, formula metrics skipped");
+            metrics
+                .into_iter()
+                .filter(|m| m.source_kind == "query")
+                .collect()
+        }
+    };
 
     let now = Utc::now();
     let mut computed = 0u32;
@@ -1690,6 +1714,100 @@ async fn compute_metric(
     }))
 }
 
+/// One metric of a tree computation.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TreeComputed {
+    pub metric_id: Uuid,
+    /// `computed`, `skipped` (a snapshot for the period existed) or `failed`.
+    pub outcome: String,
+    pub error: Option<String>,
+}
+
+/// A tree computation, in the order it ran.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ComputeTreeResponse {
+    pub metrics: Vec<TreeComputed>,
+}
+
+/// Compute a metric and everything under it
+///
+/// P9-T8: computes every query and formula metric the metric is built from
+/// (its children and its formula's inputs, transitively), children before
+/// parents, then the metric itself, for each one's current period. One
+/// metric's failure is reported and the rest go on; a cycle is refused.
+#[utoipa::path(
+    post,
+    path = "/api/v1/metrics/{id}/compute-tree",
+    tag = "dashboard",
+    params(("id" = Uuid, Path, description = "The root metric")),
+    responses(
+        (status = 200, description = "What each metric of the tree did", body = ComputeTreeResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such metric", body = ErrorResponse),
+        (status = 422, description = "The tree has a cycle", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    // As `/compute`: a query metric's first compute may provision the metric
+    // service principal's role membership (D-786).
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Execute), (attome_audit::AuditCategory::Access, attome_audit::AuditOperation::Grant)])))),
+)]
+async fn compute_tree(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<MetricUpdate>>,
+    Path(metric_id): Path<Uuid>,
+) -> Result<Json<ComputeTreeResponse>, AppError> {
+    let db = &state.base.db;
+    fetch_metric(db, metric_id).await?;
+    let nodes = crate::order::load_nodes(db).await?;
+    let tree = crate::order::tree_under(&nodes, metric_id);
+    let order = crate::order::evaluation_order(&tree)?;
+    let kinds: std::collections::HashMap<Uuid, String> = sqlx::query_as::<_, (Uuid, String)>(
+        "SELECT id, source_kind FROM dashboard_metric_definition WHERE id = ANY($1)",
+    )
+    .bind(&order)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?
+    .into_iter()
+    .collect();
+    let mut metrics = Vec::with_capacity(order.len());
+    for id in order {
+        // A manual metric has no value to derive; it is entered by hand.
+        if !matches!(
+            kinds.get(&id).map(String::as_str),
+            Some("query" | "formula")
+        ) {
+            continue;
+        }
+        let (outcome, error) =
+            match compute_and_record(&state, id, None, None, false, Some(ctx.user_id)).await {
+                Ok(o) if o.skipped => ("skipped", None),
+                Ok(o) if o.snapshot.status == "failed" => ("failed", o.snapshot.error_message),
+                Ok(_) => ("computed", None),
+                Err(e) => ("failed", Some(e.to_string())),
+            };
+        metrics.push(TreeComputed {
+            metric_id: id,
+            outcome: outcome.to_owned(),
+            error,
+        });
+    }
+    attome_audit::write_business_event(
+        &state,
+        "metric_definition",
+        metric_id,
+        attome_audit::AuditOperation::Execute,
+        "metric.compute_tree",
+        ctx.user_id,
+        None,
+        None,
+        format!("{} metrics computed in dependency order", metrics.len()),
+    )
+    .await;
+    Ok(Json(ComputeTreeResponse { metrics }))
+}
+
 /// The metric's builder query.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct BuilderQueryResponse {
@@ -1745,6 +1863,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/metrics/{id}/snapshots", get(list_snapshots))
         .route("/api/v1/metrics/{id}/compute", post(compute_metric))
+        .route("/api/v1/metrics/{id}/compute-tree", post(compute_tree))
         .route(
             "/api/v1/metrics/{id}/lineage",
             get(crate::lineage::metric_lineage),
@@ -1760,6 +1879,7 @@ pub fn routes() -> Router<EngineState> {
     list_metrics,
     list_snapshots,
     compute_metric,
+    compute_tree,
     build_metric,
     crate::targets::post_spread,
     crate::lineage::metric_lineage,

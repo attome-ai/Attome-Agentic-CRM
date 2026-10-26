@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- KPI trees in dependency order (P9-T8): the scheduled snapshot sweep now also computes formula
+  metrics, after their children (`parent_ref`) and formula inputs, so a formula reads the same
+  run's snapshots; a cycle leaves formula metrics out and is logged.
+  `POST /api/v1/metrics/{id}/compute-tree` computes a metric and every query and formula metric
+  under it in that order, reporting each one's outcome; a cycle is `422` naming its metrics.
 - Marketing attribution for won opportunities (E15-T1): a nightly `marketing_attribution` job
   collects the touches of a won opportunity's account contacts in the year before the close
   (profile events and form submissions) and stores every model's credit per touch, share and amount
