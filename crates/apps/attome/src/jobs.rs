@@ -2711,6 +2711,58 @@ async fn drain_rewrap_secrets(
                 after_id = progress.last_id;
             }
         }
+        RewrapDomain::Registry => {
+            let report = attome_auth::key_rewrap::rewrap_registry(db, |domain| {
+                registry_ring(attome_state, domain)
+            })
+            .await?;
+            let totals = report.totals();
+            let skipped: Vec<String> = report
+                .skipped
+                .iter()
+                .map(|c| format!("{}.{}", c.table, c.column))
+                .collect();
+            tracing::info!(
+                columns = report.columns.len(),
+                scanned = totals.scanned,
+                rewrapped = totals.rewrapped,
+                failed = totals.failed,
+                skipped = ?skipped,
+                "registry rewrap complete"
+            );
+            // Q18-T4: one security event per run, with its totals.
+            attome_audit::security::SecurityAuditor::from_state(attome_state)
+                .write(
+                    attome_audit::security::SecurityEvent::new(
+                        attome_audit::security::MandatoryCategory::Configuration,
+                        attome_audit::AuditOperation::Update,
+                        uuid::Uuid::nil(),
+                        "key_rewrap",
+                        None,
+                    )
+                    .named("rewrap:registry:complete")
+                    .comment(format!(
+                        "{} columns: {} scanned, {} rewrapped, {} failed; no ring for {}",
+                        report.columns.len(),
+                        totals.scanned,
+                        totals.rewrapped,
+                        totals.failed,
+                        if skipped.is_empty() {
+                            "none".to_owned()
+                        } else {
+                            skipped.join(", ")
+                        }
+                    )),
+                )
+                .await?;
+            if totals.failed > 0 {
+                return Err(std::io::Error::other(format!(
+                    "registry rewrap: {} value(s) did not open with their ring",
+                    totals.failed
+                ))
+                .into());
+            }
+        }
         RewrapDomain::Erasure => {
             let Some(ring) = attome_state.audit_erasure_key.clone() else {
                 tracing::warn!(
@@ -2736,6 +2788,29 @@ async fn drain_rewrap_secrets(
         }
     }
     Ok(())
+}
+
+/// Q18-T4: the ring each encrypted-column registry domain is sealed with,
+/// or `None` when this deployment configures none (its columns are skipped).
+/// `oidc` has no ring: its client secrets live in configuration.
+fn registry_ring(state: &EngineState, domain: &str) -> Option<attome_config::KeyRing> {
+    let secrets = state.base.secrets.load();
+    let config = &state.base.config;
+    let ring = match domain {
+        "ai_provider" | "mcp" => secrets.ai_provider_credential_key.clone(),
+        "einvoice" => config.einvoice.key_encryption_key.clone(),
+        "environment_variable" => config.integration.credential_encryption_key.clone(),
+        "integration" => secrets.integration_credential_key.clone(),
+        "events_webhook" => secrets.webhook_signing_key.clone(),
+        "fleet" => config.fleet.credential_encryption_key.clone(),
+        "recovery_archive" | "release_report" => {
+            config.metadata.recovery_archive_key_encryption_key.clone()
+        }
+        "s2s" => secrets.s2s_key_encryption_key.clone(),
+        "mfa" | "portal_mfa" => secrets.mfa_encryption_key.clone(),
+        _ => return None,
+    };
+    (!ring.is_empty()).then_some(ring)
 }
 
 /// The four tables migrations/0026_audit_partitioning.sql made

@@ -14,6 +14,30 @@ pub struct EncryptedColumn {
     /// The key domain (envelope field name or key ring) it is encrypted
     /// under.
     pub domain: &'static str,
+    /// Q18-T4: the column that names a row (its primary key).
+    pub key: &'static str,
+    /// Q18-T4: how a value is stored and what it is sealed against.
+    pub sealing: Sealing,
+}
+
+/// Q18-T4: the stored shape of an encrypted column, so the rewrap job can
+/// open and reseal any of them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Sealing {
+    /// Base64 text; a `0x02` value is bound to `table|column|key`
+    /// ([`crate::envelope::RowBinding`]), a `0x01` value to nothing.
+    Text,
+    /// `bytea`, sealed against the row key's 16 UUID bytes.
+    BytesKeyAad,
+    /// `bytea`, sealed against `"{prefix}{key}"`.
+    BytesPrefixedKey(&'static str),
+    /// `bytea`, sealed against `"{prefix}{first}:{second}"` (two columns of
+    /// the row).
+    BytesPair {
+        prefix: &'static str,
+        first: &'static str,
+        second: &'static str,
+    },
 }
 
 const fn col(table: &'static str, column: &'static str, domain: &'static str) -> EncryptedColumn {
@@ -21,6 +45,24 @@ const fn col(table: &'static str, column: &'static str, domain: &'static str) ->
         table,
         column,
         domain,
+        key: "id",
+        sealing: Sealing::Text,
+    }
+}
+
+const fn sealed(
+    table: &'static str,
+    column: &'static str,
+    domain: &'static str,
+    key: &'static str,
+    sealing: Sealing,
+) -> EncryptedColumn {
+    EncryptedColumn {
+        table,
+        column,
+        domain,
+        key,
+        sealing,
     }
 }
 
@@ -30,22 +72,46 @@ pub const ENCRYPTED_COLUMNS: &[EncryptedColumn] = &[
     col("einvoice_device", "compliance_secret_encrypted", "einvoice"),
     col("einvoice_device", "private_key_encrypted", "einvoice"),
     col("einvoice_device", "production_secret_encrypted", "einvoice"),
-    col(
+    sealed(
         "environment_variable_value",
         "value_encrypted",
         "environment_variable",
+        "name",
+        Sealing::Text,
     ),
     col(
         "event_subscription",
         "webhook_secret_encrypted",
         "events_webhook",
     ),
-    col("fleet_deployment", "secret_enc", "fleet"),
+    sealed(
+        "fleet_deployment",
+        "secret_enc",
+        "fleet",
+        "id",
+        Sealing::BytesKeyAad,
+    ),
     col("integration_credential", "secret_encrypted", "integration"),
     col("mcp_server", "credential_encrypted", "mcp"),
     col("oidc_provider", "client_secret_enc", "oidc"),
-    col("recovery_archive", "value_enc", "recovery_archive"),
-    col("release_report_item", "values_enc", "release_report"),
+    sealed(
+        "recovery_archive",
+        "value_enc",
+        "recovery_archive",
+        "id",
+        Sealing::BytesPair {
+            prefix: "recovery_archive/v2:",
+            first: "attribute_id",
+            second: "record_id",
+        },
+    ),
+    sealed(
+        "release_report_item",
+        "values_enc",
+        "release_report",
+        "id",
+        Sealing::BytesPrefixedKey("release_report/v1:"),
+    ),
     col("s2s_client_key", "secret_encrypted", "s2s"),
     col("user_mail_connection", "access_token_enc", "integration"),
     col("user_mail_connection", "refresh_token_enc", "integration"),

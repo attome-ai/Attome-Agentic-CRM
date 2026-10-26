@@ -72,6 +72,8 @@ pub mod envelope;
 pub mod epoch;
 pub mod invitation;
 pub mod jwt;
+/// Q18-T4: the rewrap job for every registered encrypted column.
+pub mod key_rewrap;
 pub mod mfa;
 /// S11-T3: certificate-bound access tokens (RFC 8705).
 pub mod mtls;

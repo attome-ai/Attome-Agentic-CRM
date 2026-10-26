@@ -51,7 +51,8 @@ pub struct RowBinding<'a> {
 }
 
 impl RowBinding<'_> {
-    fn aad(&self) -> Vec<u8> {
+    /// The associated data a bound value is sealed against.
+    pub fn aad(&self) -> Vec<u8> {
         format!("{}|{}|{}", self.table, self.column, self.row_id).into_bytes()
     }
 }
@@ -200,6 +201,27 @@ pub fn decrypt_bytes_with_aad(
     })?;
     let key_bytes = parse_key(field_name, key_hex)?;
     decrypt_with_key(field_name, &key_bytes, nonce_and_ciphertext, aad)
+}
+
+/// Q18-T4: reseals one stored envelope (`combined`, either version) under
+/// `ring`'s active key against the same `aad`, keeping its version byte, so
+/// a rotation needs no knowledge of what the value means. `aad` is what the
+/// value was sealed against (empty for an unbound `0x01` text value).
+pub fn reseal_bytes(
+    field_name: &str,
+    ring: &KeyRing,
+    combined: &[u8],
+    aad: &[u8],
+) -> Result<Vec<u8>, AppError> {
+    let version = *combined
+        .first()
+        .ok_or_else(|| AppError::internal(format!("{field_name} ciphertext is empty")))?;
+    let plain = decrypt_bytes_with_aad(field_name, ring, combined, aad)?;
+    let mut fresh = encrypt_bytes_with_aad(field_name, ring, &plain, aad)?;
+    // A reader that opens without a binding must keep getting an unbound
+    // value, and a bound one stays bound.
+    fresh[0] = version;
+    Ok(fresh)
 }
 
 /// Z3-T3: seals an `EncryptedInRedis` cache's values with
