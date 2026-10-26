@@ -125,6 +125,14 @@ pub struct ActionContext {
     /// AH6: the session is a trial run (`AgentSession::trial`), copied by
     /// [`Self::for_session`]; `false` on every other constructor.
     pub session_trial: bool,
+    /// AE1-T4: a person acting through a live surface (a button, the API,
+    /// a macro), as opposed to a flow or a job acting as a user. Set only by
+    /// [`Self::person`].
+    pub interactive: bool,
+    /// AE1-T4: the person confirmed this invocation. A consequential action
+    /// a person invokes runs only when this is set; the gate answers
+    /// `ConfirmFirst` otherwise.
+    pub confirmed: bool,
 }
 
 impl std::fmt::Debug for ActionContext {
@@ -152,6 +160,19 @@ impl ActionContext {
             autonomy: None,
             undo_window_seconds: None,
             session_trial: false,
+            interactive: false,
+            confirmed: false,
+        }
+    }
+
+    /// AE1-T4: a person invoking an action through a live surface. With
+    /// `confirmed` false a consequential action stops at `ConfirmFirst`; the
+    /// surface asks the person and calls again with it set.
+    pub fn person(security: Arc<SecurityContext>, confirmed: bool) -> Self {
+        Self {
+            interactive: true,
+            confirmed,
+            ..Self::user(security)
         }
     }
 
@@ -178,6 +199,8 @@ impl ActionContext {
             autonomy: None,
             undo_window_seconds: None,
             session_trial: false,
+            interactive: false,
+            confirmed: false,
         }
     }
 

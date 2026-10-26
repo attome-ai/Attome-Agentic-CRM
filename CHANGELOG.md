@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Risk tiers on every surface (AE1-T4): a person invoking a consequential action now confirms it
+  (`"confirm": true` in the invoke, record-action and macro-run bodies, or `X-Confirm: true` on
+  `/api/v1/actions/{name}`); without it the answer is `confirmation_required`. Agents still need
+  approval. See `docs/agents.md`.
 - Sales sequences (D17-T1): a workflow of the new kind `sequence` (`POST /api/v1/workflow/definitions`
   now takes `kind`, and a definition shows it). `POST /api/v1/workflow/sequences/{logicalname}/enrolments`
   enrols contacts, one run each; a reply, a meeting or a stage change of a deal at the contact's account

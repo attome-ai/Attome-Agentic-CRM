@@ -389,6 +389,10 @@ pub struct InvokeRequest {
     /// once it ran. Omit to run it now.
     #[serde(default)]
     pub undo_window_seconds: Option<u32>,
+    /// AE1-T4: the person confirmed this invocation. A consequential action
+    /// answers `confirmation_required` until it is called with this set.
+    #[serde(default)]
+    pub confirm: bool,
 }
 
 impl std::fmt::Debug for InvokeRequest {
@@ -441,7 +445,7 @@ async fn invoke_action(
     let module = REGISTRY.resolve(&id).map(|d| d.module).unwrap_or(MODULE_AI);
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let inputs = gate_inputs(&state, module);
-    let mut action_ctx = ActionContext::user(ctx.into_inner());
+    let mut action_ctx = ActionContext::person(ctx.into_inner(), body.confirm);
     if let Some(seconds) = body.undo_window_seconds {
         action_ctx = action_ctx.with_undo_window(seconds);
     }
@@ -472,6 +476,7 @@ async fn invoke_action(
     params(
         ("name" = String, Path, description = "The custom action's name (its id without `custom.`)"),
         ("Idempotency-Key" = Option<String>, Header, description = "Required for a consequential action"),
+        ("X-Confirm" = Option<String>, Header, description = "`true` once the person confirmed a consequential action; without it the action answers `confirmation_required`"),
     ),
     request_body = serde_json::Value,
     responses(
@@ -519,7 +524,11 @@ async fn invoke_custom_action(
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let inputs = gate_inputs(&state, descriptor.module);
     let user = ctx.user_id;
-    let mut action_ctx = ActionContext::user(ctx.into_inner());
+    let confirmed = headers
+        .get("x-confirm")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"));
+    let mut action_ctx = ActionContext::person(ctx.into_inner(), confirmed);
     action_ctx.idempotency_key = key.map(|k| format!("{id}:{user}:{k}"));
     let outcome = dispatch(
         &state,
@@ -602,7 +611,7 @@ async fn run_macro(
     Json(body): Json<crate::macros::MacroRecords>,
 ) -> Result<Json<crate::macros::MacroRun>, AppError> {
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
-    let action_ctx = ActionContext::user(ctx.into_inner());
+    let action_ctx = ActionContext::person(ctx.into_inner(), body.confirm);
     crate::macros::run(&state, &action_ctx, name.trim(), &body.record_ids)
         .await
         .map(Json)
@@ -670,7 +679,7 @@ async fn invoke_record_action(
     args.insert("record_id".into(), Value::String(id.to_string()));
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let inputs = gate_inputs(&state, module);
-    let action_ctx = ActionContext::user(ctx.into_inner());
+    let action_ctx = ActionContext::person(ctx.into_inner(), body.confirm);
     let outcome = dispatch(
         &state,
         &REGISTRY,

@@ -143,6 +143,7 @@ async fn invoke(
     ctx: Authorized<SelfService>,
     action: &str,
     args: &Value,
+    confirmed: bool,
 ) -> Result<ActionOutcome, AppError> {
     let module = crate::engine::REGISTRY
         .resolve(action)
@@ -150,7 +151,9 @@ async fn invoke(
         .ok_or(AppError::NotFound)?;
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let inputs = crate::engine::gate_inputs(state, module);
-    let action_ctx = ActionContext::user(ctx.into_inner());
+    // AE1-T4: a person on a live surface; confirming notes is itself the
+    // confirmation.
+    let action_ctx = ActionContext::person(ctx.into_inner(), confirmed);
     dispatch(
         state,
         &crate::engine::REGISTRY,
@@ -225,7 +228,9 @@ async fn regenerate_meeting_brief(
     Path(meeting_id): Path<Uuid>,
 ) -> Result<Json<ActionOutcome>, AppError> {
     let args = json!({ "meeting_id": meeting_id });
-    Ok(Json(invoke(&state, ctx, MEETING_BRIEF, &args).await?))
+    Ok(Json(
+        invoke(&state, ctx, MEETING_BRIEF, &args, false).await?,
+    ))
 }
 
 #[utoipa::path(
@@ -327,6 +332,7 @@ async fn confirm_meeting_notes(
             ctx,
             crate::actions::meeting::MEETING_CONFIRM_NOTES,
             &args,
+            true,
         )
         .await?,
     ))

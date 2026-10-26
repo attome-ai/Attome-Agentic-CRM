@@ -57,6 +57,9 @@ pub enum ConfirmReason {
     /// AH8: the agent's autonomy level for this action is `ask_first` (set
     /// by an administrator, or lowered by a limit).
     AutonomyAskFirst,
+    /// AE1-T4: a person invoked a consequential action without confirming
+    /// this invocation.
+    ConsequentialNeedsConfirmation,
 }
 
 /// Why the gate refused outright. Separate from [`GateDecision`] because a
@@ -165,6 +168,16 @@ pub fn evaluate(
     // 6. The matrix.
     let decision = match (descriptor.risk, ctx.initiator) {
         (RiskTier::Read, _) => return Ok(GateDecision::Execute),
+
+        // AE1-T4: a person on a live surface confirms a consequential action
+        // before it runs, whatever the surface (an API call, a button, a
+        // macro step). A flow or job acting as a user is not a person here:
+        // its author decided when it was published.
+        (RiskTier::Consequential, Initiator::User) if ctx.interactive && !ctx.confirmed => {
+            GateDecision::ConfirmFirst {
+                reason: ConfirmReason::ConsequentialNeedsConfirmation,
+            }
+        }
 
         // A human invoking a Consequential action through the UI is the
         // existing four-eyes question, answered by the deployment's
@@ -975,6 +988,101 @@ mod tests {
             evaluate(&read, &user, &inputs(&ai)),
             Ok(GateDecision::Execute),
             "a read is never delayed"
+        );
+    }
+
+    // ── AE1-T4: the risk tier on every surface. ───────────────────────────
+
+    fn tiers() -> [ActionDescriptor; 3] {
+        [
+            descriptor(RiskTier::Read, Effect::Read, RetryClass::Idempotent),
+            descriptor(RiskTier::Reversible, Effect::Write, RetryClass::Idempotent),
+            descriptor(
+                RiskTier::Consequential,
+                Effect::Write,
+                RetryClass::Idempotent,
+            ),
+        ]
+    }
+
+    /// A person on a live surface: a read runs, a reversible write runs (its
+    /// undo is offered), a consequential action stops until they confirm.
+    #[test]
+    fn risk_tier_person_confirms_consequential() {
+        let ai = all_on();
+        let [read, reversible, consequential] = tiers();
+        let person = ActionContext::person(security_context(), false);
+        assert_eq!(
+            evaluate(&read, &person, &inputs(&ai)),
+            Ok(GateDecision::Execute)
+        );
+        assert_eq!(
+            evaluate(&reversible, &person, &inputs(&ai)),
+            Ok(GateDecision::Execute)
+        );
+        assert_eq!(
+            evaluate(&consequential, &person, &inputs(&ai)),
+            Ok(GateDecision::ConfirmFirst {
+                reason: ConfirmReason::ConsequentialNeedsConfirmation
+            })
+        );
+        let confirmed = ActionContext::person(security_context(), true);
+        assert_eq!(
+            evaluate(&consequential, &confirmed, &inputs(&ai)),
+            Ok(GateDecision::Execute)
+        );
+    }
+
+    /// An undo window never lets an unconfirmed consequential action run.
+    #[test]
+    fn risk_tier_undo_window_keeps_confirmation() {
+        let ai = all_on();
+        let [_, _, consequential] = tiers();
+        let person = ActionContext::person(security_context(), false).with_undo_window(60);
+        assert!(matches!(
+            evaluate(&consequential, &person, &inputs(&ai)),
+            Ok(GateDecision::ConfirmFirst { .. })
+        ));
+    }
+
+    /// An agent (chat, MCP, a scheduled agent) never runs a consequential
+    /// action on its own: it goes to approval, tainted or not.
+    #[test]
+    fn risk_tier_agent_needs_approval_for_consequential() {
+        let ai = all_on();
+        let [read, reversible, consequential] = tiers();
+        for tainted in [false, true] {
+            let agent = agent_with(None, tainted);
+            assert_eq!(
+                evaluate(&read, &agent, &inputs(&ai)),
+                Ok(GateDecision::Execute)
+            );
+            assert_eq!(
+                evaluate(&consequential, &agent, &inputs(&ai)),
+                Ok(GateDecision::RequiresApproval)
+            );
+            let reversible_decision = evaluate(&reversible, &agent, &inputs(&ai));
+            if tainted {
+                assert!(matches!(
+                    reversible_decision,
+                    Ok(GateDecision::ConfirmFirst { .. })
+                ));
+            } else {
+                assert_eq!(reversible_decision, Ok(GateDecision::Execute));
+            }
+        }
+    }
+
+    /// A flow or job acting as a user is not asked: it was decided when it
+    /// was published.
+    #[test]
+    fn risk_tier_flow_context_is_not_asked() {
+        let ai = all_on();
+        let [_, _, consequential] = tiers();
+        let flow = ActionContext::user(security_context());
+        assert_eq!(
+            evaluate(&consequential, &flow, &inputs(&ai)),
+            Ok(GateDecision::Execute)
         );
     }
 }

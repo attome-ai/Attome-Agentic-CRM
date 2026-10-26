@@ -107,6 +107,10 @@ pub fn steps(definition: &Value) -> Vec<(String, Value)> {
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct MacroRecords {
     pub record_ids: Vec<Uuid>,
+    /// AE1-T4: the person confirmed the run, so its consequential steps run.
+    /// Ignored by the preview.
+    #[serde(default)]
+    pub confirm: bool,
 }
 
 /// One step for one record.

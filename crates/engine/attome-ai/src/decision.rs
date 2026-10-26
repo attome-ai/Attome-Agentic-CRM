@@ -343,7 +343,8 @@ async fn execute_decision(
     }
 
     let args = parse_args(option.args.as_deref())?;
-    let action_ctx = ActionContext::user(ctx.into_inner());
+    // AE1-T4: accepting the suggestion is the person's confirmation.
+    let action_ctx = ActionContext::person(ctx.into_inner(), true);
     let user_id = action_ctx.security.user_id;
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let gate_inputs = crate::engine::gate_inputs(&state, descriptor.module);

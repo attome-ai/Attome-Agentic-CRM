@@ -287,6 +287,9 @@ pub async fn dispatch(
                     ConfirmReason::AgentProposalNeedsConfirmation => {
                         "an agent proposed this action; it runs only when the human invokes it"
                     }
+                    ConfirmReason::ConsequentialNeedsConfirmation => {
+                        "this action has lasting effects; confirm it to run it"
+                    }
                     ConfirmReason::AutonomyAskFirst => autonomy
                         .limit_exceeded
                         .unwrap_or("this agent's autonomy level for this action asks first"),

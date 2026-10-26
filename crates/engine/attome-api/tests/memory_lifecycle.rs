@@ -240,7 +240,8 @@ async fn invoke(
         .clone()
         .oneshot(
             builder
-                .body(Body::from(json!({ "args": args }).to_string()))
+                // AE1-T4: `memory.forget` is consequential; the person confirms it.
+                .body(Body::from(json!({ "args": args, "confirm": true }).to_string()))
                 .unwrap(),
         )
         .await

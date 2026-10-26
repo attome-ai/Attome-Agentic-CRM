@@ -126,6 +126,14 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   Each is also a route, `POST /api/v1/actions/{name}`, with its arguments checked against the schema
   and an `Idempotency-Key` required when it is consequential, and it is listed in the deployment's
   OpenAPI document.
+- Risk tiers on every surface (AE1-T4): a read runs; a reversible write runs and offers its undo; a
+  consequential action needs the person's confirmation when a person invokes it, and approval when
+  an agent proposes it (chat, MCP or a scheduled agent), unless an administrator's autonomy level for
+  that agent allows more. A person confirms by calling again with `"confirm": true` in the body
+  (`/api/v1/actions/{id}/invoke`, `/api/v1/{entity}/{id}/actions/{name}`, a macro's `/run`) or with
+  the header `X-Confirm: true` (`/api/v1/actions/{name}`); until then the answer is
+  `confirmation_required`. Accepting a suggestion and confirming meeting notes are confirmations
+  themselves. A flow or job acting as a user is not asked: its author decided when it was published.
 - Macros (G6-T2): a `macro` metadata object lists actions (such as `record.update` and
   `record.transition`) to run on records of one entity, with `{{entity}}` and `{{record_id}}` filled
   in per record. Preview it with `POST /api/v1/macros/{name}/preview`, run it on up to 200 records
