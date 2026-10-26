@@ -15,8 +15,8 @@ metric's update privilege.
 | `aggregate` | `count`, `sum`, `avg`, `median`, `min` or `max`. |
 | `measure_attribute` | The number aggregated (not needed for `count`). |
 | `date_attribute` | The date that places a record in the metric's period. |
-| `filters` | Conditions on attributes. |
-| `dimensions` | Up to three attributes to break the value down by. |
+| `filters` | Conditions on attributes (`attribute`, `op`, `value`). |
+| `dimension_attributes` | Up to three attributes to break the value down by. |
 
 The builder writes the metric's stored query and points the metric at it; building again republishes
 the same query. Sensitive attributes and a non-numeric measure (other than for `count`) are refused.
