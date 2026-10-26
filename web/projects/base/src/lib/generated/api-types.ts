@@ -17614,8 +17614,9 @@ export interface paths {
          * @description Writes back what a done or cancelled operation changed, newest first,
          *     each record through its single-record path and only while it is still as
          *     the operation left it (a record changed since is reported as a
-         *     conflict). Deleted records are restored, restored ones deleted again.
-         *     Send the operation's `row_version` in `If-Match`.
+         *     conflict). Deleted records are restored, restored ones deleted again. A
+         *     large operation is undone in the background (status `undoing`). Send the
+         *     operation's `row_version` in `If-Match`.
          */
         post: operations["post_mass_undo"];
         delete?: never;
@@ -27764,6 +27765,17 @@ export interface components {
             knowledge_source_id?: string | null;
             /** @description `page` or `article`. */
             page_type: string;
+        };
+        /** @description What asking did, beside the results. */
+        AskResult: {
+            /** @description For a question: `{answer, citations}` or `{answer: null, reason}`. */
+            answer?: Record<string, never> | null;
+            /** @description The filter the words became: `{entity, where}`, the `query/run` form. */
+            filter?: Record<string, never> | null;
+            /** @description Why there is no filter, when declined. */
+            reason?: string | null;
+            /** @description `parsed` (the filter ran) or `declined` (a plain search ran). */
+            status: string;
         };
         AssessmentStartResponse: {
             /** Format: uuid */
@@ -38174,8 +38186,8 @@ export interface components {
             /** Format: uuid */
             started_by: string;
             /**
-             * @description `queued`, `running`, `paused`, `cancelled`, `failed`, `done` or
-             *     `undone`.
+             * @description `queued`, `running`, `paused`, `cancelled`, `failed`, `done`,
+             *     `undoing` or `undone`.
              */
             status: string;
         };
@@ -52935,6 +52947,7 @@ export interface components {
             zero_result_rate: number;
         };
         SearchResponse: {
+            ask?: null | components["schemas"]["AskResult"];
             /**
              * @description Legs that did not run to completion. **Reported, never swallowed** — a
              *     result set silently missing a leg looks like "no more matches", which
@@ -111506,7 +111519,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description The operation changed, is not finished, or is too large to undo in one request */
+            /** @description The operation changed, is not finished, or is past its undo retention */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -122910,6 +122923,13 @@ export interface operations {
                 explain?: boolean;
                 /** @description A25-T9: also count the results by entity, owner and month changed. */
                 facets?: boolean;
+                /**
+                 * @description A25-T7: `ask` reads the query as words. It becomes a filter over one
+                 *     entity, shown in `ask.filter` and applied; a question also gets a
+                 *     direct answer from the top results. Page 1 only. Absent is a plain
+                 *     search.
+                 */
+                mode?: string;
             };
             header?: never;
             path?: never;
@@ -122935,8 +122955,17 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Query or pagination outside the documented caps */
+            /** @description Query or pagination outside the documented caps, an unknown mode, or a page past 1 with mode=ask */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description mode=ask on a deployment where asking in words is unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -88525,7 +88525,7 @@
           "entity"
         ],
         "summary": "Undo a mass operation",
-        "description": "Writes back what a done or cancelled operation changed, newest first,\neach record through its single-record path and only while it is still as\nthe operation left it (a record changed since is reported as a\nconflict). Deleted records are restored, restored ones deleted again.\nSend the operation's `row_version` in `If-Match`.",
+        "description": "Writes back what a done or cancelled operation changed, newest first,\neach record through its single-record path and only while it is still as\nthe operation left it (a record changed since is reported as a\nconflict). Deleted records are restored, restored ones deleted again. A\nlarge operation is undone in the background (status `undoing`). Send the\noperation's `row_version` in `If-Match`.",
         "operationId": "post_mass_undo",
         "parameters": [
           {
@@ -88580,7 +88580,7 @@
             }
           },
           "409": {
-            "description": "The operation changed, is not finished, or is too large to undo in one request",
+            "description": "The operation changed, is not finished, or is past its undo retention",
             "content": {
               "application/json": {
                 "schema": {
@@ -107207,6 +107207,15 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "description": "A25-T7: `ask` reads the query as words. It becomes a filter over one\nentity, shown in `ask.filter` and applied; a question also gets a\ndirect answer from the top results. Page 1 only. Absent is a plain\nsearch.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -107231,7 +107240,17 @@
             }
           },
           "422": {
-            "description": "Query or pagination outside the documented caps",
+            "description": "Query or pagination outside the documented caps, an unknown mode, or a page past 1 with mode=ask",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "mode=ask on a deployment where asking in words is unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -135956,6 +135975,40 @@
           }
         }
       },
+      "AskResult": {
+        "type": "object",
+        "description": "What asking did, beside the results.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "answer": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "For a question: `{answer, citations}` or `{answer: null, reason}`."
+          },
+          "filter": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The filter the words became: `{entity, where}`, the `query/run` form."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why there is no filter, when declined."
+          },
+          "status": {
+            "type": "string",
+            "description": "`parsed` (the filter ran) or `declined` (a plain search ran)."
+          }
+        }
+      },
       "AssessmentStartResponse": {
         "type": "object",
         "required": [
@@ -162200,7 +162253,7 @@
           },
           "status": {
             "type": "string",
-            "description": "`queued`, `running`, `paused`, `cancelled`, `failed`, `done` or\n`undone`."
+            "description": "`queued`, `running`, `paused`, `cancelled`, `failed`, `done`,\n`undoing` or `undone`."
           }
         }
       },
@@ -200983,6 +201036,17 @@
           "degraded"
         ],
         "properties": {
+          "ask": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AskResult",
+                "description": "A25-T7: what asking in words did, for `mode=ask`."
+              }
+            ]
+          },
           "degraded": {
             "type": "array",
             "items": {
@@ -213019,7 +213083,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -213072,5 +213135,6 @@
       }
     }
   },
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }
