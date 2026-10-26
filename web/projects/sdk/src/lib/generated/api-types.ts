@@ -18405,6 +18405,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/metrics/{id}/builder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Build a metric from its parts
+         * @description P9-T3: describes the metric as an entity, an aggregate over one of its
+         *     attributes, the date that places a record in the metric's period, filters
+         *     and dimensions; creates (or republishes) the metric's stored query from it
+         *     and points the metric at that query. Needs the metric's update privilege.
+         */
+        post: operations["build_metric"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/metrics/{id}/compute": {
         parameters: {
             query?: never;
@@ -29074,6 +29097,16 @@ export interface components {
             /** Format: uuid */
             run_id: string;
         };
+        /** @description The metric's builder query. */
+        BuilderQueryResponse: {
+            /** Format: uuid */
+            metric_id: string;
+            /**
+             * Format: uuid
+             * @description The stored query the metric now reads.
+             */
+            query_id: string;
+        };
         BulkAccessBody: {
             /** @description For `share`: `view`, `action` or `deny`. Ignored for `reassign`. */
             capability?: string | null;
@@ -34788,6 +34821,22 @@ export interface components {
             principal_id: string;
             principal_type: string;
         };
+        /** @description L7-T4: what a list or query answers to a delta token. */
+        EntityDelta: {
+            /** @description Records made since the token that the list now holds, as it shows them. */
+            created: Record<string, never>[];
+            /**
+             * @description Records changed since the token that the list no longer holds:
+             *     deleted, hidden from the caller, or no longer matching its filters.
+             */
+            deleted: string[];
+            /** @description Whether more changes wait: call again with `next_token` at once. */
+            has_more: boolean;
+            /** @description The token for the next call. */
+            next_token: string;
+            /** @description Records changed since the token that the list now holds. */
+            updated: Record<string, never>[];
+        };
         EntityDetail: {
             attributes: components["schemas"]["AttributeMeta"][];
             /**
@@ -35198,6 +35247,7 @@ export interface components {
          *     `payload_too_large`: The request body is too large or too deeply nested.
          *     `request_rejected`: The request was refused before it reached a route: a malformed path or oversized headers.
          *     `invalid_cursor`: The cursor was not issued by this deployment; start again from the first page.
+         *     `resync_needed`: The delta token is older than the change feed keeps; read the list again for a new token.
          *     `idempotency_outcome_unknown`: An earlier attempt with this key did not finish; its outcome is unknown.
          *     `idempotency_replay_unavailable`: The stored response for this key can no longer be replayed.
          *     `method_not_allowed`: The path exists but not for this method; see `Allow`.
@@ -35206,7 +35256,7 @@ export interface components {
          *     `internal_error` (retryable): An unexpected error; the request id finds it in the logs.
          * @enum {string}
          */
-        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "request_rejected" | "invalid_cursor" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "api_version_sunset" | "unsupported_api_version" | "internal_error";
+        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "request_rejected" | "invalid_cursor" | "resync_needed" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "api_version_sunset" | "unsupported_api_version" | "internal_error";
         /**
          * @description `ErrorResponse.details`: its shape depends on the `error` code —
          *     a list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on
@@ -35256,7 +35306,7 @@ export interface components {
              *     `metadata_authoring_locked`, `transition_not_allowed`,
              *     `rule_violation`, `field_locked`, `field_locked_required`,
              *     `reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,
-             *     `request_rejected`, `invalid_cursor`,
+             *     `request_rejected`, `invalid_cursor`, `resync_needed`,
              *     `idempotency_outcome_unknown`, `idempotency_replay_unavailable`,
              *     `method_not_allowed`, or
              *     `internal_error` — one per `AppError` variant (`FieldLocked` answers
@@ -35548,6 +35598,14 @@ export interface components {
              *     ignored whenever cursor mode is in effect.
              */
             after_id?: string | null;
+            /**
+             * @description L7-T4: a delta token from an earlier answer, or `latest` for a first
+             *     one: answer the changes since it among the rows this query selects
+             *     (`EntityDelta`: created, updated, deleted, next_token) instead of a
+             *     page. A query over one entity only. `410 resync_needed` once the token
+             *     is older than the change feed keeps.
+             */
+            delta_token?: string | null;
             /** @description Fallback: entity name string — backend derives UUID via entity_info */
             entity?: string | null;
             /**
@@ -39158,6 +39216,22 @@ export interface components {
             at: string;
             /** Format: double */
             value: number;
+        };
+        /** @description A metric described by its parts. */
+        MetricSpec: {
+            /** @description `count`, `sum`, `avg`, `median`, `min` or `max`. */
+            aggregate: string;
+            /**
+             * @description The date that places a record in a period: a date or date-time
+             *     attribute, or `created_at` / `modified_at`.
+             */
+            date_attribute: string;
+            /** @description Attributes the value is broken down by, at most three. */
+            dimension_attributes?: string[];
+            entity_logicalname: string;
+            filters?: components["schemas"]["SpecFilter"][];
+            /** @description The attribute aggregated; optional for `count` (every record). */
+            measure_attribute?: string | null;
         };
         MetricTarget: {
             /** Format: double */
@@ -54700,6 +54774,14 @@ export interface components {
         /** @description Full-set replace for which templates a space's editors may pick from. */
         SpaceTemplatesBody: {
             template_ids: string[];
+        };
+        /** @description One filter of a builder. */
+        SpecFilter: {
+            attribute: string;
+            /** @description `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `is_null` or `is_not_null`. */
+            op: string;
+            /** @description A scalar; a list for `in`; none for `is_null` and `is_not_null`. */
+            value?: Record<string, never> | null;
         };
         /** @description The spend to check. */
         SpendBody: {
@@ -114059,6 +114141,78 @@ export interface operations {
             };
         };
     };
+    build_metric: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The metric */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetricSpec"];
+            };
+        };
+        responses: {
+            /** @description The metric reads the built query */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuilderQueryResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such metric */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The metric changed while it was being built */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown or sensitive attribute, a non-numeric measure, a bad filter, or a period without a calendar */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     compute_metric: {
         parameters: {
             query?: never;
@@ -119150,6 +119304,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description L7-T4: the delta token is older than the change feed keeps (resync_needed) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
             /** @description Invalid filter, ordering, or pagination contract */
             422: {
@@ -131130,6 +131293,11 @@ export interface operations {
                  *     deployment did not issue is a 400 `invalid_cursor`).
                  */
                 cursor?: string;
+                /**
+                 * @description L7-T4: an earlier answer's `next_token`, or `latest` for a first one:
+                 *     answer the changes since it (`EntityDelta`) instead of a page.
+                 */
+                delta_token?: string;
             };
             header?: never;
             path: {
@@ -131140,7 +131308,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One page of records; next_cursor continues it */
+            /** @description One page of records; next_cursor continues it. With delta_token, an EntityDelta instead: the records created, updated and deleted since the token, and next_token */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -131169,6 +131337,15 @@ export interface operations {
             };
             /** @description No such entity, or it has no default view */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description L7-T4: the delta token is older than the change feed keeps (resync_needed); read the list again */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };
