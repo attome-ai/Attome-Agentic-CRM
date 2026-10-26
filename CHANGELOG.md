@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Fixed
+- Deal split amounts now follow a change to the deal's `amount` made through an ordinary record
+  update (the deal-close sweep recalculates them); before, only the line, split and owner routes
+  did, and `docs/deal-teams.md` said otherwise.
 - Module Management's save now stores the configuration (Y4-T2). No migration created the
   `module_configuration` row, so the update wrote nothing: the switch held only in the answering
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.

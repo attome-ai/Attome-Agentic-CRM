@@ -217,6 +217,40 @@ pub async fn recalculate_in_tx(
     Ok(changed)
 }
 
+/// Recalculates the stored split amounts of `deals` whose amount changed
+/// through a plain record update (the line and owner routes recalculate in
+/// their own transaction). A deal whose lock is held is skipped: whoever
+/// holds it is changing the deal and recalculates as it does. The number of
+/// split amounts that changed; nothing when the deal-team tables are not
+/// installed.
+pub async fn recalculate_deals(state: &EngineState, deals: &[Uuid]) -> Result<u64, AppError> {
+    if deals.is_empty() {
+        return Ok(0);
+    }
+    let installed: bool = sqlx::query_scalar(
+        "SELECT to_regclass('opportunity_split') IS NOT NULL \
+            AND to_regclass('sales_split_type') IS NOT NULL",
+    )
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !installed {
+        return Ok(0);
+    }
+    let mut changed = 0;
+    for deal in deals {
+        let mut tx = attome_db::tx::begin(&state.base.db).await?;
+        match lock(&mut tx, *deal).await {
+            Ok(()) => {}
+            Err(AppError::Conflict(_)) => continue,
+            Err(e) => return Err(e),
+        }
+        changed += recalculate_in_tx(&mut tx, *deal).await?;
+        attome_db::tx::commit(tx).await?;
+    }
+    Ok(changed)
+}
+
 /// One split as a caller gives it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct SplitInput {

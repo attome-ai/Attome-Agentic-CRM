@@ -33,8 +33,10 @@ A split gives a member a percent of a split type:
 
 Each split's amount takes its type's basis (the total, the one-time or the recurring value, or
 the line's total for a line split), is rounded once to the currency's minor units, and the
-rounding remainder of a split type goes to the owner's split. Amounts are recalculated whenever
-the deal's amount, lines or splits change, so they never go stale.
+rounding remainder of a split type goes to the owner's split. Amounts are recalculated when the
+lines, the splits or the owner change, in the same transaction, and within a few minutes of a change
+to the deal's amount through an ordinary record update (the deal-close sweep reads it off the change
+feed).
 
 ## Won deals
 

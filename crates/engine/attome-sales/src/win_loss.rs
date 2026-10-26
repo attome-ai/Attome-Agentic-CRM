@@ -10,6 +10,11 @@
 //! Idempotent: one review per deal and outcome (reopening a deal keeps its
 //! review and snapshot), and the task carries the review's id, so a retried
 //! sweep adds neither twice.
+//!
+//! The same pass keeps split amounts current (D7-T5): a deal whose `amount`
+//! changed through a plain record update has its stored split amounts
+//! recalculated ([`crate::split_store::recalculate_deals`]), as the line and
+//! owner-change routes already do in their own transactions.
 
 use attome_core::EngineState;
 use attome_types::AppError;
@@ -181,6 +186,22 @@ pub async fn sweep_closes(state: &EngineState) -> Result<u64, AppError> {
                 created += 1;
             }
         }
+    }
+    let mut amounts: Vec<Uuid> = events
+        .iter()
+        .filter(|e| {
+            e.entity_logicalname == "opportunity"
+                && e.operation() == Some(attome_core::change_feed::ChangeOperation::Update)
+                && (e.changed_attributes.is_empty()
+                    || e.changed_attributes.iter().any(|a| a == "amount"))
+        })
+        .map(|e| e.record_id)
+        .collect();
+    amounts.sort_unstable();
+    amounts.dedup();
+    let recalculated = crate::split_store::recalculate_deals(state, &amounts).await?;
+    if recalculated > 0 {
+        tracing::info!(recalculated, "split amounts follow deal amounts");
     }
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
     attome_core::change_feed::advance(&mut conn, DEAL_CLOSE_CONSUMER, &last).await?;
