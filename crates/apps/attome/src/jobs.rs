@@ -3025,6 +3025,8 @@ const DEDUP_KEY_REPUTATION_FETCH: &str = "marketing-reputation-fetch";
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
 /// M8-T1: the transition actions sweep (a registered job type).
 const DEDUP_KEY_TRANSITION_ACTIONS_SWEEP: &str = "state-transition-actions-sweep";
+/// D17-T1: the sequence exits sweep (a registered job type).
+const DEDUP_KEY_SEQUENCE_EXITS: &str = "workflow-sequence-exits";
 /// F11-T9: the nightly loyalty revenue run (a registered job type).
 const DEDUP_KEY_REVREC_LOYALTY: &str = "revrec-loyalty";
 /// G17-T10: the nightly adherence roll-up (a registered job type).
@@ -3236,6 +3238,10 @@ pub const STATE_TRANSITION_ACTIONS: attome_jobs::JobType =
 /// actions, every minute.
 pub const STATE_TRANSITION_ACTIONS_SWEEP: attome_jobs::JobType =
     attome_jobs::JobType::new("state_transition_actions_sweep", 1);
+
+/// D17-T1: exits contacts who answered a sequence, every minute.
+pub const WORKFLOW_SEQUENCE_EXITS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_workflow::sequence::SWEEP_JOB, 1);
 
 /// F11-T9: loyalty points deferred and recognised, nightly.
 pub const REVREC_LOYALTY: attome_jobs::JobType =
@@ -4999,6 +5005,24 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WORKFLOW_SEQUENCE_EXITS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let outcome = attome_workflow::sequence::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if outcome.exited > 0 || outcome.closed > 0 {
+                    tracing::info!(
+                        exited = outcome.exited,
+                        closed = outcome.closed,
+                        "sequence exits: run complete"
+                    );
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             STATE_TRANSITION_ACTIONS_SWEEP,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 attome_state::transition_actions::sweep(&state)
@@ -5477,6 +5501,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == REVREC_LOYALTY.name => DEDUP_KEY_REVREC_LOYALTY,
         EngineJob::Registered(job) if job.name == STATE_TRANSITION_ACTIONS_SWEEP.name => {
             DEDUP_KEY_TRANSITION_ACTIONS_SWEEP
+        }
+        EngineJob::Registered(job) if job.name == WORKFLOW_SEQUENCE_EXITS.name => {
+            DEDUP_KEY_SEQUENCE_EXITS
         }
         EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
             DEDUP_KEY_SOCIAL_REVIEWS_SYNC
@@ -7127,6 +7154,25 @@ pub fn spawn_transition_actions_scheduler(db: DbPool, interval: std::time::Durat
         job,
         DEDUP_KEY_TRANSITION_ACTIONS_SWEEP,
         "transition actions",
+    );
+}
+
+/// D17-T1: every minute, the contacts who answered a sequence leave it.
+pub fn spawn_sequence_exits_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(WORKFLOW_SEQUENCE_EXITS.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "sequence exits: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_SEQUENCE_EXITS,
+        "sequence exits",
     );
 }
 

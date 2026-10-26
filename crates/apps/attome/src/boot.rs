@@ -1821,6 +1821,10 @@ pub fn register_engines(
         .register_workflow_starter(attome_workflow::instance_admin::PublishedWorkflowStarter)
         // E8-T4: a journey's exit and goal conditions, before every node.
         .register_workflow_kind_guard(attome_marketing::journey::guard::JourneyGuard)
+        // D17-T1: a sequence run ends once its contact has left the sequence,
+        // and its send-window step.
+        .register_workflow_kind_guard(attome_workflow::sequence::SequenceGuard)
+        .register_workflow_step_handler(attome_workflow::sequence::SendWindowStep)
         // Y7-T5: raise a business event about the run's record.
         .register_workflow_step_handler(attome_api::business_event::RaiseEventStep)
         // E8-T7: the journey control and action steps.

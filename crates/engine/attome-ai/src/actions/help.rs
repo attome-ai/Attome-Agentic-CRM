@@ -232,6 +232,10 @@ pub const DOCS: &[(&str, &str)] = &[
     ),
     ("docs/slo.md", include_str!("../../../../../docs/slo.md")),
     (
+        "docs/sequences.md",
+        include_str!("../../../../../docs/sequences.md"),
+    ),
+    (
         "docs/slow-queries.md",
         include_str!("../../../../../docs/slow-queries.md"),
     ),

@@ -39,6 +39,8 @@ pub struct DefinitionDetail {
     pub updated_at: DateTime<Utc>,
     /// Solution 7 (D-785): the layer that owns this workflow.
     pub owner_layer: String,
+    /// `flow`, `journey`, `nurture` or `sequence` (D17-T1).
+    pub kind: String,
     pub versions: Vec<VersionSummary>,
 }
 
@@ -85,6 +87,10 @@ impl std::fmt::Debug for VersionDetail {
 pub struct CreateDefinitionBody {
     pub logicalname: String,
     pub name: String,
+    /// D17-T1: `flow` (the default), `journey`, `nurture` or `sequence`.
+    /// Fixed once created.
+    #[serde(default)]
+    pub kind: Option<String>,
 }
 
 impl std::fmt::Debug for CreateDefinitionBody {

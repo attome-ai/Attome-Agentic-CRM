@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Sales sequences (D17-T1): a workflow of the new kind `sequence` (`POST /api/v1/workflow/definitions`
+  now takes `kind`, and a definition shows it). `POST /api/v1/workflow/sequences/{logicalname}/enrolments`
+  enrols contacts, one run each; a reply, a meeting or a stage change of a deal at the contact's account
+  ends their sequence before its next step, and the `sequence.send_window` step waits for the
+  contact's sending window in their time zone. See `docs/sequences.md`.
 - Arabic and dialect eval sets (AG4-T1): six eval suites of 50 cases each (finding records,
   updating, creating tasks, summaries and replies graded by rubric, and safety refusals), every case in
   Modern Standard Arabic or one of four dialects, under `crates/engine/attome-ai/tests/fixtures/arabic`,

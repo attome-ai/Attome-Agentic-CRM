@@ -289,6 +289,19 @@ async fn create_definition(
     if name.is_empty() {
         return Err(AppError::Validation("name is required".into()));
     }
+    let kind = body
+        .kind
+        .as_deref()
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .unwrap_or("flow")
+        .to_owned();
+    if !crate::sequence::KINDS.contains(&kind.as_str()) {
+        return Err(AppError::Validation(format!(
+            "kind must be one of {}",
+            crate::sequence::KINDS.join(", ")
+        )));
+    }
     recording.preflight(&state.base.db).await?;
     let layer = recording.stamp()?;
 
@@ -312,8 +325,8 @@ async fn create_definition(
     let id: Uuid = sqlx::query_scalar(
         r#"
         INSERT INTO workflow_definition
-            (logicalname, name, created_by, created_at, updated_at, owner_layer)
-        VALUES ($1, $2, $3, $4, $4, $5)
+            (logicalname, name, created_by, created_at, updated_at, owner_layer, kind)
+        VALUES ($1, $2, $3, $4, $4, $5, $6)
         RETURNING id
         "#,
     )
@@ -322,6 +335,7 @@ async fn create_definition(
     .bind(ctx.user_id)
     .bind(now)
     .bind(layer.as_str())
+    .bind(&kind)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
@@ -363,6 +377,7 @@ async fn create_definition(
             created_at: now,
             updated_at: now,
             owner_layer: snapshot.owner_layer,
+            kind,
             versions: vec![],
         }),
     ))
@@ -397,10 +412,12 @@ async fn get_definition(
             chrono::DateTime<Utc>,
             chrono::DateTime<Utc>,
             String,
+            String,
         ),
     >(
         r#"
-        SELECT id, logicalname, name, is_active, row_version, created_at, updated_at, owner_layer
+        SELECT id, logicalname, name, is_active, row_version, created_at, updated_at, owner_layer,
+               kind
         FROM workflow_definition
         WHERE id = $1 AND is_deleted = FALSE
         "#,
@@ -422,6 +439,7 @@ async fn get_definition(
         created_at: row.5,
         updated_at: row.6,
         owner_layer: row.7,
+        kind: row.8,
         versions,
     }))
 }

@@ -21,6 +21,8 @@ pub mod node_types;
 pub mod retention;
 pub mod schedule_trigger;
 pub mod scheduler;
+/// D17-T1: sales sequences (definition kind `sequence`).
+pub mod sequence;
 pub mod simulate;
 pub mod sla_sweep;
 pub mod timer_follow;
@@ -49,5 +51,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(instance_control::openapi_fragment());
     doc.merge(dead_letter_admin::openapi_fragment());
     doc.merge(simulate::openapi_fragment());
+    doc.merge(sequence::openapi_fragment());
     doc
 }

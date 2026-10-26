@@ -30,6 +30,7 @@ attome-storage.workspace  = true
 attome-types.workspace        = true
 axum.workspace                = true
 chrono.workspace              = true
+chrono-tz.workspace           = true
 metrics.workspace             = true
 reqwest.workspace             = true
 serde.workspace               = true

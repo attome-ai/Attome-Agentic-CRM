@@ -36,6 +36,7 @@
 - [Arabic page paths: the link-preview check](content/seo-arabic-preview-check.md): the manual WhatsApp, X and LinkedIn check that keeps `content.seo_arabic_paths` off until it passes.
 - [Scanning](scanning.md): scannable fields, GS1 codes, finding records by code, scan actions and the deep-link rule.
 - [Offline use](offline.md): offline profiles, what a device gets and never gets, remote wipe and the device view.
+- [Sales sequences](sequences.md): the sequence kind, exits on reply, meeting or stage change, the sending window in the contact's time zone, and enrolling contacts.
 - [Deal teams and splits](deal-teams.md): team members, revenue and overlay splits, won deals and leavers.
 - [Opportunity lines](opportunity-lines.md): lines and the product picker, pricing order, the deal's amount, schedules, quote sync, undo and the feature flags.
 - [Procurement](procurement.md): requisitions, orders, receipts, vendor bills, budget checks and scorecards.
