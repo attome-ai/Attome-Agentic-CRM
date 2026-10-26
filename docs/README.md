@@ -22,6 +22,7 @@
 - [Duplicate rules](duplicates.md): comparators, what saving a duplicate does, scans, merges and undo.
 - [OData feed](odata.md): reading records live from Excel and Power BI.
 - [Data lineage](lineage.md): the graph of what uses what, impact before a field change, hand-documented links and the OpenLineage export.
+- [Imports and exports](imports-and-exports.md): import jobs (upload, dry run, apply, undo, error file, policy, recurring sources, agent tools) and exports (CSV, XLSX, JSON, Parquet, parts, labels).
 - [Data profiling](data-profiling.md): what a profile measures, masking, personal-data proposals, drift and schedules.
 - [Data quality](data-quality.md): dimensions, measure-only rules, targets, issues and their owners, fixes and alerts.
 - [Scanning](scanning.md): scannable fields, GS1 codes, finding records by code, scan actions and the deep-link rule.

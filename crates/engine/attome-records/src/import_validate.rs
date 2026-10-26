@@ -26,6 +26,10 @@
 //! validation is the dry run. Running it again recomputes every row, and the
 //! counts are read back from the stage, so a rerun converges.
 //!
+//! A file exported with `id` and `row_version` reads back as updates that
+//! expect the exported version (A23-T14): a record changed in between is
+//! refused when the import applies, never overwritten.
+//!
 //! Matching existing records reads every live record, whatever the creator
 //! may see: an import is an administrator's tool, and the apply step writes
 //! with the creator's own security.
@@ -596,6 +600,7 @@ fn check_body(
 ) -> Result<(), AppError> {
     let mut body = outcome.mapped.clone();
     body.remove("id");
+    body.remove("row_version");
     match crate::entity_mutation::validate_body(attrs, &body, required_only) {
         Ok(()) => Ok(()),
         Err(AppError::FieldValidation(failures)) => {
@@ -811,8 +816,10 @@ pub async fn validate(state: &EngineState, job_id: Uuid) -> Result<ValidateCount
             let mut mapped = Map::new();
             let mut errors = Vec::new();
             for (name, cell) in &cells {
-                // A mapped `id` names the record to update.
-                if name == "id" {
+                // A mapped `id` names the record to update; a mapped
+                // `row_version` (an exported file read back, A23-T14) is the
+                // version that update expects.
+                if name == "id" || name == "row_version" {
                     if let Some(id) = key_text(cell) {
                         mapped.insert(name.clone(), Value::String(id));
                     }
@@ -945,6 +952,18 @@ pub async fn validate(state: &EngineState, job_id: Uuid) -> Result<ValidateCount
                 continue;
             }
             outcome.record = found.and_then(|f| f.first().copied());
+            // A23-T14: a file that carries the row version it was exported
+            // at updates only a record still at that version.
+            if let (Some((id, _)), Some(version)) = (
+                outcome.record,
+                outcome
+                    .mapped
+                    .get("row_version")
+                    .and_then(key_text)
+                    .and_then(|v| v.parse::<i64>().ok()),
+            ) {
+                outcome.record = Some((id, version));
+            }
             let action = Action::for_mode(&job.match_mode, outcome.record.is_some());
             outcome.action = Some(action);
 

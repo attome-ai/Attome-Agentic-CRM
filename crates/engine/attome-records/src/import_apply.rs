@@ -151,6 +151,7 @@ fn body_of(row: &StageRow) -> Map<String, Value> {
         .cloned()
         .unwrap_or_default();
     body.remove("id");
+    body.remove("row_version");
     body
 }
 

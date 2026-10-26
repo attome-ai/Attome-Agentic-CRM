@@ -336,3 +336,79 @@ fn quiet_hours_defers_apply() {
         assert_eq!(live(&app, &entity).await, before);
     });
 }
+
+// feature: A23
+// negative: import_apply
+#[test]
+fn round_trip_export_import_uses_row_version() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = fixture(&app).await;
+        let record = existing(&app, &entity).await;
+        let id = record["id"].as_str().unwrap().to_owned();
+        let exported_version = record["row_version"].as_i64().unwrap().to_string();
+
+        // The file as an export wrote it: id and row_version first, then
+        // the person's edit.
+        let job = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO import_job (id, entity_logicalname, storage_key, file_name, file_sha256, \
+                                     mapping, match_mode, status, created_by) \
+             VALUES ($1, $2, 'imports/rt.csv', 'rt.csv', $3, '{}', 'update', 'staged', $4)",
+        )
+        .bind(job)
+        .bind(&entity)
+        .bind(job.to_string())
+        .bind(app.admin.id)
+        .execute(app.db())
+        .await
+        .unwrap();
+        let names = header_names(&["id".into(), "row_version".into(), "level".into()]);
+        stage_rows(
+            app.db(),
+            job,
+            &names,
+            &[vec![id.clone(), exported_version, "8".into()]],
+            1_000,
+            None,
+        )
+        .await
+        .unwrap();
+        import_validate::validate(&app.state, job)
+            .await
+            .expect("validate");
+
+        // Someone changes the record after the export.
+        sqlx::query(&format!(
+            "UPDATE \"{entity}\" SET note = 'changed', row_version = row_version + 1 \
+              WHERE id = $1::uuid"
+        ))
+        .bind(&id)
+        .execute(app.db())
+        .await
+        .unwrap();
+
+        let counts = import_apply::apply(&app.state, job).await.expect("apply");
+        assert_eq!(counts.applied, 0);
+        assert_eq!(counts.apply_failed, 1);
+        let error: Value =
+            sqlx::query_scalar("SELECT error FROM import_stage WHERE job_id = $1 AND row_no = 1")
+                .bind(job)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(
+            error["errors"][0]["code"], "changed_since_validation",
+            "{error}"
+        );
+        let after = existing(&app, &entity).await;
+        assert_eq!(
+            after["level"].as_f64(),
+            Some(1.0),
+            "not overwritten: {after}"
+        );
+        assert_eq!(after["note"], "changed", "{after}");
+    });
+}
