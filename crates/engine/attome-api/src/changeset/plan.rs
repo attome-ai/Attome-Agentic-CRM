@@ -1554,7 +1554,7 @@ async fn row_layer(conn: &mut PgConnection, op: &DocOp) -> Result<Option<String>
         Op::UpsertStateModel | Op::RetireStateModel => (
             one(
                 "SELECT owner_layer FROM state_model WHERE entity_logicalname = $1 \
-                 AND is_deleted = false LIMIT 1",
+                 AND record_type IS NULL AND is_deleted = false LIMIT 1",
             ),
             vec![Some(op.t("entity").into())],
         ),

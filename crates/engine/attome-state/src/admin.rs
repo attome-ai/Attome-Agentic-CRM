@@ -55,11 +55,138 @@ struct ModelRow {
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
     owner_layer: String,
+    // M8-T2: left out of the snapshot when empty, so a changeset's fold
+    // reads it as the bundle shape's defaults.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    record_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    locked_states: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason_field: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasons: Option<serde_json::Value>,
+}
+
+impl ModelRow {
+    fn locked_states(&self) -> Vec<attome_core::LockedState> {
+        self.locked_states
+            .clone()
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default()
+    }
+
+    fn reasons(&self) -> Vec<attome_core::StateReasons> {
+        self.reasons
+            .clone()
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default()
+    }
 }
 
 /// Every column `ModelRow` reads.
 const MODEL_COLUMNS: &str = "id, entity_logicalname, name, state_field, initial_state, is_active, \
-     row_version, created_at, updated_at, owner_layer";
+     row_version, created_at, updated_at, owner_layer, record_type, locked_states, reason_field, \
+     reasons";
+
+/// M8-T2: a model's checked rules, as the columns store them.
+struct CheckedRules {
+    locked_states: Option<serde_json::Value>,
+    reason_field: Option<String>,
+    reasons: Option<serde_json::Value>,
+}
+
+/// M8-T2: checks a model's locked states and reasons: every state named
+/// once, reasons not empty, and the reason field an attribute of the entity.
+fn check_rules(
+    state: &EngineState,
+    entity_logicalname: &str,
+    locked_states: &[attome_core::LockedState],
+    reason_field: Option<&str>,
+    reasons: &[attome_core::StateReasons],
+) -> Result<CheckedRules, AppError> {
+    let mut seen = std::collections::HashSet::new();
+    let mut locked = Vec::with_capacity(locked_states.len());
+    for l in locked_states {
+        let state_name = l.state.trim();
+        if state_name.is_empty() || !seen.insert(state_name.to_owned()) {
+            return Err(AppError::Validation(
+                "locked_states: each state is named once".into(),
+            ));
+        }
+        locked.push(attome_core::LockedState {
+            state: state_name.to_owned(),
+            editable: l
+                .editable
+                .iter()
+                .map(|f| f.trim().to_owned())
+                .filter(|f| !f.is_empty())
+                .collect(),
+        });
+    }
+    let mut seen = std::collections::HashSet::new();
+    let mut listed = Vec::with_capacity(reasons.len());
+    for r in reasons {
+        let state_name = r.state.trim();
+        let codes: Vec<String> = r
+            .reasons
+            .iter()
+            .map(|c| c.trim().to_owned())
+            .filter(|c| !c.is_empty())
+            .collect();
+        if state_name.is_empty() || codes.is_empty() || !seen.insert(state_name.to_owned()) {
+            return Err(AppError::Validation(
+                "reasons: each state is named once, with at least one reason".into(),
+            ));
+        }
+        listed.push(attome_core::StateReasons {
+            state: state_name.to_owned(),
+            reasons: codes,
+        });
+    }
+    let reason_field = reason_field
+        .map(str::trim)
+        .filter(|f| !f.is_empty())
+        .map(str::to_owned);
+    if let Some(field) = &reason_field {
+        let known = state
+            .entities
+            .load()
+            .get(entity_logicalname)
+            .is_some_and(|m| m.attrs.iter().any(|a| &a.logicalname == field));
+        if !known {
+            return Err(AppError::Validation(format!(
+                "reason_field: {entity_logicalname} has no field named '{field}'"
+            )));
+        }
+    }
+    if !listed.is_empty() && reason_field.is_none() {
+        return Err(AppError::Validation("reasons need a reason_field".into()));
+    }
+    let json = |empty: bool, v: serde_json::Value| (!empty).then_some(v);
+    Ok(CheckedRules {
+        locked_states: json(
+            locked.is_empty(),
+            serde_json::to_value(&locked).map_err(AppError::internal)?,
+        ),
+        reason_field,
+        reasons: json(
+            listed.is_empty(),
+            serde_json::to_value(&listed).map_err(AppError::internal)?,
+        ),
+    })
+}
+
+/// M8-T2: whether the model governs one record type. A typed model is kept
+/// out of changesets: they identify a model by its entity alone.
+async fn model_is_typed(tx: &mut attome_db::Tx<'_>, model_id: Uuid) -> Result<bool, AppError> {
+    let record_type: Option<Option<String>> =
+        sqlx::query_scalar("SELECT record_type FROM state_model WHERE id = $1")
+            .bind(model_id)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(record_type.flatten().is_some())
+}
 
 impl From<ModelRow> for StateModelListItem {
     fn from(r: ModelRow) -> Self {
@@ -71,6 +198,10 @@ impl From<ModelRow> for StateModelListItem {
             initial_state: r.initial_state,
             is_active: r.is_active,
             row_version: r.row_version,
+            locked_states: r.locked_states(),
+            reasons: r.reasons(),
+            record_type: r.record_type,
+            reason_field: r.reason_field,
             owner_layer: r.owner_layer,
         }
     }
@@ -467,6 +598,10 @@ async fn fetch_detail(state: &EngineState, id: Uuid) -> Result<StateModelDetail,
         row_version: row.row_version,
         created_at: row.created_at,
         updated_at: row.updated_at,
+        locked_states: row.locked_states(),
+        reasons: row.reasons(),
+        record_type: row.record_type,
+        reason_field: row.reason_field,
         owner_layer: row.owner_layer,
         transitions: transitions.into_iter().map(Into::into).collect(),
     })
@@ -524,6 +659,19 @@ async fn create_state_model(
         ));
     }
     validate_state_field(&state, &entity_logicalname, &state_field).await?;
+    let record_type = body
+        .record_type
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_owned);
+    let rules = check_rules(
+        &state,
+        &entity_logicalname,
+        &body.locked_states,
+        body.reason_field.as_deref(),
+        &body.reasons,
+    )?;
     recording.preflight(&state.base.db).await?;
     let layer = recording.stamp()?;
 
@@ -542,22 +690,25 @@ async fn create_state_model(
 
     let existing: Option<Uuid> = sqlx::query_scalar(
         "SELECT id FROM state_model \
-         WHERE entity_logicalname = $1 AND is_deleted = false AND is_active = true",
+         WHERE entity_logicalname = $1 AND is_deleted = false AND is_active = true \
+           AND COALESCE(record_type, '') = COALESCE($2, '')",
     )
     .bind(&entity_logicalname)
+    .bind(&record_type)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
     if existing.is_some() {
         return Err(AppError::Conflict(
-            "this entity already has an active state model",
+            "this entity (or record type) already has an active state model",
         ));
     }
 
     let id: Uuid = sqlx::query_scalar(
         "INSERT INTO state_model \
-             (entity_logicalname, name, state_field, initial_state, is_active, owner_layer) \
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+             (entity_logicalname, name, state_field, initial_state, is_active, owner_layer, \
+              record_type, locked_states, reason_field, reasons) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
     )
     .bind(&entity_logicalname)
     .bind(&name)
@@ -565,6 +716,10 @@ async fn create_state_model(
     .bind(&initial_state)
     .bind(body.is_active)
     .bind(layer.as_str())
+    .bind(&record_type)
+    .bind(&rules.locked_states)
+    .bind(&rules.reason_field)
+    .bind(&rules.reasons)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -583,9 +738,11 @@ async fn create_state_model(
     )
     .await?;
     let row = fetch_model_in_tx(&mut tx, id).await?;
-    recording
-        .record(&mut tx, model_op(Op::UpsertStateModel, &row)?)
-        .await?;
+    if row.record_type.is_none() {
+        recording
+            .record(&mut tx, model_op(Op::UpsertStateModel, &row)?)
+            .await?;
+    }
 
     tx.commit().await.map_err(AppError::internal)?;
     crate::reconcile::invalidate(&state).await;
@@ -634,6 +791,13 @@ async fn update_state_model(
     .map_err(AppError::internal)?
     .ok_or(AppError::NotFound)?;
     validate_state_field(&state, &entity_logicalname, &state_field).await?;
+    let rules = check_rules(
+        &state,
+        &entity_logicalname,
+        &body.locked_states,
+        body.reason_field.as_deref(),
+        &body.reasons,
+    )?;
     recording.preflight(&state.base.db).await?;
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -652,6 +816,7 @@ async fn update_state_model(
     let n = sqlx::query(
         "UPDATE state_model \
          SET name = $2, state_field = $3, initial_state = $4, is_active = $5, \
+             locked_states = $7, reason_field = $8, reasons = $9, \
              updated_at = NOW(), row_version = row_version + 1 \
          WHERE id = $1 AND is_deleted = false AND row_version = $6",
     )
@@ -661,6 +826,9 @@ async fn update_state_model(
     .bind(&initial_state)
     .bind(body.is_active)
     .bind(body.row_version)
+    .bind(&rules.locked_states)
+    .bind(&rules.reason_field)
+    .bind(&rules.reasons)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?
@@ -683,9 +851,11 @@ async fn update_state_model(
     )
     .await?;
     let row = fetch_model_in_tx(&mut tx, id).await?;
-    recording
-        .record(&mut tx, model_op(Op::UpsertStateModel, &row)?)
-        .await?;
+    if row.record_type.is_none() {
+        recording
+            .record(&mut tx, model_op(Op::UpsertStateModel, &row)?)
+            .await?;
+    }
 
     tx.commit().await.map_err(AppError::internal)?;
     crate::reconcile::invalidate(&state).await;
@@ -745,9 +915,11 @@ async fn delete_state_model(
     )
     .await?;
     let row = fetch_model_in_tx(&mut tx, id).await?;
-    recording
-        .record(&mut tx, model_op(Op::RetireStateModel, &row)?)
-        .await?;
+    if row.record_type.is_none() {
+        recording
+            .record(&mut tx, model_op(Op::RetireStateModel, &row)?)
+            .await?;
+    }
 
     tx.commit().await.map_err(AppError::internal)?;
     crate::reconcile::invalidate(&state).await;
@@ -856,12 +1028,14 @@ async fn create_transition(
     )
     .await?;
     let entity_logicalname = model_entity_in_tx(&mut tx, id).await?;
-    recording
-        .record(
-            &mut tx,
-            transition_op(Op::UpsertStateTransition, &entity_logicalname, &row)?,
-        )
-        .await?;
+    if !model_is_typed(&mut tx, id).await? {
+        recording
+            .record(
+                &mut tx,
+                transition_op(Op::UpsertStateTransition, &entity_logicalname, &row)?,
+            )
+            .await?;
+    }
 
     tx.commit().await.map_err(AppError::internal)?;
     crate::reconcile::invalidate(&state).await;
@@ -1001,12 +1175,14 @@ async fn update_transition(
     )
     .await?;
     let entity_logicalname = model_entity_in_tx(&mut tx, id).await?;
-    recording
-        .record(
-            &mut tx,
-            transition_op(Op::UpsertStateTransition, &entity_logicalname, &row)?,
-        )
-        .await?;
+    if !model_is_typed(&mut tx, id).await? {
+        recording
+            .record(
+                &mut tx,
+                transition_op(Op::UpsertStateTransition, &entity_logicalname, &row)?,
+            )
+            .await?;
+    }
 
     tx.commit().await.map_err(AppError::internal)?;
     crate::reconcile::invalidate(&state).await;
@@ -1080,12 +1256,14 @@ async fn delete_transition(
     )
     .await?;
     let entity_logicalname = model_entity_in_tx(&mut tx, id).await?;
-    recording
-        .record(
-            &mut tx,
-            transition_op(Op::RetireStateTransition, &entity_logicalname, &row)?,
-        )
-        .await?;
+    if !model_is_typed(&mut tx, id).await? {
+        recording
+            .record(
+                &mut tx,
+                transition_op(Op::RetireStateTransition, &entity_logicalname, &row)?,
+            )
+            .await?;
+    }
 
     tx.commit().await.map_err(AppError::internal)?;
     crate::reconcile::invalidate(&state).await;
@@ -1173,6 +1351,10 @@ mod tests {
             created_at: now,
             updated_at: now,
             owner_layer: "project".into(),
+            record_type: None,
+            locked_states: None,
+            reason_field: None,
+            reasons: None,
         }
     }
 

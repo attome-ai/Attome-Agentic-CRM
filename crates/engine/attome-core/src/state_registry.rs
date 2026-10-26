@@ -94,6 +94,91 @@ pub struct StateModelDef {
     /// authored and left switched off while it's being built out.
     pub is_active: bool,
     pub row_version: i64,
+    /// M8-T2: the record type it governs, locked states and status reasons.
+    pub rules: ModelRules,
+}
+
+/// M8-T2: a state in which a record is read-only except `editable`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct LockedState {
+    pub state: String,
+    /// The fields that may still change while the record is in `state`.
+    #[serde(default)]
+    pub editable: Vec<String>,
+}
+
+/// M8-T2: the reasons a record may give for being in `state`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct StateReasons {
+    pub state: String,
+    pub reasons: Vec<String>,
+}
+
+/// M8-T2: what a model adds beyond its transitions.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ModelRules {
+    /// The record type the model governs (the record's `record_type` code);
+    /// `None` for the entity's model of every record without one of its own.
+    pub record_type: Option<String>,
+    pub locked_states: Vec<LockedState>,
+    /// A choice or text attribute holding the record's status reason.
+    pub reason_field: Option<String>,
+    pub reasons: Vec<StateReasons>,
+}
+
+impl ModelRules {
+    /// The lock of `state`, if it is locked.
+    pub fn locked(&self, state: Option<&str>) -> Option<&LockedState> {
+        let state = state?;
+        self.locked_states.iter().find(|l| l.state == state)
+    }
+
+    /// The reasons `state` allows; `None` when it names none.
+    pub fn reasons_for(&self, state: &str) -> Option<&[String]> {
+        self.reasons
+            .iter()
+            .find(|r| r.state == state)
+            .map(|r| r.reasons.as_slice())
+    }
+}
+
+/// M8-T2: which of `changed` a record in `locked` may not change: anything
+/// but the state field (a transition out stays possible), the listed
+/// editable fields, and the reason field when the state changes with it.
+/// Pure.
+pub fn locked_violations(
+    locked: &LockedState,
+    state_field: &str,
+    reason_field: Option<&str>,
+    changed: &[String],
+) -> Vec<String> {
+    let moving = changed.iter().any(|c| c == state_field);
+    changed
+        .iter()
+        .filter(|c| c.as_str() != state_field)
+        .filter(|c| !locked.editable.iter().any(|e| e == *c))
+        .filter(|c| !(moving && reason_field == Some(c.as_str())))
+        .cloned()
+        .collect()
+}
+
+/// M8-T2: checks a record's status `reason` for `state`. A state with
+/// reasons needs one of them; a state without any takes any value. Pure.
+pub fn check_reason(rules: &ModelRules, state: &str, reason: Option<&str>) -> Result<(), String> {
+    let Some(allowed) = rules.reasons_for(state) else {
+        return Ok(());
+    };
+    match reason.map(str::trim).filter(|r| !r.is_empty()) {
+        Some(r) if allowed.iter().any(|a| a == r) => Ok(()),
+        Some(r) => Err(format!(
+            "'{r}' is not a reason for '{state}'; use one of: {}",
+            allowed.join(", ")
+        )),
+        None => Err(format!(
+            "'{state}' needs a reason: one of {}",
+            allowed.join(", ")
+        )),
+    }
 }
 
 /// One `state_transition` row.
@@ -178,19 +263,69 @@ impl StateModelEntry {
 #[derive(Clone, Debug, Default)]
 pub struct StateModelRegistry {
     by_entity: HashMap<String, StateModelEntry>,
+    /// M8-T2: the models of one record type, keyed by (entity, type code).
+    by_type: HashMap<(String, String), StateModelEntry>,
 }
 
 impl StateModelRegistry {
+    /// An entry whose model names a record type goes under that type; of two
+    /// entries for one slot an active model wins.
     pub fn from_entries(entries: Vec<(String, StateModelEntry)>) -> Self {
-        Self {
-            by_entity: entries.into_iter().collect(),
+        fn put<K: std::hash::Hash + Eq>(
+            map: &mut HashMap<K, StateModelEntry>,
+            key: K,
+            entry: StateModelEntry,
+        ) {
+            let active = |e: &StateModelEntry| e.model.as_ref().is_some_and(|m| m.is_active);
+            match map.get(&key) {
+                Some(existing) if active(existing) && !active(&entry) => {}
+                _ => {
+                    map.insert(key, entry);
+                }
+            }
         }
+        let mut by_entity = HashMap::new();
+        let mut by_type = HashMap::new();
+        for (entity, entry) in entries {
+            match entry
+                .model
+                .as_ref()
+                .and_then(|m| m.rules.record_type.clone())
+            {
+                Some(code) => put(&mut by_type, (entity, code), entry),
+                None => put(&mut by_entity, entity, entry),
+            }
+        }
+        Self { by_entity, by_type }
     }
 
     /// `None` means this entity has no configured lifecycle at all —
-    /// enforcement is a no-op for it, same as today.
+    /// enforcement is a no-op for it, same as today. The entity's model for
+    /// records without a type of their own; see [`Self::for_record`].
     pub fn get(&self, entity_logicalname: &str) -> Option<&StateModelEntry> {
         self.by_entity.get(entity_logicalname)
+    }
+
+    /// M8-T2: the model of a record of `record_type`: its type's model when
+    /// the type has one, else the entity's.
+    pub fn for_record(
+        &self,
+        entity_logicalname: &str,
+        record_type: Option<&str>,
+    ) -> Option<&StateModelEntry> {
+        record_type
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .and_then(|t| {
+                self.by_type
+                    .get(&(entity_logicalname.to_owned(), t.to_owned()))
+            })
+            .or_else(|| self.get(entity_logicalname))
+    }
+
+    /// M8-T2: whether any record type of the entity has a model of its own.
+    pub fn has_typed(&self, entity_logicalname: &str) -> bool {
+        self.by_type.keys().any(|(e, _)| e == entity_logicalname)
     }
 
     pub fn len(&self) -> usize {
@@ -216,6 +351,25 @@ struct ModelRow {
     initial_state: String,
     is_active: bool,
     row_version: i64,
+    record_type: Option<String>,
+    locked_states: Option<serde_json::Value>,
+    reason_field: Option<String>,
+    reasons: Option<serde_json::Value>,
+}
+
+/// A stored rules column, or empty when it does not parse (a hand-edited
+/// row: the admin API and reconcile write only what they validated).
+fn rules_list<T: serde::de::DeserializeOwned>(
+    raw: Option<serde_json::Value>,
+    model: Uuid,
+) -> Vec<T> {
+    match raw {
+        None => Vec::new(),
+        Some(v) => serde_json::from_value(v).unwrap_or_else(|e| {
+            tracing::error!(model_id = %model, error = %e, "state_model rules column is corrupt; ignored");
+            Vec::new()
+        }),
+    }
 }
 
 #[derive(sqlx::FromRow)]
@@ -245,7 +399,8 @@ struct TransitionRow {
 /// `check_transition`).
 pub async fn load(db: &DbPool) -> Result<StateModelRegistry, AppError> {
     let models: Vec<ModelRow> = sqlx::query_as(
-        "SELECT id, entity_logicalname, name, state_field, initial_state, is_active, row_version \
+        "SELECT id, entity_logicalname, name, state_field, initial_state, is_active, row_version, \
+                record_type, locked_states, reason_field, reasons \
          FROM state_model WHERE is_deleted = false",
     )
     .fetch_all(db)
@@ -321,6 +476,12 @@ pub async fn load(db: &DbPool) -> Result<StateModelRegistry, AppError> {
                     initial_state: m.initial_state,
                     is_active: m.is_active,
                     row_version: m.row_version,
+                    rules: ModelRules {
+                        record_type: m.record_type.filter(|t| !t.trim().is_empty()),
+                        locked_states: rules_list(m.locked_states, m.id),
+                        reason_field: m.reason_field.filter(|f| !f.trim().is_empty()),
+                        reasons: rules_list(m.reasons, m.id),
+                    },
                 }),
                 transitions,
             },
@@ -527,6 +688,7 @@ mod tests {
             initial_state: initial.to_owned(),
             is_active,
             row_version: 0,
+            rules: Default::default(),
         }
     }
 
@@ -730,5 +892,94 @@ mod tests {
         };
         let err = check_transition(&entry, &ctx(&[], true), Some("new"), "closed").unwrap_err();
         assert!(matches!(err, AppError::TransitionNotAllowed(_)));
+    }
+
+    // ── M8-T2: locked states, status reasons, models per record type ──
+
+    fn s(list: &[&str]) -> Vec<String> {
+        list.iter().map(|x| (*x).to_owned()).collect()
+    }
+
+    #[test]
+    fn locked_state_allows_only_listed_fields_and_leaving() {
+        let locked = LockedState {
+            state: "closed".into(),
+            editable: s(&["notes"]),
+        };
+        let reason = Some("close_reason");
+        assert!(locked_violations(&locked, "status", reason, &s(&["notes"])).is_empty());
+        assert_eq!(
+            locked_violations(&locked, "status", reason, &s(&["amount", "notes"])),
+            s(&["amount"])
+        );
+        // Reopening moves the state and may set the reason with it.
+        assert!(
+            locked_violations(&locked, "status", reason, &s(&["status", "close_reason"]))
+                .is_empty()
+        );
+        // The reason alone is not editable while closed.
+        assert_eq!(
+            locked_violations(&locked, "status", reason, &s(&["close_reason"])),
+            s(&["close_reason"])
+        );
+    }
+
+    #[test]
+    fn reason_must_fit_the_state() {
+        let rules = ModelRules {
+            reason_field: Some("close_reason".into()),
+            reasons: vec![StateReasons {
+                state: "lost".into(),
+                reasons: s(&["price", "competitor"]),
+            }],
+            ..ModelRules::default()
+        };
+        assert!(check_reason(&rules, "lost", Some("price")).is_ok());
+        assert!(check_reason(&rules, "lost", Some("weather")).is_err());
+        assert!(check_reason(&rules, "lost", None).is_err());
+        assert!(check_reason(&rules, "lost", Some("  ")).is_err());
+        // A state with no reasons takes any value.
+        assert!(check_reason(&rules, "won", Some("anything")).is_ok());
+        assert!(check_reason(&rules, "won", None).is_ok());
+        assert_eq!(rules.locked(Some("lost")), None);
+    }
+
+    #[test]
+    fn record_type_model_wins_for_its_records() {
+        let default = model("case", "status", "new", true);
+        let mut typed = model("case", "stage", "logged", true);
+        typed.rules.record_type = Some("complaint".into());
+        let registry = StateModelRegistry::from_entries(vec![
+            (
+                "case".into(),
+                StateModelEntry {
+                    model: Some(default.clone()),
+                    transitions: vec![],
+                },
+            ),
+            (
+                "case".into(),
+                StateModelEntry {
+                    model: Some(typed.clone()),
+                    transitions: vec![],
+                },
+            ),
+        ]);
+        let field = |t: Option<&str>| {
+            registry
+                .for_record("case", t)
+                .and_then(|e| e.model.as_ref())
+                .map(|m| m.state_field.clone())
+        };
+        assert_eq!(field(Some("complaint")).as_deref(), Some("stage"));
+        assert_eq!(field(Some("service")).as_deref(), Some("status"));
+        assert_eq!(field(None).as_deref(), Some("status"));
+        assert_eq!(field(Some(" ")).as_deref(), Some("status"));
+        assert!(registry.has_typed("case"));
+        assert!(!registry.has_typed("lead"));
+        assert_eq!(
+            registry.get("case").and_then(|e| e.model.as_ref()),
+            Some(&default)
+        );
     }
 }

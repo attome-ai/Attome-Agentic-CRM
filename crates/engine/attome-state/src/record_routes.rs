@@ -109,6 +109,27 @@ async fn fetch_current_state(
     .map_err(AppError::internal)
 }
 
+/// M8-T2: the record's type, read only when one of the entity's record
+/// types has a state model of its own.
+async fn record_type_of(
+    state: &EngineState,
+    entity: &str,
+    record_id: Uuid,
+) -> Result<Option<String>, AppError> {
+    if !state.state_models.load().has_typed(entity) {
+        return Ok(None);
+    }
+    sqlx::query_scalar::<_, Option<String>>(&format!(
+        "SELECT record_type::text FROM {} WHERE id = $1 AND is_active = true",
+        quote_ident(entity)
+    ))
+    .bind(record_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map(Option::flatten)
+    .map_err(AppError::internal)
+}
+
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/transitions",
@@ -138,8 +159,9 @@ async fn list_available_transitions(
     // gate, same action, same `NotFound`-on-miss convention as
     // `entity_crud::get_record` applies to the generic `GET /{entity}/{id}`.
     require_record_access(&state, &ctx, entity_id, &entity, id, RecordAction::Read).await?;
+    let record_type = record_type_of(&state, &entity, id).await?;
     let registry = state.state_models.load();
-    let Some(entry) = registry.get(&entity) else {
+    let Some(entry) = registry.for_record(&entity, record_type.as_deref()) else {
         // No configured lifecycle for this entity -- nothing to list, not an
         // error (an ungoverned entity legitimately has zero transitions).
         return Ok(Json(PaginatedResponse::new(Vec::new(), 0, 1, 1)));
@@ -224,10 +246,11 @@ pub async fn apply_transition_at(
 
     // `/transition` exists to move a governed state field; on an entity with
     // no model it is a 422, not an ungoverned field write.
+    let record_type = record_type_of(state, entity, id).await?;
     let state_field = {
         let registry = state.state_models.load();
         registry
-            .get(entity)
+            .for_record(entity, record_type.as_deref())
             .and_then(|entry| entry.model.as_ref())
             .map(|model| model.state_field.clone())
             .ok_or_else(|| {

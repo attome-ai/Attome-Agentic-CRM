@@ -269,9 +269,10 @@ pub use state::{
     audit_user_cache_key,
 };
 pub use state_registry::{
-    ACTION_STATE_TRANSITION, STATE_MODEL_VERSION_CHANNEL, StateModelDef, StateModelEntry,
-    StateModelRegistry, TransitionApprovalPayload, TransitionDef, available_transitions,
-    check_initial_state, check_transition, check_transition_with,
+    ACTION_STATE_TRANSITION, LockedState, ModelRules, STATE_MODEL_VERSION_CHANNEL, StateModelDef,
+    StateModelEntry, StateModelRegistry, StateReasons, TransitionApprovalPayload, TransitionDef,
+    available_transitions, check_initial_state, check_reason, check_transition,
+    check_transition_with, locked_violations,
 };
 pub use transfer_gate::{TransferDecision, assert_transfer_allowed};
 pub use workflow_start::{WorkflowStartFuture, WorkflowStartRequest, WorkflowStarter};

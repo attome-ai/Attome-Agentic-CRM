@@ -460,6 +460,7 @@ mod tests {
             initial_state: "open".into(),
             is_active: true,
             row_version: 1,
+            rules: Default::default(),
         };
         let mut guarded = transition("open", "completed", 0);
         guarded.guard_expression = Some("subject != ''".into());

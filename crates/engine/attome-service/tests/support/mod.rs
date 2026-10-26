@@ -219,6 +219,7 @@ pub fn register_bundle_state_models(state: &EngineState) {
                         initial_state: text(model, "initial_state"),
                         is_active: true,
                         row_version: 0,
+                        rules: Default::default(),
                     }),
                     transitions,
                 },

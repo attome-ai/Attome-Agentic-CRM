@@ -698,6 +698,16 @@ pub struct StateModelDef {
     pub is_active: bool,
     #[serde(default)]
     pub transitions: Vec<StateTransitionDef>,
+    /// M8-T2: states in which a record is read-only except listed fields.
+    /// Omitted from an export when there are none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub locked_states: Vec<attome_core::LockedState>,
+    /// M8-T2: the attribute holding the status reason.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason_field: Option<String>,
+    /// M8-T2: the reasons each state allows.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reasons: Vec<attome_core::StateReasons>,
 }
 
 fn default_true() -> bool {

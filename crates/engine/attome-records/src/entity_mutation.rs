@@ -1525,9 +1525,10 @@ fn sanitize_rich_text_fields<'a>(
 /// this widens when that fetch happens, it does not add a second one.
 fn entity_has_active_state_model(state: &EngineState, entity_name: &str) -> bool {
     let registry = state.state_models.load();
-    registry
-        .get(entity_name)
-        .is_some_and(|entry| entry.model.as_ref().is_some_and(|m| m.is_active))
+    registry.has_typed(entity_name)
+        || registry
+            .get(entity_name)
+            .is_some_and(|entry| entry.model.as_ref().is_some_and(|m| m.is_active))
 }
 
 /// D-789: the live row `record_id` of `entity_name` (every column, sensitive
@@ -1606,6 +1607,36 @@ pub(crate) async fn fetch_stored_record(
         Some(Value::Object(map)) => Some(map),
         _ => None,
     })
+}
+
+/// M8-T2: the attributes `obj` sets to a value other than the stored one,
+/// engine-managed fields left out (an engine's own bookkeeping is never a
+/// person's edit).
+async fn changed_fields(
+    tx: &mut Transaction<'_, Postgres>,
+    state: &EngineState,
+    entity_name: &str,
+    record_id: Uuid,
+    attrs: &[AttrInfo],
+    obj: &serde_json::Map<String, Value>,
+) -> Result<Vec<String>, AppError> {
+    let stored = fetch_stored_record(tx, entity_name, record_id, attrs)
+        .await?
+        .unwrap_or_default();
+    Ok(attrs
+        .iter()
+        .filter(|a| obj.contains_key(&a.logicalname))
+        .filter(|a| {
+            !state
+                .engine_managed_fields
+                .contains(&(entity_name.to_owned(), a.logicalname.clone()))
+        })
+        .filter(|a| {
+            crate::rule_engine::rules_value_of_attr(a, obj.get(&a.logicalname))
+                != crate::rule_engine::rules_value_of_attr(a, stored.get(&a.logicalname))
+        })
+        .map(|a| a.logicalname.clone())
+        .collect())
 }
 
 /// `stored` with the PATCH `obj` laid over it.
@@ -1880,8 +1911,10 @@ pub async fn create_one_as(
     let with_initial_state;
     let obj = {
         let registry = state.state_models.load();
+        // M8-T2: a record of a type with its own model starts in that model.
+        let record_type = obj.get("record_type").and_then(Value::as_str);
         let governed = registry
-            .get(entity_name)
+            .for_record(entity_name, record_type)
             .and_then(|entry| entry.model.as_ref().map(|m| (entry, m)));
         match governed {
             None => obj,
@@ -2390,7 +2423,13 @@ pub(crate) fn state_transition_event_name(
     new_row: Option<&Value>,
 ) -> Option<String> {
     let registry = state.state_models.load();
-    let model = registry.get(entity_name)?.model.as_ref()?;
+    let record_type = old_row
+        .and_then(|r| r.get("record_type"))
+        .and_then(Value::as_str);
+    let model = registry
+        .for_record(entity_name, record_type)?
+        .model
+        .as_ref()?;
     if !model.is_active {
         return None;
     }
@@ -2440,7 +2479,22 @@ async fn enforce_state_transition(
     mode: MutationMode,
 ) -> Result<Option<PendingRedirect>, AppError> {
     let registry = state.state_models.load();
-    let Some(entry) = registry.get(entity_name) else {
+    // M8-T2: an entity whose record types have models of their own reads the
+    // record's type first (one query, only for such entities).
+    let record_type: Option<String> = if registry.has_typed(entity_name) {
+        sqlx::query_scalar::<_, Option<String>>(&format!(
+            "SELECT record_type::text FROM {} WHERE id = $1 AND is_active = true",
+            quote_ident(entity_name)
+        ))
+        .bind(record_id)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(AppError::internal)?
+        .flatten()
+    } else {
+        None
+    };
+    let Some(entry) = registry.for_record(entity_name, record_type.as_deref()) else {
         return Ok(None);
     };
     let Some(model) = &entry.model else {
@@ -2450,9 +2504,18 @@ async fn enforce_state_transition(
     // M07 Phase F: a model with approval transitions needs the current state
     // on every write (the pending lock applies to field edits too); any
     // other model only when the write names the state field — the zero-I/O
-    // common case is unchanged.
+    // common case is unchanged. M8-T2: so does a model with locked states,
+    // or a write that sets the status reason.
     let approval_lock = entry.has_approval_transitions();
-    if new_value.is_none() && !approval_lock && !matches!(mode, MutationMode::ApprovalFlow(_)) {
+    let rules = &model.rules;
+    let reason_touched = rules
+        .reason_field
+        .as_ref()
+        .is_some_and(|f| obj.contains_key(f));
+    let needs_current = new_value.is_some()
+        || approval_lock
+        || (model.is_active && (!rules.locked_states.is_empty() || reason_touched));
+    if !needs_current && !matches!(mode, MutationMode::ApprovalFlow(_)) {
         return Ok(None);
     }
 
@@ -2489,7 +2552,7 @@ async fn enforce_state_transition(
     // write and no transition, whoever asks (an admin too: the approval flow
     // is the only way out, so a decision can never be overtaken by a direct
     // edit). This is the minimal `locked_states` behaviour for pending states
-    // only; Phase B's general `locked_states` is not built yet.
+    // only; the general locked states (M8-T2) are checked just below.
     if let Some(gated) = entry.approval_pending_in(current.as_deref()) {
         return Err(AppError::TransitionNotAllowed(format!(
             "{entity_name}: the record is in '{}' waiting for the approval of transition '{}'; \
@@ -2498,6 +2561,37 @@ async fn enforce_state_transition(
             current.as_deref().unwrap_or(""),
             gated.name
         )));
+    }
+
+    // M8-T2: a locked state makes the record read-only except its editable
+    // fields; the state field stays writable so a transition can leave it.
+    if model.is_active
+        && let Some(locked) = rules.locked(current.as_deref())
+    {
+        let changed = changed_fields(tx, state, entity_name, record_id, attrs, obj).await?;
+        let refused = attome_core::locked_violations(
+            locked,
+            &model.state_field,
+            rules.reason_field.as_deref(),
+            &changed,
+        );
+        if !refused.is_empty() {
+            return Err(AppError::TransitionNotAllowed(format!(
+                "{entity_name}: the record is '{}', which is read-only; it cannot change {}",
+                locked.state,
+                refused.join(", ")
+            )));
+        }
+    }
+    // M8-T2: the status reason fits the state the record ends in.
+    if model.is_active
+        && let Some(reason_field) = &rules.reason_field
+        && (new_value.is_some() || reason_touched)
+        && let Some(target) = new_value.or(current.as_deref())
+    {
+        let reason = guard_ctx_source.get(reason_field).and_then(Value::as_str);
+        attome_core::check_reason(rules, target, reason)
+            .map_err(|m| AppError::Validation(format!("{entity_name}.{reason_field}: {m}")))?;
     }
 
     let Some(new_value) = new_value else {

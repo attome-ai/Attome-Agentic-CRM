@@ -14,6 +14,19 @@ pub struct StateModelListItem {
     pub initial_state: String,
     pub is_active: bool,
     pub row_version: i64,
+    /// M8-T2: the record type this model governs; absent for the entity's
+    /// model of every record without one of its own.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub record_type: Option<String>,
+    /// M8-T2: states in which a record is read-only except listed fields.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub locked_states: Vec<attome_core::LockedState>,
+    /// M8-T2: the attribute holding the record's status reason.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason_field: Option<String>,
+    /// M8-T2: the reasons each state allows.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub reasons: Vec<attome_core::StateReasons>,
     /// Solution 7 (D-785): the layer that owns this model — `platform`,
     /// `product`, `project` or `customer`. Only a changeset of that layer may
     /// change or retire it.
@@ -37,6 +50,19 @@ pub struct StateModelDetail {
     pub row_version: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// M8-T2: the record type this model governs; absent for the entity's
+    /// model of every record without one of its own.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub record_type: Option<String>,
+    /// M8-T2: states in which a record is read-only except listed fields.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub locked_states: Vec<attome_core::LockedState>,
+    /// M8-T2: the attribute holding the record's status reason.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason_field: Option<String>,
+    /// M8-T2: the reasons each state allows.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub reasons: Vec<attome_core::StateReasons>,
     /// Solution 7 (D-785): the layer that owns this model.
     pub owner_layer: String,
     pub transitions: Vec<TransitionListItem>,
@@ -57,6 +83,21 @@ pub struct CreateStateModelBody {
     pub initial_state: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
+    /// M8-T2: the record type (a `record_type` code of the entity) this model
+    /// governs; omit for the entity's model of every other record. Fixed once
+    /// created. A typed model is not recorded in changesets or bundles: make
+    /// it through this API in each deployment.
+    #[serde(default)]
+    pub record_type: Option<String>,
+    /// M8-T2: states in which a record is read-only except the listed fields.
+    #[serde(default)]
+    pub locked_states: Vec<attome_core::LockedState>,
+    /// M8-T2: an attribute of the entity holding the status reason.
+    #[serde(default)]
+    pub reason_field: Option<String>,
+    /// M8-T2: the reasons each state allows; a state listed here needs one.
+    #[serde(default)]
+    pub reasons: Vec<attome_core::StateReasons>,
 }
 
 impl std::fmt::Debug for CreateStateModelBody {
@@ -79,6 +120,13 @@ pub struct UpdateStateModelBody {
     pub initial_state: String,
     pub is_active: bool,
     pub row_version: i64,
+    /// M8-T2: full replacement, like every field here.
+    #[serde(default)]
+    pub locked_states: Vec<attome_core::LockedState>,
+    #[serde(default)]
+    pub reason_field: Option<String>,
+    #[serde(default)]
+    pub reasons: Vec<attome_core::StateReasons>,
 }
 
 impl std::fmt::Debug for UpdateStateModelBody {

@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- State model locks, reasons and record types (M8-T2): a model's `locked_states` make a record
+  read-only in those states except the listed fields; `reason_field` and `reasons` require a status
+  reason that fits the state; a model with `record_type` governs only records of that type.
+  Migration `0292_state_model_rules` adds the columns and makes the active-model index per
+  (entity, record type). See `docs/state-models.md`.
 - Sequences screen (D17-T2): `/xrm/sales/sequences` enrols a marketing list's contacts in a published
   sequence (the enrol route now takes `list_id`) and starts a new sequence for the workflow editor;
   `GET /api/v1/workflow/sequences` lists the published ones. See `docs/sequences.md`.

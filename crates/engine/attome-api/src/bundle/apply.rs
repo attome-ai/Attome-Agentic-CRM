@@ -1106,6 +1106,9 @@ async fn run_step(
         (Step::StateModel(m), _) => {
             let desc = attome_state::reconcile::StateModelDesc {
                 entity_logicalname: m.entity_logicalname.clone(),
+                locked_states: m.locked_states.clone(),
+                reason_field: m.reason_field.clone(),
+                reasons: m.reasons.clone(),
                 name: m.name.clone(),
                 state_field: m.state_field.clone(),
                 initial_state: m.initial_state.clone(),

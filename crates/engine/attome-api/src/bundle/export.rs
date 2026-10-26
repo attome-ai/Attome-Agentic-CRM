@@ -884,11 +884,27 @@ async fn export_field_security_profiles(db: &DbPool, bundle: &mut Bundle) -> Res
 /// Only active, non-deleted models; only non-deleted transitions — a
 /// retired model or transition is, by definition, absent from the bundle
 /// (§4 "Removals are promoted as soft-retire").
+/// A `state_model` row as the export reads it.
+type ModelExportRow = (
+    Uuid,
+    String,
+    String,
+    String,
+    String,
+    bool,
+    Option<serde_json::Value>,
+    Option<String>,
+    Option<serde_json::Value>,
+);
+
 async fn export_state_models(db: &DbPool, bundle: &mut Bundle) -> Result<(), AppError> {
-    let rows: Vec<(Uuid, String, String, String, String, bool)> = sqlx::query_as(
-        "SELECT id, entity_logicalname, name, state_field, initial_state, is_active
+    // M8-T2: a record type's own model stays out of bundles, which identify
+    // a model by its entity.
+    let rows: Vec<ModelExportRow> = sqlx::query_as(
+        "SELECT id, entity_logicalname, name, state_field, initial_state, is_active,
+                locked_states, reason_field, reasons
          FROM state_model
-         WHERE is_deleted = false",
+         WHERE is_deleted = false AND record_type IS NULL",
     )
     .fetch_all(db)
     .await
@@ -896,7 +912,17 @@ async fn export_state_models(db: &DbPool, bundle: &mut Bundle) -> Result<(), App
     let mut models: HashMap<Uuid, StateModelDef> = rows
         .into_iter()
         .map(
-            |(id, entity_logicalname, name, state_field, initial_state, is_active)| {
+            |(
+                id,
+                entity_logicalname,
+                name,
+                state_field,
+                initial_state,
+                is_active,
+                locked_states,
+                reason_field,
+                reasons,
+            )| {
                 (
                     id,
                     StateModelDef {
@@ -906,6 +932,13 @@ async fn export_state_models(db: &DbPool, bundle: &mut Bundle) -> Result<(), App
                         initial_state,
                         is_active,
                         transitions: Vec::new(),
+                        locked_states: locked_states
+                            .and_then(|v| serde_json::from_value(v).ok())
+                            .unwrap_or_default(),
+                        reason_field,
+                        reasons: reasons
+                            .and_then(|v| serde_json::from_value(v).ok())
+                            .unwrap_or_default(),
                     },
                 )
             },

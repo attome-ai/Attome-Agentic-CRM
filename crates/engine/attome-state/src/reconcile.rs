@@ -50,6 +50,11 @@ pub struct StateModelDesc {
     pub initial_state: String,
     pub is_active: bool,
     pub transitions: Vec<TransitionDesc>,
+    /// M8-T2: see `attome_core::ModelRules`. A reconciled model is always the
+    /// entity's untyped one.
+    pub locked_states: Vec<attome_core::LockedState>,
+    pub reason_field: Option<String>,
+    pub reasons: Vec<attome_core::StateReasons>,
 }
 
 impl std::fmt::Debug for StateModelDesc {
@@ -66,6 +71,9 @@ struct ModelRow {
     initial_state: String,
     is_active: bool,
     is_deleted: bool,
+    locked_states: Option<serde_json::Value>,
+    reason_field: Option<String>,
+    reasons: Option<serde_json::Value>,
 }
 
 #[derive(sqlx::FromRow, Clone, PartialEq)]
@@ -157,8 +165,9 @@ pub async fn reconcile_state_model(
     }
 
     let current: Option<ModelRow> = sqlx::query_as(
-        "SELECT id, name, state_field, initial_state, is_active, is_deleted \
-         FROM state_model WHERE entity_logicalname = $1 \
+        "SELECT id, name, state_field, initial_state, is_active, is_deleted, \
+                locked_states, reason_field, reasons \
+         FROM state_model WHERE entity_logicalname = $1 AND record_type IS NULL \
          ORDER BY is_deleted ASC, created_at DESC LIMIT 1",
     )
     .bind(&desc.entity_logicalname)
@@ -166,12 +175,34 @@ pub async fn reconcile_state_model(
     .await
     .map_err(AppError::internal)?;
 
+    let rules_json = |empty: bool, v: Result<serde_json::Value, serde_json::Error>| {
+        if empty {
+            Ok(None)
+        } else {
+            v.map(Some).map_err(AppError::internal)
+        }
+    };
+    let locked_json = rules_json(
+        desc.locked_states.is_empty(),
+        serde_json::to_value(&desc.locked_states),
+    )?;
+    let reasons_json = rules_json(desc.reasons.is_empty(), serde_json::to_value(&desc.reasons))?;
+    let reason_field = desc
+        .reason_field
+        .as_deref()
+        .map(str::trim)
+        .filter(|f| !f.is_empty())
+        .map(str::to_owned);
+
     let unchanged_model = current.as_ref().is_some_and(|r| {
         !r.is_deleted
             && r.name == desc.name
             && r.state_field == desc.state_field
             && r.initial_state == desc.initial_state
             && r.is_active == desc.is_active
+            && r.locked_states == locked_json
+            && r.reason_field == reason_field
+            && r.reasons == reasons_json
     });
 
     let model_id = match &current {
@@ -179,6 +210,7 @@ pub async fn reconcile_state_model(
             let n = sqlx::query(
                 "UPDATE state_model \
                  SET name = $2, state_field = $3, initial_state = $4, is_active = $5, \
+                     locked_states = $6, reason_field = $7, reasons = $8, \
                      is_deleted = false, updated_at = NOW(), row_version = row_version + 1 \
                  WHERE id = $1",
             )
@@ -187,6 +219,9 @@ pub async fn reconcile_state_model(
             .bind(&desc.state_field)
             .bind(&desc.initial_state)
             .bind(desc.is_active)
+            .bind(&locked_json)
+            .bind(&reason_field)
+            .bind(&reasons_json)
             .execute(&mut *tx)
             .await
             .map_err(AppError::internal)?
@@ -201,8 +236,9 @@ pub async fn reconcile_state_model(
         Some(row) => row.id,
         None => sqlx::query_scalar::<_, Uuid>(
             "INSERT INTO state_model \
-                 (entity_logicalname, name, state_field, initial_state, is_active, owner_layer) \
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+                 (entity_logicalname, name, state_field, initial_state, is_active, owner_layer, \
+                  locked_states, reason_field, reasons) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
         )
         .bind(&desc.entity_logicalname)
         .bind(&desc.name)
@@ -210,6 +246,9 @@ pub async fn reconcile_state_model(
         .bind(&desc.initial_state)
         .bind(desc.is_active)
         .bind(owner_layer)
+        .bind(&locked_json)
+        .bind(&reason_field)
+        .bind(&reasons_json)
         .fetch_one(&mut *tx)
         .await
         .map_err(map_unique_violation)?,

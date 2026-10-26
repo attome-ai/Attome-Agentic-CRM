@@ -1,4 +1,4 @@
-# State models: actions and automatic transitions
+# State models: locks, reasons, actions and automatic transitions
 
 A state model governs one choice field of an entity (its state field): the states a record moves
 through and the transitions allowed between them. Models and transitions are administered at
@@ -6,6 +6,41 @@ through and the transitions allowed between them. Models and transitions are adm
 `POST /api/v1/{entity}/{id}/transition`, or with an ordinary update of the state field; both go
 through the same checks (the transition's `required_privilege`, its `guard_expression`, its approval
 plan, the entity's rules).
+
+## Locked states and status reasons
+
+A model's `locked_states` make a record read-only while it is in one of them, except the fields each
+lists as `editable`:
+
+```json
+"locked_states": [ { "state": "closed", "editable": ["notes"] } ]
+```
+
+Any other change to a record in a locked state is refused (`422 transition_not_allowed`), whoever
+asks. The state field stays writable, so a transition out of the state (reopening) works as usual.
+Fields an engine manages itself are not counted as changes.
+
+A model's `reason_field` names the attribute holding the record's status reason, and `reasons`
+lists the reasons each state allows:
+
+```json
+"reason_field": "close_reason",
+"reasons": [ { "state": "lost", "reasons": ["price", "competitor", "no_decision"] } ]
+```
+
+A write that moves a record into a state with reasons, or changes the reason, needs one of that
+state's reasons. A state with no reasons listed takes any value. While a state is locked, the reason
+may change only together with a transition.
+
+## A model per record type
+
+A model created with `record_type` (a record type code of the entity) governs only records of that
+type; every other record follows the entity's model without a type. The entity may have one active
+model per record type, plus the untyped one. A record of the type is created in its model's initial
+state and moves along its transitions; the locks and reasons are its model's.
+
+A typed model is not recorded in changesets or exported in bundles, which identify a model by its
+entity alone: create it through the API in each deployment.
 
 ## Transition actions
 

@@ -304,6 +304,7 @@ async fn provision_parent(state: &EngineState) -> (String, Uuid) {
                     initial_state: "open".into(),
                     is_active: true,
                     row_version: 0,
+                    rules: Default::default(),
                 }),
                 transitions: Vec::new(),
             },

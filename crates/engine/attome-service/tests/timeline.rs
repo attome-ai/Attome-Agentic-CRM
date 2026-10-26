@@ -573,6 +573,7 @@ fn register_ticket_state_model(state: &EngineState) {
                     initial_state: "open".into(),
                     is_active: true,
                     row_version: 0,
+                    rules: Default::default(),
                 }),
                 transitions: Vec::new(),
             },
