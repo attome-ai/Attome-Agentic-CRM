@@ -25,6 +25,7 @@
 - [Imports and exports](imports-and-exports.md): import jobs (upload, dry run, apply, undo, error file, policy, recurring sources, agent tools) and exports (CSV, XLSX, JSON, Parquet, parts, labels).
 - [Data profiling](data-profiling.md): what a profile measures, masking, personal-data proposals, drift and schedules.
 - [Data quality](data-quality.md): dimensions, measure-only rules, targets, issues and their owners, fixes and alerts.
+- [Arabic page paths: the link-preview check](content/seo-arabic-preview-check.md): the manual WhatsApp, X and LinkedIn check that keeps `content.seo_arabic_paths` off until it passes.
 - [Scanning](scanning.md): scannable fields, GS1 codes, finding records by code, scan actions and the deep-link rule.
 - [Offline use](offline.md): offline profiles, what a device gets and never gets, remote wipe and the device view.
 - [Deal teams and splits](deal-teams.md): team members, revenue and overlay splits, won deals and leavers.

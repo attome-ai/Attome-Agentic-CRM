@@ -13,6 +13,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- SEO end-to-end tests (E13-T13): with every SEO flag off a publish does no SEO work, a moved page
+  answers at its old path, and the SEO tables hold no personal data. The manual Arabic link-preview
+  check is `docs/content/seo-arabic-preview-check.md`; `content.seo_arabic_paths` stays off until it passes.
 - Catalogue access for non-administrators (L4-T3): `GET /api/v1/catalog/entities[/{name}]` need the
   new `metadata.read` privilege instead of administrator, list only entities the caller may read,
   and never name an attribute the caller may not read (in its fields or its lineage). The setting
