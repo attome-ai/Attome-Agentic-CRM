@@ -147,7 +147,37 @@ pub fn load_custom_actions() {
         .map(|doc| (*doc).clone())
         .collect();
     let macros_loaded = attome_ai::macros::install(&macros);
-    tracing::info!(loaded, macros_loaded, "custom actions and macros loaded");
+    // Q14-T2: sharing rules follow the same version, into the record filter.
+    let prefix = format!("{}:", attome_model::kinds::SHARING_RULE.0);
+    let rules: Vec<attome_security::sharing_rules::SharingRule> = snapshot
+        .manifest
+        .artefacts
+        .keys()
+        .filter(|key| key.starts_with(&prefix))
+        .filter_map(|key| {
+            cooked.get::<attome_model::kinds::CookedSharingRule>(
+                attome_model::kinds::SHARING_RULE.0,
+                key,
+            )
+        })
+        .filter_map(|rule| {
+            attome_security::sharing_rules::SharingRule::from_parts(
+                rule.id,
+                rule.entity,
+                (&rule.source_type, rule.source_id),
+                (&rule.target_type, rule.target_id),
+                &rule.level,
+            )
+        })
+        .collect();
+    let sharing_rules = rules.len();
+    attome_security::sharing_rules::install(rules);
+    tracing::info!(
+        loaded,
+        macros_loaded,
+        sharing_rules,
+        "custom actions, macros and sharing rules loaded"
+    );
 }
 
 /// Loads the deployment's current metadata version on this node when it is
@@ -186,6 +216,11 @@ pub(crate) async fn ensure_cooked(state: &EngineState) -> Result<(), AppError> {
             }
             other => other?,
         }
+    }
+    // The cold-start follow loads a version without the runtime hand-offs
+    // `follow_cooked` makes; make them here too.
+    if cooked().snapshot().version != 0 {
+        load_custom_actions();
     }
     Ok(())
 }

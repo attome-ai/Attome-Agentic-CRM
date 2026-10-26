@@ -23,6 +23,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Sharing rules (Q14-T2): the `sharing_rule` metadata kind shares one entity's records owned by a
+  unit, a team or a role's holders with another unit, team or role, to read or to read and change.
+  A published rule is a condition in the record filter (no share rows are written), an explicit
+  deny share still wins, and a rule that picks records by a condition is refused at save until the
+  filter can compile one. Search and audit lists, which filter many entities at once, do not apply
+  rules yet: they show less, never more.
 - Per-operation access levels in the record-access resolver (Q10-T2): `RecordAction` gains create,
   assign, share, export and bulk over migration `0076`'s columns, and a business-unit depth whose
   `{action}_bu_children` is off stops at the person's own units. A NULL create, assign or share level

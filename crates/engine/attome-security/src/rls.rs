@@ -476,10 +476,26 @@ fn build_predicate(
     let teams_ph = format!("${p_teams}::uuid[]");
     let subordinates_ph = format!("${p_subordinates}::uuid[]");
 
+    // Q14-T2: published sharing rules, one more allow arm inside the deny
+    // guard. Only on a real table, which has the organisation and owner
+    // columns the rules compare.
+    let rule_arm = if allow_bu_tier {
+        crate::sharing_rules::rule_arm(
+            ctx,
+            entity_ref,
+            required,
+            &org_col,
+            &owner_col,
+            &owner_type_col,
+        )
+    } else {
+        None
+    };
     let allow = format!(
         r#"(
             ({bu_tier})
             OR ({owner_arm})
+            OR ({rule_arm})
             OR EXISTS (
                 SELECT 1 FROM {SHARE_ROWS} s
                 WHERE s.record_id = {record_id_col} AND s.entity_ref = ${p_entity}::uuid
@@ -509,6 +525,7 @@ fn build_predicate(
         } else {
             "FALSE".to_owned()
         },
+        rule_arm = rule_arm.as_deref().unwrap_or("FALSE"),
         share_disjunction =
             principal_disjunction_sql("s", &caller_ph, &teams_ph, Some(&subordinates_ph)),
         default_share_disjunction = principal_disjunction_sql("d", &caller_ph, &teams_ph, None),
@@ -899,6 +916,70 @@ mod tests {
             unit_scope: Default::default(),
             service_principal: false,
         }
+    }
+
+    /// Q14-T2: a published rule adds an allow arm for the people it shares
+    /// with, and the explicit-deny guard still wraps it, so a deny share
+    /// wins over a rule. Someone the rule does not target gets no arm.
+    #[test]
+    fn sharing_rule_arm_is_inside_the_deny_guard() {
+        use crate::sharing_rules::{RuleSource, RuleTarget, SharingRule};
+        let (entity, unit, team) = (Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7());
+        crate::sharing_rules::install([SharingRule {
+            id: Uuid::now_v7(),
+            entity,
+            source: RuleSource::Unit(unit),
+            target: RuleTarget::Team(team),
+            write: false,
+        }]);
+        let arm = format!("t.organization_ref = ANY('{{{unit}}}'::uuid[])");
+
+        let member = SecurityContext {
+            team_ids: vec![team],
+            ..ctx(false)
+        };
+        let pred = rls_predicate(&member, entity, "t", AccessLevel::Team, Capability::View, 1)
+            .expect("a Team tier filters");
+        let at_arm = pred
+            .sql
+            .find(&arm)
+            .expect("the rule's arm is in the filter");
+        let at_deny = pred
+            .sql
+            .find("NOT EXISTS")
+            .expect("the deny guard is in the filter");
+        assert!(
+            at_arm < at_deny,
+            "the arm is an allow arm, ANDed with the deny guard: {}",
+            pred.sql
+        );
+        assert!(pred.sql.contains(") AND NOT EXISTS"), "{}", pred.sql);
+
+        let write = rls_predicate(
+            &member,
+            entity,
+            "t",
+            AccessLevel::Team,
+            Capability::Action,
+            1,
+        )
+        .expect("a Team tier filters");
+        assert!(!write.sql.contains(&arm), "a read rule grants no change");
+
+        let outsider = rls_predicate(
+            &ctx(false),
+            entity,
+            "t",
+            AccessLevel::Team,
+            Capability::View,
+            1,
+        )
+        .expect("a Team tier filters");
+        assert!(
+            !outsider.sql.contains(&arm),
+            "only the team the rule targets"
+        );
+        crate::sharing_rules::install([]);
     }
 
     /// Same as `ctx`, but with F138 position hierarchy turned on and a given

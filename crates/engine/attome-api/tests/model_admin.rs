@@ -312,6 +312,7 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
                 "reply_template",
                 "rule",
                 "rule_function",
+                "sharing_rule",
                 "stage_process",
                 "state_model",
                 "survey",
