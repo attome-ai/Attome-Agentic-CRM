@@ -309,6 +309,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(3600),
     );
+    // M8-T1: transition exit and entry actions, every minute.
+    crate::jobs::spawn_transition_actions_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+    );
     // F11-T9: loyalty points deferred and recognised, daily.
     crate::jobs::spawn_revrec_loyalty_scheduler(
         db.clone(),

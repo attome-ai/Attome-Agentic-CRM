@@ -3023,6 +3023,8 @@ const DEDUP_KEY_BLOCKLIST_CHECK: &str = "marketing-blocklist-check";
 const DEDUP_KEY_REPUTATION_FETCH: &str = "marketing-reputation-fetch";
 /// E6-T4: the daily deliverability rollup (a registered job type).
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
+/// M8-T1: the transition actions sweep (a registered job type).
+const DEDUP_KEY_TRANSITION_ACTIONS_SWEEP: &str = "state-transition-actions-sweep";
 /// F11-T9: the nightly loyalty revenue run (a registered job type).
 const DEDUP_KEY_REVREC_LOYALTY: &str = "revrec-loyalty";
 /// G17-T10: the nightly adherence roll-up (a registered job type).
@@ -3224,6 +3226,16 @@ pub const EMAIL_CAMPAIGN: attome_jobs::JobType = attome_jobs::JobType::new("emai
 /// E6-T4: today's and yesterday's deliverability rollup, recomputed.
 pub const DELIVERABILITY_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new("deliverability_rollup", 1);
+
+/// M8-T1: one change's transition actions (payload
+/// `attome_state::transition_actions::TransitionActions`). Only enqueued.
+pub const STATE_TRANSITION_ACTIONS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_state::transition_actions::JOB, 1);
+
+/// M8-T1: reads committed transitions from the change feed and queues their
+/// actions, every minute.
+pub const STATE_TRANSITION_ACTIONS_SWEEP: attome_jobs::JobType =
+    attome_jobs::JobType::new("state_transition_actions_sweep", 1);
 
 /// F11-T9: loyalty points deferred and recognised, nightly.
 pub const REVREC_LOYALTY: attome_jobs::JobType =
@@ -4987,6 +4999,30 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            STATE_TRANSITION_ACTIONS_SWEEP,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                attome_state::transition_actions::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            STATE_TRANSITION_ACTIONS,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_state::transition_actions::TransitionActions =
+                    job.payload()?;
+                run_transition_actions(&state, payload)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             REVREC_LOYALTY,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_LEDGER) {
@@ -5439,6 +5475,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_WFM_ADHERENCE_DAY
         }
         EngineJob::Registered(job) if job.name == REVREC_LOYALTY.name => DEDUP_KEY_REVREC_LOYALTY,
+        EngineJob::Registered(job) if job.name == STATE_TRANSITION_ACTIONS_SWEEP.name => {
+            DEDUP_KEY_TRANSITION_ACTIONS_SWEEP
+        }
         EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
             DEDUP_KEY_SOCIAL_REVIEWS_SYNC
         }
@@ -7012,6 +7051,82 @@ pub fn spawn_deliverability_rollup_scheduler(db: DbPool, interval: std::time::Du
         job,
         DEDUP_KEY_DELIVERABILITY_ROLLUP,
         "deliverability rollup",
+    );
+}
+
+/// M8-T1: runs one change's transition actions through the action gate, in
+/// order, as the person who made the change, each with its own idempotency
+/// key so a retried job never runs one twice. An action that needs a
+/// person's confirmation or approval is left to that path; any refusal or
+/// failure fails the job (retried, then a dead letter).
+async fn run_transition_actions(
+    state: &EngineState,
+    payload: attome_state::transition_actions::TransitionActions,
+) -> Result<(), attome_types::AppError> {
+    let Some(actor) = payload.actor else {
+        tracing::warn!(
+            entity = %payload.entity,
+            record = %payload.record_id,
+            "transition actions skipped: no one to run them as"
+        );
+        return Ok(());
+    };
+    let security = state.base.security.resolve(actor).await?;
+    let registry = attome_ai::ActionRegistry::new();
+    let executors = attome_ai::Executors::new();
+    let args = serde_json::json!({
+        "entity": payload.entity,
+        "record_id": payload.record_id,
+        "from_state": payload.from_state,
+        "to_state": payload.to_state,
+    });
+    for (index, action) in payload.actions.iter().enumerate() {
+        let descriptor = registry.resolve(action).ok_or_else(|| {
+            attome_types::AppError::Validation(format!(
+                "transition action {action} is not a registered action"
+            ))
+        })?;
+        let mut ctx = attome_ai::ActionContext::user(std::sync::Arc::clone(&security));
+        ctx.idempotency_key = Some(attome_state::transition_actions::action_key(
+            payload.event_id,
+            index,
+        ));
+        let inputs = attome_ai::GateInputs {
+            licensed: state.modules.load().has(descriptor.module),
+            ai: &state.base.config.inference.ai,
+            surface: Some(attome_config::AiSurface::WorkflowNodes),
+            external_effects_enabled: state.base.config.security.external_effects_enabled,
+        };
+        match attome_ai::dispatch(state, &registry, &executors, action, &ctx, &inputs, &args)
+            .await?
+        {
+            attome_ai::ActionOutcome::Completed { .. } => {}
+            _ => tracing::info!(
+                action = %action,
+                record = %payload.record_id,
+                "transition action waits on a person's confirmation or approval"
+            ),
+        }
+    }
+    Ok(())
+}
+
+/// M8-T1: every minute, committed transitions whose actions are due.
+pub fn spawn_transition_actions_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(STATE_TRANSITION_ACTIONS_SWEEP.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "transition actions: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_TRANSITION_ACTIONS_SWEEP,
+        "transition actions",
     );
 }
 

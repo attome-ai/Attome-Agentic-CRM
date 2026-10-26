@@ -16,6 +16,8 @@ pub mod approval;
 pub mod model;
 pub mod reconcile;
 pub mod record_routes;
+/// M8-T1: a transition's exit and entry actions, run after it commits.
+pub mod transition_actions;
 
 use attome_core::EngineState;
 use attome_modules::ModuleId;

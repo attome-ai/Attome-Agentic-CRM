@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Transition actions run (M8-T1): a transition's exit and entry actions, stored until now but never
+  run, are run after the transition commits. A change-feed consumer sees every change of a state
+  field (through `/transition` or an update) and queues one job per change; the job runs the actions
+  through the action gate, as the person who made the change, each with its own idempotency key, and
+  a failure is retried and then kept as a dead letter.
 - Custom actions in MCP and flows (AE1-T3): published custom actions appear in MCP `tools/list`
   from their definition, and the new flow node `custom_action` runs one with the wired `args` through
   the action gate (the run and node key it once); publishing a flow checks that the action exists.
