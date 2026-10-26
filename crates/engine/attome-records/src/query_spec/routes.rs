@@ -192,8 +192,11 @@ async fn saved_spec(
 }
 
 /// Compiles and runs one spec for `ctx`, who may already read its entity:
-/// the body of `POST /api/v1/query/run`, shared with the OData feed (S7-T1).
-pub(crate) async fn execute_spec(
+/// the body of `POST /api/v1/query/run`, shared with the OData feed (S7-T1)
+/// and search's `mode=ask` (A25-T7). With `spec.explain` it compiles and
+/// plans only, which checks every field and operator against the caller's
+/// metadata without running anything.
+pub async fn execute_spec(
     state: &EngineState,
     ctx: &SecurityContext,
     spec: QuerySpec,

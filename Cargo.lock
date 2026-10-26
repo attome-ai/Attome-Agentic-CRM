@@ -2269,6 +2269,7 @@ dependencies = [
  "attome-metadata",
  "attome-modules",
  "attome-notification",
+ "attome-records",
  "attome-security",
  "attome-server",
  "attome-testkit",

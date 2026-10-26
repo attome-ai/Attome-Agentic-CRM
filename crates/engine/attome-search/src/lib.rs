@@ -26,18 +26,20 @@ pub mod access_cache;
 /// A25-T9: search administration routes.
 pub mod admin;
 pub mod aggregate;
+/// A25-T7: searching in words (`mode=ask`).
+pub mod ask;
 pub mod backfill;
 /// A25-T3: synonyms, stop words, boosts, pins and personal ranking.
 pub mod controls;
 pub mod corpus;
 pub mod coverage;
 pub mod drain;
-/// A25-T4: explaining a result and its rank.
-pub mod explain;
 pub mod dsl;
 pub mod embedding_writer;
 pub mod engine;
 pub mod eval;
+/// A25-T4: explaining a result and its rank.
+pub mod explain;
 pub mod fallback;
 pub mod glossary;
 pub mod graph;

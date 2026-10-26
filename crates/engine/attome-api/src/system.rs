@@ -942,6 +942,8 @@ impl EngineSystemBuilder {
         state.stock_source = self.stock_source;
         // U10-T2: the settings agent tool writes through the settings API.
         state.settings_writer = Some(Arc::new(crate::settings_admin::ApiSettingsWriter));
+        // A25-T7: search's `mode=ask` reaches the model actions through this.
+        state.search_asker = Some(Arc::new(attome_ai::actions::search_ask::AiSearchAsker));
         // E8-T1 — the registered step handlers and kind guards, frozen the
         // same way.
         state.workflow_step_handlers = std::sync::Arc::new(self.workflow_step_handlers);

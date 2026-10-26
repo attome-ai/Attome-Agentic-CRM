@@ -1,4 +1,5 @@
-//! `knowledge.answer` end to end: a real database, Redis and the shared
+//! `knowledge.answer` end to end (and, A25-T7, `search.parse_filter` and
+//! `search.answer_records`): a real database, Redis and the shared
 //! `dispatch`, with a stand-in model server on loopback that speaks the
 //! OpenAI-compatible chat-completions API. Nothing leaves this machine.
 //!
@@ -32,6 +33,7 @@ use std::sync::{Arc, Mutex};
 
 use attome_ai::actions::knowledge::SEARCH_KNOWLEDGE;
 use attome_ai::actions::knowledge_answer::KNOWLEDGE_ANSWER;
+use attome_ai::actions::search_ask::{SEARCH_ANSWER_RECORDS, SEARCH_PARSE_FILTER};
 use attome_ai::context::ActionContext;
 use attome_ai::execute::{ActionOutcome, Executors, Provenance, dispatch};
 use attome_ai::gate::GateInputs;
@@ -715,4 +717,155 @@ async fn a_session_knowledge_scope_is_enforced_before_any_evidence_is_returned()
     }
 
     delete_article(&state.base.db, article.item, Some(article.source)).await;
+}
+
+// ── A25-T7: asking search in words ─────────────────────────────────────────
+
+/// The state with its entity registry loaded, as a booted server has it:
+/// the parse prompt lists the entities the caller may read from it.
+async fn ask_state(base_url: &str) -> Option<EngineState> {
+    let state = test_state(base_url, APPROVED_MODEL).await?;
+    let registry = attome_core::build_registry(&state.base.db)
+        .await
+        .expect("load the entity registry");
+    state.entities.swap(registry);
+    Some(state)
+}
+
+async fn run_action(state: &EngineState, ctx: &ActionContext, action: &str, args: Value) -> Value {
+    let ai = attome_config::AiEnablement {
+        enabled: true,
+        fields: true,
+        chat: true,
+        semantic_search: true,
+        workflow_nodes: true,
+    };
+    let inputs = GateInputs {
+        licensed: true,
+        ai: &ai,
+        surface: None,
+        external_effects_enabled: false,
+    };
+    let outcome = dispatch(
+        state,
+        &ActionRegistry::new(),
+        &Executors::new(),
+        action,
+        ctx,
+        &inputs,
+        &args,
+    )
+    .await
+    .unwrap_or_else(|e| panic!("{action}: {e}"));
+    completed(outcome).0
+}
+
+/// The model's filter is checked against the caller's metadata: an
+/// attribute the entity does not have declines, a real one parses, and
+/// neither runs anything.
+#[tokio::test]
+async fn parse_filter_rejects_unknown_attribute() {
+    let model = stand_in(
+        r#"{"entity":"ai_model","where":{"kind":"compare","field":"no_such_attribute","op":"eq","value":"x"}}"#,
+    )
+    .await;
+    let Some(state) = ask_state(&model.base_url).await else {
+        return;
+    };
+    let user = seed_user(&state.base.db).await;
+    let ctx = ActionContext::user(security_context(user, true));
+    let result = run_action(
+        &state,
+        &ctx,
+        SEARCH_PARSE_FILTER,
+        json!({ "query": "models with no such thing" }),
+    )
+    .await;
+    assert_eq!(result["status"], "declined", "{result}");
+    assert_eq!(result["reason"], "invalid_filter", "{result}");
+    let requests = model.requests();
+    assert_eq!(requests.len(), 1);
+    let sent = requests[0].to_string();
+    assert!(
+        sent.contains("ai_model"),
+        "the prompt lists the readable entity"
+    );
+
+    let model = stand_in(
+        r#"```json
+{"entity":"ai_model","where":{"kind":"compare","field":"name","op":"contains","value":"stand"}}
+```"#,
+    )
+    .await;
+    let Some(state) = ask_state(&model.base_url).await else {
+        return;
+    };
+    let result = run_action(
+        &state,
+        &ctx,
+        SEARCH_PARSE_FILTER,
+        json!({ "query": "models named stand" }),
+    )
+    .await;
+    assert_eq!(result["status"], "parsed", "{result}");
+    assert_eq!(result["filter"]["entity"], "ai_model");
+    assert_eq!(result["filter"]["where"]["field"], "name");
+}
+
+/// Only records the caller may read become evidence: one the caller cannot
+/// read is never shown to the model or cited, and a caller who can read none
+/// gets no answer and no model call.
+#[tokio::test]
+async fn answer_cites_only_permitted_records() {
+    let model =
+        stand_in(r#"{"status":"answered","answer":"It is approved.","citations":["E1"]}"#).await;
+    let Some(state) = ask_state(&model.base_url).await else {
+        return;
+    };
+    let approved: Uuid = sqlx::query_scalar("SELECT id FROM ai_model WHERE name = $1 LIMIT 1")
+        .bind(APPROVED_MODEL)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("the approved stand-in model row");
+    let unreadable = Uuid::now_v7();
+    let admin = ActionContext::user(security_context(seed_user(&state.base.db).await, true));
+    let result = run_action(
+        &state,
+        &admin,
+        SEARCH_ANSWER_RECORDS,
+        json!({
+            "question": "is the stand-in model approved?",
+            "records": [
+                { "entity": "ai_model", "id": unreadable },
+                { "entity": "ai_model", "id": approved }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(result["answer"], "It is approved.", "{result}");
+    let citations = result["citations"].as_array().unwrap();
+    assert_eq!(citations.len(), 1, "{result}");
+    assert_eq!(citations[0]["record_id"], json!(approved), "{result}");
+    let requests = model.requests();
+    assert_eq!(requests.len(), 1);
+    assert!(
+        !requests[0].to_string().contains(&unreadable.to_string()),
+        "a record the caller cannot read never reaches the model"
+    );
+
+    // A caller with no grants reads nothing: no evidence, no model call.
+    let nobody = ActionContext::user(security_context(seed_user(&state.base.db).await, false));
+    let result = run_action(
+        &state,
+        &nobody,
+        SEARCH_ANSWER_RECORDS,
+        json!({
+            "question": "is the stand-in model approved?",
+            "records": [{ "entity": "ai_model", "id": approved }]
+        }),
+    )
+    .await;
+    assert_eq!(result["answer"], Value::Null, "{result}");
+    assert_eq!(result["reason"], "not_found", "{result}");
+    assert_eq!(model.requests().len(), 1, "no second model call");
 }

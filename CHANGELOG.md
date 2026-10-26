@@ -16,6 +16,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Search in words (A25-T7): `GET /api/v1/search?q=...&mode=ask` sends the words to the new read
+  action `search.parse_filter`, which answers a QuerySpec `{entity, where}` (the `query/run` form;
+  no SQL) over what the caller may read, checked against their metadata; the filter is returned in
+  `ask.filter` and run as the caller (page 1 only). A declined parse runs the plain search with the
+  reason. A question also gets `ask.answer` from `search.answer_records`: up to ten of the results,
+  each read as the caller, answered with citations to them only, or `{answer: null, reason}`. Both
+  go through the budget guard and MCP read admission; 503 where asking is unavailable.
 - Org charts documented (D23-T14, `docs/org-chart.md`): what is off by default, the reports-to rule
   (the same account or another account in its group, no further), and the routes
   `GET /api/v1/sales/accounts/{id}/org-chart` (`group`, `expand`, `cursor`),

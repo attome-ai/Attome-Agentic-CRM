@@ -47,20 +47,20 @@ pub mod data_mapping;
 pub mod duplicate_check;
 pub mod entity_crud;
 pub mod entity_mutation;
+/// Z11-T12: one expression checked for an editor or agent.
+pub mod expression_check;
 /// AA10-T2: the size check that sends a heavy operation inline or to the
 /// background.
 pub mod heavy_op;
-/// AA10-T3: mass operations over a filter, sized by `heavy_op`.
-pub mod mass;
-/// Z11-T12: one expression checked for an editor or agent.
-pub mod expression_check;
-pub mod import_choice_match;
 /// A23-T5: applying a validated import.
 pub mod import_apply;
+pub mod import_choice_match;
 /// A23-T6: undoing an applied import.
 pub mod import_undo;
 /// A23-T4: validating a staged import (the dry run).
 pub mod import_validate;
+/// AA10-T3: mass operations over a filter, sized by `heavy_op`.
+pub mod mass;
 /// C-10 — the shared mutation-commit orchestration helper (creator share,
 /// file mirror, audit write, commit, post-commit invalidation, rw-pin).
 /// `pub`, not `pub(crate)`: `attome-server::communication` and

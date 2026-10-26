@@ -205,6 +205,7 @@ async fn admitted_search(
             impression_id: None,
             limited: false,
             facets: None,
+            ask: None,
         });
     }
 
@@ -281,6 +282,7 @@ async fn admitted_search(
         impression_id: None,
         limited: false,
         facets: None,
+        ask: None,
     })
 }
 

@@ -100,6 +100,17 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::agent_playground::playground_system_prompt(),
         },
         PromptEntry {
+            action_id: crate::actions::search_ask::SEARCH_PARSE_FILTER,
+            version: crate::actions::search_ask::PARSE_PROMPT_VERSION,
+            // The caller's readable metadata goes in its own untrusted segment.
+            text: crate::actions::search_ask::parse_system_prompt(),
+        },
+        PromptEntry {
+            action_id: crate::actions::search_ask::SEARCH_ANSWER_RECORDS,
+            version: crate::actions::search_ask::RECORDS_ANSWER_PROMPT_VERSION,
+            text: crate::actions::search_ask::records_answer_system_prompt(),
+        },
+        PromptEntry {
             action_id: crate::actions::knowledge_answer::KNOWLEDGE_ANSWER,
             version: crate::actions::knowledge_answer::ANSWER_PROMPT_VERSION,
             // No language parameter: the prompt tells the model to answer in

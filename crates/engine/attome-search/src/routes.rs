@@ -211,6 +211,12 @@ pub struct SearchParams {
     /// A25-T9: also count the results by entity, owner and month changed.
     #[serde(default)]
     pub facets: bool,
+    /// A25-T7: `ask` reads the query as words. It becomes a filter over one
+    /// entity, shown in `ask.filter` and applied; a question also gets a
+    /// direct answer from the top results. Page 1 only. Absent is a plain
+    /// search.
+    #[serde(default)]
+    pub mode: Option<String>,
 }
 
 /// A25-T9: what a search computes beside its page.
@@ -313,6 +319,9 @@ pub struct SearchResponse {
     /// A25-T9: the facets, when asked for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub facets: Option<SearchFacets>,
+    /// A25-T7: what asking in words did, for `mode=ask`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ask: Option<crate::ask::AskResult>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -413,7 +422,8 @@ pub fn route_name(route: &Route) -> &'static str {
     responses(
         (status = 200, description = "A bounded page of results", body = SearchResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 422, description = "Query or pagination outside the documented caps", body = ErrorResponse),
+        (status = 422, description = "Query or pagination outside the documented caps, an unknown mode, or a page past 1 with mode=ask", body = ErrorResponse),
+        (status = 503, description = "mode=ask on a deployment where asking in words is unavailable", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -422,9 +432,19 @@ async fn search(
     ctx: Authorized<SelfService>,
     Query(params): Query<SearchParams>,
 ) -> Result<Json<SearchResponse>, AppError> {
+    let ctx = ctx.into_inner();
     let q = validate_query(&params.q)?;
     validate_paging(params.page, params.page_size)?;
     let audience = parse_audience(params.audience.as_deref())?;
+    let ask = match params.mode.as_deref() {
+        None => false,
+        Some("ask") => true,
+        Some(other) => {
+            return Err(AppError::Validation(format!(
+                "mode: {other} is not a search mode; the one mode is ask"
+            )));
+        }
+    };
 
     // AB5-T5: with the index confirmed down, answer from the tables instead.
     if state
@@ -442,6 +462,19 @@ async fn search(
         explain: params.explain && crate::explain::may_explain(&ctx),
         facets: params.facets,
     };
+    if ask {
+        let response = crate::ask::ask_search(
+            &state,
+            ctx,
+            &q,
+            params.page,
+            params.page_size,
+            audience,
+            options,
+        )
+        .await?;
+        return Ok(Json(response));
+    }
     let response = execute_search_with(
         &state,
         &ctx,
@@ -519,6 +552,7 @@ pub async fn execute_search_with(
             impression_id: None,
             limited: false,
             facets: None,
+            ask: None,
         });
     }
 
@@ -881,6 +915,7 @@ pub async fn execute_search_with(
         impression_id,
         limited: false,
         facets,
+        ask: None,
         items,
     })
 }
@@ -1241,6 +1276,7 @@ fn empty_response(route: &Route, page: i64, page_size: i64) -> SearchResponse {
         impression_id: None,
         limited: false,
         facets: None,
+        ask: None,
     }
 }
 

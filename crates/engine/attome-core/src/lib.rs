@@ -162,6 +162,8 @@ pub mod rule_registry;
 /// Z11-T10: the SQL-safe part of a rule expression as a bound predicate.
 pub mod rules_sql;
 pub mod run_payload;
+/// A25-T7: the seam search asks in words through (`attome-ai` implements it).
+pub mod search_ask;
 /// Boot-cost fix — skip-gate wrapping the ~30 `*::seed::seed(db)` functions
 /// called from `crates/server/src/boot.rs`/`EngineSystem::build()`, backed by
 /// `seed_watermark` (migration `0388_seed_watermark.sql`).
@@ -244,6 +246,7 @@ pub use relationship_registry::{
     RelationshipRegistry,
 };
 pub use rule_registry::{InvalidRule, RULE_VERSION_CHANNEL, RuleDef, RuleEntry, RuleRegistry};
+pub use search_ask::SearchAsker;
 pub use services::{NoopNotifications, NotificationService, ServiceError};
 pub use setting_descriptor::{
     SettingDescriptor, SettingRegistry, SettingScope, SettingSource, registry as setting_registry,

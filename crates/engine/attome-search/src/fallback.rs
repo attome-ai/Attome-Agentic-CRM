@@ -179,6 +179,7 @@ pub async fn fallback_search(
     items.truncate(usize::try_from(page_size).unwrap_or(0));
     Ok(SearchResponse {
         facets: None,
+        ask: None,
         items,
         total: Total::Exact { value: found },
         page,

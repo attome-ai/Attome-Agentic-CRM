@@ -19,5 +19,5 @@ pub use model::{
     AggFunc, Aggregate, Condition, DateBucket, GroupKey, OPERATORS, QuerySpec, SortKey,
 };
 pub use operators::Clock;
-pub use routes::RunRequest;
+pub use routes::{RunRequest, RunResponse, RunRow, execute_spec};
 pub use text::parse as parse_text;

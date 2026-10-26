@@ -311,6 +311,8 @@ pub(crate) const GOVERNED_READ_ACTIONS: &[&str] = &[
     crate::actions::search_records::SEARCH_RECORDS,
     crate::actions::graph::GRAPH_TRAVERSE,
     crate::actions::commission::EXPLAIN_LINE,
+    crate::actions::search_ask::SEARCH_PARSE_FILTER,
+    crate::actions::search_ask::SEARCH_ANSWER_RECORDS,
 ];
 
 /// Read-side admission for one MCP invocation: a snapshot of the setting,
@@ -1015,6 +1017,10 @@ mod tests {
             (
                 "actions/commission.rs",
                 include_str!("../actions/commission.rs"),
+            ),
+            (
+                "actions/search_ask.rs",
+                include_str!("../actions/search_ask.rs"),
             ),
         ] {
             // The test module, not a test-only helper above it.

@@ -242,6 +242,9 @@ pub struct EngineState {
     /// builder so the settings agent tool writes as the admin route does.
     /// `None` on a bare state (`settings_write.rs`).
     pub settings_writer: Option<Arc<dyn crate::settings_write::SettingsWriter>>,
+    /// A25-T7 — asking search in words, registered by `attome-api` with
+    /// `attome-ai`'s implementation. `None` on a bare state (`search_ask.rs`).
+    pub search_asker: Option<Arc<dyn crate::search_ask::SearchAsker>>,
     /// E8-T1 — the step handlers engines registered on the builder, by node
     /// key, frozen at build (`workflow_step.rs`). Empty on a bare state.
     pub workflow_step_handlers: Arc<
@@ -340,6 +343,7 @@ impl EngineState {
             workflow_starter: None,
             stock_source: None,
             settings_writer: None,
+            search_asker: None,
             workflow_step_handlers: Arc::new(std::collections::HashMap::new()),
             workflow_kind_guards: Arc::new(std::collections::HashMap::new()),
         }
