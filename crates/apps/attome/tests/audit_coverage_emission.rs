@@ -490,6 +490,8 @@ async fn fixture() -> Option<Fx> {
         // AB4-T1 onwards: the ops engine's upgrade, disaster, drill and
         // switchover routes.
         .register(attome_ops::OpsModel)
+        // P8-T1: dashboard embeds and their tokens.
+        .register(attome_dashboard::DashboardModel)
         .build()
         .await
         .expect("build EngineSystem");
@@ -2740,6 +2742,50 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             request(
                 "DELETE",
                 &format!("/api/v1/auth/api-keys/{}", id_of(&key)),
+                t,
+                None,
+            )
+        }
+        // S2-T12: a per-key request quota.
+        "PUT /api/v1/admin/api-keys/{id}/quota" => {
+            let key = admin(
+                fx,
+                "POST",
+                "/api/v1/auth/api-keys",
+                Some(json!({"name": uniq("key")})),
+            )
+            .await;
+            request(
+                "PUT",
+                &format!("/api/v1/admin/api-keys/{}/quota", id_of(&key)),
+                t,
+                Some(json!({"requests_per_minute": 120})),
+            )
+        }
+        // Q14-T1: sharing a record with a user, and removing the share.
+        "POST /api/v1/{entity}/{id}/shares" => {
+            let record = entity_record(fx, &uniq("shared")).await;
+            let (user, _) = seed_user(&fx.base, "share-target").await;
+            request(
+                "POST",
+                &format!("/api/v1/{}/{record}/shares", fx.entity),
+                t,
+                Some(json!({"capability": "view", "user_id": user})),
+            )
+        }
+        "DELETE /api/v1/{entity}/{id}/shares/{share_id}" => {
+            let record = entity_record(fx, &uniq("unshared")).await;
+            let (user, _) = seed_user(&fx.base, "unshare-target").await;
+            let share = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/{}/{record}/shares", fx.entity),
+                Some(json!({"capability": "view", "user_id": user})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/{}/{record}/shares/{}", fx.entity, id_of(&share)),
                 t,
                 None,
             )
@@ -7897,7 +7943,9 @@ fn rule_body(fx: &Fx, name: &str, value: &str) -> Value {
     json!({
         "entity": fx.entity,
         "name": name,
-        "condition": { "all": [] },
+        // Each rule's own condition, so the A11-T4 conflict check sees the
+        // rules one run creates as never applying together.
+        "condition": { "all": [ { "field": "title", "op": "eq", "value": name } ] },
         "policies": [ { "type": "set_value", "field": "title", "value": value,
                         "mode": "default" } ],
     })

@@ -679,6 +679,10 @@ async fn insert_snapshot(
     dimension_attribute: Option<&str>,
     definition_version: Option<i32>,
 ) -> Result<SnapshotRow, AppError> {
+    // `metric_snapshot.definition_version` is NOT NULL DEFAULT 1 (0086): a
+    // definition that carries no version (the P9-T4 attribute absent or
+    // empty) is at version 1, never NULL, which would refuse the write.
+    let definition_version = definition_version.unwrap_or(1);
     let mut tx = attome_db::tx::begin(db).await?;
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
         .bind(crate::ADVISORY_LOCK_NAMESPACE)
