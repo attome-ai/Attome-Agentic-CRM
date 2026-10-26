@@ -2,6 +2,34 @@
 
 .rt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
+.rt-digest {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 8%, transparent);
+}
+
+.rt-digest-text { margin: 0 0 6px; white-space: pre-line; color: var(--color-text-primary, #e5eefc); }
+.rt-cites { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.rt-cite {
+  padding: 2px 8px;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary, #94a3b8);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rt-cite:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #14b8a6) 40%, transparent);
+}
+
+.rt-item-cited { background: color-mix(in srgb, var(--color-accent, #14b8a6) 10%, transparent); }
+
 .rt-chip {
   display: inline-flex;
   align-items: center;

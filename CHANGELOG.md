@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Timeline summary and questions (B1-T3): AI actions `timeline.summarize` and `timeline.ask` read the
+  record's timeline as the person (an MCP agent's without related records) and answer citing its
+  events, checked like `knowledge.answer`; summaries are cached per event list. The record timeline
+  panel shows the summary on open, and a citation scrolls to its event.
 - Record timeline sources and provenance (B1-T1): `GET /api/v1/{entity}/{id}/timeline` adds approvals,
   flow runs and agent runs; every entry carries `actor`, `actor_kind` (person, agent, flow, system),
   `run_id` and `source_record`. The new setting `records.timeline_roll_in` rolls in related records

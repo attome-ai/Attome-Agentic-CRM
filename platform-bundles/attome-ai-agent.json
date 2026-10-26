@@ -81,6 +81,7 @@
               "sales.team.suggest", "sales.winloss.draft_review", "scan.lookup", "search.answer_records",
               "search.knowledge", "search.parse_filter", "search.records", "secrets.list", "seo.draft", "settings.list", "settings.set", "system.status",
               "table.change_plan", "table.health", "table.index_proposals", "text.sentiment", "text.translate",
+              "timeline.ask", "timeline.summarize",
               "workflow.start", "workforce.coverage", "workforce.explain_gap", "workforce.my_next_day_off",
               "workforce.propose_fix"
             ],

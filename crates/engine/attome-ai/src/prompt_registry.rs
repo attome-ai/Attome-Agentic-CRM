@@ -100,6 +100,17 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::agent_playground::playground_system_prompt(),
         },
         PromptEntry {
+            action_id: crate::actions::timeline::TIMELINE_SUMMARIZE,
+            version: crate::actions::timeline::SUMMARIZE_PROMPT_VERSION,
+            // The language is the caller's; the template shows the default.
+            text: crate::actions::timeline::summarize_system_prompt("the language of the events"),
+        },
+        PromptEntry {
+            action_id: crate::actions::timeline::TIMELINE_ASK,
+            version: crate::actions::timeline::ASK_PROMPT_VERSION,
+            text: crate::actions::timeline::ask_system_prompt(),
+        },
+        PromptEntry {
             action_id: crate::actions::catalog::CATALOG_ASK,
             version: crate::actions::catalog::ASK_PROMPT_VERSION,
             text: crate::actions::catalog::ask_system_prompt(),

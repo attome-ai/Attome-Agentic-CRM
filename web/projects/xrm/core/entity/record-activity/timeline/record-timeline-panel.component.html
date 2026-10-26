@@ -1,4 +1,24 @@
 <section class="rt" data-testid="record-timeline">
+  @if (summaryLoading()) {
+    <p class="rt-hint" data-testid="timeline-summary-loading">{{ 'recordTimeline.summaryLoading' | translate }}</p>
+  } @else if (summary(); as s) {
+    <div class="rt-digest" role="note" [attr.aria-label]="'recordTimeline.summaryTitle' | translate"
+         data-testid="timeline-summary">
+      <p class="rt-digest-text">{{ s.answer }}</p>
+      @if (s.citations.length) {
+        <div class="rt-cites" [attr.aria-label]="'recordTimeline.citedEvents' | translate">
+          @for (c of s.citations; track c.evidence) {
+            <button type="button" class="rt-cite" (click)="showEntry(c.source_id)"
+                    [attr.data-testid]="'timeline-cite-' + c.source_id">
+              {{ 'recordTimeline.kinds.' + c.kind | translate }} ·
+              {{ c.occurred_at | localDate: { dateStyle: 'medium' } }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+
   <div class="rt-chips" role="group" [attr.aria-label]="'recordTimeline.filterLabel' | translate">
     <button type="button" class="rt-chip" [class.rt-chip-on]="selected().size === 0"
             [attr.aria-pressed]="selected().size === 0" (click)="clearFilter()"
@@ -25,7 +45,8 @@
 
   <ol class="rt-list">
     @for (entry of entries(); track entry.kind + ':' + entry.source_id) {
-      <li class="rt-item" [attr.data-kind]="entry.kind" data-testid="timeline-entry">
+      <li class="rt-item" [attr.data-kind]="entry.kind" [attr.id]="'tl-' + entry.source_id"
+          [class.rt-item-cited]="highlighted() === entry.source_id" data-testid="timeline-entry">
         <span class="rt-icon" aria-hidden="true"><i [class]="icon(entry.kind)"></i></span>
         <div class="rt-body">
           <div class="rt-summary">{{ entry.summary }}</div>

@@ -949,6 +949,9 @@ export const xrmAr = {
     error: 'تعذر تحميل الخط الزمني.',
     loading: 'جاري التحميل…',
     loadMore: 'تحميل المزيد',
+    summaryTitle: 'ملخص الخط الزمني',
+    summaryLoading: 'جارٍ التلخيص…',
+    citedEvents: 'الأحداث التي يستند إليها الملخص',
   },
   // U6 (D-601) — انظر en.catalog.ts
   systemStatus: {

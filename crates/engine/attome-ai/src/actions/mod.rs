@@ -103,6 +103,8 @@ pub mod summary_context;
 pub mod system_status;
 /// Y2-T14, Y12-T12: read tools over an entity's table.
 pub mod table;
+/// B1-T3: a record's timeline, summarised and asked.
+pub mod timeline;
 pub mod transition;
 pub mod translate;
 // T2-T5: a page drafted from a description.
@@ -136,6 +138,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(business::descriptors());
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
+    all.extend(timeline::descriptors());
     all.extend(record_write::descriptors());
     all.extend(bulk::descriptors());
     all.extend(transition::descriptors());
@@ -228,6 +231,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(business::executors());
     all.extend(search_ask::executors());
     all.extend(catalog::executors());
+    all.extend(timeline::executors());
     all.extend(record_write::executors());
     all.extend(bulk::executors());
     all.push(Box::new(transition::RecordTransitions));

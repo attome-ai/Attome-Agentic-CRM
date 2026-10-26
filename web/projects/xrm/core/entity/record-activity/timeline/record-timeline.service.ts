@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { ApiComponents, ApiService } from '@attome/base';
 
 /**
@@ -20,6 +20,33 @@ export const TIMELINE_KINDS: readonly TimelineEntryKind[] = [
   'audit_event', 'state_transition', 'communication', 'note', 'activity', 'decision',
 ];
 
+/** B1-T3: one event a timeline summary cites. */
+export interface TimelineCitation {
+  evidence: string;
+  kind: TimelineEntryKind;
+  source_id: string;
+  occurred_at: string;
+}
+
+/** B1-T3: the timeline's AI summary, citing its events. */
+export interface TimelineSummary {
+  answer: string;
+  citations: TimelineCitation[];
+}
+
+interface SummaryOutcome {
+  status: string;
+  result?: { answer?: string | null; citations?: TimelineCitation[] };
+}
+
+/** The summary in an action outcome, when it completed with an answer. Pure. */
+export function timelineSummary(outcome: SummaryOutcome | null | undefined): TimelineSummary | null {
+  if (!outcome || outcome.status !== 'completed') return null;
+  const answer = outcome.result?.answer;
+  if (typeof answer !== 'string' || !answer.trim()) return null;
+  return { answer, citations: outcome.result?.citations ?? [] };
+}
+
 export interface TimelineRequest {
   cursor?: string | null;
   pageSize?: number;
@@ -39,6 +66,18 @@ export class RecordTimelineService {
     return this.api.get<TimelinePage>(
       `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(recordId)}/timeline`, params,
     );
+  }
+
+  /**
+   * B1-T3: the AI summary of the record's timeline (`timeline.summarize`),
+   * from the events the person may see; `null` when there is none.
+   */
+  summary(entityName: string, recordId: string): Observable<TimelineSummary | null> {
+    return this.api
+      .post<SummaryOutcome>('/api/v1/actions/timeline.summarize/invoke', {
+        args: { entity: entityName, record_id: recordId },
+      })
+      .pipe(map(timelineSummary));
   }
 
   history(entityName: string, recordId: string, cursor?: string | null): Observable<RecordHistoryPage> {

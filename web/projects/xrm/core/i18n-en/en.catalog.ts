@@ -984,6 +984,9 @@ export const xrmEn = {
     error: 'The timeline could not be loaded.',
     loading: 'Loading…',
     loadMore: 'Load more',
+    summaryTitle: 'Summary of the timeline',
+    summaryLoading: 'Summarising…',
+    citedEvents: 'Events the summary draws on',
   },
   // U6 (D-601) — <xrm-record-history-panel>.
   systemStatus: {

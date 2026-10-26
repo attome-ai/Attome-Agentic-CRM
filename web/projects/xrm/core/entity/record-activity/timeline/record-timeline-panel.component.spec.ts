@@ -3,7 +3,7 @@ import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LangService, UserPreferencesService } from '@attome/base';
 import { RecordTimelinePanelComponent, TIMELINE_PAGE_SIZE } from './record-timeline-panel.component';
-import { RecordTimelineService, TimelineEntry } from './record-timeline.service';
+import { RecordTimelineService, TimelineEntry, timelineSummary } from './record-timeline.service';
 
 function entry(id: string, kind: TimelineEntry['kind'], summary: string): TimelineEntry {
   return {
@@ -22,13 +22,15 @@ function entry(id: string, kind: TimelineEntry['kind'], summary: string): Timeli
 
 describe('RecordTimelinePanelComponent', () => {
   let timeline: ReturnType<typeof vi.fn>;
+  let summary: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     timeline = vi.fn();
+    summary = vi.fn().mockReturnValue(of(null));
     TestBed.configureTestingModule({
       imports: [RecordTimelinePanelComponent],
       providers: [
-        { provide: RecordTimelineService, useValue: { timeline } },
+        { provide: RecordTimelineService, useValue: { timeline, summary } },
         { provide: LangService, useValue: { translate: (k: string) => k, intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => null, calendar: () => null, digits: () => null } },
       ],
@@ -92,5 +94,39 @@ describe('RecordTimelinePanelComponent', () => {
     timeline.mockReturnValue(of({ items: [] }));
     const fixture = mount();
     expect(fixture.nativeElement.querySelector('[data-testid="timeline-empty"]')).not.toBeNull();
+  });
+
+  it('shows the summary on open with its cited events, and a citation marks its entry', () => {
+    timeline.mockReturnValue(of({ items: [entry('a', 'note', 'Note: discount approved'), entry('b', 'note', 'Note: hi')] }));
+    summary.mockReturnValue(of({
+      answer: 'The discount was approved.',
+      citations: [{ evidence: 'E1', kind: 'note', source_id: 'a', occurred_at: '2026-09-23T10:00:00Z' }],
+    }));
+    const fixture = mount();
+    expect(summary).toHaveBeenCalledWith('contact', 'rec-1');
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="timeline-summary"]')?.textContent).toContain('The discount was approved.');
+    el.querySelector<HTMLButtonElement>('[data-testid="timeline-cite-a"]')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('#tl-a')?.classList.contains('rt-item-cited')).toBe(true);
+    expect(el.querySelector('#tl-b')?.classList.contains('rt-item-cited')).toBe(false);
+  });
+
+  it('shows no summary when there is none or AI is unavailable', () => {
+    timeline.mockReturnValue(of({ items: [entry('a', 'note', 'Note: hi')] }));
+    summary.mockReturnValue(throwError(() => new Error('ai off')));
+    const fixture = mount();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="timeline-summary"]')).toBeNull();
+    expect(el.querySelector('[data-testid="timeline-summary-loading"]')).toBeNull();
+    expect(el.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('reads the summary only from a completed outcome with an answer', () => {
+    expect(timelineSummary({ status: 'completed', result: { answer: 'x', citations: [] } }))
+      .toEqual({ answer: 'x', citations: [] });
+    expect(timelineSummary({ status: 'completed', result: { answer: null } })).toBeNull();
+    expect(timelineSummary({ status: 'pending_confirmation' })).toBeNull();
+    expect(timelineSummary(null)).toBeNull();
   });
 });
