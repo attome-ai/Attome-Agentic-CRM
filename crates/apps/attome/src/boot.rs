@@ -1833,14 +1833,12 @@ pub fn register_engines(
         .register_workflow_step_handler(attome_marketing::journey::action_step::ListMembership {
             add: false,
         })
+        .register_workflow_step_handler(attome_marketing::journey::action_step::CampaignMembership)
         .register_workflow_step_handler(attome_marketing::journey::action_step::Unavailable {
             key: attome_marketing::journey::action_step::UNAVAILABLE[0],
         })
         .register_workflow_step_handler(attome_marketing::journey::action_step::Unavailable {
             key: attome_marketing::journey::action_step::UNAVAILABLE[1],
-        })
-        .register_workflow_step_handler(attome_marketing::journey::action_step::Unavailable {
-            key: attome_marketing::journey::action_step::UNAVAILABLE[2],
         })
 }
 

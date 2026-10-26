@@ -315,6 +315,53 @@ pub async fn run_from_list(
     Ok(plan)
 }
 
+/// E8-T7: adds one person (a contact or a lead) to a campaign as `targeted`,
+/// as `ctx`; `false` when they already are a member. A journey step calls
+/// it, so no consent is checked here: messages check consent when they send.
+pub async fn add_person(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    campaign: Uuid,
+    person: Uuid,
+) -> Result<bool, AppError> {
+    ctx.require("campaign_member", "create")?;
+    campaign_type(state, ctx, campaign).await?;
+    let is_contact: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM contact WHERE id = $1 \
+            AND (is_active IS NULL OR is_active = true))",
+    )
+    .bind(person)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let field = if is_contact {
+        "contact_ref"
+    } else {
+        "lead_ref"
+    };
+    let existing: bool = sqlx::query_scalar(&format!(
+        "SELECT EXISTS (SELECT 1 FROM campaign_member WHERE campaign_ref = $1 AND {field} = $2 \
+            AND (is_active IS NULL OR is_active = true))"
+    ))
+    .bind(campaign)
+    .bind(person)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if existing {
+        return Ok(false);
+    }
+    attome_records::entity_crud::create_record_for(
+        state,
+        ctx,
+        ctx.user_id,
+        "campaign_member",
+        json!({ "campaign_ref": campaign, (field): person, "status": FIRST_STATUS }),
+    )
+    .await?;
+    Ok(true)
+}
+
 /// The campaign's live members by status.
 pub async fn member_summary(
     state: &EngineState,

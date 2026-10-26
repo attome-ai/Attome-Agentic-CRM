@@ -4,10 +4,13 @@
 //! run's identity (the flow's run-as user), so the list's access rules and
 //! audit apply as for any other change. A dry run changes nothing.
 //!
-//! `marketing.campaign_add`, `marketing.score_change` and `sales.handoff`
-//! are declared so a journey that names them is refused at publish with
-//! `feature_unavailable`, until the campaign-membership, scoring and
-//! hand-off features they call give them a run path.
+//! `marketing.campaign_add` adds the run's person to `config.campaign_id` as
+//! a `targeted` member (E1-T3's campaign membership), skipping a person who
+//! already is one.
+//!
+//! `marketing.score_change` and `sales.handoff` are declared so a journey
+//! that names them is refused at publish with `feature_unavailable`, until
+//! the scoring and hand-off features they call give them a run path.
 
 use attome_core::EngineState;
 use attome_core::workflow_step::{StepFuture, StepInvocation, StepOutcome, WorkflowStepHandler};
@@ -78,6 +81,56 @@ impl WorkflowStepHandler for ListMembership {
     }
 }
 
+/// `marketing.campaign_add`: the run's person joins `config.campaign_id`.
+#[derive(Debug)]
+pub struct CampaignMembership;
+
+fn campaign_id(config: &Value) -> Option<Uuid> {
+    config
+        .get("campaign_id")
+        .and_then(Value::as_str)
+        .and_then(|s| Uuid::parse_str(s.trim()).ok())
+}
+
+impl WorkflowStepHandler for CampaignMembership {
+    fn key(&self) -> &'static str {
+        "marketing.campaign_add"
+    }
+    fn module_id(&self) -> ModuleId {
+        MODULE_MARKETING
+    }
+    fn validate_config(&self, config: &Value) -> Result<(), String> {
+        campaign_id(config)
+            .map(|_| ())
+            .ok_or_else(|| "campaign_id names a campaign".into())
+    }
+    fn run<'a>(&'a self, state: &'a EngineState, inv: StepInvocation) -> StepFuture<'a> {
+        Box::pin(async move {
+            let campaign = campaign_id(&inv.config)
+                .ok_or_else(|| AppError::Validation("campaign_id names a campaign".into()))?;
+            let Some(person) = inv.correlation_entity_id else {
+                return Ok(StepOutcome::Blocked {
+                    reason: "the run has no person".into(),
+                    continue_after: true,
+                });
+            };
+            if inv.simulate {
+                return Ok(StepOutcome::Done(json!({
+                    "would": "add to campaign",
+                    "campaign_id": campaign,
+                })));
+            }
+            let user = inv.run_as_user.ok_or(AppError::Forbidden)?;
+            let ctx = attome_security::resolve_uncached(&state.base.db, user).await?;
+            let added = crate::campaign::add_person(state, &ctx, campaign, person).await?;
+            Ok(StepOutcome::Done(json!({
+                "campaign_id": campaign,
+                "added": added,
+            })))
+        })
+    }
+}
+
 /// A step whose feature has no run path yet: refused at publish.
 #[derive(Debug)]
 pub struct Unavailable {
@@ -100,11 +153,7 @@ impl WorkflowStepHandler for Unavailable {
 }
 
 /// The steps declared but not yet runnable.
-pub const UNAVAILABLE: [&str; 3] = [
-    "marketing.campaign_add",
-    "marketing.score_change",
-    "sales.handoff",
-];
+pub const UNAVAILABLE: [&str; 2] = ["marketing.score_change", "sales.handoff"];
 
 #[cfg(test)]
 mod tests {
@@ -118,6 +167,16 @@ mod tests {
                 Err("feature_unavailable".into())
             );
         }
+    }
+
+    #[test]
+    fn campaign_step_needs_a_campaign() {
+        assert!(CampaignMembership.validate_config(&json!({})).is_err());
+        assert!(
+            CampaignMembership
+                .validate_config(&json!({ "campaign_id": Uuid::now_v7() }))
+                .is_ok()
+        );
     }
 
     #[test]
