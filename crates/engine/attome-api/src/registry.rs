@@ -114,6 +114,33 @@ impl ModelRegistry {
         validators
     }
 
+    /// Y4-T1 — every registered model's manifest, resolved with its module's
+    /// name and its entities. A model without a manifest, or a manifest with
+    /// a problem of its own (`EngineManifest::check`), is an error naming
+    /// the engine, so boot stops on it.
+    pub fn manifests(&self) -> Result<Vec<attome_core::module_manifest::EngineManifest>, String> {
+        let mut out = Vec::with_capacity(self.models.len());
+        for model in &self.models {
+            let declared = model
+                .manifest()
+                .ok_or_else(|| format!("engine {} declares no module manifest", model.name()))?;
+            // A module outside `MODULE_MAP` (an extra model's own) is named
+            // `custom` and takes no part in dependency checks.
+            let module = attome_modules::module_name(model.module_id()).unwrap_or("custom");
+            let manifest = attome_core::module_manifest::EngineManifest {
+                engine: model.name(),
+                module,
+                version: declared.version,
+                depends_on: declared.depends_on,
+                platform: declared.platform,
+                entities: model.owned_entities(),
+            };
+            manifest.check()?;
+            out.push(manifest);
+        }
+        Ok(out)
+    }
+
     /// D-535 — every entity a registered model declared through
     /// `EngineModel::engine_owned_entities`, folded into one set. Call once at
     /// boot; the result is read-only.

@@ -90,6 +90,14 @@ async fn seed_user(db: &attome_db::DbPool) -> String {
 struct TestPaidModel;
 
 impl EngineModel for TestPaidModel {
+    fn manifest(&self) -> Option<attome_core::module_manifest::ModuleManifest> {
+        Some(attome_core::module_manifest::ModuleManifest {
+            version: "0.1.0",
+            depends_on: &[],
+            platform: attome_core::module_manifest::BUILT_IN_PLATFORM,
+        })
+    }
+
     fn name(&self) -> &'static str {
         "test-paid-model"
     }

@@ -99,6 +99,13 @@ pub trait EngineModel: Send + Sync + 'static {
     fn record_validators(&self) -> &'static [(&'static str, RecordValidator)] {
         &[]
     }
+
+    /// Y4-T1: the engine's version, platform range and module dependencies.
+    /// Every registered engine declares one; `ModelRegistry::manifests`
+    /// refuses a registry with an engine that does not, so boot stops.
+    fn manifest(&self) -> Option<crate::module_manifest::ModuleManifest> {
+        None
+    }
 }
 
 #[cfg(test)]

@@ -926,6 +926,9 @@ impl EngineSystemBuilder {
         // Dashboard 10/10 Phase 2.1 — model-declared write validators, frozen
         // the same way.
         state.record_validators = std::sync::Arc::new(self.registry.record_validators());
+        // Y4-T1 — every engine's manifest, frozen the same way; a missing or
+        // broken manifest stops boot here.
+        state.engine_manifests = std::sync::Arc::new(self.registry.manifests()?);
         // Dashboard 10/10 Phase 6 — registered `MyWorkProvider`s, frozen the
         // same way: `register_my_work_provider` is a builder method and
         // cannot run past this point either.
@@ -955,6 +958,9 @@ impl EngineSystemBuilder {
         // `license`, both infra tables migrations already created,
         // with no dependency on the entity seeding this precedes.
         let license = load_license(&state.base.db).await;
+        // Y4-T1: a switched-on module whose dependency is off stops boot.
+        attome_core::module_manifest::check_dependencies(&state.engine_manifests, &license)
+            .map_err(|e| format!("module configuration: {e}; turn the dependency on in Module Management or turn this module off"))?;
         state.modules = Arc::new(ArcSwap::from_pointee(license));
 
         // Self-register system entities — idempotent, safe on every startup.

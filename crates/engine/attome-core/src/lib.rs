@@ -136,6 +136,8 @@ pub mod meta_registry;
 /// (`attome-server` for queries, `attome-workflow` for workflows) writes it.
 pub mod metadata_reference;
 pub mod model;
+/// Y4-T1: engine module manifests and their dependency check.
+pub mod module_manifest;
 pub mod my_work;
 pub mod partition_maintenance;
 /// R1-T1: restriction of processing, shared by every processing path.

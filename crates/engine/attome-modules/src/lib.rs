@@ -228,6 +228,14 @@ pub const MODULE_MAP: &[(&str, ModuleId)] = &[
     ("ops", MODULE_OPS),
 ];
 
+/// Y4-T1: the name [`MODULE_MAP`] gives module `id`.
+pub fn module_name(id: ModuleId) -> Option<&'static str> {
+    MODULE_MAP
+        .iter()
+        .find(|(_, candidate)| *candidate == id)
+        .map(|(name, _)| *name)
+}
+
 /// The module named `name` in [`MODULE_MAP`].
 pub fn module_by_name(name: &str) -> Option<ModuleId> {
     MODULE_MAP

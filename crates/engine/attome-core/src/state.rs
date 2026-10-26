@@ -145,6 +145,10 @@ pub struct EngineState {
     /// like `engine_owned_entities`. Empty here, which validates nothing extra.
     pub record_validators:
         Arc<std::collections::HashMap<String, Vec<crate::model::RecordValidator>>>,
+    /// Y4-T1: every registered engine's manifest, frozen by
+    /// `EngineSystemBuilder::build`. Module Management checks a new
+    /// configuration against their dependencies. Empty here (bare state).
+    pub engine_manifests: Arc<Vec<crate::module_manifest::EngineManifest>>,
     pub notifications: Arc<dyn NotificationService>,
     /// Audit-chain Ed25519 signer (P1.5b) — `None` when `audit.signing_enabled`
     /// is false. Read-only after construction: config-loaded once at startup,
@@ -315,6 +319,7 @@ impl EngineState {
             engine_managed_initial_values: Arc::new(std::collections::HashMap::new()),
             engine_owned_entities: Arc::new(HashSet::new()),
             record_validators: Arc::new(std::collections::HashMap::new()),
+            engine_manifests: Arc::new(Vec::new()),
             notifications: Arc::new(NoopNotifications),
             audit_signer,
             audit_users: create_hot_cache(10_000, 60),

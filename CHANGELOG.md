@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Module manifests (Y4-T1): every engine declares its version, the platform versions it runs on
+  and the modules it needs on. Boot refuses a module configuration where a module that is on needs
+  one that is off (today: Service and GRC need Project, which their entities look up), naming
+  both; Module Management (`PUT /api/v1/admin/license/modules`) refuses to save such a
+  configuration with `422`.
 - HTTP/3 (Z5-T8): a server built with `--features http3` and run with `app.tls.http3 = true`
   also serves HTTP/3 over QUIC on its HTTPS port (UDP), through the same routes and middleware,
   and advertises it with `Alt-Svc: h3=":<port>"; ma=86400`. The switch without the feature

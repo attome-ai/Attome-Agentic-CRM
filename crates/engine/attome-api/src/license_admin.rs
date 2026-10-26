@@ -307,6 +307,12 @@ async fn update_module_configuration(
         }
     }
 
+    // Y4-T1: never a configuration boot would refuse — a module on whose
+    // dependency is off.
+    let next = signed.narrowed_by(Some((request.enabled, configured_module_bits(&modules))));
+    attome_core::module_manifest::check_dependencies(&state.engine_manifests, &next)
+        .map_err(AppError::Validation)?;
+
     // Audit plan 3.3: the singleton row update and its `License` + `Update`
     // event commit together, before this node's arc-swap is touched.
     let mut tx = SecurityTx::begin(
