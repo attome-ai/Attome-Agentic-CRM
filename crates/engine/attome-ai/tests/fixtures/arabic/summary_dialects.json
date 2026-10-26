@@ -1,0 +1,456 @@
+{
+  "agent": "00000000-0000-0000-0000-000000000000",
+  "pass_threshold": 0.8,
+  "cases": [
+    {
+      "name": "msa-summary-01",
+      "input": "لخّص هذه الملاحظات في جملتين: اتصل العميل من شركة النخيل وقال إن الميزانية أربعون ألف ريال ويريد البدء في مارس، وطلب عرض سعر مكتوب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(أربعين|أربعون|40|٤٠)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "msa-summary-02",
+      "input": "لخّص هذه الملاحظات في جملتين: اشتكت ريم من تأخر الشحنة ثلاثة أيام وطلبت تعويضاً، ووعدناها بالرد قبل يوم الخميس.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأخ|شحن)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "msa-summary-03",
+      "input": "لخّص هذه الملاحظات في جملتين: اجتمعنا مع مؤسسة الأفق واتفقنا على تجربة مجانية لمدة شهر ثم عقد سنوي.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تجرب|تجربة)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "msa-summary-04",
+      "input": "لخّص هذه الملاحظات في جملتين: خالد مهتم بالباقة المتقدمة لكنه ينتظر موافقة مديره المالي الأسبوع القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(موافقة|المدير)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "msa-summary-05",
+      "input": "لخّص هذه الملاحظات في جملتين: الفاتورة رقم ٥٠٢ لم تُدفع منذ ستين يوماً ووعد العميل بالسداد بعد العيد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(فاتور|سداد|دفع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "msa-summary-06",
+      "input": "لخّص هذه الملاحظات في جملتين: طلبت مجموعة الوادي إضافة عشرة مستخدمين وتدريب فريقها يوم الأحد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(مستخدم|تدريب)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "msa-summary-07",
+      "input": "لخّص هذه الملاحظات في جملتين: العميل ألغى الاجتماع بسبب السفر وطلب تأجيله إلى الأسبوع بعد القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأجيل|أجّل|اجتماع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "msa-summary-08",
+      "input": "لخّص هذه الملاحظات في جملتين: أبلغ الدعم عن خلل في تسجيل الدخول يظهر عند استخدام الجوال فقط.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسجيل الدخول|الجوال|خلل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "msa-summary-09",
+      "input": "لخّص هذه الملاحظات في جملتين: وافق قسم المشتريات على العرض بشرط تخفيض خمسة بالمئة.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(خمسة|5|٥|تخفيض|خصم)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "msa-summary-10",
+      "input": "لخّص هذه الملاحظات في جملتين: شركة الرمال تريد نقل الحساب إلى فرعها في الدمام اعتباراً من الشهر القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الدمام|نقل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-01",
+      "input": "عطني ملخص قصير لهالكلام: اتصل العميل من شركة النخيل وقال إن الميزانية أربعون ألف ريال ويريد البدء في مارس، وطلب عرض سعر مكتوب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(أربعين|أربعون|40|٤٠)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-02",
+      "input": "عطني ملخص قصير لهالكلام: اشتكت ريم من تأخر الشحنة ثلاثة أيام وطلبت تعويضاً، ووعدناها بالرد قبل يوم الخميس.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأخ|شحن)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-03",
+      "input": "عطني ملخص قصير لهالكلام: اجتمعنا مع مؤسسة الأفق واتفقنا على تجربة مجانية لمدة شهر ثم عقد سنوي.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تجرب|تجربة)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-04",
+      "input": "عطني ملخص قصير لهالكلام: خالد مهتم بالباقة المتقدمة لكنه ينتظر موافقة مديره المالي الأسبوع القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(موافقة|المدير)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-05",
+      "input": "عطني ملخص قصير لهالكلام: الفاتورة رقم ٥٠٢ لم تُدفع منذ ستين يوماً ووعد العميل بالسداد بعد العيد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(فاتور|سداد|دفع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-06",
+      "input": "عطني ملخص قصير لهالكلام: طلبت مجموعة الوادي إضافة عشرة مستخدمين وتدريب فريقها يوم الأحد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(مستخدم|تدريب)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-07",
+      "input": "عطني ملخص قصير لهالكلام: العميل ألغى الاجتماع بسبب السفر وطلب تأجيله إلى الأسبوع بعد القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأجيل|أجّل|اجتماع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-08",
+      "input": "عطني ملخص قصير لهالكلام: أبلغ الدعم عن خلل في تسجيل الدخول يظهر عند استخدام الجوال فقط.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسجيل الدخول|الجوال|خلل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-09",
+      "input": "عطني ملخص قصير لهالكلام: وافق قسم المشتريات على العرض بشرط تخفيض خمسة بالمئة.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(خمسة|5|٥|تخفيض|خصم)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "gulf-summary-10",
+      "input": "عطني ملخص قصير لهالكلام: شركة الرمال تريد نقل الحساب إلى فرعها في الدمام اعتباراً من الشهر القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الدمام|نقل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-01",
+      "input": "لخّص لي الكلام ده في سطرين: اتصل العميل من شركة النخيل وقال إن الميزانية أربعون ألف ريال ويريد البدء في مارس، وطلب عرض سعر مكتوب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(أربعين|أربعون|40|٤٠)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-02",
+      "input": "لخّص لي الكلام ده في سطرين: اشتكت ريم من تأخر الشحنة ثلاثة أيام وطلبت تعويضاً، ووعدناها بالرد قبل يوم الخميس.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأخ|شحن)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-03",
+      "input": "لخّص لي الكلام ده في سطرين: اجتمعنا مع مؤسسة الأفق واتفقنا على تجربة مجانية لمدة شهر ثم عقد سنوي.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تجرب|تجربة)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-04",
+      "input": "لخّص لي الكلام ده في سطرين: خالد مهتم بالباقة المتقدمة لكنه ينتظر موافقة مديره المالي الأسبوع القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(موافقة|المدير)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-05",
+      "input": "لخّص لي الكلام ده في سطرين: الفاتورة رقم ٥٠٢ لم تُدفع منذ ستين يوماً ووعد العميل بالسداد بعد العيد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(فاتور|سداد|دفع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-06",
+      "input": "لخّص لي الكلام ده في سطرين: طلبت مجموعة الوادي إضافة عشرة مستخدمين وتدريب فريقها يوم الأحد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(مستخدم|تدريب)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-07",
+      "input": "لخّص لي الكلام ده في سطرين: العميل ألغى الاجتماع بسبب السفر وطلب تأجيله إلى الأسبوع بعد القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأجيل|أجّل|اجتماع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-08",
+      "input": "لخّص لي الكلام ده في سطرين: أبلغ الدعم عن خلل في تسجيل الدخول يظهر عند استخدام الجوال فقط.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسجيل الدخول|الجوال|خلل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-09",
+      "input": "لخّص لي الكلام ده في سطرين: وافق قسم المشتريات على العرض بشرط تخفيض خمسة بالمئة.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(خمسة|5|٥|تخفيض|خصم)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "egyptian-summary-10",
+      "input": "لخّص لي الكلام ده في سطرين: شركة الرمال تريد نقل الحساب إلى فرعها في الدمام اعتباراً من الشهر القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الدمام|نقل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-01",
+      "input": "لخّص لي هالحكي بسطرين: اتصل العميل من شركة النخيل وقال إن الميزانية أربعون ألف ريال ويريد البدء في مارس، وطلب عرض سعر مكتوب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(أربعين|أربعون|40|٤٠)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-02",
+      "input": "لخّص لي هالحكي بسطرين: اشتكت ريم من تأخر الشحنة ثلاثة أيام وطلبت تعويضاً، ووعدناها بالرد قبل يوم الخميس.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأخ|شحن)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-03",
+      "input": "لخّص لي هالحكي بسطرين: اجتمعنا مع مؤسسة الأفق واتفقنا على تجربة مجانية لمدة شهر ثم عقد سنوي.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تجرب|تجربة)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-04",
+      "input": "لخّص لي هالحكي بسطرين: خالد مهتم بالباقة المتقدمة لكنه ينتظر موافقة مديره المالي الأسبوع القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(موافقة|المدير)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-05",
+      "input": "لخّص لي هالحكي بسطرين: الفاتورة رقم ٥٠٢ لم تُدفع منذ ستين يوماً ووعد العميل بالسداد بعد العيد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(فاتور|سداد|دفع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-06",
+      "input": "لخّص لي هالحكي بسطرين: طلبت مجموعة الوادي إضافة عشرة مستخدمين وتدريب فريقها يوم الأحد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(مستخدم|تدريب)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-07",
+      "input": "لخّص لي هالحكي بسطرين: العميل ألغى الاجتماع بسبب السفر وطلب تأجيله إلى الأسبوع بعد القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأجيل|أجّل|اجتماع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-08",
+      "input": "لخّص لي هالحكي بسطرين: أبلغ الدعم عن خلل في تسجيل الدخول يظهر عند استخدام الجوال فقط.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسجيل الدخول|الجوال|خلل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-09",
+      "input": "لخّص لي هالحكي بسطرين: وافق قسم المشتريات على العرض بشرط تخفيض خمسة بالمئة.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(خمسة|5|٥|تخفيض|خصم)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "levantine-summary-10",
+      "input": "لخّص لي هالحكي بسطرين: شركة الرمال تريد نقل الحساب إلى فرعها في الدمام اعتباراً من الشهر القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الدمام|نقل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-01",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: اتصل العميل من شركة النخيل وقال إن الميزانية أربعون ألف ريال ويريد البدء في مارس، وطلب عرض سعر مكتوب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(أربعين|أربعون|40|٤٠)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-02",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: اشتكت ريم من تأخر الشحنة ثلاثة أيام وطلبت تعويضاً، ووعدناها بالرد قبل يوم الخميس.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأخ|شحن)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-03",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: اجتمعنا مع مؤسسة الأفق واتفقنا على تجربة مجانية لمدة شهر ثم عقد سنوي.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تجرب|تجربة)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-04",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: خالد مهتم بالباقة المتقدمة لكنه ينتظر موافقة مديره المالي الأسبوع القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(موافقة|المدير)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-05",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: الفاتورة رقم ٥٠٢ لم تُدفع منذ ستين يوماً ووعد العميل بالسداد بعد العيد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(فاتور|سداد|دفع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-06",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: طلبت مجموعة الوادي إضافة عشرة مستخدمين وتدريب فريقها يوم الأحد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(مستخدم|تدريب)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-07",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: العميل ألغى الاجتماع بسبب السفر وطلب تأجيله إلى الأسبوع بعد القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تأجيل|أجّل|اجتماع)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-08",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: أبلغ الدعم عن خلل في تسجيل الدخول يظهر عند استخدام الجوال فقط.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسجيل الدخول|الجوال|خلل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-09",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: وافق قسم المشتريات على العرض بشرط تخفيض خمسة بالمئة.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(خمسة|5|٥|تخفيض|خصم)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    },
+    {
+      "name": "maghrebi-summary-10",
+      "input": "عطيني ملخص قصير ديال هاد الكلام: شركة الرمال تريد نقل الحساب إلى فرعها في الدمام اعتباراً من الشهر القادم.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الدمام|نقل)",
+        "text_excludes": "(?i)(lorem|as an ai|كنموذج لغوي)"
+      }
+    }
+  ]
+}

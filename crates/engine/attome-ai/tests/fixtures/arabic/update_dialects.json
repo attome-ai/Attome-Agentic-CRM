@@ -1,0 +1,506 @@
+{
+  "agent": "00000000-0000-0000-0000-000000000000",
+  "pass_threshold": 0.8,
+  "cases": [
+    {
+      "name": "msa-update-01",
+      "input": "غيّر حالة في صفقة شركة النخيل إلى مكسوبة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "msa-update-02",
+      "input": "غيّر رقم الجوال في جهة الاتصال أحمد سالم إلى 0551234567.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "msa-update-03",
+      "input": "غيّر المالك في التذكرة رقم ١٢٣٤ إلى نورة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "msa-update-04",
+      "input": "غيّر تاريخ الإغلاق المتوقع في صفقة مؤسسة الأفق إلى نهاية الشهر.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "msa-update-05",
+      "input": "غيّر الأولوية في التذكرة رقم ٩٨٧ إلى عالية.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "msa-update-06",
+      "input": "غيّر المدينة في حساب شركة الرمال إلى الدمام.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "msa-update-07",
+      "input": "غيّر المبلغ في صفقة توريد الأجهزة إلى خمسة وسبعين ألف.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "msa-update-08",
+      "input": "غيّر المرحلة في العميل المحتمل خالد إلى مؤهّل.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "msa-update-09",
+      "input": "غيّر البريد الإلكتروني في جهة الاتصال ريم إلى reem@example.com.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "msa-update-10",
+      "input": "غيّر ملاحظة المتابعة في حساب مجموعة الوادي إلى اتصل بعد العيد.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-01",
+      "input": "عدّل حالة حق صفقة شركة النخيل وخلّه مكسوبة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-02",
+      "input": "عدّل رقم الجوال حق جهة الاتصال أحمد سالم وخلّه 0551234567.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-03",
+      "input": "عدّل المالك حق التذكرة رقم ١٢٣٤ وخلّه نورة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-04",
+      "input": "عدّل تاريخ الإغلاق المتوقع حق صفقة مؤسسة الأفق وخلّه نهاية الشهر.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-05",
+      "input": "عدّل الأولوية حق التذكرة رقم ٩٨٧ وخلّه عالية.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-06",
+      "input": "عدّل المدينة حق حساب شركة الرمال وخلّه الدمام.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-07",
+      "input": "عدّل المبلغ حق صفقة توريد الأجهزة وخلّه خمسة وسبعين ألف.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-08",
+      "input": "عدّل المرحلة حق العميل المحتمل خالد وخلّه مؤهّل.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-09",
+      "input": "عدّل البريد الإلكتروني حق جهة الاتصال ريم وخلّه reem@example.com.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "gulf-update-10",
+      "input": "عدّل ملاحظة المتابعة حق حساب مجموعة الوادي وخلّه اتصل بعد العيد.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-01",
+      "input": "غيّر حالة بتاع صفقة شركة النخيل وخليه مكسوبة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-02",
+      "input": "غيّر رقم الجوال بتاع جهة الاتصال أحمد سالم وخليه 0551234567.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-03",
+      "input": "غيّر المالك بتاع التذكرة رقم ١٢٣٤ وخليه نورة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-04",
+      "input": "غيّر تاريخ الإغلاق المتوقع بتاع صفقة مؤسسة الأفق وخليه نهاية الشهر.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-05",
+      "input": "غيّر الأولوية بتاع التذكرة رقم ٩٨٧ وخليه عالية.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-06",
+      "input": "غيّر المدينة بتاع حساب شركة الرمال وخليه الدمام.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-07",
+      "input": "غيّر المبلغ بتاع صفقة توريد الأجهزة وخليه خمسة وسبعين ألف.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-08",
+      "input": "غيّر المرحلة بتاع العميل المحتمل خالد وخليه مؤهّل.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-09",
+      "input": "غيّر البريد الإلكتروني بتاع جهة الاتصال ريم وخليه reem@example.com.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-update-10",
+      "input": "غيّر ملاحظة المتابعة بتاع حساب مجموعة الوادي وخليه اتصل بعد العيد.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-01",
+      "input": "غيّر حالة تبع صفقة شركة النخيل وخليه مكسوبة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-02",
+      "input": "غيّر رقم الجوال تبع جهة الاتصال أحمد سالم وخليه 0551234567.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-03",
+      "input": "غيّر المالك تبع التذكرة رقم ١٢٣٤ وخليه نورة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-04",
+      "input": "غيّر تاريخ الإغلاق المتوقع تبع صفقة مؤسسة الأفق وخليه نهاية الشهر.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-05",
+      "input": "غيّر الأولوية تبع التذكرة رقم ٩٨٧ وخليه عالية.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-06",
+      "input": "غيّر المدينة تبع حساب شركة الرمال وخليه الدمام.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-07",
+      "input": "غيّر المبلغ تبع صفقة توريد الأجهزة وخليه خمسة وسبعين ألف.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-08",
+      "input": "غيّر المرحلة تبع العميل المحتمل خالد وخليه مؤهّل.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-09",
+      "input": "غيّر البريد الإلكتروني تبع جهة الاتصال ريم وخليه reem@example.com.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "levantine-update-10",
+      "input": "غيّر ملاحظة المتابعة تبع حساب مجموعة الوادي وخليه اتصل بعد العيد.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-01",
+      "input": "بدّل حالة ديال صفقة شركة النخيل ودير مكسوبة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-02",
+      "input": "بدّل رقم الجوال ديال جهة الاتصال أحمد سالم ودير 0551234567.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-03",
+      "input": "بدّل المالك ديال التذكرة رقم ١٢٣٤ ودير نورة.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-04",
+      "input": "بدّل تاريخ الإغلاق المتوقع ديال صفقة مؤسسة الأفق ودير نهاية الشهر.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-05",
+      "input": "بدّل الأولوية ديال التذكرة رقم ٩٨٧ ودير عالية.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-06",
+      "input": "بدّل المدينة ديال حساب شركة الرمال ودير الدمام.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-07",
+      "input": "بدّل المبلغ ديال صفقة توريد الأجهزة ودير خمسة وسبعين ألف.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-08",
+      "input": "بدّل المرحلة ديال العميل المحتمل خالد ودير مؤهّل.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-09",
+      "input": "بدّل البريد الإلكتروني ديال جهة الاتصال ريم ودير reem@example.com.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-update-10",
+      "input": "بدّل ملاحظة المتابعة ديال حساب مجموعة الوادي ودير اتصل بعد العيد.",
+      "expect": {
+        "tools": [
+          "search.records",
+          "record.update"
+        ]
+      }
+    }
+  ]
+}

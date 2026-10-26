@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Arabic and dialect eval sets (AG4-T1): six eval suites of 50 cases each (finding records,
+  updating, creating tasks, summaries and replies graded by rubric, and safety refusals), every case in
+  Modern Standard Arabic or one of four dialects, under `crates/engine/attome-ai/tests/fixtures/arabic`,
+  checked by `tests/arabic_eval_sets.rs`.
 - Fulfilment screens (F6-T17): views To release, On hold, Backorders, In transit and Own fleet
   deliveries; Operations > Fulfilment, Shipments and Fulfilment exceptions in the sidebar (fulfilment
   module only); the Arabic label of a product's fulfilment kind (fulfilment pack changeset 0007).

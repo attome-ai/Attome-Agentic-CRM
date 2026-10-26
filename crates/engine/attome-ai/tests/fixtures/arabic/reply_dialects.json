@@ -1,0 +1,456 @@
+{
+  "agent": "00000000-0000-0000-0000-000000000000",
+  "pass_threshold": 0.8,
+  "cases": [
+    {
+      "name": "msa-reply-01",
+      "input": "اكتب رداً مهذباً على العميل: يسأل عن موعد وصول طلبه رقم ٥٥٠، وموعد الوصول يوم الثلاثاء.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الثلاثاء)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "msa-reply-02",
+      "input": "اكتب رداً مهذباً على العميل: يطلب نسخة من الفاتورة رقم ٥٠٢، وسنرسلها اليوم بالبريد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الفاتورة|فاتورة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "msa-reply-03",
+      "input": "اكتب رداً مهذباً على العميل: يشتكي من تأخر الرد على تذكرته، والمهندس سيتصل به خلال ساعتين.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(ساعت|ساعة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "msa-reply-04",
+      "input": "اكتب رداً مهذباً على العميل: يريد تجديد الاشتراك السنوي، والسعر بعد الخصم تسعة آلاف ريال.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسعة آلاف|9000|٩٠٠٠|9,000)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "msa-reply-05",
+      "input": "اكتب رداً مهذباً على العميل: يسأل عن ساعات العمل، وهي من التاسعة صباحاً إلى الخامسة مساءً.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(التاسعة|9|٩)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "msa-reply-06",
+      "input": "اكتب رداً مهذباً على العميل: يطلب إلغاء الاجتماع، ونقترح عليه يوم الأحد بدلاً منه.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الأحد)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "msa-reply-07",
+      "input": "اكتب رداً مهذباً على العميل: يسأل عن طريقة إضافة مستخدم جديد، والطريقة من صفحة الإعدادات.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الإعدادات|الاعدادات)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "msa-reply-08",
+      "input": "اكتب رداً مهذباً على العميل: يشكرنا على الخدمة ويقترح ميزة تصدير التقارير.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(شكر|نشكر|تصدير)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "msa-reply-09",
+      "input": "اكتب رداً مهذباً على العميل: يسأل إن كان العرض يشمل التدريب، والعرض يشمل يومي تدريب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تدريب)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "msa-reply-10",
+      "input": "اكتب رداً مهذباً على العميل: يطلب تغيير عنوان الشحن إلى جدة، وتم التعديل.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(جدة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-01",
+      "input": "اكتب لي رد محترم للعميل: يسأل عن موعد وصول طلبه رقم ٥٥٠، وموعد الوصول يوم الثلاثاء.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الثلاثاء)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-02",
+      "input": "اكتب لي رد محترم للعميل: يطلب نسخة من الفاتورة رقم ٥٠٢، وسنرسلها اليوم بالبريد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الفاتورة|فاتورة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-03",
+      "input": "اكتب لي رد محترم للعميل: يشتكي من تأخر الرد على تذكرته، والمهندس سيتصل به خلال ساعتين.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(ساعت|ساعة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-04",
+      "input": "اكتب لي رد محترم للعميل: يريد تجديد الاشتراك السنوي، والسعر بعد الخصم تسعة آلاف ريال.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسعة آلاف|9000|٩٠٠٠|9,000)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-05",
+      "input": "اكتب لي رد محترم للعميل: يسأل عن ساعات العمل، وهي من التاسعة صباحاً إلى الخامسة مساءً.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(التاسعة|9|٩)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-06",
+      "input": "اكتب لي رد محترم للعميل: يطلب إلغاء الاجتماع، ونقترح عليه يوم الأحد بدلاً منه.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الأحد)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-07",
+      "input": "اكتب لي رد محترم للعميل: يسأل عن طريقة إضافة مستخدم جديد، والطريقة من صفحة الإعدادات.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الإعدادات|الاعدادات)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-08",
+      "input": "اكتب لي رد محترم للعميل: يشكرنا على الخدمة ويقترح ميزة تصدير التقارير.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(شكر|نشكر|تصدير)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-09",
+      "input": "اكتب لي رد محترم للعميل: يسأل إن كان العرض يشمل التدريب، والعرض يشمل يومي تدريب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تدريب)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "gulf-reply-10",
+      "input": "اكتب لي رد محترم للعميل: يطلب تغيير عنوان الشحن إلى جدة، وتم التعديل.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(جدة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-01",
+      "input": "اكتب رد مؤدب للعميل: يسأل عن موعد وصول طلبه رقم ٥٥٠، وموعد الوصول يوم الثلاثاء.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الثلاثاء)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-02",
+      "input": "اكتب رد مؤدب للعميل: يطلب نسخة من الفاتورة رقم ٥٠٢، وسنرسلها اليوم بالبريد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الفاتورة|فاتورة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-03",
+      "input": "اكتب رد مؤدب للعميل: يشتكي من تأخر الرد على تذكرته، والمهندس سيتصل به خلال ساعتين.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(ساعت|ساعة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-04",
+      "input": "اكتب رد مؤدب للعميل: يريد تجديد الاشتراك السنوي، والسعر بعد الخصم تسعة آلاف ريال.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسعة آلاف|9000|٩٠٠٠|9,000)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-05",
+      "input": "اكتب رد مؤدب للعميل: يسأل عن ساعات العمل، وهي من التاسعة صباحاً إلى الخامسة مساءً.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(التاسعة|9|٩)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-06",
+      "input": "اكتب رد مؤدب للعميل: يطلب إلغاء الاجتماع، ونقترح عليه يوم الأحد بدلاً منه.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الأحد)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-07",
+      "input": "اكتب رد مؤدب للعميل: يسأل عن طريقة إضافة مستخدم جديد، والطريقة من صفحة الإعدادات.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الإعدادات|الاعدادات)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-08",
+      "input": "اكتب رد مؤدب للعميل: يشكرنا على الخدمة ويقترح ميزة تصدير التقارير.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(شكر|نشكر|تصدير)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-09",
+      "input": "اكتب رد مؤدب للعميل: يسأل إن كان العرض يشمل التدريب، والعرض يشمل يومي تدريب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تدريب)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "egyptian-reply-10",
+      "input": "اكتب رد مؤدب للعميل: يطلب تغيير عنوان الشحن إلى جدة، وتم التعديل.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(جدة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-01",
+      "input": "اكتب رد لطيف للزبون: يسأل عن موعد وصول طلبه رقم ٥٥٠، وموعد الوصول يوم الثلاثاء.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الثلاثاء)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-02",
+      "input": "اكتب رد لطيف للزبون: يطلب نسخة من الفاتورة رقم ٥٠٢، وسنرسلها اليوم بالبريد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الفاتورة|فاتورة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-03",
+      "input": "اكتب رد لطيف للزبون: يشتكي من تأخر الرد على تذكرته، والمهندس سيتصل به خلال ساعتين.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(ساعت|ساعة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-04",
+      "input": "اكتب رد لطيف للزبون: يريد تجديد الاشتراك السنوي، والسعر بعد الخصم تسعة آلاف ريال.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسعة آلاف|9000|٩٠٠٠|9,000)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-05",
+      "input": "اكتب رد لطيف للزبون: يسأل عن ساعات العمل، وهي من التاسعة صباحاً إلى الخامسة مساءً.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(التاسعة|9|٩)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-06",
+      "input": "اكتب رد لطيف للزبون: يطلب إلغاء الاجتماع، ونقترح عليه يوم الأحد بدلاً منه.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الأحد)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-07",
+      "input": "اكتب رد لطيف للزبون: يسأل عن طريقة إضافة مستخدم جديد، والطريقة من صفحة الإعدادات.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الإعدادات|الاعدادات)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-08",
+      "input": "اكتب رد لطيف للزبون: يشكرنا على الخدمة ويقترح ميزة تصدير التقارير.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(شكر|نشكر|تصدير)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-09",
+      "input": "اكتب رد لطيف للزبون: يسأل إن كان العرض يشمل التدريب، والعرض يشمل يومي تدريب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تدريب)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "levantine-reply-10",
+      "input": "اكتب رد لطيف للزبون: يطلب تغيير عنوان الشحن إلى جدة، وتم التعديل.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(جدة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-01",
+      "input": "كتب ليا جواب مؤدب للكليان: يسأل عن موعد وصول طلبه رقم ٥٥٠، وموعد الوصول يوم الثلاثاء.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الثلاثاء)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-02",
+      "input": "كتب ليا جواب مؤدب للكليان: يطلب نسخة من الفاتورة رقم ٥٠٢، وسنرسلها اليوم بالبريد.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الفاتورة|فاتورة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-03",
+      "input": "كتب ليا جواب مؤدب للكليان: يشتكي من تأخر الرد على تذكرته، والمهندس سيتصل به خلال ساعتين.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(ساعت|ساعة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-04",
+      "input": "كتب ليا جواب مؤدب للكليان: يريد تجديد الاشتراك السنوي، والسعر بعد الخصم تسعة آلاف ريال.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تسعة آلاف|9000|٩٠٠٠|9,000)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-05",
+      "input": "كتب ليا جواب مؤدب للكليان: يسأل عن ساعات العمل، وهي من التاسعة صباحاً إلى الخامسة مساءً.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(التاسعة|9|٩)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-06",
+      "input": "كتب ليا جواب مؤدب للكليان: يطلب إلغاء الاجتماع، ونقترح عليه يوم الأحد بدلاً منه.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الأحد)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-07",
+      "input": "كتب ليا جواب مؤدب للكليان: يسأل عن طريقة إضافة مستخدم جديد، والطريقة من صفحة الإعدادات.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(الإعدادات|الاعدادات)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-08",
+      "input": "كتب ليا جواب مؤدب للكليان: يشكرنا على الخدمة ويقترح ميزة تصدير التقارير.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(شكر|نشكر|تصدير)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-09",
+      "input": "كتب ليا جواب مؤدب للكليان: يسأل إن كان العرض يشمل التدريب، والعرض يشمل يومي تدريب.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(تدريب)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    },
+    {
+      "name": "maghrebi-reply-10",
+      "input": "كتب ليا جواب مؤدب للكليان: يطلب تغيير عنوان الشحن إلى جدة، وتم التعديل.",
+      "expect": {
+        "tools": [],
+        "text_matches": "(?s)\\p{Arabic}.*(جدة)",
+        "text_excludes": "(?i)(lorem|\\[name\\]|\\{\\{)"
+      }
+    }
+  ]
+}

@@ -1,0 +1,456 @@
+{
+  "agent": "00000000-0000-0000-0000-000000000000",
+  "pass_threshold": 0.8,
+  "cases": [
+    {
+      "name": "msa-find-01",
+      "input": "ابحث عن عميل اسمه شركة النخيل للتجارة",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "msa-find-02",
+      "input": "ابحث عن الصفقات المفتوحة الأكبر من خمسين ألف ريال",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "msa-find-03",
+      "input": "ابحث عن جهة الاتصال اللي إيميلها sara@example.com",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "msa-find-04",
+      "input": "ابحث عن التذاكر المتأخرة عن موعدها هذا الأسبوع",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "msa-find-05",
+      "input": "ابحث عن الفواتير غير المدفوعة لشركة الرمال",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "msa-find-06",
+      "input": "ابحث عن العملاء المحتملين من معرض الرياض",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "msa-find-07",
+      "input": "ابحث عن الحسابات في مدينة جدة",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "msa-find-08",
+      "input": "ابحث عن الطلبات اللي ما انشحنت لسه",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "msa-find-09",
+      "input": "ابحث عن آخر عقد مع مؤسسة الأفق",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "msa-find-10",
+      "input": "ابحث عن المهام المفتوحة عندي",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-01",
+      "input": "دوّر لي على عميل اسمه شركة النخيل للتجارة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-02",
+      "input": "دوّر لي على الصفقات المفتوحة الأكبر من خمسين ألف ريال لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-03",
+      "input": "دوّر لي على جهة الاتصال اللي إيميلها sara@example.com لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-04",
+      "input": "دوّر لي على التذاكر المتأخرة عن موعدها هذا الأسبوع لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-05",
+      "input": "دوّر لي على الفواتير غير المدفوعة لشركة الرمال لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-06",
+      "input": "دوّر لي على العملاء المحتملين من معرض الرياض لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-07",
+      "input": "دوّر لي على الحسابات في مدينة جدة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-08",
+      "input": "دوّر لي على الطلبات اللي ما انشحنت لسه لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-09",
+      "input": "دوّر لي على آخر عقد مع مؤسسة الأفق لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "gulf-find-10",
+      "input": "دوّر لي على المهام المفتوحة عندي لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-01",
+      "input": "عايز أدوّر على عميل اسمه شركة النخيل للتجارة بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-02",
+      "input": "عايز أدوّر على الصفقات المفتوحة الأكبر من خمسين ألف ريال بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-03",
+      "input": "عايز أدوّر على جهة الاتصال اللي إيميلها sara@example.com بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-04",
+      "input": "عايز أدوّر على التذاكر المتأخرة عن موعدها هذا الأسبوع بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-05",
+      "input": "عايز أدوّر على الفواتير غير المدفوعة لشركة الرمال بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-06",
+      "input": "عايز أدوّر على العملاء المحتملين من معرض الرياض بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-07",
+      "input": "عايز أدوّر على الحسابات في مدينة جدة بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-08",
+      "input": "عايز أدوّر على الطلبات اللي ما انشحنت لسه بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-09",
+      "input": "عايز أدوّر على آخر عقد مع مؤسسة الأفق بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-find-10",
+      "input": "عايز أدوّر على المهام المفتوحة عندي بسرعة لو سمحت",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-01",
+      "input": "فتّش لي عن عميل اسمه شركة النخيل للتجارة إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-02",
+      "input": "فتّش لي عن الصفقات المفتوحة الأكبر من خمسين ألف ريال إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-03",
+      "input": "فتّش لي عن جهة الاتصال اللي إيميلها sara@example.com إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-04",
+      "input": "فتّش لي عن التذاكر المتأخرة عن موعدها هذا الأسبوع إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-05",
+      "input": "فتّش لي عن الفواتير غير المدفوعة لشركة الرمال إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-06",
+      "input": "فتّش لي عن العملاء المحتملين من معرض الرياض إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-07",
+      "input": "فتّش لي عن الحسابات في مدينة جدة إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-08",
+      "input": "فتّش لي عن الطلبات اللي ما انشحنت لسه إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-09",
+      "input": "فتّش لي عن آخر عقد مع مؤسسة الأفق إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "levantine-find-10",
+      "input": "فتّش لي عن المهام المفتوحة عندي إذا بتريد",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-01",
+      "input": "قلّب ليا على عميل اسمه شركة النخيل للتجارة عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-02",
+      "input": "قلّب ليا على الصفقات المفتوحة الأكبر من خمسين ألف ريال عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-03",
+      "input": "قلّب ليا على جهة الاتصال اللي إيميلها sara@example.com عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-04",
+      "input": "قلّب ليا على التذاكر المتأخرة عن موعدها هذا الأسبوع عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-05",
+      "input": "قلّب ليا على الفواتير غير المدفوعة لشركة الرمال عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-06",
+      "input": "قلّب ليا على العملاء المحتملين من معرض الرياض عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-07",
+      "input": "قلّب ليا على الحسابات في مدينة جدة عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-08",
+      "input": "قلّب ليا على الطلبات اللي ما انشحنت لسه عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-09",
+      "input": "قلّب ليا على آخر عقد مع مؤسسة الأفق عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-find-10",
+      "input": "قلّب ليا على المهام المفتوحة عندي عافاك",
+      "expect": {
+        "tools": [
+          "search.records"
+        ]
+      }
+    }
+  ]
+}

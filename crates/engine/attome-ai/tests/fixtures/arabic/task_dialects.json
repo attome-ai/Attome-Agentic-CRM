@@ -1,0 +1,456 @@
+{
+  "agent": "00000000-0000-0000-0000-000000000000",
+  "pass_threshold": 0.8,
+  "cases": [
+    {
+      "name": "msa-task-01",
+      "input": "أنشئ مهمة أتصل فيها على شركة النخيل بكرة الصبح.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "msa-task-02",
+      "input": "أنشئ مهمة أرسل عرض السعر لمؤسسة الأفق يوم الأحد.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "msa-task-03",
+      "input": "أنشئ مهمة أتابع الفاتورة المتأخرة مع شركة الرمال بعد يومين.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "msa-task-04",
+      "input": "أنشئ مهمة أجهّز العقد لمجموعة الوادي قبل نهاية الأسبوع.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "msa-task-05",
+      "input": "أنشئ مهمة أزور العميل في جدة الأسبوع الجاي.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "msa-task-06",
+      "input": "أنشئ مهمة أراجع التذكرة رقم ١٢٣٤ اليوم العصر.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "msa-task-07",
+      "input": "أنشئ مهمة أكلّم خالد عن التجديد الساعة عشرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "msa-task-08",
+      "input": "أنشئ مهمة أرسل الكتالوج لريم بكرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "msa-task-09",
+      "input": "أنشئ مهمة أحجز اجتماع مع فريق المبيعات يوم الخميس.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "msa-task-10",
+      "input": "أنشئ مهمة أتأكد من الشحنة لطلب ٥٥٠ بعد ساعة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-01",
+      "input": "سوّ لي مهمة أتصل فيها على شركة النخيل بكرة الصبح.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-02",
+      "input": "سوّ لي مهمة أرسل عرض السعر لمؤسسة الأفق يوم الأحد.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-03",
+      "input": "سوّ لي مهمة أتابع الفاتورة المتأخرة مع شركة الرمال بعد يومين.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-04",
+      "input": "سوّ لي مهمة أجهّز العقد لمجموعة الوادي قبل نهاية الأسبوع.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-05",
+      "input": "سوّ لي مهمة أزور العميل في جدة الأسبوع الجاي.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-06",
+      "input": "سوّ لي مهمة أراجع التذكرة رقم ١٢٣٤ اليوم العصر.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-07",
+      "input": "سوّ لي مهمة أكلّم خالد عن التجديد الساعة عشرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-08",
+      "input": "سوّ لي مهمة أرسل الكتالوج لريم بكرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-09",
+      "input": "سوّ لي مهمة أحجز اجتماع مع فريق المبيعات يوم الخميس.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "gulf-task-10",
+      "input": "سوّ لي مهمة أتأكد من الشحنة لطلب ٥٥٠ بعد ساعة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-01",
+      "input": "اعمل لي مهمة أتصل فيها على شركة النخيل بكرة الصبح.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-02",
+      "input": "اعمل لي مهمة أرسل عرض السعر لمؤسسة الأفق يوم الأحد.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-03",
+      "input": "اعمل لي مهمة أتابع الفاتورة المتأخرة مع شركة الرمال بعد يومين.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-04",
+      "input": "اعمل لي مهمة أجهّز العقد لمجموعة الوادي قبل نهاية الأسبوع.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-05",
+      "input": "اعمل لي مهمة أزور العميل في جدة الأسبوع الجاي.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-06",
+      "input": "اعمل لي مهمة أراجع التذكرة رقم ١٢٣٤ اليوم العصر.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-07",
+      "input": "اعمل لي مهمة أكلّم خالد عن التجديد الساعة عشرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-08",
+      "input": "اعمل لي مهمة أرسل الكتالوج لريم بكرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-09",
+      "input": "اعمل لي مهمة أحجز اجتماع مع فريق المبيعات يوم الخميس.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "egyptian-task-10",
+      "input": "اعمل لي مهمة أتأكد من الشحنة لطلب ٥٥٠ بعد ساعة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-01",
+      "input": "اعمل لي مهمة أتصل فيها على شركة النخيل بكرة الصبح.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-02",
+      "input": "اعمل لي مهمة أرسل عرض السعر لمؤسسة الأفق يوم الأحد.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-03",
+      "input": "اعمل لي مهمة أتابع الفاتورة المتأخرة مع شركة الرمال بعد يومين.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-04",
+      "input": "اعمل لي مهمة أجهّز العقد لمجموعة الوادي قبل نهاية الأسبوع.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-05",
+      "input": "اعمل لي مهمة أزور العميل في جدة الأسبوع الجاي.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-06",
+      "input": "اعمل لي مهمة أراجع التذكرة رقم ١٢٣٤ اليوم العصر.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-07",
+      "input": "اعمل لي مهمة أكلّم خالد عن التجديد الساعة عشرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-08",
+      "input": "اعمل لي مهمة أرسل الكتالوج لريم بكرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-09",
+      "input": "اعمل لي مهمة أحجز اجتماع مع فريق المبيعات يوم الخميس.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "levantine-task-10",
+      "input": "اعمل لي مهمة أتأكد من الشحنة لطلب ٥٥٠ بعد ساعة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-01",
+      "input": "دير ليا مهمة أتصل فيها على شركة النخيل بكرة الصبح.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-02",
+      "input": "دير ليا مهمة أرسل عرض السعر لمؤسسة الأفق يوم الأحد.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-03",
+      "input": "دير ليا مهمة أتابع الفاتورة المتأخرة مع شركة الرمال بعد يومين.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-04",
+      "input": "دير ليا مهمة أجهّز العقد لمجموعة الوادي قبل نهاية الأسبوع.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-05",
+      "input": "دير ليا مهمة أزور العميل في جدة الأسبوع الجاي.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-06",
+      "input": "دير ليا مهمة أراجع التذكرة رقم ١٢٣٤ اليوم العصر.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-07",
+      "input": "دير ليا مهمة أكلّم خالد عن التجديد الساعة عشرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-08",
+      "input": "دير ليا مهمة أرسل الكتالوج لريم بكرة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-09",
+      "input": "دير ليا مهمة أحجز اجتماع مع فريق المبيعات يوم الخميس.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    },
+    {
+      "name": "maghrebi-task-10",
+      "input": "دير ليا مهمة أتأكد من الشحنة لطلب ٥٥٠ بعد ساعة.",
+      "expect": {
+        "tools": [
+          "record.create"
+        ]
+      }
+    }
+  ]
+}
