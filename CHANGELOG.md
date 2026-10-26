@@ -13,6 +13,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Heavy-operation size check (AA10-T2): `attome_records::heavy_op::size_check` counts the rows of
+  a filtered update or delete the caller may change (the query engine's filter, the caller's
+  record scope for that change), stopping one past `limits.heavy_op.inline_max_rows` (500), and
+  answers inline or background with an estimated count and duration.
 - Themes travel in changesets (B13-T7): three new operations, `upsert_theme` (a scope's tokens and
   its assets by storage key and SHA-256, never the bytes), `publish_theme` and `retire_theme`,
   targeted by `theme_scope` (`deployment` or `<kind>:<ref>`). Saving, editing, publishing, rolling

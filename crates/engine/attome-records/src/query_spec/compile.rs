@@ -812,6 +812,41 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<Compiled, AppError> {
     })
 }
 
+/// AA10-T2: the ids of the rows `spec.where` selects that the caller may
+/// reach, as `SELECT t."id" FROM ... WHERE ...` with no order and no limit
+/// (the caller bounds it), compiled exactly as [`compile`] compiles the
+/// filter and the row predicates. `select`, `sort`, `cursor` and the page
+/// are ignored.
+pub fn compile_scope(
+    spec: &QuerySpec,
+    env: &Env<'_>,
+) -> Result<(String, Vec<BindValue>), AppError> {
+    let root = env
+        .registry
+        .get(&spec.entity)
+        .filter(|e| env.ctx.require(&e.logicalname, "read").is_ok())
+        .ok_or(AppError::NotFound)?;
+    let b = Builder::new(env);
+    let scope = Scope::root(root);
+    let mut conds: Vec<String> = Vec::new();
+    if let Some(condition) = &spec.r#where {
+        conds.push(b.condition(&scope, condition, spec)?);
+    }
+    let root_predicates = b.row_predicates(root, "t");
+    let mut sql = format!(
+        "SELECT t.\"id\" FROM {} AS t",
+        quote_ident(&root.logicalname)
+    );
+    sql.push_str(&b.joins_sql());
+    sql.push_str(" WHERE TRUE");
+    for cond in &conds {
+        sql.push_str(" AND ");
+        sql.push_str(cond);
+    }
+    sql.push_str(&root_predicates);
+    Ok((sql, b.into_binds()))
+}
+
 /// Rows after the cursor row in sort order. Key by key: a row is after it
 /// when every earlier key is equal and this key is past it.
 fn cursor_condition(

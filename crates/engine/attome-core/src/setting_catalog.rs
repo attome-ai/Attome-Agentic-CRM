@@ -228,6 +228,16 @@ fn limit_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(500),
         ),
+        // AA10-T2: the rows a heavy operation changes in the request.
+        SettingDescriptor::new(
+            "limits.heavy_op.inline_max_rows",
+            "Rows an update or delete over a filtered set changes in the request; a larger set \
+             runs as a background job with progress. 1 to 100,000.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 100_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(500),
+        ),
         SettingDescriptor::new(
             "limits.query.timeout_ms.interactive",
             "Milliseconds an ordinary list or view query may run before it is \

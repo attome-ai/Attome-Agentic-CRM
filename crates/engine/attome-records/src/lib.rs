@@ -47,6 +47,9 @@ pub mod data_mapping;
 pub mod duplicate_check;
 pub mod entity_crud;
 pub mod entity_mutation;
+/// AA10-T2: the size check that sends a heavy operation inline or to the
+/// background.
+pub mod heavy_op;
 /// Z11-T12: one expression checked for an editor or agent.
 pub mod expression_check;
 pub mod import_choice_match;
