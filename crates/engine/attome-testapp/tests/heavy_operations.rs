@@ -1,5 +1,6 @@
 //! AA10-T2: the size check counts the rows the caller may change, bounded
-//! by the inline threshold, and says inline or background.
+//! by the inline threshold, and says inline or background. AA10-T3: the
+//! mass-operation routes estimate, run, follow and control an operation.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -129,5 +130,260 @@ fn size_check_large_is_background() {
             .await
             .is_err()
         );
+    });
+}
+
+/// AA10-T3: the condition `title = value`.
+fn title_is(value: &str) -> serde_json::Value {
+    json!({"kind": "compare", "field": "title", "op": "eq", "value": value})
+}
+
+/// Live records of `entity` titled `title`.
+async fn titled(app: &TestApp, entity: &str, title: &str) -> i64 {
+    sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM \"{entity}\" WHERE title = $1 AND is_active"
+    ))
+    .bind(title)
+    .fetch_one(app.db())
+    .await
+    .unwrap()
+}
+
+// feature: AA10
+#[test]
+fn mass_estimate_returns_path() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = ten_records(&app).await;
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}/mass/estimate"),
+                Some(json!({ "filter": title_is("big"), "kind": "delete" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["path"], "inline", "{body}");
+        assert_eq!(body["estimated_rows"], 4, "{body}");
+
+        // A payload the kind does not take is refused.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}/mass/estimate"),
+                Some(json!({ "kind": "update", "payload": {} })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    });
+}
+
+// feature: AA10
+#[test]
+fn mass_small_runs_inline() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = ten_records(&app).await;
+        let (status, run) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}/mass"),
+                Some(json!({
+                    "filter": title_is("big"),
+                    "kind": "update",
+                    "payload": { "title": "huge" },
+                    "reason": "rename"
+                })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{run}");
+        assert_eq!(run["operation"]["status"], "done", "{run}");
+        assert_eq!(run["operation"]["rows_done"], 4, "{run}");
+        let items = run["items"].as_array().unwrap();
+        assert_eq!(items.len(), 4, "{run}");
+        assert!(items.iter().all(|i| i["status"] == "done"), "{run}");
+        assert_eq!(titled(&app, &entity, "huge").await, 4);
+        assert_eq!(titled(&app, &entity, "big").await, 0);
+
+        let id = run["operation"]["id"].as_str().unwrap().to_owned();
+        let (status, op) = app
+            .request(Method::GET, &format!("/api/v1/mass/{id}"), None)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{op}");
+        assert_eq!(op["kind"], "update");
+        assert_eq!(op["seconds_left"], serde_json::Value::Null);
+
+        // Undo writes the old titles back.
+        let tag = format!("\"{}\"", op["row_version"]);
+        let (status, undone) = app
+            .request_with(
+                Method::POST,
+                &format!("/api/v1/mass/{id}/undo"),
+                &[("if-match", tag.as_str())],
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{undone}");
+        assert_eq!(undone["operation"]["status"], "undone", "{undone}");
+        assert_eq!(titled(&app, &entity, "big").await, 4);
+        assert_eq!(titled(&app, &entity, "huge").await, 0);
+
+        // A delete goes to the bin, and a restore brings the records back.
+        let (status, run) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}/mass"),
+                Some(json!({ "filter": title_is("small"), "kind": "delete" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{run}");
+        assert_eq!(run["operation"]["rows_done"], 6, "{run}");
+        assert_eq!(titled(&app, &entity, "small").await, 0);
+        let (status, run) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}/mass"),
+                Some(json!({ "filter": title_is("small"), "kind": "restore" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{run}");
+        assert_eq!(run["operation"]["rows_done"], 6, "{run}");
+        assert_eq!(titled(&app, &entity, "small").await, 6);
+    });
+}
+
+/// `ten_records` plus `extra` more, written straight to the test table.
+async fn many_records(app: &TestApp, extra: i32) -> String {
+    let entity = ten_records(app).await;
+    sqlx::query(&format!(
+        "INSERT INTO \"{entity}\" (title) SELECT 'bulk' FROM generate_series(1, $1)"
+    ))
+    .bind(extra)
+    .execute(app.db())
+    .await
+    .unwrap();
+    entity
+}
+
+// feature: AA10
+#[test]
+fn mass_large_returns_202() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = many_records(&app, 495).await;
+        let (status, refused) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}/mass"),
+                Some(json!({ "kind": "update", "payload": { "title": "x" } })),
+            )
+            .await;
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "a background run needs the estimate confirmed: {refused}"
+        );
+        let (status, run) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}/mass"),
+                Some(json!({
+                    "kind": "update",
+                    "payload": { "title": "x" },
+                    "confirm_estimate_rows": 505
+                })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::ACCEPTED, "{run}");
+        assert_eq!(run["operation"]["status"], "queued", "{run}");
+        assert_eq!(run["estimate"]["path"], "background", "{run}");
+        assert!(run["items"].as_array().unwrap().is_empty());
+        assert_eq!(
+            titled(&app, &entity, "x").await,
+            0,
+            "nothing changes in the request"
+        );
+    });
+}
+
+// feature: AA10
+#[test]
+fn mass_control_requires_if_match() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = many_records(&app, 495).await;
+        let (status, run) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}/mass"),
+                Some(json!({ "kind": "delete", "confirm_estimate_rows": 505 })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::ACCEPTED, "{run}");
+        let id = run["operation"]["id"].as_str().unwrap().to_owned();
+        let version = run["operation"]["row_version"].as_i64().unwrap();
+        let pause = format!("/api/v1/mass/{id}/pause");
+
+        let (status, body) = app.request(Method::POST, &pause, None).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        let stale = format!("\"{}\"", version + 7);
+        let (status, body) = app
+            .request_with(Method::POST, &pause, &[("if-match", stale.as_str())], None)
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        let current = format!("\"{version}\"");
+        let (status, body) = app
+            .request_with(
+                Method::POST,
+                &pause,
+                &[("if-match", current.as_str())],
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["operation"]["status"], "paused", "{body}");
+
+        // Someone else neither sees nor controls it.
+        let other = seed_user(app.db(), "mass-other").await;
+        let (status, _) = app
+            .request_as(
+                &other.cookie,
+                Method::GET,
+                &format!("/api/v1/mass/{id}"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+
+        // Cancelled is final: resuming it is refused.
+        let next = format!("\"{}\"", body["operation"]["row_version"]);
+        let (status, body) = app
+            .request_with(
+                Method::POST,
+                &format!("/api/v1/mass/{id}/cancel"),
+                &[("if-match", next.as_str())],
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["operation"]["status"], "cancelled");
+        let last = format!("\"{}\"", body["operation"]["row_version"]);
+        let (status, body) = app
+            .request_with(
+                Method::POST,
+                &format!("/api/v1/mass/{id}/resume"),
+                &[("if-match", last.as_str())],
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
     });
 }

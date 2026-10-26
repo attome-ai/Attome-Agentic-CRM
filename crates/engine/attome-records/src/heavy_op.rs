@@ -21,9 +21,10 @@ use attome_server::security::{AccessLevel, SecurityContext};
 use attome_types::AppError;
 use serde::Serialize;
 use serde_json::Value;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::query_spec::compile::{Access, Env, compile_scope};
+use crate::query_spec::compile::{Access, Env, compile_scope_rows};
 use crate::query_spec::{Clock, Condition, QuerySpec};
 
 /// The setting's key under `limits.` (`SettingsSnapshot::runtime_limit`).
@@ -34,8 +35,9 @@ pub const DEFAULT_INLINE_MAX_ROWS: i64 = 500;
 pub const ROWS_PER_SECOND: i64 = 2000;
 
 /// Where a heavy operation runs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[schema(as = HeavyOpPath)]
 pub enum Path {
     /// In the request: small enough to finish now.
     Inline,
@@ -44,7 +46,7 @@ pub enum Path {
 }
 
 /// What the size check found.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 pub struct SizeEstimate {
     /// The rows counted, exact up to the threshold plus one.
     pub exact_upto: i64,
@@ -78,6 +80,23 @@ pub fn estimate(counted: i64, threshold: i64, plan_rows: Option<i64>) -> SizeEst
     }
 }
 
+/// Which rows a heavy operation works on (AA10-T3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rows {
+    /// The live records (update, delete, reassign).
+    Live,
+    /// The soft-deleted records (restore).
+    Deleted,
+}
+
+/// The inline threshold: the setting, or [`DEFAULT_INLINE_MAX_ROWS`].
+pub fn inline_threshold(state: &EngineState) -> i64 {
+    state
+        .runtime_limit(INLINE_MAX_ROWS_LIMIT)
+        .unwrap_or(DEFAULT_INLINE_MAX_ROWS)
+        .max(1)
+}
+
 /// How many rows of `entity` matching `filter` the caller may `action`
 /// (update or delete), and whether that work runs inline or in the
 /// background. Refused when the caller may not `action` the entity at all.
@@ -88,10 +107,7 @@ pub async fn size_check(
     filter: Option<&Condition>,
     action: RecordAction,
 ) -> Result<SizeEstimate, AppError> {
-    let threshold = state
-        .runtime_limit(INLINE_MAX_ROWS_LIMIT)
-        .unwrap_or(DEFAULT_INLINE_MAX_ROWS)
-        .max(1);
+    let threshold = inline_threshold(state);
     size_check_with(state, security, entity, filter, action, threshold).await
 }
 
@@ -104,86 +120,32 @@ pub async fn size_check_with(
     action: RecordAction,
     threshold: i64,
 ) -> Result<SizeEstimate, AppError> {
-    if matches!(action, RecordAction::Read) {
-        return Err(AppError::internal(
-            "size_check: a heavy operation updates or deletes",
-        ));
-    }
-    security.require(entity, action.as_str())?;
-    let threshold = threshold.max(1);
-
-    // Related records named in the filter are read with the caller's read
-    // scope; the entity itself with the scope of the change.
-    let (read, change): (HashMap<Uuid, AccessLevel>, HashMap<Uuid, AccessLevel>) =
-        if security.is_admin {
-            (HashMap::new(), HashMap::new())
-        } else {
-            let db = &state.base.db;
-            (
-                attome_security::resolve_all_entity_access_levels(
-                    db,
-                    security.user_id,
-                    RecordAction::Read,
-                )
-                .await?
-                .into_values()
-                .collect(),
-                attome_security::resolve_all_entity_access_levels(db, security.user_id, action)
-                    .await?
-                    .into_values()
-                    .collect(),
-            )
-        };
-    let mut spec: QuerySpec = serde_json::from_value(serde_json::json!({ "entity": entity }))
-        .map_err(AppError::internal)?;
-    spec.r#where = filter.cloned();
-    let tz = state
-        .base
-        .config
-        .app
-        .time_zone
-        .as_deref()
-        .and_then(|z| z.parse().ok())
-        .unwrap_or(chrono_tz::UTC);
-    let (sql, binds) = {
-        let registry = state.entities.load();
-        let relationships = state.relationships.load();
-        let root = registry.get(entity).ok_or(AppError::NotFound)?;
-        let mut access = Access::new(read);
-        if !security.is_admin {
-            let level = change
-                .get(&root.entity_id)
-                .copied()
-                .unwrap_or(AccessLevel::None);
-            access = access.with(root.entity_id, level);
-        }
-        let env = Env {
-            registry: &registry,
-            relationships: &relationships,
-            ctx: security,
-            access: &access,
-            clock: Clock {
-                now: chrono::Utc::now(),
-                tz,
-                fiscal_start_month: 1,
-            },
-        };
-        compile_scope(&spec, &env)?
-    };
-
-    let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    let timeout_ms = state
-        .runtime_limit("query.timeout_ms.interactive")
-        .and_then(|v| u32::try_from(v).ok())
-        .unwrap_or(state.base.config.query.timeouts_ms.interactive)
-        .max(1);
-    sqlx::query(&attome_db::tag_dynamic(
-        "heavy_op.size_check",
-        &format!("SET LOCAL statement_timeout = {timeout_ms}"),
-    ))
-    .execute(&mut *tx)
+    size_check_rows(
+        state,
+        security,
+        entity,
+        filter,
+        action,
+        threshold,
+        Rows::Live,
+    )
     .await
-    .map_err(AppError::internal)?;
+}
+
+/// [`size_check_with`] over `rows` (AA10-T3: a restore counts the deleted
+/// records).
+pub async fn size_check_rows(
+    state: &EngineState,
+    security: &SecurityContext,
+    entity: &str,
+    filter: Option<&Condition>,
+    action: RecordAction,
+    threshold: i64,
+    rows: Rows,
+) -> Result<SizeEstimate, AppError> {
+    let threshold = threshold.max(1);
+    let (sql, binds) = scope_sql(state, security, entity, filter, action, rows).await?;
+    let mut tx = scoped_tx(state).await?;
     let count_sql = attome_db::tag_dynamic(
         "heavy_op.size_check",
         &format!(
@@ -221,6 +183,128 @@ pub async fn size_check_with(
     };
     drop(tx);
     Ok(estimate(counted, threshold, plan_rows))
+}
+
+/// AA10-T3: the ids of at most `limit` rows the size check counts, in id
+/// order, for an operation small enough to run inline.
+pub async fn matching_ids(
+    state: &EngineState,
+    security: &SecurityContext,
+    entity: &str,
+    filter: Option<&Condition>,
+    action: RecordAction,
+    rows: Rows,
+    limit: i64,
+) -> Result<Vec<Uuid>, AppError> {
+    let (sql, binds) = scope_sql(state, security, entity, filter, action, rows).await?;
+    let mut tx = scoped_tx(state).await?;
+    let ids_sql = attome_db::tag_dynamic(
+        "heavy_op.matching_ids",
+        &format!(
+            "SELECT s.id FROM ({sql}) AS s ORDER BY s.id LIMIT {}",
+            limit.max(0)
+        ),
+    );
+    let mut ids = sqlx::query_scalar::<_, Uuid>(&ids_sql);
+    for bind in &binds {
+        ids = ids.bind(bind.as_str());
+    }
+    let ids = ids.fetch_all(&mut *tx).await.map_err(AppError::internal)?;
+    drop(tx);
+    Ok(ids)
+}
+
+/// A read-only transaction under the interactive statement timeout.
+async fn scoped_tx(state: &EngineState) -> Result<attome_db::Tx<'_>, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let timeout_ms = state
+        .runtime_limit("query.timeout_ms.interactive")
+        .and_then(|v| u32::try_from(v).ok())
+        .unwrap_or(state.base.config.query.timeouts_ms.interactive)
+        .max(1);
+    sqlx::query(&attome_db::tag_dynamic(
+        "heavy_op.size_check",
+        &format!("SET LOCAL statement_timeout = {timeout_ms}"),
+    ))
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(tx)
+}
+
+/// The ids of the rows of `entity` matching `filter` the caller may
+/// `action`, as SQL with its binds (no order, no limit).
+async fn scope_sql(
+    state: &EngineState,
+    security: &SecurityContext,
+    entity: &str,
+    filter: Option<&Condition>,
+    action: RecordAction,
+    rows: Rows,
+) -> Result<(String, Vec<String>), AppError> {
+    if matches!(action, RecordAction::Read) {
+        return Err(AppError::internal(
+            "size_check: a heavy operation updates or deletes",
+        ));
+    }
+    security.require(entity, action.as_str())?;
+
+    // Related records named in the filter are read with the caller's read
+    // scope; the entity itself with the scope of the change.
+    let (read, change): (HashMap<Uuid, AccessLevel>, HashMap<Uuid, AccessLevel>) =
+        if security.is_admin {
+            (HashMap::new(), HashMap::new())
+        } else {
+            let db = &state.base.db;
+            (
+                attome_security::resolve_all_entity_access_levels(
+                    db,
+                    security.user_id,
+                    RecordAction::Read,
+                )
+                .await?
+                .into_values()
+                .collect(),
+                attome_security::resolve_all_entity_access_levels(db, security.user_id, action)
+                    .await?
+                    .into_values()
+                    .collect(),
+            )
+        };
+    let mut spec: QuerySpec = serde_json::from_value(serde_json::json!({ "entity": entity }))
+        .map_err(AppError::internal)?;
+    spec.r#where = filter.cloned();
+    let tz = state
+        .base
+        .config
+        .app
+        .time_zone
+        .as_deref()
+        .and_then(|z| z.parse().ok())
+        .unwrap_or(chrono_tz::UTC);
+    let registry = state.entities.load();
+    let relationships = state.relationships.load();
+    let root = registry.get(entity).ok_or(AppError::NotFound)?;
+    let mut access = Access::new(read);
+    if !security.is_admin {
+        let level = change
+            .get(&root.entity_id)
+            .copied()
+            .unwrap_or(AccessLevel::None);
+        access = access.with(root.entity_id, level);
+    }
+    let env = Env {
+        registry: &registry,
+        relationships: &relationships,
+        ctx: security,
+        access: &access,
+        clock: Clock {
+            now: chrono::Utc::now(),
+            tz,
+            fiscal_start_month: 1,
+        },
+    };
+    compile_scope_rows(&spec, &env, rows == Rows::Deleted)
 }
 
 #[cfg(test)]

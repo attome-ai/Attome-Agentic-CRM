@@ -1014,6 +1014,7 @@ pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/{entity}/bulk", post(enqueue))
         .merge(crate::bulk_edit::routes())
+        .merge(crate::mass::routes())
         .route("/api/v1/{entity}/bulk/{id}", get(get_status))
         .route("/api/v1/{entity}/staged-import", post(staged_import))
         .route(

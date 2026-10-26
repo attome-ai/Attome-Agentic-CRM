@@ -50,6 +50,8 @@ pub mod entity_mutation;
 /// AA10-T2: the size check that sends a heavy operation inline or to the
 /// background.
 pub mod heavy_op;
+/// AA10-T3: mass operations over a filter, sized by `heavy_op`.
+pub mod mass;
 /// Z11-T12: one expression checked for an editor or agent.
 pub mod expression_check;
 pub mod import_choice_match;
@@ -108,6 +110,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = entity_crud::openapi();
     doc.merge(bulk::openapi_fragment());
     doc.merge(bulk_edit::openapi_fragment());
+    doc.merge(mass::openapi_fragment());
     doc.merge(query_exec::openapi_fragment());
     doc.merge(query_admin::openapi_fragment());
     doc

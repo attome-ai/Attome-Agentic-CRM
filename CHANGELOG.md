@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Mass operations (AA10-T3): `POST /api/v1/{entity}/mass/estimate` and `POST /api/v1/{entity}/mass`
+  (update, delete, reassign or restore every record a filter selects; inline with each record's
+  outcome up to `limits.heavy_op.inline_max_rows`, queued with `202` past it once
+  `confirm_estimate_rows` is sent), `GET /api/v1/mass/{id}`, and `POST /api/v1/mass/{id}/pause`,
+  `/resume`, `/cancel` and `/undo` (each with `If-Match`; only the starter or an administrator).
+  The entity name `mass` is now reserved. See `docs/mass-operations.md`.
 - Competitor tracking documentation (D25-T11): `docs/competitors.md` covers the records, each part's
   switch and what is off by default (win/loss reviews need a stage threshold per pipeline;
   competitor news is not built), and the routes `POST /api/v1/sales/competitor-mentions/{id}/confirm`

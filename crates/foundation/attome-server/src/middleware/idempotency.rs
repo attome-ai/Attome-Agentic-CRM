@@ -139,6 +139,8 @@ pub fn is_consequential(operation: &str) -> bool {
         || path.ends_with("/bulk-edit")
         || path.ends_with("/bulk-edit/undo")
         || path.ends_with("/bulk-transform")
+        || path.ends_with("/mass")
+        || (path.starts_with("/api/v1/mass/") && path.ends_with("/undo"))
         || path.contains("/communications")
 }
 
@@ -879,6 +881,9 @@ mod consequential_tests {
         assert!(!is_consequential("POST /api/v1/{entity}"));
         assert!(!is_consequential("PATCH /api/v1/{entity}/{id}"));
         assert!(!is_consequential("POST /api/v1/{entity}/bulk-edit/preview"));
+        assert!(is_consequential("POST /api/v1/{entity}/mass"));
+        assert!(is_consequential("POST /api/v1/mass/{id}/undo"));
+        assert!(!is_consequential("POST /api/v1/{entity}/mass/estimate"));
     }
 }
 

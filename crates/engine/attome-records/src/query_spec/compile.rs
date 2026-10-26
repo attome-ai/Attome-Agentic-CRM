@@ -238,10 +238,23 @@ impl<'a> Builder<'a> {
     /// The live-row and record-level predicates for `entity` aliased `alias`,
     /// each beginning with ` AND `.
     pub(super) fn row_predicates(&self, entity: &EntityMeta, alias: &str) -> String {
+        self.row_predicates_in(
+            entity,
+            alias,
+            live_row_predicate(alias, entity.is_append_only),
+        )
+    }
+
+    /// [`Self::row_predicates`] over the soft-deleted rows (AA10-T3).
+    pub(super) fn deleted_row_predicates(&self, entity: &EntityMeta, alias: &str) -> String {
+        self.row_predicates_in(entity, alias, Some(format!("{alias}.is_active = false")))
+    }
+
+    fn row_predicates_in(&self, entity: &EntityMeta, alias: &str, rows: Option<String>) -> String {
         let mut sql = String::new();
-        if let Some(live) = live_row_predicate(alias, entity.is_append_only) {
+        if let Some(rows) = rows {
             sql.push_str(" AND ");
-            sql.push_str(&live);
+            sql.push_str(&rows);
         }
         let ctx = self.env.ctx;
         let level = self.env.access.level(entity.entity_id);
@@ -821,6 +834,17 @@ pub fn compile_scope(
     spec: &QuerySpec,
     env: &Env<'_>,
 ) -> Result<(String, Vec<BindValue>), AppError> {
+    compile_scope_rows(spec, env, false)
+}
+
+/// AA10-T3: [`compile_scope`] over the soft-deleted rows instead of the live
+/// ones when `deleted` (what a mass restore selects). An append-only entity
+/// has no deleted rows and is refused.
+pub fn compile_scope_rows(
+    spec: &QuerySpec,
+    env: &Env<'_>,
+    deleted: bool,
+) -> Result<(String, Vec<BindValue>), AppError> {
     let root = env
         .registry
         .get(&spec.entity)
@@ -832,7 +856,16 @@ pub fn compile_scope(
     if let Some(condition) = &spec.r#where {
         conds.push(b.condition(&scope, condition, spec)?);
     }
-    let root_predicates = b.row_predicates(root, "t");
+    let root_predicates = if deleted {
+        if root.is_append_only {
+            return Err(AppError::Validation(
+                "an append-only entity has no deleted records".into(),
+            ));
+        }
+        b.deleted_row_predicates(root, "t")
+    } else {
+        b.row_predicates(root, "t")
+    };
     let mut sql = format!(
         "SELECT t.\"id\" FROM {} AS t",
         quote_ident(&root.logicalname)
