@@ -86,7 +86,7 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(text);
 }
 
-function fromBase64(data: string): Uint8Array {
+function fromBase64(data: string): Uint8Array<ArrayBuffer> {
   const text = atob(data);
   const bytes = new Uint8Array(text.length);
   for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
