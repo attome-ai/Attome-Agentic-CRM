@@ -16,6 +16,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Fulfilment screens (F6-T17): views To release, On hold, Backorders, In transit and Own fleet
+  deliveries; Operations > Fulfilment, Shipments and Fulfilment exceptions in the sidebar (fulfilment
+  module only); the Arabic label of a product's fulfilment kind (fulfilment pack changeset 0007).
+  `GET /api/v1/fulfilment/orders?order_id=` (`fulfilment_order.read`) gives a sales order's lines with
+  ordered, shipped, delivered and backordered quantities, the promised date and the shipments; a sales
+  order's form has a Fulfilment tab showing it (new entry point `@attome/xrm/fulfilment`, loaded when
+  the tab opens).
 - Macros (G6-T2): a new metadata kind, `macro`, lists actions to run on records of one entity, with
   `{{entity}}` and `{{record_id}}` filled in. `POST /api/v1/macros/{name}/preview` shows each record's
   steps, arguments and problems without running anything; `POST /api/v1/macros/{name}/run` (at most

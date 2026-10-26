@@ -175,6 +175,7 @@ export const xrmAr = {
       documents: 'المستندات', communications: 'المراسلات', notes: 'الملاحظات', activities: 'الأنشطة',
       tags: 'الوسوم', consent: 'الموافقة', relationships: 'العلاقات',
       timeline: 'الخط الزمني', history: 'سجل التغييرات', approvals: 'الموافقات', golden: 'السجل الذهبي',
+      fulfilment: 'التنفيذ',
     },
     entity: {
       document: 'مستند', note: 'ملاحظة', organization: 'مؤسسة', privilege: 'صلاحية',
@@ -900,6 +901,14 @@ export const xrmAr = {
     status: { sent: 'بانتظار قرارك', accepted: 'مقبول', rejected: 'مرفوض', expired: 'منتهي' },
   },
   // B18-T9: offline conflicts and refused changes.
+  fulfilment: {
+    panel: {
+      loading: 'جارٍ تحميل التنفيذ…', error: 'تعذّر تحميل تنفيذ هذا الطلب.',
+      empty: 'لم يُطلق شيء للتنفيذ بعد.', saveFirst: 'احفظ الطلب لترى تنفيذه.',
+      line: 'البند', ordered: 'المطلوب', shipped: 'المشحون', delivered: 'المسلَّم', backordered: 'المؤجل',
+      promised: 'الموعد المتفق عليه', shipments: 'الشحنات', noTracking: 'لا رقم تتبع',
+    },
+  },
   offline: {
     notOnDevice: 'هذا السجل غير موجود على هذا الجهاز. يُفتح مجددًا عند عودة الاتصال.',
     pendingNumber: 'الرقم قيد الانتظار (يُخصص عند مزامنة هذا الجهاز)',

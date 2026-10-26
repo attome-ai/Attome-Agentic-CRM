@@ -36,6 +36,7 @@ import { TagsPanelComponent } from '../tags/tags-panel.component';
 type RecordActivityModule = typeof import('@attome/xrm/core/entity/record-activity');
 type ApprovalsModule = typeof import('@attome/xrm/core/approvals');
 type MasterDataModule = typeof import('@attome/xrm/core/admin/governance/master-data');
+type FulfilmentModule = typeof import('@attome/xrm/fulfilment');
 
 @Component({
   selector: 'xrm-record-tab-panels',
@@ -79,6 +80,11 @@ export class RecordTabPanelsComponent {
   readonly masterDataLoadFailed = signal(false);
   private masterDataRequested = false;
 
+  /** F6-T17: the fulfilment entry point, once an order's Fulfilment tab has asked for it. */
+  readonly fulfilment = signal<FulfilmentModule | null>(null);
+  readonly fulfilmentLoadFailed = signal(false);
+  private fulfilmentRequested = false;
+
   constructor() {
     effect(() => {
       const tab = this.activeTab();
@@ -96,6 +102,15 @@ export class RecordTabPanelsComponent {
         import('@attome/xrm/core/approvals').then(
           m => this.approvals.set(m),
           () => this.approvalsLoadFailed.set(true),
+        );
+      }
+    });
+    effect(() => {
+      if (this.activeTab() === 'fulfilment' && this.recordId() && !this.fulfilmentRequested) {
+        this.fulfilmentRequested = true;
+        import('@attome/xrm/fulfilment').then(
+          m => this.fulfilment.set(m),
+          () => this.fulfilmentLoadFailed.set(true),
         );
       }
     });

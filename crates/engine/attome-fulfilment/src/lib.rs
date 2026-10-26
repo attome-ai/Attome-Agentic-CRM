@@ -17,6 +17,8 @@ pub mod exceptions;
 /// F6-T6: holds that stop a release, and releasing.
 pub mod hold;
 pub mod model;
+/// F6-T17: a sales order's fulfilment, line by line.
+pub mod order_view;
 /// F6-T8: pick lists and packing.
 pub mod pack;
 /// F6-T12: non-goods and drop-ship lines handed to their owners.
@@ -41,5 +43,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(pack::openapi_fragment());
     doc.merge(carrier::openapi_fragment());
     doc.merge(delivery::openapi_fragment());
+    doc.merge(order_view::openapi_fragment());
     doc
 }

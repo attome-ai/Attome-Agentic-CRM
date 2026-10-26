@@ -35,3 +35,12 @@ sets the delivered date, adds the shipped quantities to the order lines and rais
 When the order's `cod_amount` is above zero, proving the delivery records the cash as one payment
 from the order's account, method `cash`, referenced `shipment <id>`. A repeated proof never records
 it twice. The driver then also needs `customer_payment.create`.
+
+## Screens
+
+The fulfilment pack adds the views To release, On hold, Backorders, In transit and Own fleet
+deliveries, and Operations > Fulfilment, Shipments and Fulfilment exceptions in the sidebar (only
+with the fulfilment module). A sales order's form has a Fulfilment tab: each line's ordered,
+shipped, delivered and backordered quantities, its promised date in the person's calendar, and its
+shipments with a tracking link where the carrier has one. The tab reads
+`GET /api/v1/fulfilment/orders?order_id=` (`fulfilment_order.read`).

@@ -1,0 +1,375 @@
+{
+  "author": "packs",
+  "checksum": "sha256:9ad4acc5e3508b3d5b119d6ab1c234787442143fd587f7738081be7b688b9722",
+  "closed_at": "2026-10-26T00:00:00Z",
+  "description": "Fulfilment screens (F6-T17): views of orders to release, orders on hold, backordered lines, shipments in transit and own-fleet deliveries, Operations > Fulfilment, Shipments and Fulfilment exceptions in the sidebar for those who read them (shown only with the fulfilment module), and the Arabic label of a product's fulfilment kind.",
+  "format": "attome-changeset/v1",
+  "id": "01a17897-c9ca-7275-9329-79f2c6d5ba24",
+  "layer": "product",
+  "name": "fulfilment-screens",
+  "opened_at": "2026-10-26T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "display_name": "نوع التنفيذ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "locale": "ar",
+        "object_key": "product.fulfilment_kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "fulfilment_order",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "To release",
+          "required_privilege": "fulfilment_order.read",
+          "sql": "SELECT id, \"order_ref\", \"location_ref\", \"status\", \"promised_date\", \"priority\", \"created_at\" FROM \"fulfilment_order\" WHERE is_active = true AND \"status\" = 'draft'",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "fulfilment_order",
+        "query": "To release"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "fulfilment_order",
+          "icon": "las la-play-circle",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "To release",
+          "query": {
+            "entity": "fulfilment_order",
+            "name": "To release"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "fulfilment_order",
+        "view": "To release"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "fulfilment_order",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "On hold",
+          "required_privilege": "fulfilment_order.read",
+          "sql": "SELECT id, \"order_ref\", \"location_ref\", \"status\", \"promised_date\", \"created_at\" FROM \"fulfilment_order\" WHERE is_active = true AND \"status\" = 'on_hold'",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "fulfilment_order",
+        "query": "On hold"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "fulfilment_order",
+          "icon": "las la-pause-circle",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "On hold",
+          "query": {
+            "entity": "fulfilment_order",
+            "name": "On hold"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "fulfilment_order",
+        "view": "On hold"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "fulfilment_order_line",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Backorders",
+          "required_privilege": "fulfilment_order_line.read",
+          "sql": "SELECT id, \"fulfilment_order_ref\", \"product_ref\", \"quantity\", \"quantity_backordered\", \"expected_date\" FROM \"fulfilment_order_line\" WHERE is_active = true AND COALESCE(\"quantity_backordered\", 0) > 0",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "fulfilment_order_line",
+        "query": "Backorders"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "fulfilment_order_line",
+          "icon": "las la-hourglass-half",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Backorders",
+          "query": {
+            "entity": "fulfilment_order_line",
+            "name": "Backorders"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "fulfilment_order_line",
+        "view": "Backorders"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "shipment",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "In transit",
+          "required_privilege": "shipment.read",
+          "sql": "SELECT id, \"fulfilment_order_ref\", \"carrier\", \"tracking_number\", \"status\", \"last_event_at\" FROM \"shipment\" WHERE is_active = true AND \"status\" IN ('picked_up', 'in_transit', 'out_for_delivery')",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "shipment",
+        "query": "In transit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "shipment",
+          "icon": "las la-shipping-fast",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "In transit",
+          "query": {
+            "entity": "shipment",
+            "name": "In transit"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "shipment",
+        "view": "In transit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "shipment",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Own fleet deliveries",
+          "required_privilege": "shipment.read",
+          "sql": "SELECT id, \"fulfilment_order_ref\", \"driver_ref\", \"status\", \"shipped_on\", \"last_event_at\" FROM \"shipment\" WHERE is_active = true AND \"carrier\" = 'own_fleet' AND \"status\" IN ('booked', 'out_for_delivery', 'failed_attempt')",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "shipment",
+        "query": "Own fleet deliveries"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "shipment",
+          "icon": "las la-truck",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Own fleet deliveries",
+          "query": {
+            "entity": "shipment",
+            "name": "Own fleet deliveries"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "shipment",
+        "view": "Own fleet deliveries"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 120,
+          "entity": null,
+          "icon": "la-warehouse",
+          "is_container": true,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "fulfilment",
+          "path": [
+            "Operations"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "path": "Operations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 0,
+          "entity": null,
+          "icon": "la-boxes",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "fulfilment",
+          "path": [
+            "Operations",
+            "Fulfilment"
+          ],
+          "privileges": [
+            "fulfilment_order.read"
+          ],
+          "route": "/xrm/entity/fulfilment_order/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "path": "Operations/Fulfilment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-truck",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "fulfilment",
+          "path": [
+            "Operations",
+            "Shipments"
+          ],
+          "privileges": [
+            "shipment.read"
+          ],
+          "route": "/xrm/entity/shipment/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "path": "Operations/Shipments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-exclamation-triangle",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "fulfilment",
+          "path": [
+            "Operations",
+            "Fulfilment exceptions"
+          ],
+          "privileges": [
+            "fulfilment_exception.read"
+          ],
+          "route": "/xrm/entity/fulfilment_exception/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "path": "Operations/Fulfilment exceptions"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "fulfilment",
+  "seq": 7,
+  "title": "Pack: fulfilment views and sidebar"
+}

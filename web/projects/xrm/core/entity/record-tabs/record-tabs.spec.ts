@@ -12,7 +12,9 @@ const echo = (key: string) => key;
 
 describe('recordTabDefs', () => {
   it('returns every record tab, in the generic form order, for an ordinary entity', () => {
-    expect(recordTabDefs('contact', echo).map(t => t.id)).toEqual([...RECORD_TAB_IDS]);
+    // F6-T17: the Fulfilment tab is a sales order's only.
+    expect(recordTabDefs('contact', echo).map(t => t.id)).toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment'));
+    expect(recordTabDefs('order', echo).map(t => t.id)).toEqual([...RECORD_TAB_IDS]);
   });
 
   it('resolves labels through the translate function', () => {

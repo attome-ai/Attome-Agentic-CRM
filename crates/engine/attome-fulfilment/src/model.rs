@@ -39,5 +39,6 @@ impl EngineModel for FulfilmentModel {
             .merge(crate::pack::routes())
             .merge(crate::carrier::routes())
             .merge(crate::delivery::routes())
+            .merge(crate::order_view::routes())
     }
 }

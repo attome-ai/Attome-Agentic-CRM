@@ -198,6 +198,7 @@ export const xrmEn = {
       documents: 'Documents', communications: 'Communications', notes: 'Notes', activities: 'Activities',
       tags: 'Tags', consent: 'Consent', relationships: 'Relationships',
       timeline: 'Timeline', history: 'History', approvals: 'Approvals', golden: 'Golden record',
+      fulfilment: 'Fulfilment',
     },
     entity: {
       document: 'Document', note: 'Note', organization: 'Organization', privilege: 'Privilege',
@@ -933,6 +934,14 @@ export const xrmEn = {
     status: { sent: 'Awaiting your decision', accepted: 'Accepted', rejected: 'Declined', expired: 'Expired' },
   },
   // B18-T9: offline conflicts and refused changes.
+  fulfilment: {
+    panel: {
+      loading: 'Loading fulfilment…', error: 'Could not load the fulfilment of this order.',
+      empty: 'Nothing has been released for fulfilment yet.', saveFirst: 'Save the order to see its fulfilment.',
+      line: 'Line', ordered: 'Ordered', shipped: 'Shipped', delivered: 'Delivered', backordered: 'Backordered',
+      promised: 'Promised', shipments: 'Shipments', noTracking: 'No tracking number',
+    },
+  },
   offline: {
     notOnDevice: 'This record is not on this device. It opens again once you are back online.',
     pendingNumber: 'Number pending (assigned when this device syncs)',

@@ -159,3 +159,21 @@
     }
   </div>
 }
+
+@if (has('fulfilment')) {
+  <div [id]="panelId('fulfilment')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('fulfilment')" [hidden]="activeTab() !== 'fulfilment'"
+       data-testid="fulfilment-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'fulfilment') {
+        @if (fulfilment(); as m) {
+          <ng-container *ngComponentOutlet="m.OrderFulfilmentPanelComponent; inputs: activityInputs()" />
+        } @else if (fulfilmentLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'fulfilment.panel.error' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'fulfilment.panel.saveFirst' | translate }}</p>
+    }
+  </div>
+}
