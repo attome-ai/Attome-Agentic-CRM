@@ -151,8 +151,11 @@ pub async fn size_check_with(
         let root = registry.get(entity).ok_or(AppError::NotFound)?;
         let mut access = Access::new(read);
         if !security.is_admin {
-            let level = change.get(&root.id).copied().unwrap_or(AccessLevel::None);
-            access = access.with(root.id, level);
+            let level = change
+                .get(&root.entity_id)
+                .copied()
+                .unwrap_or(AccessLevel::None);
+            access = access.with(root.entity_id, level);
         }
         let env = Env {
             registry: &registry,
