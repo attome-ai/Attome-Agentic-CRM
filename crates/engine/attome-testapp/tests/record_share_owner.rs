@@ -30,6 +30,7 @@ async fn user_with(app: &TestApp, label: &str, entity: &str, verbs: &[&str]) -> 
 }
 
 // feature: Q14
+// negative: POST /api/v1/{entity}/{id}/shares
 #[test]
 fn record_share_owner_shares_without_admin_and_cannot_escalate() {
     attome_testkit::run_shared(async {

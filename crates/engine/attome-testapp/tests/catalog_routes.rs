@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 use uuid::Uuid;
 
 // feature: L4
+// negative: PATCH /api/v1/catalog/assets/{id}/description, POST /api/v1/catalog/assets/{id}/description/approve, POST /api/v1/catalog/assets/{id}/access-requests, POST /api/v1/catalog/access-requests/{id}/decide
 #[test]
 fn search_page_describe_and_request_access() {
     attome_testkit::run_shared(async {

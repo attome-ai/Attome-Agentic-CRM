@@ -19,6 +19,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 // feature: L1
+// negative: PATCH /api/v1/admin/entities/{entity_id}
 #[test]
 fn mark_entity_master_requires_domain_and_survives_reload() {
     attome_testkit::run_shared(async {

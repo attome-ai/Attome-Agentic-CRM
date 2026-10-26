@@ -59,6 +59,7 @@ fn calls(list: Uuid, member: Uuid) -> [(String, Value); 5] {
 }
 
 // feature: D21
+// negative: POST /api/v1/sales/call-list-members/{id}/skip
 #[test]
 fn claim_requires_list_read_privilege() {
     attome_testkit::run_shared(async {

@@ -131,6 +131,7 @@ fn viewer_cannot_read_confidential() {
 }
 
 // feature: W1
+// negative: DELETE /api/v1/{entity}/{id}
 #[test]
 fn held_contract_cannot_be_deleted() {
     attome_testkit::run_shared(async {

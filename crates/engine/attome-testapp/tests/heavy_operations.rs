@@ -153,6 +153,7 @@ async fn titled(app: &TestApp, entity: &str, title: &str) -> i64 {
 }
 
 // feature: AA10
+// negative: POST /api/v1/{entity}/mass/estimate
 #[test]
 fn mass_estimate_returns_path() {
     attome_testkit::run_shared(async {
@@ -273,6 +274,7 @@ async fn many_records(app: &TestApp, extra: i32) -> String {
 }
 
 // feature: AA10
+// negative: POST /api/v1/{entity}/mass
 #[test]
 fn mass_large_returns_202() {
     attome_testkit::run_shared(async {
@@ -316,6 +318,7 @@ fn mass_large_returns_202() {
 }
 
 // feature: AA10
+// negative: POST /api/v1/mass/{id}/pause, POST /api/v1/mass/{id}/resume
 #[test]
 fn mass_control_requires_if_match() {
     attome_testkit::run_shared(async {
@@ -618,6 +621,7 @@ fn mass_undo_restores_values() {
 }
 
 // feature: AA10
+// negative: POST /api/v1/mass/{id}/undo
 #[test]
 fn mass_undo_refused_past_retention() {
     attome_testkit::run_shared(async {

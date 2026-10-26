@@ -20,6 +20,7 @@ fn test_app_starts_and_lists_entities() {
 }
 
 /// A seeded record for a real entity passes the API's own validation.
+// negative: POST /api/v1/{entity}
 #[test]
 fn record_for_passes_validation() {
     attome_testkit::run_shared(async {

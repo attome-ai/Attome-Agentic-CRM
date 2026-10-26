@@ -48,6 +48,7 @@ async fn phone(app: &TestApp, id: Uuid) -> Value {
 }
 
 // feature: L1
+// negative: POST /api/v1/master/{entity}/contributions/{cid}/release, POST /api/v1/master/{entity}/contributions/{cid}/detach, POST /api/v1/master/{entity}/{id}/certify
 #[test]
 fn steward_routes_pin_release_detach_certify() {
     attome_testkit::run_shared(async {

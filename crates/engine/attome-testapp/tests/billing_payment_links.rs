@@ -218,6 +218,7 @@ async fn checkout(app: &TestApp, token: &str) -> StatusCode {
 }
 
 // feature: F5
+// negative: POST /api/v1/billing/payment-links
 #[test]
 fn link_wrong_secret_is_404() {
     attome_testkit::run_shared(async {
@@ -268,6 +269,7 @@ fn link_wrong_secret_is_404() {
 }
 
 // feature: F5
+// negative: POST /api/v1/billing/payment-links
 #[test]
 fn link_expired_is_404() {
     attome_testkit::run_shared(async {

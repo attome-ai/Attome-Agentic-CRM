@@ -94,6 +94,7 @@ async fn user_with_role(app: &TestApp, role: Uuid) -> TestUser {
 }
 
 // feature: Q10, Q15
+// negative: POST /api/v1/query/execute, POST /api/v1/{entity}
 #[test]
 fn every_role_matches_its_privileges() {
     attome_testkit::run_shared(async {

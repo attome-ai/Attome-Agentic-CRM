@@ -103,6 +103,7 @@ async fn audit_events(app: &TestApp, record: Uuid) -> i64 {
 }
 
 // feature: AG2
+// negative: POST /api/v1/einvoice/devices
 #[test]
 fn einvoice_device_onboards_through_zatca() {
     attome_testkit::run_shared(async {

@@ -75,6 +75,7 @@ async fn run(app: &TestApp, body: Value) -> (StatusCode, Value) {
 }
 
 // feature: S4
+// negative: POST /api/v1/admin/queries
 #[test]
 fn saved_query_runs_with_typed_params() {
     attome_testkit::run_shared(async {

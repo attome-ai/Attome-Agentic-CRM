@@ -193,6 +193,7 @@ fn bulk_reassign_of_2000_records_runs_in_chunks_with_progress() {
     })
 }
 
+// negative: POST /api/v1/admin/security/record-shares/bulk
 #[test]
 fn bulk_share_and_bad_requests() {
     attome_testkit::run_shared(async {

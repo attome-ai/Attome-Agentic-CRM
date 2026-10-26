@@ -101,6 +101,7 @@ fn a_key_past_its_quota_is_refused() {
     });
 }
 
+// negative: PUT /api/v1/admin/api-keys/{id}/quota
 #[test]
 fn admins_list_keys_and_bad_quotas_are_refused() {
     attome_testkit::run_shared(async {

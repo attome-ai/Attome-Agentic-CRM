@@ -146,6 +146,7 @@ fn id(body: &Value, key: &str) -> Uuid {
 }
 
 // feature: F5
+// negative: POST /api/v1/billing/payments/{id}/refunds
 #[test]
 fn refund_more_than_paid_rejected() {
     attome_testkit::run_shared(async {

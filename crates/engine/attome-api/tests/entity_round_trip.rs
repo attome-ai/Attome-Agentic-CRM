@@ -326,6 +326,7 @@ async fn body_json(res: axum::response::Response) -> serde_json::Value {
     serde_json::from_slice(&bytes).expect("json")
 }
 
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, POST /api/v1/{entity}, GET /api/v1/{entity}/{id}, PATCH /api/v1/{entity}/{id}, DELETE /api/v1/{entity}/{id}
 #[test]
 fn create_get_update_soft_delete_round_trip() {
     attome_testkit::run_shared(async {
@@ -566,6 +567,7 @@ fn create_get_update_soft_delete_round_trip() {
 /// admin surface relies on (D-012). Full per-field read grants (F013/F135)
 /// are still unbuilt; this only proves the "everyone or nobody" defect D-102
 /// closed, not a real field-level-security intersection.
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, POST /api/v1/admin/security/grants, POST /api/v1/{entity}, GET /api/v1/{entity}/{id}, PATCH /api/v1/{entity}/{id}
 #[test]
 fn sensitive_attribute_never_appears_in_response() {
     attome_testkit::run_shared(async {
@@ -713,6 +715,7 @@ fn sensitive_attribute_never_appears_in_response() {
 /// `record_level_security.rs`'s header already carries for D-137/D-138/
 /// D-139/D-140; run this against a throwaway database before relying on
 /// D-141 in production.
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, POST /api/v1/admin/security/grants, POST /api/v1/{entity}, PATCH /api/v1/{entity}/{id}
 #[test]
 fn update_record_rejects_sensitive_field_write_without_can_update_grant() {
     attome_testkit::run_shared(async {
@@ -1296,6 +1299,7 @@ fn field_read_and_write_security_are_independent_dimensions() {
 
 /// P-data-integrity (D-021) item (c): logicalname is immutable after
 /// creation — attempting to rename it is rejected, not silently applied.
+// op: POST /api/v1/admin/entities, PATCH /api/v1/admin/entities/{entity_id}
 #[test]
 fn entity_rename_is_rejected() {
     attome_testkit::run_shared(async {
@@ -1415,6 +1419,7 @@ async fn provision_test_entity(system: TestSystem, prefix: &str) -> (String, Str
 /// generic UPDATE — a stale version is a 409, and a missing header is a 422.
 /// There is no unguarded last-write-wins path (D-079: "version-unaware
 /// clients must be upgraded").
+// op: POST /api/v1/{entity}, PATCH /api/v1/{entity}/{id}, GET /api/v1/admin/conflicts, GET /api/v1/{entity}/{id}
 #[test]
 fn stale_row_version_is_rejected() {
     attome_testkit::run_shared(async {
@@ -1546,6 +1551,7 @@ fn stale_row_version_is_rejected() {
 /// breaks. Tightening them to mandatory later is a breaking change and needs
 /// its own decision; asserting the omitted-header case here is what stops that
 /// happening by accident.
+// op: POST /api/v1/{entity}, PATCH /api/v1/{entity}/{id}, DELETE /api/v1/{entity}/{id}, GET /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore
 #[test]
 fn if_match_is_optional_on_delete_and_restore() {
     attome_testkit::run_shared(async {
@@ -1707,6 +1713,7 @@ fn if_match_is_optional_on_delete_and_restore() {
 /// A-1 (2026-07-13 audit): `attome_field::validate` now runs before any entity
 /// write — a type-shape mismatch is a 422 validation_error naming the field,
 /// on both create and update, and nothing is persisted.
+// op: POST /api/v1/{entity}, PATCH /api/v1/{entity}/{id}, GET /api/v1/{entity}/{id}
 #[test]
 fn semantic_validation_rejects_wrong_types() {
     attome_testkit::run_shared(async {
@@ -1854,6 +1861,7 @@ async fn sync_registry(state: &EngineState) {
 /// and a client PUTting that back permanently nulled the real value). Also
 /// covers the write-time liveness gate D-057 left open: a create/update
 /// pointing at a missing or soft-deleted target is rejected outright.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, GET /api/v1/{entity}/{id}, PATCH /api/v1/{entity}/{id}
 #[test]
 fn lookup_write_time_validation_and_round_trip_preserves_dangling_reference() {
     attome_testkit::run_shared(async {
@@ -2055,6 +2063,7 @@ fn lookup_write_time_validation_and_round_trip_preserves_dangling_reference() {
 /// WHERE {dep_field} = $1 AND is_active`) sequential-scans the dependent
 /// table under row locks inside the write transaction, bounded by migration
 /// `0018`'s 500ms role-level `statement_timeout`.
+// op: POST /api/v1/admin/entities/{entity_id}/fields, GET /api/v1/admin/entities/{entity_id}/fields/{field_id}/index-status
 #[test]
 fn lookup_field_gets_index_by_default_without_sortable_or_filterable() {
     attome_testkit::run_shared(async {
@@ -2155,6 +2164,7 @@ fn lookup_field_gets_index_by_default_without_sortable_or_filterable() {
 /// P-data-lifecycle item (c): `restrict` blocks a delete with zero side
 /// effects while a live reference exists, and `cascade-deactivate` fires
 /// exactly when the delete actually goes through.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, GET /api/v1/{entity}/{id}
 #[test]
 fn on_target_delete_restrict_blocks_then_cascade_deactivate_cascades() {
     attome_testkit::run_shared(async {
@@ -2340,6 +2350,7 @@ fn on_target_delete_restrict_blocks_then_cascade_deactivate_cascades() {
 /// dependent (`WHERE {fk} = $1 AND is_active = FALSE`) with no record of
 /// which rows the delete itself had cascaded, so it wrongly resurrected a
 /// dependent that was already dead before the parent's own delete ever ran.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore, GET /api/v1/{entity}/{id}
 #[test]
 fn restore_does_not_resurrect_independently_deleted_dependent() {
     attome_testkit::run_shared(async {
@@ -2525,6 +2536,7 @@ fn restore_does_not_resurrect_independently_deleted_dependent() {
 /// this test (no worker `Monitor` here), which is exactly the point: if the
 /// old unbounded inline path had run, every dependent would already be
 /// inactive by the time this test asserts.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}
 #[test]
 fn large_cascade_deactivate_group_defers_to_async_job() {
     attome_testkit::run_shared(async {
@@ -2652,6 +2664,7 @@ fn large_cascade_deactivate_group_defers_to_async_job() {
 /// 0029) round-trips through the admin API into the metadata registry and is
 /// enforced by `attome_field::validate` on every write — an out-of-list value is
 /// a 422, not silently accepted (the pre-F004 shape-only behavior).
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, POST /api/v1/{entity}
 #[test]
 fn multi_select_choice_options_are_enforced_on_write() {
     attome_testkit::run_shared(async {
@@ -2740,6 +2753,7 @@ fn multi_select_choice_options_are_enforced_on_write() {
 /// `admin/attribute.rs` returned the same column correctly and made the
 /// metadata look fine. Asserts the lookup branch keeps its synthesized shape
 /// too, since that is what the fix had to leave alone.
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, GET /api/v1/schema/{logicalname}
 #[test]
 fn schema_endpoint_serves_stored_choice_options() {
     attome_testkit::run_shared(async {
@@ -2819,6 +2833,7 @@ fn schema_endpoint_serves_stored_choice_options() {
 /// when a display field is present, so a null one left the lookup popup's
 /// search box inert, re-listing the same first 20 target records for every
 /// keystroke while the metadata editor looked correct.
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, GET /api/v1/schema/{logicalname}
 #[test]
 fn schema_endpoint_resolves_lookup_display_field_from_target_entity() {
     attome_testkit::run_shared(async {
@@ -2922,6 +2937,7 @@ fn schema_endpoint_resolves_lookup_display_field_from_target_entity() {
 /// by `attome_field::validate` on every write, and a malformed pattern is
 /// rejected at attribute-creation time (`attome_field::validate_options`) rather
 /// than only failing the first time a record write hits it.
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, POST /api/v1/{entity}
 #[test]
 fn masked_text_pattern_is_enforced_on_write_and_validated_on_creation() {
     attome_testkit::run_shared(async {
@@ -3016,6 +3032,7 @@ fn masked_text_pattern_is_enforced_on_write_and_validated_on_creation() {
 /// A29-T1: an external-id field is unique among live records (a second
 /// record with the same id is a 409), an entity may hold ids for several
 /// systems, and a malformed `external_id` option is refused.
+// op: POST /api/v1/admin/entities/{entity_id}/fields, POST /api/v1/{entity}
 #[test]
 fn external_id_field_is_unique_per_entity() {
     attome_testkit::run_shared(async {
@@ -3157,6 +3174,7 @@ fn external_id_field_is_unique_per_entity() {
 /// B7-T2: a bulk clone copies each record with the overrides, a preview
 /// creates nothing, and undoing a clone removes the copy while it is
 /// unchanged; once the copy is edited, undo is a 409 and removes nothing.
+// op: GET /api/v1/{entity}/{id}, PATCH /api/v1/{entity}/{id}
 #[test]
 fn clone_routes_bulk_clone_and_undo() {
     attome_testkit::run_shared(async {
@@ -3678,6 +3696,7 @@ fn tag_merge_undo_and_expiry() {
 /// just a bare `is_active` flip), so a fresh record ends at `row_version ==
 /// 2` after one delete + one restore. A second restore on an already-active
 /// record is a 409, not a silent no-op.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore, GET /api/v1/{entity}/{id}
 #[test]
 fn restore_undeletes_a_soft_deleted_record() {
     attome_testkit::run_shared(async {
@@ -3761,6 +3780,7 @@ fn restore_undeletes_a_soft_deleted_record() {
 /// uuid and masked every restore as a 500. A matching `If-Match` goes all
 /// the way through that `UPDATE ... RETURNING`, so it is the path that proves
 /// the decode: 200, the row's data intact, and `row_version` bumped by one.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore, GET /api/v1/{entity}/{id}
 #[test]
 fn restore_with_matching_if_match_bumps_row_version() {
     attome_testkit::run_shared(async {
@@ -3831,6 +3851,7 @@ fn restore_with_matching_if_match_bumps_row_version() {
 
 /// A stale `If-Match` on restore is a 409 `version_conflict`, and the record
 /// stays soft-deleted: the rejected restore changed nothing.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore, GET /api/v1/{entity}/{id}
 #[test]
 fn restore_with_stale_if_match_is_a_conflict() {
     attome_testkit::run_shared(async {
@@ -3896,6 +3917,7 @@ fn restore_with_stale_if_match_is_a_conflict() {
 /// A29-T2: an upsert matches on an external id given as `?key=` (creating,
 /// then updating the same record), a lookup names its target by an external
 /// id, and an id no record holds is a 422 naming it.
+// op: POST /api/v1/{entity}/upsert, POST /api/v1/{entity}/{id}/merge
 #[test]
 fn upsert_by_external_id_and_lookup_by_external_id() {
     attome_testkit::run_shared(async {
@@ -4506,6 +4528,7 @@ fn autonumber_gaps_report_keeps_deleted_numbers() {
 /// F023 (P2.2): `POST .../upsert` creates when no row matches `match`, then
 /// updates that same row (never inserting a duplicate) on a second call with
 /// the same match key.
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, POST /api/v1/{entity}/upsert
 #[test]
 fn upsert_creates_then_updates_by_match_key() {
     attome_testkit::run_shared(async {
@@ -4716,6 +4739,7 @@ async fn create_hierarchy_node(
 
 /// S2-T16: an admin's overlay describes an entity's path in the deployment
 /// document, and a target outside `/api/v1/` paths is refused.
+// op: PUT /api/v1/admin/openapi/overlay, GET /api/v1/openapi/deployment.json
 #[test]
 fn overlay_description_appears_in_live_document() {
     attome_testkit::run_shared(async {
@@ -4793,6 +4817,7 @@ fn overlay_description_appears_in_live_document() {
 
 /// A17-T1: a hierarchy-flagged self lookup keeps each row's tree path; a
 /// move rewrites the moved subtree, and descendants are read by prefix.
+// op: GET /api/v1/{entity}/{id}/descendants, PATCH /api/v1/{entity}/{id}
 #[test]
 fn hierarchy_path_follows_moves() {
     attome_testkit::run_shared(async {
@@ -5226,6 +5251,7 @@ fn requester_never_resolves_as_approver() {
 /// F019: `GET .../ancestors` and `GET .../descendants` walk a self-referencing
 /// `parent_ref` chain (`a` -> `b` -> `c`) via the recursive-CTE endpoints,
 /// nearest-first for ancestors, breadth order for descendants.
+// op: GET /api/v1/{entity}/{id}/ancestors, GET /api/v1/{entity}/{id}/descendants
 #[test]
 fn hierarchy_ancestors_and_descendants_walk_the_tree() {
     attome_testkit::run_shared(async {
@@ -5320,6 +5346,7 @@ fn hierarchy_ancestors_and_descendants_walk_the_tree() {
 /// one-step case (a record naming itself as its own parent) and an indirect
 /// cycle (setting a node's parent to its own descendant) — both on update,
 /// since a fresh create has no id yet to cycle back to.
+// op: PATCH /api/v1/{entity}/{id}, GET /api/v1/{entity}/{id}
 #[test]
 fn hierarchy_cycle_guard_rejects_self_and_indirect_cycles() {
     attome_testkit::run_shared(async {
@@ -5393,6 +5420,7 @@ fn hierarchy_cycle_guard_rejects_self_and_indirect_cycles() {
 /// F019/D-095: the same cycle guard applies to the upsert conflict-update
 /// branch, not only to PATCH. A failed upsert must leave both the hierarchy
 /// edge and row_version unchanged.
+// op: POST /api/v1/{entity}/upsert, GET /api/v1/{entity}/{id}
 #[test]
 fn hierarchy_upsert_cycle_guard_rejects_self_and_indirect_cycles() {
     attome_testkit::run_shared(async {
@@ -5455,6 +5483,7 @@ fn hierarchy_upsert_cycle_guard_rejects_self_and_indirect_cycles() {
 
 /// F019/D-095: a hierarchy chain that reaches the safety cap without a root
 /// is rejected rather than being treated as a valid, merely deep hierarchy.
+// op: PATCH /api/v1/{entity}/{id}
 #[test]
 fn hierarchy_cycle_guard_fails_closed_at_depth_limit() {
     attome_testkit::run_shared(async {
@@ -5511,6 +5540,7 @@ fn hierarchy_cycle_guard_fails_closed_at_depth_limit() {
 /// F019/D-095: concurrent reparenting of one record is serialized by the
 /// row-scoped advisory lock. One request succeeds and the other receives a
 /// conflict; neither request may deadlock or produce an invalid hierarchy.
+// op: PATCH /api/v1/{entity}/{id}, GET /api/v1/{entity}/{id}
 #[test]
 fn concurrent_hierarchy_reparents_are_conflict_safe() {
     attome_testkit::run_shared(async {
@@ -5589,6 +5619,7 @@ fn concurrent_hierarchy_reparents_are_conflict_safe() {
 /// already committed and can now see the real, live parent chain). Either
 /// outcome proves the cross-record race is closed; a and b must never both
 /// end up pointing at each other.
+// op: PATCH /api/v1/{entity}/{id}, GET /api/v1/{entity}/{id}
 #[test]
 fn concurrent_cross_record_hierarchy_reparents_are_conflict_safe() {
     attome_testkit::run_shared(async {
@@ -5678,6 +5709,7 @@ fn concurrent_cross_record_hierarchy_reparents_are_conflict_safe() {
 /// `bulk::process` is invoked directly, the same way
 /// `bulk_create_processes_all_records_and_isolates_per_record_errors`
 /// simulates the worker without a live apalis loop.
+// op: POST /api/v1/{entity}/bulk, PATCH /api/v1/{entity}/{id}, GET /api/v1/{entity}/bulk/{id}, GET /api/v1/{entity}/{id}
 #[test]
 fn interactive_hierarchy_reparent_races_a_bulk_update_reparent_conflict_safely() {
     attome_testkit::run_shared(async {
@@ -5812,6 +5844,7 @@ fn interactive_hierarchy_reparent_races_a_bulk_update_reparent_conflict_safely()
 /// enqueue/approval transaction, per that plan's §4) is not yet landed, or
 /// does not cover two wholly separate bulk operations racing each other's
 /// `process()` runs the way this test does.
+// op: POST /api/v1/{entity}/bulk, GET /api/v1/{entity}/bulk/{id}, GET /api/v1/{entity}/{id}
 #[test]
 fn two_bulk_update_reparents_race_conflict_safely() {
     attome_testkit::run_shared(async {
@@ -5952,6 +5985,7 @@ fn two_bulk_update_reparents_race_conflict_safely() {
 /// gaps from the duplicate (never overwriting a value the canonical already
 /// has), redirects every other entity's lookup field that pointed at the
 /// duplicate to the canonical id instead, and retires the duplicate.
+// op: POST /api/v1/{entity}, POST /api/v1/{entity}/{id}/merge, GET /api/v1/{entity}/{id}
 #[test]
 fn merge_records_unions_data_redirects_dependents_and_retires_duplicate() {
     attome_testkit::run_shared(async {
@@ -6119,6 +6153,7 @@ fn merge_records_unions_data_redirects_dependents_and_retires_duplicate() {
 /// for all three things it touches: the canonical record (update), the
 /// duplicate (delete), and every dependent row the redirect step repoints —
 /// previously none of the three got one at all.
+// op: POST /api/v1/{entity}, POST /api/v1/{entity}/{id}/merge
 #[test]
 fn merge_emits_change_feed_rows_for_canonical_duplicate_and_redirected_dependents() {
     attome_testkit::run_shared(async {
@@ -6278,6 +6313,7 @@ fn merge_emits_change_feed_rows_for_canonical_duplicate_and_redirected_dependent
 /// canonical record (additive: absent still behaves as before). A stale
 /// value is a 409, exactly like PATCH/DELETE's own row_version guard, and
 /// the rejected merge must not have touched either record.
+// op: POST /api/v1/{entity}, PATCH /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/merge, GET /api/v1/{entity}/{id}
 #[test]
 fn merge_rejects_stale_if_match_on_canonical() {
     attome_testkit::run_shared(async {
@@ -6397,6 +6433,7 @@ fn merge_rejects_stale_if_match_on_canonical() {
 /// A duplicate whose own lookup field points at a target that's since been
 /// soft-deleted must not have that dangling reference silently copied onto
 /// the canonical record — the merge is refused instead.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/merge, GET /api/v1/{entity}/{id}
 #[test]
 fn merge_refuses_fill_when_duplicates_lookup_target_is_soft_deleted() {
     attome_testkit::run_shared(async {
@@ -6570,6 +6607,7 @@ fn merge_refuses_fill_when_duplicates_lookup_target_is_soft_deleted() {
 /// value is left untouched. A field with no configured rule keeps the
 /// pre-D-432 `most_complete` behavior (covered by the plain merge test
 /// above), so this test only needs to cover the two rule-driven strategies.
+// op: POST /api/v1/admin/data/survivorship-rules, POST /api/v1/{entity}, PATCH /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/merge
 #[test]
 fn merge_records_applies_configured_survivorship_rules() {
     attome_testkit::run_shared(async {
@@ -7605,6 +7643,7 @@ fn import_and_api_share_rules_and_dismissed_pairs_stay_dismissed() {
 /// `EngineJob::DataMatchSweep`'s handler, called directly here the same
 /// way `attome_workflow::entity_trigger::dispatch_pending` is called directly
 /// in attome-workflow's own integration tests.
+// op: POST /api/v1/admin/data/match-rules, POST /api/v1/{entity}, GET /api/v1/admin/data/duplicates
 #[test]
 fn data_match_sweep_finds_the_true_duplicate_and_ignores_the_unrelated_record() {
     attome_testkit::run_shared(async {
@@ -7722,6 +7761,7 @@ fn data_match_sweep_finds_the_true_duplicate_and_ignores_the_unrelated_record() 
 /// considered, no matter how strongly it would otherwise score on a
 /// non-blocking field. This is the deliberate blocking trade-off (see
 /// `duplicates_match`'s module doc, "Blocking keys"), not a false negative.
+// op: POST /api/v1/admin/data/match-rules, POST /api/v1/{entity}, GET /api/v1/admin/data/duplicates
 #[test]
 fn data_match_sweep_blocking_key_narrows_the_candidate_set() {
     attome_testkit::run_shared(async {
@@ -7858,6 +7898,7 @@ fn data_match_sweep_blocking_key_narrows_the_candidate_set() {
 }
 
 /// F028: a record cannot be merged into itself.
+// op: POST /api/v1/{entity}, POST /api/v1/{entity}/{id}/merge
 #[test]
 fn merge_records_rejects_merging_a_record_into_itself() {
     attome_testkit::run_shared(async {
@@ -7901,6 +7942,7 @@ fn merge_records_rejects_merging_a_record_into_itself() {
 /// parent from a to c, but c's own parent is already b, so that redirect
 /// would create a two-node cycle (b -> c -> b). The merge must fail closed,
 /// and neither record's parent may change.
+// op: POST /api/v1/{entity}/{id}/merge, GET /api/v1/{entity}/{id}
 #[test]
 fn merge_redirect_rejects_hierarchy_cycle() {
     attome_testkit::run_shared(async {
@@ -8075,6 +8117,7 @@ async fn create_bulk_fixture_record(
 /// record independently — a record missing a required field fails in
 /// isolation, the other two still succeed, and `GET .../bulk/{id}` reports
 /// the real succeeded/failed split with the failure's index and reason.
+// op: POST /api/v1/{entity}/bulk, GET /api/v1/{entity}/bulk/{id}
 #[test]
 fn bulk_create_processes_all_records_and_isolates_per_record_errors() {
     attome_testkit::run_shared(async {
@@ -8384,6 +8427,7 @@ fn bulk_update_rejects_self_cycle_and_continues_other_records() {
 /// record with a stale `row_version` is a 409 that leaves the row untouched;
 /// a record with the correct version updates and bumps `row_version` exactly
 /// like PATCH/upsert do.
+// op: POST /api/v1/{entity}/bulk
 #[test]
 fn bulk_update_enforces_row_version_per_record() {
     attome_testkit::run_shared(async {
@@ -8600,6 +8644,7 @@ fn bulk_enqueue_transaction_rolls_back_both_rows_together() {
 /// interactive endpoint for each record. A restrict failure is isolated to
 /// its record, cascade-deactivate is atomic with its parent, and an orphan
 /// lookup remains active exactly as it does on the single-record path.
+// op: POST /api/v1/{entity}/bulk, GET /api/v1/{entity}/bulk/{id}, GET /api/v1/{entity}/{id}
 #[test]
 fn bulk_delete_enforces_delete_policy_per_record_and_continues() {
     attome_testkit::run_shared(async {
@@ -8937,6 +8982,7 @@ fn bulk_delete_policy_stays_within_budget_at_max_batch() {
 /// skips lookup-liveness but never hierarchy/row-version/delete-policy
 /// guards. `process_staged_import` is invoked directly here, the same way
 /// the bulk tests simulate the apalis worker without spinning one up.
+// op: POST /api/v1/{entity}/staged-import, POST /api/v1/{entity}/staged-import/{id}/approve
 #[test]
 fn staged_import_approval_persists_a_dangling_lookup_reference() {
     attome_testkit::run_shared(async {
@@ -9062,6 +9108,7 @@ fn staged_import_approval_persists_a_dangling_lookup_reference() {
 /// D-100: hierarchy-cycle protection is never skippable, even for an
 /// approved staged import — only lookup-liveness is. A self-parent record
 /// submitted for staged import must still fail at approval time.
+// op: POST /api/v1/{entity}/staged-import, POST /api/v1/{entity}/staged-import/{id}/approve
 #[test]
 fn staged_import_approval_still_rejects_a_hierarchy_cycle() {
     attome_testkit::run_shared(async {
@@ -9151,6 +9198,7 @@ fn staged_import_approval_still_rejects_a_hierarchy_cycle() {
 
 /// D-100: only `system.admin` can approve a staged import — a user with only
 /// the entity's own `bulk` grant (enough to submit one) must be rejected.
+// op: POST /api/v1/{entity}/staged-import, POST /api/v1/{entity}/staged-import/{id}/approve
 #[test]
 fn staged_import_approval_requires_admin() {
     attome_testkit::run_shared(async {
@@ -9239,6 +9287,7 @@ fn staged_import_approval_requires_admin() {
 /// record shape that would fail if it were re-applied (a duplicate-name
 /// unique-ish assertion isn't available generically, so instead this proves
 /// resumption via attempts/record_id staying untouched on the skipped item).
+// op: POST /api/v1/{entity}/staged-import, POST /api/v1/{entity}/staged-import/{id}/approve
 #[test]
 fn staged_import_worker_resumes_without_reapplying_succeeded_items() {
     attome_testkit::run_shared(async {
@@ -9373,6 +9422,7 @@ fn staged_import_worker_resumes_without_reapplying_succeeded_items() {
 /// `entity_mutation::LIFECYCLE_INSERT_COLS` now drops the column from every
 /// insert, whatever the body says — asserted below for all three values a
 /// client can send.
+// op: POST /api/v1/{entity}, GET /api/v1/{entity}/{id}
 #[test]
 fn create_never_honours_a_client_supplied_is_active() {
     attome_testkit::run_shared(async {
@@ -9436,6 +9486,7 @@ fn create_never_honours_a_client_supplied_is_active() {
 /// covers it. It uses `organization`, a bootstrap table whose
 /// `is_active` is still nullable, because `user_account.is_active` is
 /// NOT NULL since migration 0460 (attome-auth hardening 2.4).
+// op: GET /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore
 #[test]
 fn restore_repairs_a_record_whose_is_active_is_null() {
     attome_testkit::run_shared(async {
@@ -9528,6 +9579,7 @@ fn restore_repairs_a_record_whose_is_active_is_null() {
 /// `resolve_strict` on the SAME node immediately after, with no delay: it
 /// must already reflect the restored grant, not the stale pre-restore
 /// value.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore
 #[test]
 fn restore_of_privilege_grant_is_visible_to_resolve_strict_immediately() {
     attome_testkit::run_shared(async {
@@ -9655,6 +9707,7 @@ fn restore_of_privilege_grant_is_visible_to_resolve_strict_immediately() {
 /// `is_active`/`row_version`, so a record whose lookup target was
 /// soft-deleted while THIS record was itself already soft-deleted could be
 /// restored back into existence pointing at nothing live.
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore, GET /api/v1/{entity}/{id}
 #[test]
 fn restore_refuses_a_record_whose_lookup_target_is_no_longer_live() {
     attome_testkit::run_shared(async {
@@ -9799,6 +9852,7 @@ fn restore_refuses_a_record_whose_lookup_target_is_no_longer_live() {
 
 /// S1-T14: `Attome-Duplicate-Check: skip` needs `duplicate.bypass`; with it a
 /// save a `block` rule would refuse goes through and the skip is audited.
+// op: POST /api/v1/admin/data/match-rules, POST /api/v1/{entity}
 #[test]
 fn skip_duplicate_check_requires_privilege_and_is_audited() {
     attome_testkit::run_shared(async {
@@ -9898,6 +9952,7 @@ fn skip_duplicate_check_requires_privilege_and_is_audited() {
 /// S1-T7: a composite request creates a parent, then a child pointing at it
 /// through `${parent.id}`; a failing operation is reported and the rest run;
 /// each operation needs its own privilege.
+// op: POST /api/v1/composite
 #[test]
 fn composite_create_then_update_by_reference() {
     attome_testkit::run_shared(async {
@@ -10003,6 +10058,7 @@ fn composite_create_then_update_by_reference() {
 
 /// S1-T6: a record is read and updated by its declared business key; a
 /// non-key attribute is 422; PATCH by key needs If-Match.
+// op: PATCH /api/v1/admin/entities/{entity_id}, POST /api/v1/{entity}, PATCH /api/v1/{entity}/key/{keyspec}
 #[test]
 fn get_and_patch_by_business_key() {
     attome_testkit::run_shared(async {
@@ -10093,6 +10149,7 @@ fn get_and_patch_by_business_key() {
 }
 
 /// S1-T4: `?expand=` returns a lookup's target inline; a non-lookup is 422.
+// op: POST /api/v1/{entity}
 #[test]
 fn expand_returns_related_record_inline() {
     attome_testkit::run_shared(async {
@@ -10212,6 +10269,7 @@ async fn patch_at(
 /// current version and says what it was merged over; one that touches a
 /// changed attribute is still the 409, as is any stale PATCH without the
 /// header. The header takes only `attributes`.
+// op: POST /api/v1/{entity}
 #[test]
 fn stale_update_merges_over_other_attributes_and_conflicts_on_its_own() {
     attome_testkit::run_shared(async {

@@ -17,6 +17,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 // feature: A5
+// negative: POST /api/v1/{entity}, POST /api/v1/admin/model/option_set/{id}/merge
 #[test]
 fn option_set_merge_moves_every_record_and_retires_the_value() {
     attome_testkit::run_shared(async {

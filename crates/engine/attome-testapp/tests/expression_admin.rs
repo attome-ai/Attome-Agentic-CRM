@@ -42,6 +42,7 @@ async fn entity(app: &TestApp) -> String {
 }
 
 // feature: Z11
+// negative: POST /api/v1/admin/expressions/validate
 #[test]
 fn validate_reports_span_of_error() {
     attome_testkit::run_shared(async {

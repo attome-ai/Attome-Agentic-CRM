@@ -143,6 +143,7 @@ fn titles(page: &Value) -> Vec<String> {
 }
 
 // feature: A14
+// negative: PUT /api/v1/admin/query-shares/{id}, PATCH /api/v1/admin/queries/{id}/spec
 #[test]
 fn shared_query_runs_with_params_for_shared_users() {
     attome_testkit::run_shared(async {

@@ -43,6 +43,7 @@ async fn install_crm(app: &TestApp) {
 }
 
 // feature: K7
+// negative: POST /api/v1/admin/records/declarations, PATCH /api/v1/{entity}/{id}, DELETE /api/v1/{entity}/{id}, POST /api/v1/admin/records/dispositions/{id}/decide
 #[test]
 fn declared_record_is_immutable_and_disposes_with_a_certificate() {
     attome_testkit::run_shared(async {

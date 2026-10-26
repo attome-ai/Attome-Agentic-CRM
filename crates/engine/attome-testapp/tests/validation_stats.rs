@@ -14,6 +14,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 // feature: A3
+// negative: POST /api/v1/{entity}
 #[test]
 fn validation_stats_count_rejections_and_score_the_entity() {
     attome_testkit::run_shared(async {

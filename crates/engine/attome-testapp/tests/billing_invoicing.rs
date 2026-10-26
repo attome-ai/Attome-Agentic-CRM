@@ -390,6 +390,7 @@ async fn issued_invoice(app: &TestApp, account: Uuid, qty: &str, series: &str) -
 }
 
 // feature: F4
+// negative: POST /api/v1/billing/invoices/{id}/credit-notes
 #[test]
 fn credit_more_than_issued_is_422() {
     attome_testkit::run_shared(async {
@@ -475,6 +476,7 @@ fn credit_more_than_issued_is_422() {
 }
 
 // feature: F4
+// negative: POST /api/v1/billing/invoices/{id}/cancel
 #[test]
 fn cancel_issues_full_credit_note() {
     attome_testkit::run_shared(async {
@@ -539,6 +541,7 @@ fn cancel_issues_full_credit_note() {
 }
 
 // feature: F4
+// negative: POST /api/v1/billing/invoices/{id}/apply-deposit
 #[test]
 fn deposit_is_deducted_once() {
     attome_testkit::run_shared(async {
@@ -608,6 +611,7 @@ fn deposit_is_deducted_once() {
 }
 
 // feature: F4
+// negative: POST /api/v1/billing/invoices/{id}/convert-pro-forma
 #[test]
 fn pro_forma_cannot_be_issued() {
     attome_testkit::run_shared(async {
@@ -1047,6 +1051,7 @@ async fn set_write_off_threshold(app: &TestApp, value: u32) {
 }
 
 // feature: F4
+// negative: POST /api/v1/billing/invoices/{id}/write-off
 #[test]
 fn write_off_above_threshold_needs_approval() {
     attome_testkit::run_shared(async {

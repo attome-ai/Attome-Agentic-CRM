@@ -26,6 +26,7 @@ async fn plan(app: &TestApp, entity_id: Uuid, changes: Value) -> (StatusCode, Va
 }
 
 // feature: Y12
+// negative: POST /api/v1/admin/entities
 #[test]
 fn change_plan_estimates_from_ledger() {
     attome_testkit::run_shared(async {

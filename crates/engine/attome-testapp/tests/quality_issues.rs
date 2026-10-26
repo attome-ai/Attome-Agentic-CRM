@@ -61,6 +61,7 @@ async fn grant(app: &TestApp, user: Uuid, key: &str) {
 }
 
 // feature: L2
+// negative: PATCH /api/v1/admin/data/quality/issues/{id}
 #[test]
 fn issues_assigned_and_hidden_from_non_readers() {
     attome_testkit::run_shared(async {

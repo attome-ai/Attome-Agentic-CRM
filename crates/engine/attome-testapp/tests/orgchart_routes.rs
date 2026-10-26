@@ -61,6 +61,7 @@ async fn contact(app: &TestApp, name: &str, account: Uuid) -> Uuid {
 }
 
 // feature: D23
+// negative: PUT /api/v1/sales/contacts/{id}/manager
 #[test]
 fn set_manager_needs_if_match() {
     attome_testkit::run_shared(async {
@@ -90,6 +91,7 @@ fn set_manager_needs_if_match() {
 }
 
 // feature: D23
+// negative: POST /api/v1/sales/accounts/{id}/org-chart/export
 #[test]
 fn export_queues_a_pdf_render() {
     attome_testkit::run_shared(async {
@@ -125,6 +127,7 @@ fn export_queues_a_pdf_render() {
 }
 
 // feature: D23
+// negative: POST /api/v1/sales/accounts/{id}/org-chart/export
 #[test]
 fn unlicensed_returns_404() {
     attome_testkit::run_shared(async {

@@ -286,6 +286,7 @@ fn webhook_duplicate_event_applied_once() {
 }
 
 // feature: F5
+// negative: POST /api/v1/billing/payments
 #[test]
 fn webhook_bad_signature_is_401() {
     attome_testkit::run_shared(async {

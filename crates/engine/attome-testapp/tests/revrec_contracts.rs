@@ -194,6 +194,7 @@ fn bundle_product_splits_into_three_obligations() {
 }
 
 // feature: F11
+// negative: POST /api/v1/ledger/revrec/contracts/combine
 #[test]
 fn combine_refused_after_lock() {
     attome_testkit::run_shared(async {

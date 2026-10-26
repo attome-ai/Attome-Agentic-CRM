@@ -113,6 +113,7 @@ async fn pay(app: &TestApp, body: serde_json::Value) -> (StatusCode, serde_json:
 }
 
 // feature: F5
+// negative: POST /api/v1/billing/accounts/{id}/apply-credit
 #[test]
 fn payment_partial_marks_partly_paid() {
     attome_testkit::run_shared(async {
@@ -203,6 +204,7 @@ fn payment_partial_marks_partly_paid() {
 }
 
 // feature: F5
+// negative: POST /api/v1/billing/payments/{id}/reverse
 #[test]
 fn payment_reverse_reopens_invoice() {
     attome_testkit::run_shared(async {
@@ -293,6 +295,7 @@ fn payment_concurrent_same_account_conflict() {
 }
 
 // feature: F5
+// negative: DELETE /api/v1/{entity}/{id}
 #[test]
 fn payment_delete_is_forbidden() {
     attome_testkit::run_shared(async {

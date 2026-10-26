@@ -38,6 +38,7 @@ async fn add_field(app: &TestApp, entity_id: &str, name: &str) -> (StatusCode, V
 }
 
 // feature: Y11
+// negative: POST /api/v1/admin/entities
 #[test]
 fn reserved_name_refused() {
     attome_testkit::run_shared(async {
@@ -72,6 +73,7 @@ fn reserved_name_refused() {
 }
 
 // feature: Y11
+// negative: PATCH /api/v1/admin/entities/{entity_id}/fields/{field_id}, PATCH /api/v1/admin/entities/{entity_id}, DELETE /api/v1/admin/entities/{entity_id}/fields/{field_id}
 #[test]
 fn locked_item_refuses_customer_change() {
     attome_testkit::run_shared(async {

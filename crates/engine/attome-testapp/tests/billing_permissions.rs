@@ -204,6 +204,7 @@ fn clerk_cannot_issue_without_privilege() {
 }
 
 // feature: F4
+// negative: POST /api/v1/billing/invoices/{id}/recompute
 #[test]
 fn sales_user_reads_only_own_accounts_invoices() {
     attome_testkit::run_shared(async {
@@ -268,6 +269,7 @@ fn sales_user_reads_only_own_accounts_invoices() {
 }
 
 // feature: F4
+// negative: POST /api/v1/billing/invoices/{id}/recompute
 #[test]
 fn tax_rate_change_does_not_alter_issued_invoice() {
     attome_testkit::run_shared(async {
