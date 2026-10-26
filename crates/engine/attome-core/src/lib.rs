@@ -111,6 +111,7 @@ pub mod experiment;
 mod feature_flag_catalog;
 pub mod feature_flag_descriptor;
 pub mod feature_flag_store;
+pub mod field_mask;
 pub mod field_type;
 pub mod filter;
 /// M05 Phase 1 (D-426) — per-locale `metadata_label` resolution
@@ -261,8 +262,8 @@ pub use setting_store::{
 pub use settings_write::SettingsWriter;
 pub use snapshot_source::{SnapshotSource, spawn_doorbell_reload};
 pub use sql_ident::{
-    ALL_SYSTEM_COLS, live_row_predicate, quote_ident, select_columns, select_columns_filtered,
-    select_columns_where,
+    ALL_SYSTEM_COLS, live_row_predicate, quote_ident, select_columns, select_columns_access,
+    select_columns_filtered, select_columns_where,
 };
 pub use state::{
     AUDIT_USER_VERSION_CHANNEL, AuditUserInfo, EngineState, FEATURE_FLAG_VERSION_CHANNEL,

@@ -10361,3 +10361,212 @@ fn stale_update_merges_over_other_attributes_and_conflicts_on_its_own() {
         assert!(plain.get("merged_over").is_none(), "{plain}");
     });
 }
+
+/// Q15-T1: a sensitive field granted masked reads masked on a record get and
+/// on the entity list, the raw value never in the response, and the holder
+/// cannot change it. The admin route takes the mask and refuses a masked
+/// field that could be updated.
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, POST /api/v1/admin/security/grants, POST /api/v1/admin/security/field-profiles, POST /api/v1/admin/security/field-profiles/{id}/fields, POST /api/v1/{entity}, GET /api/v1/{entity}/{id}, GET /api/v1/{entity}, PATCH /api/v1/{entity}/{id}
+#[test]
+fn masked_field_reads_masked_and_cannot_be_updated() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+        let post = |uri: String, cookie: &str, body: String| {
+            Request::builder()
+                .method("POST")
+                .uri(uri)
+                .header("cookie", cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+
+        let logicalname = format!("masked_test_{}", Uuid::now_v7().simple());
+        let res = app
+            .clone()
+            .oneshot(post(
+                "/api/v1/admin/entities".into(),
+                &admin_cookie,
+                format!(r#"{{"logicalname":"{logicalname}","name":"Masked Test"}}"#),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let entity_id = body_json(res).await["id"].as_str().unwrap().to_owned();
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/admin/entities/{entity_id}/fields"),
+                &admin_cookie,
+                r#"{"logicalname":"card_number","name":"Card","field_type":"text","is_sensitive":true}"#
+                    .into(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+
+        // A non-admin holding a role whose profile shows the card masked.
+        let user_id = Uuid::now_v7();
+        let user_email = format!("masked-reader-{user_id}@test.local");
+        sqlx::query(
+            "INSERT INTO user_account (id, email, user_name, is_active) VALUES ($1, $2, $3, true)",
+        )
+        .bind(user_id)
+        .bind(&user_email)
+        .bind(format!("masked-reader-{user_id}"))
+        .execute(&db)
+        .await
+        .unwrap();
+        for action in ["read", "create", "update"] {
+            let res = app
+                .clone()
+                .oneshot(post(
+                    "/api/v1/admin/security/grants".into(),
+                    &admin_cookie,
+                    format!(r#"{{"user_email":"{user_email}","privilege_key":"{logicalname}.{action}"}}"#),
+                ))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::CREATED, "granting {action}");
+        }
+        let res = app
+            .clone()
+            .oneshot(post(
+                "/api/v1/admin/security/field-profiles".into(),
+                &admin_cookie,
+                format!(r#"{{"name":"masked-{user_id}"}}"#),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let profile_id = body_json(res).await["id"].as_str().unwrap().to_owned();
+        let fields_uri = format!("/api/v1/admin/security/field-profiles/{profile_id}/fields");
+        let res = app
+            .clone()
+            .oneshot(post(
+                fields_uri.clone(),
+                &admin_cookie,
+                format!(
+                    r#"{{"entity_logicalname":"{logicalname}","field_logicalname":"card_number","can_read":true,"can_update":true,"mask_format":"last4"}}"#
+                ),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            res.status(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "a masked field that could be updated is refused"
+        );
+        let res = app
+            .clone()
+            .oneshot(post(
+                fields_uri,
+                &admin_cookie,
+                format!(
+                    r#"{{"entity_logicalname":"{logicalname}","field_logicalname":"card_number","can_read":true,"mask_format":"last4"}}"#
+                ),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let item = body_json(res).await;
+        assert_eq!(item["mask_format"], "last4");
+        assert_eq!(
+            item["can_update"], false,
+            "a mask defaults can_update to false"
+        );
+
+        let role_id = Uuid::now_v7();
+        sqlx::query("INSERT INTO role (id, name, description, owner_layer) VALUES ($1, $2, 'q15', 'project')")
+            .bind(role_id)
+            .bind(format!("masked-role-{role_id}"))
+            .execute(&db)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO role_mm_field_security_profile (role_ref, profile_ref, owner_layer) VALUES ($1, $2::uuid, 'project')",
+        )
+        .bind(role_id)
+        .bind(&profile_id)
+        .execute(&db)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO user_account_mm_role (id, user_ref, role_ref) VALUES ($1, $2, $3)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(user_id)
+        .bind(role_id)
+        .execute(&db)
+        .await
+        .unwrap();
+        let reader_cookie = session_cookie(user_id);
+
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{logicalname}"),
+                &admin_cookie,
+                r#"{"card_number":"4111111111111111"}"#.into(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+        let record_id = created["id"].as_str().unwrap().to_owned();
+        let row_version = created["row_version"].as_i64().unwrap();
+
+        let get = |uri: String| {
+            Request::builder()
+                .method("GET")
+                .uri(uri)
+                .header("cookie", &reader_cookie)
+                .body(Body::empty())
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{logicalname}/{record_id}")))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let fetched = body_json(res).await;
+        assert_eq!(
+            fetched["data"]["card_number"], "••••••••••••1111",
+            "{fetched}"
+        );
+        assert!(!fetched.to_string().contains("4111111111111111"));
+
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{logicalname}")))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let list = body_json(res).await;
+        assert!(!list.to_string().contains("4111111111111111"), "{list}");
+        assert!(list.to_string().contains("••••••••••••1111"), "{list}");
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/v1/{logicalname}/{record_id}"))
+                    .header("cookie", &reader_cookie)
+                    .header("content-type", "application/json")
+                    .header("if-match", format!("\"{row_version}\""))
+                    .body(Body::from(r#"{"card_number":"5500000000000004"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            res.status(),
+            StatusCode::FORBIDDEN,
+            "a masked field cannot be updated"
+        );
+    })
+}

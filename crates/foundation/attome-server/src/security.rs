@@ -210,6 +210,13 @@ pub struct SecurityContext {
     /// i.e. fails closed (no write grant), never a silently-inferred true.
     #[serde(default)]
     pub field_write_grants: HashSet<String>,
+    /// Q15-T1: `"{entity}.{field}"` -> mask format (`last4`, `email`, `phone`,
+    /// `full`) for each sensitive field this caller may see only masked: a
+    /// profile grants it with a `mask_format` and none grants it in full. A
+    /// masked field is in neither `field_grants` nor `field_write_grants`,
+    /// so every surface that does not project masks keeps hiding it.
+    #[serde(default)]
+    pub field_masks: HashMap<String, String>,
     /// D-589: bulk-surface field exposure. See [`BulkFields`].
     #[serde(default)]
     pub bulk_fields: BulkFields,
@@ -357,6 +364,15 @@ impl SecurityContext {
                 .map(|f| format!("read:{f}")),
         );
         lines.extend(
+            sorted(
+                self.field_masks
+                    .iter()
+                    .map(|(field, format)| format!("{field}={format}")),
+            )
+            .into_iter()
+            .map(|m| format!("mask:{m}")),
+        );
+        lines.extend(
             sorted(&self.field_write_grants)
                 .into_iter()
                 .map(|f| format!("write:{f}")),
@@ -424,6 +440,7 @@ impl SecurityContext {
             privileges: self.privileges.clone(),
             field_grants: self.field_grants.clone(),
             field_write_grants: self.field_write_grants.clone(),
+            field_masks: self.field_masks.clone(),
             bulk_fields: self.bulk_fields.clone(),
             epoch: self.epoch,
             accessible_org_ids: self.accessible_org_ids.clone(),
@@ -499,6 +516,7 @@ impl EntityCeiling {
             privileges,
             field_grants: ctx.field_grants.clone(),
             field_write_grants: ctx.field_write_grants.clone(),
+            field_masks: ctx.field_masks.clone(),
             bulk_fields: ctx.bulk_fields.clone(),
             epoch: ctx.epoch,
             accessible_org_ids: ctx.accessible_org_ids.clone(),
@@ -684,6 +702,7 @@ mod tests {
             condition_grants: HashMap::new(),
             role_ids: Some(Vec::new()),
             unit_scope: Default::default(),
+            field_masks: Default::default(),
             service_principal: false,
         }
     }
@@ -754,6 +773,7 @@ mod tests {
                     condition_grants: HashMap::new(),
                     role_ids: None,
                     unit_scope: Default::default(),
+                    field_masks: Default::default(),
                     service_principal: false,
                 }))
             })
@@ -798,6 +818,7 @@ mod tests {
             condition_grants: HashMap::new(),
             role_ids: None,
             unit_scope: Default::default(),
+            field_masks: Default::default(),
             service_principal: false,
         }
     }

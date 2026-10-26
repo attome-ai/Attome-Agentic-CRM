@@ -23,6 +23,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Masked fields (Q15-T1): a field-security profile can show a sensitive field masked
+  (`mask_format`: `last4`, `email`, `phone` or `full`; migration `0293`). PostgreSQL computes the
+  mask in the projection, so the raw value never reaches the client; record get, list, related,
+  expand and hierarchy reads show the masked text, bulk surfaces (export, query, reports) keep
+  hiding the field, and a masked field cannot be updated. `POST
+  /api/v1/admin/security/field-profiles/{id}/fields` takes `mask_format`; its `can_update` defaults
+  to false with a mask and a masked field that could be updated is refused. The security-context
+  cache key moves to `security:ctx:v4`.
 - Sharing rules (Q14-T2): the `sharing_rule` metadata kind shares one entity's records owned by a
   unit, a team or a role's holders with another unit, team or role, to read or to read and change.
   A published rule is a condition in the record filter (no share rows are written), an explicit

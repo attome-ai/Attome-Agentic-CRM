@@ -1,8 +1,8 @@
 use attome_core::{AttrInfo, EngineState, quote_ident};
 use attome_security::record_action::Read;
 use attome_security::{
-    RecordAction, SecurityContextExt, bind_rls_predicate, resolve_entity_access_level,
-    resolve_owner_visible, rls_predicate_with_conditions,
+    RecordAction, bind_rls_predicate, resolve_entity_access_level, resolve_owner_visible,
+    rls_predicate_with_conditions,
 };
 use attome_server::authz::{Authorized, RecordScoped};
 use attome_server::security::SecurityContext;
@@ -227,8 +227,14 @@ pub(super) async fn list_ancestors(
     // row regardless of field visibility); only the final row-fetch join
     // (D-102) sources from a privilege-projected subquery, since that's the
     // one whose output actually becomes `row_to_json(t)`.
-    let cols = attome_core::select_columns_filtered(&attrs, |attr| {
-        ctx.has_field_read_grant(&entity_name, &attr.logicalname)
+    let cols = attome_core::select_columns_access(&attrs, |attr| {
+        attome_security::field_gate::projection(
+            &ctx,
+            &entity_name,
+            attr,
+            None,
+            attome_security::field_gate::Surface::Interactive,
+        )
     });
     let sql = format!(
         "WITH RECURSIVE chain AS ( \
@@ -309,8 +315,14 @@ pub(super) async fn list_descendants(
     // ancestors there's no self-row to exclude. Same D-102 split as
     // `list_ancestors`: the recursive `chain` definition stays unprojected
     // (structural walk), only the final row-fetch join is privilege-projected.
-    let cols = attome_core::select_columns_filtered(&attrs, |attr| {
-        ctx.has_field_read_grant(&entity_name, &attr.logicalname)
+    let cols = attome_core::select_columns_access(&attrs, |attr| {
+        attome_security::field_gate::projection(
+            &ctx,
+            &entity_name,
+            attr,
+            None,
+            attome_security::field_gate::Surface::Interactive,
+        )
     });
     // A17-T1: a hierarchy lookup keeps each row's tree path, so the subtree
     // is one prefix scan. Depth counts path segments below the record; a

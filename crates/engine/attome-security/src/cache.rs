@@ -10,7 +10,7 @@ use attome_types::AppError;
 use std::time::Duration;
 use uuid::Uuid;
 
-use crate::db::{resolve_field_grants, resolve_privileges};
+use crate::db::resolve_privileges;
 
 const TTL_SECS: u64 = 60;
 /// "{crate}:{purpose}:{id}" per guidelines §5. The `v2` segment (D-789
@@ -19,8 +19,10 @@ const TTL_SECS: u64 = 60;
 /// reads as a system writer and skips business-rule locks. Bump it again
 /// whenever a new field's `#[serde(default)]` would not fail closed. `v3`
 /// (Q10-T2): an entry without `unit_scope` would read every business-unit
-/// tier as reaching child units.
-const REDIS_PREFIX: &str = "security:ctx:v3";
+/// tier as reaching child units. `v4` (Q15-T1): one without `field_masks`
+/// would show nothing masked, which fails closed, but would not show the
+/// masked fields either until it expired.
+const REDIS_PREFIX: &str = "security:ctx:v4";
 /// Cross-node authz-cache invalidation doorbell (D-051) — mirrors the
 /// `meta_version` pattern (`attome-server/src/admin.rs`/`system.rs`), except the
 /// payload itself has to carry the `user_id` being invalidated: unlike
@@ -154,7 +156,8 @@ impl SecurityCache {
         epoch: i64,
     ) -> Result<Arc<SecurityContext>, AppError> {
         let privileges = resolve_privileges(&self.db, user_id).await?;
-        let (field_grants, field_write_grants) = resolve_field_grants(&self.db, user_id).await?;
+        let (field_grants, field_write_grants, field_masks) =
+            crate::db::resolve_field_access(&self.db, user_id).await?;
         let bulk_fields = crate::db::resolve_bulk_fields(&self.db, user_id).await?;
         let is_admin = privileges.contains(crate::context::ADMIN_PRIVILEGE_KEY);
         let rlc = crate::resolver::resolve_record_level_context(&self.db, user_id).await?;
@@ -174,6 +177,7 @@ impl SecurityCache {
             condition_grants,
             role_ids: Some(rlc.role_ids),
             unit_scope: rlc.unit_scope,
+            field_masks,
             service_principal: false,
         };
 

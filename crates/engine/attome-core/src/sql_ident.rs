@@ -126,6 +126,28 @@ pub fn select_columns_where(
     cols.join(", ")
 }
 
+/// Q15-T1: the system columns plus each attribute as `access` decides: in
+/// full, masked in the query (`attr AS "attr"` over [`MaskFormat::sql`], so
+/// the raw value never leaves PostgreSQL), or not selected.
+///
+/// [`MaskFormat::sql`]: crate::field_mask::MaskFormat::sql
+pub fn select_columns_access(
+    attrs: &[crate::AttrInfo],
+    access: impl Fn(&crate::AttrInfo) -> crate::field_mask::ColumnAccess,
+) -> String {
+    use crate::field_mask::ColumnAccess;
+    let mut cols: Vec<String> = ALL_SYSTEM_COLS.iter().map(|c| (*c).to_owned()).collect();
+    for attr in attrs {
+        let col = quote_ident(&attr.logicalname);
+        match access(attr) {
+            ColumnAccess::Full => cols.push(col),
+            ColumnAccess::Masked(format) => cols.push(format!("{} AS {col}", format.sql(&col))),
+            ColumnAccess::Hidden => {}
+        }
+    }
+    cols.join(", ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::{ALL_SYSTEM_COLS, live_row_predicate, quote_ident, select_columns};

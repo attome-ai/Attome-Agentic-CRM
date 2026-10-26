@@ -273,6 +273,7 @@ mod tests {
             condition_grants,
             role_ids: None,
             unit_scope: Default::default(),
+            field_masks: Default::default(),
             service_principal: false,
         }
     }

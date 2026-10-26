@@ -383,8 +383,16 @@ pub(crate) async fn read_record_projection(
             .and_then(|m| m.primary_name_attribute.clone());
         attome_security::field_gate::bulk_columns(ctx, entity_name, attrs, primary_name.as_deref())
     } else {
-        attome_core::select_columns_filtered(attrs, |attr| {
-            ctx.has_field_read_grant(entity_name, &attr.logicalname)
+        // Q15-T1: a field the caller may see only masked is masked here, in
+        // the query, so its raw value never leaves PostgreSQL.
+        attome_core::select_columns_access(attrs, |attr| {
+            attome_security::field_gate::projection(
+                ctx,
+                entity_name,
+                attr,
+                None,
+                attome_security::field_gate::Surface::Interactive,
+            )
         })
     };
     let sql = format!(

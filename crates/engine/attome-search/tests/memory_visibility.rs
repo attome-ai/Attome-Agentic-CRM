@@ -64,6 +64,7 @@ fn ctx(user_id: Uuid) -> SecurityContext {
         condition_grants: HashMap::new(),
         role_ids: None,
         unit_scope: Default::default(),
+        field_masks: Default::default(),
         service_principal: false,
     }
 }

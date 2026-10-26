@@ -315,6 +315,7 @@ async fn recall_ids(db: &attome_db::DbPool, user_id: Uuid) -> Vec<Uuid> {
         condition_grants: HashMap::new(),
         role_ids: None,
         unit_scope: Default::default(),
+        field_masks: Default::default(),
         service_principal: false,
     };
     let access = HashMap::new();

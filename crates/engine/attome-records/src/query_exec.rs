@@ -422,8 +422,9 @@ fn entity_list_sql(
     let registry = state.entities.load();
     let meta = registry.get_by_id(entity_id?)?;
     let primary = meta.primary_name_attribute.as_deref();
-    let columns = attome_core::select_columns_where(&meta.attrs, |attr| {
-        attome_security::field_gate::readable(
+    // Q15-T1: masked fields are masked in the query.
+    let columns = attome_core::select_columns_access(&meta.attrs, |attr| {
+        attome_security::field_gate::projection(
             ctx,
             &meta.logicalname,
             attr,
@@ -2468,8 +2469,11 @@ pub async fn execute_stored_query_with_definition(
             Some(entity) => entity
                 .attrs
                 .iter()
+                // Q15-T1: a field the list shows masked is kept only when the
+                // rows came from `entity_list_sql`, which masked it in the
+                // query; from any other SQL it would be the raw value.
                 .filter(|attr| {
-                    !attome_security::field_gate::readable(
+                    match attome_security::field_gate::projection(
                         ctx,
                         &entity.logicalname,
                         attr,
@@ -2479,7 +2483,11 @@ pub async fn execute_stored_query_with_definition(
                         } else {
                             attome_security::field_gate::Surface::Bulk
                         },
-                    )
+                    ) {
+                        attome_core::field_mask::ColumnAccess::Full => false,
+                        attome_core::field_mask::ColumnAccess::Masked(_) => list_sql.is_none(),
+                        attome_core::field_mask::ColumnAccess::Hidden => true,
+                    }
                 })
                 .map(|attr| attr.logicalname.clone())
                 .collect(),

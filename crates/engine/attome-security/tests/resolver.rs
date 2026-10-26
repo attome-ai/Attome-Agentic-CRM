@@ -1452,3 +1452,123 @@ async fn bu_only_excludes_child_unit_records() {
         "update and delete keep their child units"
     );
 }
+
+// ── Q15-T1: masked field-security grants ──
+
+async fn grant_profile_field(
+    db: &DbPool,
+    role_id: Uuid,
+    field: &str,
+    can_update: bool,
+    mask: Option<&str>,
+) {
+    let profile = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO field_security_profile (id, name, owner_layer) VALUES ($1, $2, 'project')",
+    )
+    .bind(profile)
+    .bind(format!("test-profile-{profile}"))
+    .execute(db)
+    .await
+    .expect("insert throwaway profile");
+    sqlx::query(
+        "INSERT INTO field_security_profile_field \
+         (profile_ref, entity_logicalname, field_logicalname, can_read, can_update, mask_format, owner_layer) \
+         VALUES ($1, 'q15_account', $2, true, $3, $4, 'project')",
+    )
+    .bind(profile)
+    .bind(field)
+    .bind(can_update)
+    .bind(mask)
+    .execute(db)
+    .await
+    .expect("insert throwaway profile field");
+    sqlx::query(
+        "INSERT INTO role_mm_field_security_profile (role_ref, profile_ref, owner_layer) VALUES ($1, $2, 'project')",
+    )
+    .bind(role_id)
+    .bind(profile)
+    .execute(db)
+    .await
+    .expect("assign the profile to the role");
+}
+
+/// A masked grant resolves to a mask and to neither a read nor a write
+/// grant (even when its row says can_update); a full grant from another
+/// profile wins over a mask; of two masks the less revealing one wins.
+#[tokio::test]
+async fn field_mask_grants_resolve_into_the_context() {
+    let db = skip_if_no_db!(test_db().await);
+    let user_id = seed_bare_user(&db).await;
+    let role_id = seed_role(&db).await;
+    link_user_to_role(&db, user_id, role_id).await;
+
+    grant_profile_field(&db, role_id, "card", true, Some("last4")).await;
+    grant_profile_field(&db, role_id, "email", false, Some("email")).await;
+    grant_profile_field(&db, role_id, "email", false, Some("full")).await;
+    grant_profile_field(&db, role_id, "iban", false, Some("last4")).await;
+    grant_profile_field(&db, role_id, "iban", true, None).await;
+
+    let ctx = attome_security::resolve_uncached(&db, user_id)
+        .await
+        .expect("resolve the context");
+    assert_eq!(
+        ctx.field_masks.get("q15_account.card").map(String::as_str),
+        Some("last4")
+    );
+    assert!(!ctx.field_grants.contains("q15_account.card"));
+    assert!(
+        !ctx.field_write_grants.contains("q15_account.card"),
+        "a masked field cannot be updated, whatever its row says"
+    );
+    assert_eq!(
+        ctx.field_masks.get("q15_account.email").map(String::as_str),
+        Some("full"),
+        "the less revealing mask wins"
+    );
+    assert!(
+        !ctx.field_masks.contains_key("q15_account.iban"),
+        "a full grant wins"
+    );
+    assert!(ctx.field_grants.contains("q15_account.iban"));
+}
+
+/// The mask PostgreSQL computes in the projection is the mask Rust computes,
+/// for every format, so a read path and a mutation path show the same text.
+#[tokio::test]
+async fn field_mask_sql_matches_the_rust_mask() {
+    use attome_core::field_mask::MaskFormat;
+    let db = skip_if_no_db!(test_db().await);
+    let values = [
+        "4111111111111111",
+        "123",
+        "ahmed@example.com",
+        "not-an-email",
+        "@example.com",
+        "+966501234567",
+        "أحمدالسالم",
+        "",
+    ];
+    for name in MaskFormat::ALL {
+        let format = MaskFormat::parse(name).unwrap();
+        let sql = format!("SELECT {} FROM (VALUES ($1::text)) v(c)", format.sql("c"));
+        for value in values {
+            let masked: Option<String> = sqlx::query_scalar(&sql)
+                .bind(value)
+                .fetch_one(&db)
+                .await
+                .expect("run the mask");
+            assert_eq!(
+                masked.as_deref(),
+                Some(format.apply(value).as_str()),
+                "{name} of {value:?}"
+            );
+        }
+        let null: Option<String> = sqlx::query_scalar(&sql)
+            .bind(None::<String>)
+            .fetch_one(&db)
+            .await
+            .expect("run the mask");
+        assert_eq!(null, None, "{name} keeps NULL");
+    }
+}

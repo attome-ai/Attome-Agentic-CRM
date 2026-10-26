@@ -202,8 +202,14 @@ pub(super) async fn list_related(
         None => (String::new(), 2),
     };
 
-    let cols = attome_core::select_columns_filtered(&other_attrs, |attr| {
-        ctx.has_field_read_grant(&other_entity_name, &attr.logicalname)
+    let cols = attome_core::select_columns_access(&other_attrs, |attr| {
+        attome_security::field_gate::projection(
+            &ctx,
+            &other_entity_name,
+            attr,
+            None,
+            attome_security::field_gate::Surface::Interactive,
+        )
     });
 
     let count_sql = format!(

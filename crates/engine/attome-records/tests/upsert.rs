@@ -213,6 +213,7 @@ fn security_context(user_id: Uuid) -> Arc<SecurityContext> {
         condition_grants: HashMap::new(),
         role_ids: None,
         unit_scope: Default::default(),
+        field_masks: Default::default(),
         service_principal: false,
     })
 }

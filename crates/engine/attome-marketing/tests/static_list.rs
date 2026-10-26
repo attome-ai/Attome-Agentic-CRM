@@ -169,6 +169,7 @@ fn ctx(user_id: Uuid, is_admin: bool) -> SecurityContext {
         condition_grants: HashMap::new(),
         role_ids: None,
         unit_scope: Default::default(),
+        field_masks: Default::default(),
         service_principal: false,
     }
 }

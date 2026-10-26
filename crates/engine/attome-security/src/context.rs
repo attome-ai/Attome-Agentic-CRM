@@ -204,6 +204,7 @@ mod tests {
             condition_grants: HashMap::new(),
             role_ids: None,
             unit_scope: Default::default(),
+            field_masks: Default::default(),
             service_principal: false,
         }
     }
@@ -310,6 +311,7 @@ mod tests {
             condition_grants: HashMap::new(),
             role_ids: None,
             unit_scope: Default::default(),
+            field_masks: Default::default(),
             service_principal: false,
         };
         assert!(c.has_field_read_grant("employee", "salary"));

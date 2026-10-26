@@ -244,6 +244,7 @@ mod tests {
                 own_org_ids: units.to_vec(),
                 own_units_only: Default::default(),
             },
+            field_masks: Default::default(),
             service_principal: false,
         }
     }

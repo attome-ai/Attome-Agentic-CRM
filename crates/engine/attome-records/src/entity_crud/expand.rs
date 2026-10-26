@@ -86,8 +86,14 @@ async fn read_target(
         RecordAction::Read.share_capability(),
         2,
     );
-    let columns = attome_core::select_columns_filtered(&attrs, |a| {
-        ctx.has_field_read_grant(&table, &a.logicalname)
+    let columns = attome_core::select_columns_access(&attrs, |a| {
+        attome_security::field_gate::projection(
+            ctx,
+            &table,
+            a,
+            None,
+            attome_security::field_gate::Surface::Interactive,
+        )
     });
     let predicate = pred.as_ref().map_or("", |p| p.sql.as_str());
     let sql = format!(

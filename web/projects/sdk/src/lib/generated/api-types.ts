@@ -36853,6 +36853,11 @@ export interface components {
             field_logicalname: string;
             /** Format: uuid */
             id: string;
+            /**
+             * @description Q15-T1: `last4`, `email`, `phone` or `full` when the profile shows the
+             *     field only masked; absent when it shows it in full.
+             */
+            mask_format?: string | null;
             /** @description Solution 7 (D-785): the layer that owns this member row. */
             owner_layer: string;
         };
@@ -44805,6 +44810,11 @@ export interface components {
                 field_logicalname: string;
                 /** Format: uuid */
                 id: string;
+                /**
+                 * @description Q15-T1: `last4`, `email`, `phone` or `full` when the profile shows the
+                 *     field only masked; absent when it shows it in full.
+                 */
+                mask_format?: string | null;
                 /** @description Solution 7 (D-785): the layer that owns this member row. */
                 owner_layer: string;
             }[];
@@ -54895,9 +54905,20 @@ export interface components {
         };
         SetFieldProfileFieldBody: {
             can_read: boolean;
-            can_update?: boolean;
+            /**
+             * @description Omitted: true (P-field-write-security, D-141: an admin caller that only
+             *     ever sent `can_read` keeps behaving as before, matching the column
+             *     default), or false when `mask_format` is set (a masked field cannot be
+             *     changed).
+             */
+            can_update?: boolean | null;
             entity_logicalname: string;
             field_logicalname: string;
+            /**
+             * @description Q15-T1: show the field only masked: `last4`, `email`, `phone` or
+             *     `full`. Needs `can_read`; omitted or null shows it in full.
+             */
+            mask_format?: string | null;
         };
         /**
          * @description When a `set_value` policy writes: on every write, or on create only when

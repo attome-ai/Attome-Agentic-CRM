@@ -1363,7 +1363,7 @@ async fn set_profile_live(
 
 /// Soft-retire (`is_deleted = true`) a field-security profile by name.
 /// Idempotent; the member rows and role links are kept so reactivation is
-/// lossless (`resolve_field_grants` joins through the profile row, so a
+/// lossless (`resolve_field_access` joins through the profile row, so a
 /// retired profile grants nothing in the meantime).
 pub async fn retire_field_security_profile(
     db: &DbPool,

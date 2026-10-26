@@ -110,7 +110,8 @@ pub(crate) async fn resolve_record_level_context(
 /// node (the normal request path continues to use `EngineSecurityResolver`).
 pub async fn resolve_uncached(db: &DbPool, user_id: Uuid) -> Result<SecurityContext, AppError> {
     let privileges = crate::db::resolve_privileges(db, user_id).await?;
-    let (field_grants, field_write_grants) = crate::db::resolve_field_grants(db, user_id).await?;
+    let (field_grants, field_write_grants, field_masks) =
+        crate::db::resolve_field_access(db, user_id).await?;
     let bulk_fields = crate::db::resolve_bulk_fields(db, user_id).await?;
     let is_admin = privileges.contains(crate::context::ADMIN_PRIVILEGE_KEY);
     let rlc = resolve_record_level_context(db, user_id).await?;
@@ -135,6 +136,7 @@ pub async fn resolve_uncached(db: &DbPool, user_id: Uuid) -> Result<SecurityCont
         // D-789 §4.3: a resolved user is never a system writer.
         role_ids: Some(rlc.role_ids),
         unit_scope: rlc.unit_scope,
+        field_masks,
         service_principal: false,
     })
 }

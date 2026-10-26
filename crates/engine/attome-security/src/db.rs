@@ -107,15 +107,23 @@ pub async fn resolve_privileges(db: &DbPool, user_id: Uuid) -> Result<HashSet<St
 /// keeping one assignment shape for this grant type rather than mirroring
 /// privileges' two paths before there's a demonstrated need for the direct
 /// one.
-pub async fn resolve_field_grants(
+///
+/// Q15-T1: also the masks, `"{entity}.{field}"` -> mask format for each
+/// field the caller may see only masked. A grant in full from any profile wins over a
+/// masked one (most permissive wins, as everywhere else); a masked field is
+/// neither readable nor writable, whatever its row's `can_update` says. Of
+/// two masked grants the least revealing format wins (`full`, then `phone`,
+/// `last4` and `email`), since none of them was meant to show more.
+pub async fn resolve_field_access(
     db: &DbPool,
     user_id: Uuid,
-) -> Result<(HashSet<String>, HashSet<String>), AppError> {
-    let rows: Vec<(String, String, bool, bool)> = tokio::time::timeout(
+) -> Result<(HashSet<String>, HashSet<String>, HashMap<String, String>), AppError> {
+    let rows: Vec<(String, String, bool, bool, Option<String>)> = tokio::time::timeout(
         QUERY_TIMEOUT,
         sqlx::query_as(
             r#"
-            SELECT DISTINCT f.entity_logicalname, f.field_logicalname, f.can_read, f.can_update
+            SELECT DISTINCT f.entity_logicalname, f.field_logicalname, f.can_read, f.can_update,
+                   f.mask_format
             FROM field_security_profile_field f
             JOIN role_mm_field_security_profile rp ON rp.profile_ref = f.profile_ref
             JOIN user_account_mm_role ur ON ur.role_ref = rp.role_ref
@@ -132,16 +140,41 @@ pub async fn resolve_field_grants(
 
     let mut read_grants = HashSet::new();
     let mut write_grants = HashSet::new();
-    for (entity, field, can_read, can_update) in rows {
+    let mut masks: HashMap<String, String> = HashMap::new();
+    let reveals = |format: &str| match format {
+        "full" => 0,
+        "phone" => 1,
+        "last4" => 2,
+        _ => 3,
+    };
+    for (entity, field, can_read, can_update, mask_format) in rows {
         let key = format!("{entity}.{field}");
-        if can_read {
-            read_grants.insert(key.clone());
-        }
-        if can_update {
-            write_grants.insert(key);
+        match mask_format {
+            Some(format) if can_read => {
+                let keep = masks
+                    .get(&key)
+                    .is_none_or(|current| reveals(&format) < reveals(current));
+                if keep {
+                    masks.insert(key, format);
+                }
+            }
+            // A masked row without can_read grants nothing.
+            Some(_) => {}
+            None => {
+                if can_read {
+                    read_grants.insert(key.clone());
+                }
+                if can_update {
+                    write_grants.insert(key);
+                }
+            }
         }
     }
-    Ok((read_grants, write_grants))
+    masks.retain(|key, _| !read_grants.contains(key));
+    for key in masks.keys() {
+        write_grants.remove(key);
+    }
+    Ok((read_grants, write_grants, masks))
 }
 
 /// D-589: the caller's bulk-surface field exposure. `Legacy` (today's

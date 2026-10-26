@@ -441,6 +441,7 @@ async fn dashboard_general_report_queries_are_live_and_executable_after_apply() 
         condition_grants: std::collections::HashMap::new(),
         role_ids: None,
         unit_scope: Default::default(),
+        field_masks: Default::default(),
         service_principal: false,
     };
     let body: attome_records::query_exec::ExecuteQueryRequest =

@@ -558,9 +558,24 @@ pub(super) fn build_response(
         .cloned()
         .unwrap_or_else(|| created_at.clone());
 
+    // Q15-T1: a field the caller may see only masked is kept, masked. A read
+    // path's row already holds the masked form (masking it again changes
+    // nothing); a mutation path's row holds the raw value for the audit diff,
+    // which never reaches the response.
+    let mut masked: std::collections::HashMap<&str, attome_core::field_mask::MaskFormat> =
+        std::collections::HashMap::new();
     let sensitive: std::collections::HashSet<&str> = attrs
         .iter()
         .filter(|a| a.is_sensitive && !ctx.has_field_read_grant(entity_name, &a.logicalname))
+        .filter(|a| {
+            match attome_security::field_gate::field_mask(ctx, entity_name, &a.logicalname) {
+                Some(format) => {
+                    masked.insert(a.logicalname.as_str(), format);
+                    false
+                }
+                None => true,
+            }
+        })
         .map(|a| a.logicalname.as_str())
         .collect();
 
@@ -573,6 +588,17 @@ pub(super) fn build_response(
     // retained key/value into a new map.
     let data = if let Value::Object(mut map) = row {
         map.retain(|k, _| !SYSTEM_COLS.contains(&k.as_str()) && !sensitive.contains(k.as_str()));
+        for (field, format) in &masked {
+            if let Some(value) = map.get_mut(*field)
+                && !value.is_null()
+            {
+                let text = match &*value {
+                    Value::String(s) => s.clone(),
+                    other => other.to_string(),
+                };
+                *value = Value::String(format.apply(&text));
+            }
+        }
         Value::Object(map)
     } else {
         Value::Object(serde_json::Map::new())

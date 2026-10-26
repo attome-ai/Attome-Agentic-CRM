@@ -1,6 +1,6 @@
 //! Field-security profiles (F013/F135, D-111). A profile is a named bundle
 //! of per-(entity, field) read grants, assigned to roles the same way
-//! privileges are — see `resolve_field_grants` in db.rs. Also carries the
+//! privileges are — see `resolve_field_access` in db.rs. Also carries the
 //! field-security profile ↔ role assignment endpoints.
 //!
 //! Solution 7 Phase 1 (D-785): profile create is recorded as
@@ -38,8 +38,8 @@ const PROFILE_SNAPSHOT: &str = "SELECT id, name, description, is_customized, is_
 
 /// `field_security_profile_field`'s snapshot, profile by name.
 const PROFILE_FIELD_SNAPSHOT: &str = "SELECT f.id, f.profile_ref, p.name AS profile, \
-     f.entity_logicalname, f.field_logicalname, f.can_read, f.can_update, f.row_version, \
-     f.owner_layer \
+     f.entity_logicalname, f.field_logicalname, f.can_read, f.can_update, f.mask_format, \
+     f.row_version, f.owner_layer \
      FROM field_security_profile_field f \
      JOIN field_security_profile p ON p.id = f.profile_ref \
      WHERE f.id = $1";
@@ -235,6 +235,10 @@ pub struct FieldSecurityProfileFieldItem {
     field_logicalname: String,
     can_read: bool,
     can_update: bool,
+    /// Q15-T1: `last4`, `email`, `phone` or `full` when the profile shows the
+    /// field only masked; absent when it shows it in full.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mask_format: Option<String>,
     /// Solution 7 (D-785): the layer that owns this member row.
     owner_layer: String,
 }
@@ -270,8 +274,10 @@ pub(super) async fn list_field_profile_fields(
 ) -> Result<Json<PaginatedResponse<FieldSecurityProfileFieldItem>>, AppError> {
     let window = query.window();
 
-    let rows: Vec<(Uuid, String, String, bool, bool, String)> = sqlx::query_as(
-        "SELECT id, entity_logicalname, field_logicalname, can_read, can_update, owner_layer \
+    #[allow(clippy::type_complexity)]
+    let rows: Vec<(Uuid, String, String, bool, bool, Option<String>, String)> = sqlx::query_as(
+        "SELECT id, entity_logicalname, field_logicalname, can_read, can_update, mask_format, \
+                owner_layer \
          FROM field_security_profile_field WHERE profile_ref = $1 \
          ORDER BY entity_logicalname, field_logicalname LIMIT $2 OFFSET $3",
     )
@@ -292,13 +298,22 @@ pub(super) async fn list_field_profile_fields(
     let items = rows
         .into_iter()
         .map(
-            |(id, entity_logicalname, field_logicalname, can_read, can_update, owner_layer)| {
+            |(
+                id,
+                entity_logicalname,
+                field_logicalname,
+                can_read,
+                can_update,
+                mask_format,
+                owner_layer,
+            )| {
                 FieldSecurityProfileFieldItem {
                     id,
                     entity_logicalname,
                     field_logicalname,
                     can_read,
                     can_update,
+                    mask_format,
                     owner_layer,
                 }
             },
@@ -312,21 +327,21 @@ pub(super) async fn list_field_profile_fields(
     )))
 }
 
-/// P-field-write-security (D-141): defaults an omitted `can_update` to `true`
-/// so an existing admin caller that only ever sent `can_read` (pre-dating
-/// this field) keeps behaving exactly as before — matching migration
-/// `0055`'s column default, not a stricter one, at this API boundary too.
-fn default_true() -> bool {
-    true
-}
-
 #[derive(Deserialize, ToSchema)]
 pub(super) struct SetFieldProfileFieldBody {
     entity_logicalname: String,
     field_logicalname: String,
     can_read: bool,
-    #[serde(default = "default_true")]
-    can_update: bool,
+    /// Omitted: true (P-field-write-security, D-141: an admin caller that only
+    /// ever sent `can_read` keeps behaving as before, matching the column
+    /// default), or false when `mask_format` is set (a masked field cannot be
+    /// changed).
+    #[serde(default)]
+    can_update: Option<bool>,
+    /// Q15-T1: show the field only masked: `last4`, `email`, `phone` or
+    /// `full`. Needs `can_read`; omitted or null shows it in full.
+    #[serde(default)]
+    mask_format: Option<String>,
 }
 
 /// Set a profile's field right
@@ -366,6 +381,28 @@ pub(super) async fn set_field_profile_field(
             "entity_logicalname and field_logicalname are required".into(),
         ));
     }
+    // Q15-T1: a masked field is read masked and never changed.
+    let mask_format = match body.mask_format.as_deref() {
+        None => None,
+        Some(name) => Some(
+            attome_core::field_mask::MaskFormat::parse(name)
+                .ok_or_else(|| {
+                    AppError::Validation(format!(
+                        "mask_format must be one of {}",
+                        attome_core::field_mask::MaskFormat::ALL.join(", ")
+                    ))
+                })?
+                .as_str(),
+        ),
+    };
+    let can_update = body.can_update.unwrap_or(mask_format.is_none());
+    if mask_format.is_some() && (can_update || !body.can_read) {
+        return Err(AppError::Validation(
+            "a masked field needs can_read and cannot be updated: send can_read true and \
+             can_update false"
+                .into(),
+        ));
+    }
 
     let profile_exists: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM field_security_profile WHERE id = $1 AND is_deleted = false)",
@@ -395,8 +432,8 @@ pub(super) async fn set_field_profile_field(
         .ok_or(AppError::NotFound)?;
     // An existing member is changed only by its own layer; one already
     // holding these permissions changes nothing and records nothing.
-    let existing: Option<(String, bool, bool)> = sqlx::query_as(
-        "SELECT owner_layer, can_read, can_update FROM field_security_profile_field \
+    let existing: Option<(String, bool, bool, Option<String>)> = sqlx::query_as(
+        "SELECT owner_layer, can_read, can_update, mask_format FROM field_security_profile_field \
          WHERE profile_ref = $1 AND entity_logicalname = $2 AND field_logicalname = $3 \
          FOR UPDATE",
     )
@@ -408,8 +445,9 @@ pub(super) async fn set_field_profile_field(
     .map_err(AppError::internal)?;
     let changes = match &existing {
         None => true,
-        Some((owner, can_read, can_update)) => {
-            let same = (*can_read, *can_update) == (body.can_read, body.can_update);
+        Some((owner, row_read, row_update, row_mask)) => {
+            let same = (*row_read, *row_update, row_mask.as_deref())
+                == (body.can_read, can_update, mask_format);
             if !same {
                 recording.check_owner(parse_owner_layer(owner)?)?;
             }
@@ -422,10 +460,16 @@ pub(super) async fn set_field_profile_field(
         entity,
         field,
         body.can_read,
-        body.can_update,
+        can_update,
         layer,
     )
     .await?;
+    sqlx::query("UPDATE field_security_profile_field SET mask_format = $2 WHERE id = $1")
+        .bind(id)
+        .bind(mask_format)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
     mark_profile_customized(&mut *tx, profile_id).await?;
     let snapshot = snapshot_row(&mut tx, PROFILE_FIELD_SNAPSHOT, id).await?;
     let owner_layer = snapshot["owner_layer"]
@@ -475,7 +519,8 @@ pub(super) async fn set_field_profile_field(
         entity_logicalname: entity.to_owned(),
         field_logicalname: field.to_owned(),
         can_read: body.can_read,
-        can_update: body.can_update,
+        can_update,
+        mask_format: mask_format.map(str::to_owned),
         owner_layer,
     }))
 }
