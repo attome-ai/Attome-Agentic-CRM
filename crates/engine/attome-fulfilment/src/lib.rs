@@ -10,6 +10,8 @@ pub mod atp;
 pub mod backorder;
 /// F6-T9: booking and tracking shipments with a carrier.
 pub mod carrier;
+/// F6-T11: delivery by the own fleet with proof, a delivery code and cash on delivery.
+pub mod delivery;
 /// F6-T14: late and stuck orders as exceptions.
 pub mod exceptions;
 /// F6-T6: holds that stop a release, and releasing.
@@ -38,5 +40,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(backorder::openapi_fragment());
     doc.merge(pack::openapi_fragment());
     doc.merge(carrier::openapi_fragment());
+    doc.merge(delivery::openapi_fragment());
     doc
 }

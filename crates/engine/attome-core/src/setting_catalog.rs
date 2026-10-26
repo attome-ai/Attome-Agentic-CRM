@@ -583,6 +583,18 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(48),
         ),
+        // F6-T11: a one-time code at delivery.
+        SettingDescriptor::new(
+            "fulfilment.delivery.otp",
+            "Whether a delivery by the deployment's own drivers needs a one-time code: when a \
+         shipment goes out for delivery, a six-digit code is texted to the order's delivery \
+         phone (else its account's phone), and the driver enters it to prove the delivery \
+         (F6-T11). Off by default.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         // F11-T4: the SSP fallbacks.
         SettingDescriptor::new(
             "revrec.ssp_list_discount_percent",

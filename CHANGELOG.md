@@ -16,6 +16,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Delivery proof for the own fleet (F6-T11): the shipment's driver calls
+  `POST /api/v1/fulfilment/shipments/{id}/out-for-delivery`, then
+  `POST /api/v1/fulfilment/shipments/{id}/proof` with the outcome (delivered, failed attempt or
+  refused), photo and signature files, who received it and where; it is kept as a `delivery_proof`
+  record and moves the shipment through the tracking path. With the new setting
+  `fulfilment.delivery.otp` on, a six-digit code is texted to the order's new `delivery_phone` (else
+  its account's phone), stored only as a hash (migration 0286), and a delivery needs it; five wrong
+  codes lock it. An order's new `cod_amount` (fulfilment pack changeset 0006) is recorded as one
+  cash payment when the delivery is proved.
 - Campaign members from a list (E1-T3): `POST /api/v1/marketing/campaigns/{id}/members/from-list`
   queues a job (`campaign_members_from_list`) that adds a marketing list's contacts or leads to a
   campaign as `targeted` members through the record API, skipping existing members and, for an
