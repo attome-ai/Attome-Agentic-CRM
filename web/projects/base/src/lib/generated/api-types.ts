@@ -23926,7 +23926,14 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change an import's mapping and options
+         * @description A23-T13: the wizard sets the mapping after the file is staged (an agent
+         *     can only propose one from staged rows). Allowed until the import starts
+         *     applying; a validated import goes back to staged, so its counts are
+         *     computed again by the next dry run.
+         */
+        patch: operations["update_import"];
         trace?: never;
     };
     "/api/v1/{entity}/imports/{id}/apply": {
@@ -34923,6 +34930,12 @@ export interface components {
             matching_rows: number;
             status: string;
         };
+        /** @description A23-T10: one file of a completed export, to download. */
+        ExportPartLink: {
+            download_url: string;
+            /** Format: int64 */
+            row_count: number;
+        };
         ExportRequestBody: {
             /**
              * @description Requested column projection. Empty means "every column the caller
@@ -34931,7 +34944,19 @@ export interface components {
              */
             columns?: string[];
             filter?: components["schemas"]["Filter"][];
+            /** @description `csv`, `xlsx`, `json` or `parquet`. */
             format: string;
+            /**
+             * @description A23-T10: CSV and XLSX headers in the requester's language (`id` and
+             *     `row_version` keep their names).
+             */
+            labels?: boolean;
+            /**
+             * Format: int64
+             * @description A23-T10: rows per file part of a Parquet export, 1 000 000 by default;
+             *     the status lists every part.
+             */
+            split_rows?: number | null;
         };
         ExportStatusResponse: {
             download_url?: string | null;
@@ -34942,6 +34967,8 @@ export interface components {
             format: string;
             /** Format: uuid */
             id: string;
+            /** @description A23-T10: every file of the export (one unless it was split). */
+            parts?: components["schemas"]["ExportPartLink"][];
             /** Format: int64 */
             row_count?: number | null;
             status: string;
@@ -36441,6 +36468,14 @@ export interface components {
             source_job_id?: string | null;
             /** @description Run workflow triggers and notifications for the imported rows. */
             triggers_on?: boolean;
+        };
+        /** @description What `PATCH .../imports/{id}` changes; an absent field keeps its value. */
+        ImportOptionsChange: {
+            all_or_nothing?: boolean | null;
+            mapping?: Record<string, never> | null;
+            match_columns?: string[] | null;
+            match_mode?: string | null;
+            triggers_on?: boolean | null;
         };
         /** @description An entity's import policy. */
         ImportPolicy: {
@@ -129172,6 +129207,80 @@ export interface operations {
             };
             /** @description No such import the caller may see */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+                /** @description The import job */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportOptionsChange"];
+            };
+        };
+        responses: {
+            /** @description The import with its new options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportJobView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The import started applying */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A mapping or option that does not fit the entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

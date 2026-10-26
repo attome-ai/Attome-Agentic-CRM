@@ -119051,6 +119051,130 @@
         "x-privilege": "{entity}.read",
         "x-rate-class": "api",
         "x-risk": "low"
+      },
+      "patch": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Change an import's mapping and options",
+        "description": "A23-T13: the wizard sets the mapping after the file is staged (an agent\ncan only propose one from staged rows). Allowed until the import starts\napplying; a validated import goes back to staged, so its counts are\ncomputed again by the next dry run.",
+        "operationId": "update_import",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The import job",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportOptionsChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The import with its new options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJobView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The import started applying",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A mapping or option that does not fit the entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.update",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/{entity}/imports/{id}/apply": {
@@ -152879,6 +153003,23 @@
           }
         }
       },
+      "ExportPartLink": {
+        "type": "object",
+        "description": "A23-T10: one file of a completed export, to download.",
+        "required": [
+          "row_count",
+          "download_url"
+        ],
+        "properties": {
+          "download_url": {
+            "type": "string"
+          },
+          "row_count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "ExportRequestBody": {
         "type": "object",
         "required": [
@@ -152899,7 +153040,20 @@
             }
           },
           "format": {
-            "type": "string"
+            "type": "string",
+            "description": "`csv`, `xlsx`, `json` or `parquet`."
+          },
+          "labels": {
+            "type": "boolean",
+            "description": "A23-T10: CSV and XLSX headers in the requester's language (`id` and\n`row_version` keep their names)."
+          },
+          "split_rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "A23-T10: rows per file part of a Parquet export, 1 000 000 by default;\nthe status lists every part."
           }
         }
       },
@@ -152941,6 +153095,13 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportPartLink"
+            },
+            "description": "A23-T10: every file of the export (one unless it was split)."
           },
           "row_count": {
             "type": [
@@ -156687,6 +156848,46 @@
           "triggers_on": {
             "type": "boolean",
             "description": "Run workflow triggers and notifications for the imported rows."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportOptionsChange": {
+        "type": "object",
+        "description": "What `PATCH .../imports/{id}` changes; an absent field keeps its value.",
+        "properties": {
+          "all_or_nothing": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "mapping": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "match_columns": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "match_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "triggers_on": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         },
         "additionalProperties": false
@@ -209727,6 +209928,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -209778,7 +209981,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  }
 }
