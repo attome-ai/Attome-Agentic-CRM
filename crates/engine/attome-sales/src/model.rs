@@ -184,6 +184,10 @@ impl EngineModel for SalesModel {
                 post(crate::competitor_routes::post_sales_mention_reject),
             )
             .route(
+                "/api/v1/sales/win-loss-reviews/{id}/buyer-feedback",
+                post(crate::buyer_feedback::post_sales_buyer_feedback),
+            )
+            .route(
                 "/api/v1/sales/opportunities/{id}/battlecards",
                 get(crate::competitor_routes::get_sales_battlecards),
             )

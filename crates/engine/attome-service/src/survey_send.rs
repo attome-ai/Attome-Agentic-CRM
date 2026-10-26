@@ -45,6 +45,8 @@ const BATCH: i64 = 500;
 const MAX_BATCHES: usize = 10;
 /// Events older than this are not sent.
 const FRESH_HOURS: i64 = 24;
+/// D25-T7: the entity whose buyer answers link back to it.
+const WIN_LOSS_REVIEW: &str = "win_loss_review";
 /// Most published surveys considered.
 const MAX_SURVEYS: i64 = 200;
 
@@ -290,15 +292,27 @@ async fn send_one(state: &EngineState, sender: &Sender, record_id: Uuid) -> Resu
     let Some(row) = row else {
         return Ok(false);
     };
+    mail_link(state, sender.id, &sender.doc, row, email).await?;
+    Ok(true)
+}
+
+/// Emails `email` the signed link to answer response `row` of `survey`.
+async fn mail_link(
+    state: &EngineState,
+    survey: Uuid,
+    doc: &Value,
+    row: Uuid,
+    email: String,
+) -> Result<(), AppError> {
+    let db = &state.base.db;
     let token = attome_auth::signed_link::sign(
         &link_secret(state)?,
         LINK_DOMAIN,
-        &subject_of(sender.id, row),
+        &subject_of(survey, row),
         (Utc::now() + Duration::days(LINK_DAYS)).timestamp(),
     )
     .ok_or_else(|| AppError::internal("could not sign the survey link"))?;
-    let title = sender
-        .doc
+    let title = doc
         .get("display_name")
         .and_then(Value::as_str)
         .unwrap_or("our survey");
@@ -327,8 +341,91 @@ async fn send_one(state: &EngineState, sender: &Sender, record_id: Uuid) -> Resu
     attome_jobs::enqueue_in_tx(&mut tx, job)
         .await
         .map_err(AppError::internal)?;
-    attome_db::tx::commit(tx).await?;
-    Ok(true)
+    attome_db::tx::commit(tx).await
+}
+
+/// D25-T7: why a named survey was not sent to a contact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NotSent {
+    /// The contact has no valid email address.
+    NoAddress,
+    /// This survey already went to that address about this record.
+    AlreadySent,
+}
+
+/// D25-T7: the published survey named `name` (any app), as `(id, doc,
+/// response entity)`; `None` when there is none, or its response entity is
+/// not provisioned.
+pub async fn published_named(
+    state: &EngineState,
+    name: &str,
+) -> Result<Option<(Uuid, Value, String)>, AppError> {
+    let ids: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM metadata_object WHERE kind = 'survey' AND name = $1 AND is_active \
+         ORDER BY app, id",
+    )
+    .bind(name)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    for id in ids {
+        let Ok(version) = attome_model::store::read_published(&state.base.db, id).await else {
+            continue;
+        };
+        let Some(entity) = response_entity_of(&version.doc).map(str::to_owned) else {
+            continue;
+        };
+        if state.entities.load().get(&entity).is_some() {
+            return Ok(Some((id, version.doc, entity)));
+        }
+    }
+    Ok(None)
+}
+
+/// D25-T7: sends `survey` (from [`published_named`]) to `contact` about
+/// the record `regarding_entity`/`regarding_id`, once per address. The
+/// caller has checked the contact may be read and has consented.
+pub async fn send_to_contact(
+    state: &EngineState,
+    survey: &(Uuid, Value, String),
+    regarding_entity: &str,
+    regarding_id: Uuid,
+    contact: Uuid,
+) -> Result<Result<Uuid, NotSent>, AppError> {
+    let db = &state.base.db;
+    let (survey_id, doc, entity) = survey;
+    let email: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT to_jsonb(c)->>'email' FROM contact c \
+          WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(contact)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(email) = email.flatten().filter(|e| crate::status_page::email_ok(e)) else {
+        return Ok(Err(NotSent::NoAddress));
+    };
+    let target = attome_core::quote_ident(entity);
+    let row: Option<Uuid> = sqlx::query_scalar(&format!(
+        "INSERT INTO {target} (id, respondent_email, regarding_entity, regarding_id) \
+         SELECT $1, $2, $3, $4 \
+          WHERE NOT EXISTS (SELECT 1 FROM {target} \
+                             WHERE regarding_entity = $3 AND regarding_id = $4 \
+                               AND lower(respondent_email) = lower($2)) \
+         RETURNING id"
+    ))
+    .bind(Uuid::now_v7())
+    .bind(&email)
+    .bind(regarding_entity)
+    .bind(regarding_id.to_string())
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(row) = row else {
+        return Ok(Err(NotSent::AlreadySent));
+    };
+    mail_link(state, *survey_id, doc, row, email).await?;
+    Ok(Ok(row))
 }
 
 /// The link.
@@ -496,6 +593,34 @@ async fn store(
         .rows_affected();
     if written == 0 {
         return Err(AppError::NotFound);
+    }
+    // D25-T7: a buyer's answers about a win-loss review show beside it.
+    let regarding: Option<(Option<String>, Option<String>)> = sqlx::query_as(&format!(
+        "SELECT regarding_entity, regarding_id FROM {table} WHERE id = $1"
+    ))
+    .bind(row)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if let Some((Some(regarding_entity), Some(regarding_id))) = regarding
+        && regarding_entity == WIN_LOSS_REVIEW
+        && let Ok(review) = Uuid::parse_str(&regarding_id)
+        && state.entities.load().get(WIN_LOSS_REVIEW).is_some_and(|e| {
+            e.attrs
+                .iter()
+                .any(|a| a.logicalname == "buyer_feedback_ref")
+        })
+    {
+        sqlx::query(
+            "UPDATE win_loss_review SET buyer_feedback_ref = $2, modified_at = now(), \
+                    row_version = row_version + 1 \
+              WHERE id = $1 AND buyer_feedback_ref IS NULL",
+        )
+        .bind(review)
+        .bind(row.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
     }
     attome_audit::write_business_event_in_tx(
         &mut tx,

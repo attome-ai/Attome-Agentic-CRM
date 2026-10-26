@@ -2229,6 +2229,7 @@ dependencies = [
  "attome-rules",
  "attome-security",
  "attome-server",
+ "attome-service",
  "attome-types",
  "axum",
  "chrono",

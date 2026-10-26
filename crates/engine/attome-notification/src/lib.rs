@@ -1,7 +1,8 @@
 pub mod admin;
 pub mod approval_timeouts;
 pub mod communication;
-mod consent_gate;
+/// D25-T7: read by the sales buyer survey, which mails only consented contacts.
+pub mod consent_gate;
 pub mod dispatch;
 pub mod engine;
 pub mod follows;

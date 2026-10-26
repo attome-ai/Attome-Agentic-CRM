@@ -13,6 +13,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Buyer feedback after a close (D25-T7): `POST /api/v1/sales/win-loss-reviews/{id}/buyer-feedback`
+  sends the published survey `win_loss_buyer` to the readable contacts who consented to surveys
+  (others are listed with the reason), or creates an interview task regarding the review. The
+  first answer links itself from `win_loss_review.buyer_feedback_ref`.
 - Heavy-operation size check (AA10-T2): `attome_records::heavy_op::size_check` counts the rows of
   a filtered update or delete the caller may change (the query engine's filter, the caller's
   record scope for that change), stopping one past `limits.heavy_op.inline_max_rows` (500), and

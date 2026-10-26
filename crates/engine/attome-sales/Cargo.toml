@@ -27,6 +27,7 @@ attome-notification.workspace = true
 attome-records.workspace = true
 attome-rules.workspace   = true
 attome-security.workspace = true
+attome-service.workspace = true
 attome-server.workspace  = true
 attome-types.workspace   = true
 axum.workspace           = true

@@ -9,6 +9,8 @@
 pub mod attainment;
 /// D20-T2: public booking links.
 pub mod booking;
+/// D25-T7: buyer feedback after a close.
+pub mod buyer_feedback;
 pub mod catalogue;
 pub mod competitor_drafts;
 pub mod competitor_mentions;
@@ -79,6 +81,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<dialer::telephony::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<territory::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<competitor_routes::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<buyer_feedback::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<plays::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<cpq::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<orgchart::ApiDocFragment as utoipa::OpenApi>::openapi());
