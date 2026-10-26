@@ -6,6 +6,8 @@ pub mod consent_gate;
 pub mod dispatch;
 pub mod engine;
 pub mod follows;
+/// AA10-T9: the notice that a background mass operation ended.
+pub mod mass_notice;
 pub mod model;
 /// M15-T1: one notify API over the dispatch engine.
 pub mod notify;

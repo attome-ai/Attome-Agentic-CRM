@@ -1398,6 +1398,8 @@ async fn dispatch_platform_job(
                 attome_records::mass::run_chunk(&attome_state, operation_id, chunk_no, after_id)
                     .await?;
             tracing::info!(%operation_id, chunk_no, changed, "mass operation: chunk done");
+            // AA10-T9: after the chunk committed, the starter hears once that it ended.
+            attome_notification::mass_notice::notify_finished(&attome_state, operation_id).await?;
         }
         // AA10-T5: one chunk of a large mass operation written back.
         EngineJob::HeavyOpUndoChunk {

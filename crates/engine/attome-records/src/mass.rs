@@ -386,7 +386,7 @@ pub async fn estimate(
     if kind == MassKind::Reassign && !ctx.is_admin {
         return Err(AppError::Forbidden);
     }
-    size_check_rows(
+    let mut size = size_check_rows(
         state,
         ctx,
         entity,
@@ -395,7 +395,99 @@ pub async fn estimate(
         inline_threshold(state),
         kind.rows(),
     )
-    .await
+    .await?;
+    // AA10-T9: at the speed this kind was last measured at.
+    size.estimated_seconds = seconds_at(size.estimated_rows, measured_rps(state, kind));
+    Ok(size)
+}
+
+/// The setting's key under `limits.` for `kind`'s measured speed.
+pub fn measured_rps_limit(kind: MassKind) -> String {
+    format!("heavy_op.measured_rps.{}", kind.as_str())
+}
+
+/// Records per second `kind` was last measured at, else [`ROWS_PER_SECOND`].
+pub fn measured_rps(state: &EngineState, kind: MassKind) -> i64 {
+    state
+        .runtime_limit(&measured_rps_limit(kind))
+        .unwrap_or(ROWS_PER_SECOND)
+        .max(1)
+}
+
+/// Seconds `rows` take at `rps` records a second, rounded up. Pure.
+pub fn seconds_at(rows: i64, rps: i64) -> i64 {
+    let rps = rps.max(1);
+    (rows.max(0) + rps - 1) / rps
+}
+
+/// The moving average a finished operation's `measured` speed moves the
+/// `previous` one to: three tenths of the way. Pure.
+pub fn next_rps(previous: Option<i64>, measured: i64) -> i64 {
+    let measured = measured.clamp(1, 1_000_000);
+    match previous {
+        Some(previous) => ((previous as f64) * 0.7 + (measured as f64) * 0.3).round() as i64,
+        None => measured,
+    }
+    .clamp(1, 1_000_000)
+}
+
+/// AA10-T9: once a background operation is done, moves its kind's measured
+/// speed toward the records per second it ran at, through the settings
+/// write. A failure is logged, never the chunk's: the estimate keeps the
+/// old speed.
+async fn record_speed(state: &EngineState, operation: Uuid, kind: MassKind, actor: Uuid) {
+    let Some(writer) = state.settings_writer.as_ref() else {
+        return;
+    };
+    let timing: Result<Option<(i64, f64)>, sqlx::Error> = sqlx::query_as(
+        "SELECT rows_done, EXTRACT(EPOCH FROM (finished_at - created_at))::float8 \
+           FROM heavy_operation WHERE id = $1 AND status = 'done'",
+    )
+    .bind(operation)
+    .fetch_optional(&state.base.db)
+    .await;
+    let Ok(Some((rows, seconds))) = timing else {
+        return;
+    };
+    if rows <= 0 || seconds <= 0.0 {
+        return;
+    }
+    let measured = ((rows as f64) / seconds).round() as i64;
+    let key = format!("limits.{}", measured_rps_limit(kind));
+    let next = next_rps(state.runtime_limit(&measured_rps_limit(kind)), measured);
+    if let Err(error) = writer
+        .write_deployment(state, actor, &key, json!(next))
+        .await
+    {
+        tracing::warn!(%operation, %error, "mass operation: measured speed not saved");
+    }
+}
+
+/// The starter's security context, or `None` after marking the operation
+/// `failed` when the starter can no longer act (gone or disabled). Any
+/// other error is returned, so the job retries.
+async fn starter_ctx(
+    state: &EngineState,
+    operation: Uuid,
+    starter: Uuid,
+) -> Result<Option<std::sync::Arc<SecurityContext>>, AppError> {
+    match state.base.security.resolve(starter).await {
+        Ok(ctx) => Ok(Some(ctx)),
+        Err(AppError::NotFound | AppError::Forbidden | AppError::Unauthorized) => {
+            sqlx::query(
+                "UPDATE heavy_operation SET status = 'failed', finished_at = now(), \
+                     row_version = row_version + 1 \
+                  WHERE id = $1 AND status IN ('queued', 'running')",
+            )
+            .bind(operation)
+            .execute(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            tracing::warn!(%operation, "mass operation: its starter can no longer act; failed");
+            Ok(None)
+        }
+        Err(error) => Err(error),
+    }
 }
 
 /// Starts a mass operation as `ctx` (see the module docs). The second value
@@ -916,7 +1008,9 @@ pub async fn plan_chunk(
     }
     let kind = MassKind::parse(&work.kind)
         .ok_or_else(|| AppError::internal("mass: an operation of an unknown kind"))?;
-    let ctx = state.base.security.resolve(work.started_by).await?;
+    let Some(ctx) = starter_ctx(state, operation, work.started_by).await? else {
+        return Ok(None);
+    };
     let filter: Option<Condition> =
         serde_json::from_value(work.filter.clone()).map_err(AppError::internal)?;
     let ids = matching_ids(
@@ -1003,7 +1097,9 @@ pub async fn run_chunk(
     };
     let kind = MassKind::parse(&work.kind)
         .ok_or_else(|| AppError::internal("mass: an operation of an unknown kind"))?;
-    let ctx = state.base.security.resolve(work.started_by).await?;
+    let Some(ctx) = starter_ctx(state, operation, work.started_by).await? else {
+        return Ok(0);
+    };
     let entity = work.entity_logicalname.clone();
 
     let mut items = Vec::with_capacity(entries.len());
@@ -1073,8 +1169,10 @@ pub async fn run_chunk(
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    let mut completed = false;
     if finished {
         if status == "running" {
+            completed = true;
             let totals: (i64, i64, i64) = sqlx::query_as(
                 "UPDATE heavy_operation SET status = 'done', finished_at = now() \
                   WHERE id = $1 RETURNING rows_done, rows_conflict, rows_skipped_permission",
@@ -1108,6 +1206,9 @@ pub async fn run_chunk(
         .map_err(AppError::internal)?;
     }
     attome_db::tx::commit(tx).await?;
+    if completed {
+        record_speed(state, operation, kind, work.started_by).await;
+    }
     Ok(done)
 }
 
@@ -1893,6 +1994,20 @@ mod tests {
         assert!(!holds_values(&data, &json!({"title": "y"})));
         assert!(holds_values(&json!({}), &json!({"gone": null})));
         assert!(!holds_values(&data, &Value::Null));
+    }
+
+    #[test]
+    fn measured_speed_moves_the_estimate() {
+        assert_eq!(seconds_at(4001, 2000), 3);
+        assert_eq!(seconds_at(0, 2000), 0);
+        assert_eq!(seconds_at(10, 0), 10);
+        assert_eq!(next_rps(None, 500), 500);
+        assert_eq!(next_rps(Some(2000), 1000), 1700);
+        assert_eq!(next_rps(Some(5), 0), 4);
+        assert_eq!(
+            measured_rps_limit(MassKind::Restore),
+            "heavy_op.measured_rps.restore"
+        );
     }
 
     #[test]

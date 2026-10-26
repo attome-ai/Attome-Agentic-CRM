@@ -238,6 +238,46 @@ fn limit_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(500),
         ),
+        // AA10-T9: the measured speed of a mass update, written by each one.
+        SettingDescriptor::new(
+            "limits.heavy_op.measured_rps.update",
+            "Records per second a background mass update changed, a moving average each finished \
+             one updates; estimates use it. 1 to 1,000,000.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 1_000_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(2000),
+        ),
+        // AA10-T9: the measured speed of a mass delete, written by each one.
+        SettingDescriptor::new(
+            "limits.heavy_op.measured_rps.delete",
+            "Records per second a background mass delete changed, a moving average each finished \
+             one updates; estimates use it. 1 to 1,000,000.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 1_000_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(2000),
+        ),
+        // AA10-T9: the measured speed of a mass reassign, written by each one.
+        SettingDescriptor::new(
+            "limits.heavy_op.measured_rps.reassign",
+            "Records per second a background mass reassign changed, a moving average each finished \
+             one updates; estimates use it. 1 to 1,000,000.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 1_000_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(2000),
+        ),
+        // AA10-T9: the measured speed of a mass restore, written by each one.
+        SettingDescriptor::new(
+            "limits.heavy_op.measured_rps.restore",
+            "Records per second a background mass restore changed, a moving average each finished \
+             one updates; estimates use it. 1 to 1,000,000.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 1_000_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(2000),
+        ),
         // AA10-T5: how long a finished mass operation can still be undone.
         SettingDescriptor::new(
             "limits.heavy_op.undo_retention_days",

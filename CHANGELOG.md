@@ -36,6 +36,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   the operation left it (migration 0280 adds the status). New setting
   `limits.heavy_op.undo_retention_days` (30); a daily job clears older undo values, after which undo
   is refused.
+- Mass operations tell their starter once when they end (AA10-T9): one in-app notification with the
+  counts and a link (`heavy_operation.notified_at`, migration 0280), written after the last chunk.
+  Settings `limits.heavy_op.measured_rps.{update,delete,reassign,restore}` keep each kind's measured
+  speed (a moving average), which the estimate uses.
 - Competitor tracking documentation (D25-T11): `docs/competitors.md` covers the records, each part's
   switch and what is off by default (win/loss reviews need a stage threshold per pipeline;
   competitor news is not built), and the routes `POST /api/v1/sales/competitor-mentions/{id}/confirm`

@@ -7,3 +7,6 @@ ALTER TABLE heavy_operation DROP CONSTRAINT IF EXISTS heavy_operation_status_che
 ALTER TABLE heavy_operation ADD CONSTRAINT heavy_operation_status_check CHECK (status IN (
     'estimating', 'queued', 'running', 'paused', 'cancelled', 'failed', 'done', 'undoing',
     'undone'));
+
+-- AA10-T9: when the person who started it was told it ended (once).
+ALTER TABLE heavy_operation ADD COLUMN IF NOT EXISTS notified_at timestamptz;

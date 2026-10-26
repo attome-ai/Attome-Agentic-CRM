@@ -50,6 +50,7 @@ attome-compliance.workspace = true
 attome-events.workspace = true
 attome-grc.workspace = true
 attome-model.workspace = true
+attome-notification.workspace = true
 attome-jobs.workspace = true
 attome-ledger.workspace = true
 attome-metadata.workspace = true

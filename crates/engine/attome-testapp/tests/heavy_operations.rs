@@ -2,7 +2,8 @@
 //! by the inline threshold, and says inline or background. AA10-T3: the
 //! mass-operation routes estimate, run, follow and control an operation.
 //! AA10-T4: background operations run in resumable chunks. AA10-T5: a large
-//! operation is undone chunk by chunk; undo values expire.
+//! operation is undone chunk by chunk; undo values expire. AA10-T9: the
+//! starter is told once when it ends.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -673,6 +674,58 @@ fn mass_undo_refused_past_retention() {
             titled(&app, &entity, "huge").await,
             4,
             "nothing written back"
+        );
+    });
+}
+
+// feature: AA10
+#[test]
+fn mass_finish_notifies_starter() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = many_records(&app, 495).await;
+        let operation = start_background_update(&app, &entity, 505).await;
+        attome_records::mass::run_chunk(&app.state, operation, 0, None)
+            .await
+            .unwrap();
+
+        // Not finished yet: no notice.
+        assert!(
+            !attome_notification::mass_notice::notify_finished(&app.state, operation)
+                .await
+                .unwrap()
+        );
+        let after = chunk_last_id(&app, operation, 0).await;
+        attome_records::mass::run_chunk(&app.state, operation, 1, after)
+            .await
+            .unwrap();
+
+        // Done: told once, however often the job asks.
+        assert!(
+            attome_notification::mass_notice::notify_finished(&app.state, operation)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !attome_notification::mass_notice::notify_finished(&app.state, operation)
+                .await
+                .unwrap()
+        );
+        let notices: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
+            "SELECT body_text, route FROM notification_dispatch \
+              WHERE recipient_user_ref = $1 AND route = $2",
+        )
+        .bind(app.admin.id)
+        .bind(format!("/xrm/operations/{operation}"))
+        .fetch_all(app.db())
+        .await
+        .unwrap();
+        assert_eq!(notices.len(), 1, "one notice");
+        assert!(
+            notices[0].0.as_deref().unwrap_or_default().contains("505"),
+            "{notices:?}"
         );
     });
 }

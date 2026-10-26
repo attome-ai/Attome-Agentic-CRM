@@ -66,6 +66,18 @@ already `done` is not repeated.
 A chunk starts only while the operation is `queued` or `running`, so pause and cancel take effect
 between chunks. Resume queues the chunk the operation stopped at.
 
+When a background operation ends, `done` or `failed`, the person who started it gets one in-app
+notification in their language, with the counts and a link to the operation. It is written after
+the last chunk commits, in a transaction of its own that also marks the operation as notified, so a
+retried job does not send it twice.
+
+An operation whose starter can no longer act (removed or disabled) is marked `failed`.
+
+Each finished background operation also moves its kind's measured speed,
+`limits.heavy_op.measured_rps.<kind>` (`update`, `delete`, `reassign` or `restore`), three tenths
+of the way toward the records per second it ran at. Estimates for that kind use the measured speed;
+2,000 records a second until one has run.
+
 ## Follow and control
 
 `GET /api/v1/mass/{id}` returns the status (`queued`, `running`, `paused`, `cancelled`, `failed`,
