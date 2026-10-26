@@ -102,6 +102,19 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Questions: `query.plan` turns a question into a checked query (entity, filters, order, limit) and
   returns the issues to fix, or a description for the person and the `query.execute` arguments that
   run it. The model never writes SQL.
+- Searching by question (A25-T7): `search.parse_filter` turns words into a checked filter over one
+  entity; `search.answer_records` answers from the records found, citing only records the person may
+  read.
+- Timeline (B1-T3): `timeline.summarize` and `timeline.ask` read a record's timeline as the person
+  (an MCP agent sees the record's own entries only) and cite the entries they used.
+- Catching up (L7-T8): `changes.since` returns the records created, updated and deleted in an
+  entity's list since a delta token (`docs/delta-tokens.md`), up to 500 per call.
+- Data catalogue (L4-T7): `catalog.search`, `catalog.describe_asset` and `catalog.ask` read the
+  catalogue as the person; `catalog.draft_descriptions` proposes descriptions that stay drafts until
+  a builder approves them, and waits for a person's confirmation.
+- Configuration and help: `builder.explain` (AD6-T1) explains how something is configured from the
+  catalogue and the lineage, citing the flows, rules and entities involved; `help.answer` (B14-T2)
+  answers how-to questions from the built-in documentation and the configuration, citing both.
 - AI attributes: an attribute whose options carry `"ai": { "prompt": "Summarise {{description}}..." }`
   is filled by `record.ai_field` as a suggestion a person accepts or rejects.
 - Communication: `email.draft` files a draft for a person to send; `email.send` sends now, or after
