@@ -13,6 +13,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Exports at scale (A23-T10): `POST /api/v1/{entity}/export` takes `format: "parquet"` (row groups of
+  50,000, Snappy; parquet/arrow 59 with default features off, so no C toolchain), `split_rows` (a new
+  part each time one fills; 1,000,000 by default) and `labels` (CSV and XLSX headers in the
+  requester's language from the attribute labels). Every export's file now starts with `id` and
+  `row_version`, and the status lists every part with its own link (`parts`). Migration 0277.
 - Agent import tools (A23-T11): `import.propose_mapping` (a model maps a staged import's columns to
   fields with a confidence each; sensitive fields' samples are never sent, unknown fields are
   dropped), `import.start` (consequential; the rows must fit the agent session's remaining daily

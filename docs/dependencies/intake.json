@@ -119,6 +119,30 @@
       "licence": "MIT",
       "maintenance": "Maintained alongside axum's extractors; stable 3.x line.",
       "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "parquet",
+      "reason": "A23-T10: writes data exports as Parquet files (row groups of 50,000, Snappy). Default features off, only arrow and snap: no zstd/lz4 C code, builds on Windows.",
+      "licence": "Apache-2.0",
+      "maintenance": "Apache Arrow project (arrow-rs), monthly releases.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "arrow-array",
+      "reason": "A23-T10: the in-memory column batches the Parquet writer takes; default features off.",
+      "licence": "Apache-2.0",
+      "maintenance": "Apache Arrow project (arrow-rs), monthly releases.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "arrow-schema",
+      "reason": "A23-T10: the column schema of a Parquet export; default features off.",
+      "licence": "Apache-2.0",
+      "maintenance": "Apache Arrow project (arrow-rs), monthly releases.",
+      "windows_native": true
     }
   ]
 }

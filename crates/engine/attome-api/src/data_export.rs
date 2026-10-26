@@ -84,7 +84,28 @@ const MAX_CONCURRENT_EXPORTS_PER_USER: i64 = 3;
 const DOWNLOAD_URL_TTL: Duration = Duration::from_secs(15 * 60);
 
 fn valid_format(format: &str) -> bool {
-    matches!(format, "csv" | "xlsx" | "json")
+    matches!(format, "csv" | "xlsx" | "json" | "parquet")
+}
+
+/// A23-T10: rows per Parquet row group.
+const PARQUET_ROW_GROUP: usize = 50_000;
+
+/// A23-T10: rows per file part when the request names no `split_rows`.
+const DEFAULT_SPLIT_ROWS: i64 = 1_000_000;
+
+/// A23-T10: one file of an export.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct ExportPart {
+    object_key: String,
+    row_count: i64,
+    checksum: String,
+}
+
+/// A23-T10: one file of a completed export, to download.
+#[derive(Serialize, ToSchema)]
+struct ExportPartLink {
+    row_count: i64,
+    download_url: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -96,7 +117,16 @@ struct ExportRequestBody {
     /// request time.
     #[serde(default)]
     columns: Vec<String>,
+    /// `csv`, `xlsx`, `json` or `parquet`.
     format: String,
+    /// A23-T10: CSV and XLSX headers in the requester's language (`id` and
+    /// `row_version` keep their names).
+    #[serde(default)]
+    labels: bool,
+    /// A23-T10: rows per file part of a Parquet export, 1 000 000 by default;
+    /// the status lists every part.
+    #[serde(default)]
+    split_rows: Option<i64>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -126,6 +156,9 @@ struct ExportStatusResponse {
     /// the export did not see.
     #[serde(skip_serializing_if = "Option::is_none")]
     stream_token: Option<String>,
+    /// A23-T10: every file of the export (one unless it was split).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    parts: Vec<ExportPartLink>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -138,6 +171,7 @@ struct ExportRow {
     object_key: Option<String>,
     error: Option<String>,
     stream_token: Option<String>,
+    parts: Option<Value>,
 }
 
 /// The permission-filtered query plan for one export: the final column list
@@ -477,7 +511,12 @@ async fn enqueue_export(
 
     if !valid_format(&body.format) {
         return Err(AppError::Validation(
-            "format must be csv, xlsx, or json".into(),
+            "format must be csv, xlsx, json or parquet".into(),
+        ));
+    }
+    if body.split_rows.is_some_and(|n| n <= 0) {
+        return Err(AppError::Validation(
+            "split_rows is a positive number".into(),
         ));
     }
 
@@ -532,8 +571,9 @@ async fn enqueue_export(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     sqlx::query(
         "INSERT INTO data_export \
-            (id, entity_logicalname, format, columns, filters, status, created_by) \
-         VALUES ($1, $2, $3, $4, $5, 'pending', $6)",
+            (id, entity_logicalname, format, columns, filters, status, created_by, labels, \
+             split_rows) \
+         VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8)",
     )
     .bind(export_id)
     .bind(&entity_name)
@@ -541,6 +581,8 @@ async fn enqueue_export(
     .bind(&columns_json)
     .bind(&filters_json)
     .bind(claims.sub)
+    .bind(body.labels)
+    .bind(body.split_rows)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -602,7 +644,7 @@ async fn export_status(
     let (_, entity_name, _, _) = entity_crud::resolve_entity(&state, &entity_input).await?;
     let row: Option<ExportRow> = sqlx::query_as(
         "SELECT id, entity_logicalname, format, status, row_count, object_key, error, \
-                stream_token \
+                stream_token, parts \
            FROM data_export \
           WHERE id = $1 AND entity_logicalname = $2 AND is_deleted = false \
             AND (created_by = $3 OR $4)",
@@ -616,6 +658,26 @@ async fn export_status(
     .map_err(AppError::internal)?;
     let row = row.ok_or(AppError::NotFound)?;
 
+    // A23-T10: every part, each with its own link.
+    let mut parts = Vec::new();
+    if row.status == "completed"
+        && let Some(stored) = row.parts.clone()
+    {
+        let stored: Vec<ExportPart> = serde_json::from_value(stored).map_err(AppError::internal)?;
+        for part in stored {
+            let url = attome_storage::presign_download(
+                &state.base.storage,
+                &part.object_key,
+                DOWNLOAD_URL_TTL,
+            )
+            .await
+            .map_err(AppError::internal)?;
+            parts.push(ExportPartLink {
+                row_count: part.row_count,
+                download_url: url,
+            });
+        }
+    }
     let (download_url, expires_in_secs) = if row.status == "completed" {
         if let Some(key) = &row.object_key {
             let url = attome_storage::presign_download(&state.base.storage, key, DOWNLOAD_URL_TTL)
@@ -639,6 +701,7 @@ async fn export_status(
         download_url,
         expires_in_secs,
         stream_token: row.stream_token,
+        parts,
     }))
 }
 
@@ -725,9 +788,30 @@ pub async fn process(
     .await
     .map_err(AppError::internal)?;
 
+    // A23-T10: the export's own options.
+    let (labels, split_rows): (bool, Option<i64>) =
+        sqlx::query_as("SELECT labels, split_rows FROM data_export WHERE id = $1")
+            .bind(export_id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let split_rows = split_rows.unwrap_or(DEFAULT_SPLIT_ROWS).max(1);
+
     let table = quote_ident(&entity_name);
-    let mut header = vec!["id".to_string()];
-    header.extend(plan.columns.clone());
+    // A23-T10: id and row_version first, so a file read back can be matched
+    // to its records and refused when one changed since.
+    let mut header = vec!["id".to_string(), "row_version".to_string()];
+    header.extend(
+        plan.columns
+            .iter()
+            .filter(|c| *c != "id" && *c != "row_version")
+            .cloned(),
+    );
+    let display = if labels {
+        header_labels(state, payload.user_id, &entity_name, &header).await
+    } else {
+        header.clone()
+    };
     let select_list = header
         .iter()
         .map(|c| quote_ident(c))
@@ -740,6 +824,7 @@ pub async fn process(
         match payload.format.as_str() {
             "xlsx" => "xlsx",
             "csv" => "csv",
+            "parquet" => "part-0001.parquet",
             _ => "ndjson",
         }
     );
@@ -753,18 +838,17 @@ pub async fn process(
         .await
         .ok();
     let result = match payload.format.as_str() {
-        "json" => {
-            run_query_and_stream(state, &table, &select_list, &plan, &path, None, |row| {
-                row.to_string()
-            })
-            .await
-        }
+        "json" => run_query_and_stream(state, &table, &select_list, &plan, &path, None, |row| {
+            row.to_string()
+        })
+        .await
+        .map(|(rows, checksum, snapshot)| (rows, checksum, snapshot, Vec::new())),
         "csv" => {
             // B21-T3: a byte-order mark first, so Excel reads Arabic as UTF-8.
             let header_line = format!(
                 "{}{}",
                 attome_report::render::CSV_BOM,
-                attome_report::render::csv_header_line(&header)
+                attome_report::render::csv_header_line(&display)
             );
             let header_for_rows = header.clone();
             let dates = DatePresentation::for_user(state, payload.user_id, &attrs).await;
@@ -783,6 +867,23 @@ pub async fn process(
                 },
             )
             .await
+            .map(|(rows, checksum, snapshot)| (rows, checksum, snapshot, Vec::new()))
+        }
+        "parquet" => {
+            export_parquet(
+                state,
+                XlsxQuery {
+                    table: &table,
+                    select_list: &select_list,
+                    plan: &plan,
+                    header: &header,
+                    path: &path,
+                },
+                &entity_name,
+                export_id,
+                split_rows,
+            )
+            .await
         }
         _ => {
             let dates = DatePresentation::for_user(state, payload.user_id, &attrs).await;
@@ -796,12 +897,28 @@ pub async fn process(
                     path: &path,
                 },
                 &dates,
+                &display,
             )
             .await
+            .map(|(rows, checksum, snapshot)| (rows, checksum, snapshot, Vec::new()))
         }
     };
+    // A single-file export reaches here with its one file; restate it as
+    // the export's only part.
+    let result = result.map(|(rows, checksum, snapshot, parts)| {
+        let parts = if parts.is_empty() {
+            vec![ExportPart {
+                object_key: object_key.clone(),
+                row_count: rows,
+                checksum: checksum.clone(),
+            }]
+        } else {
+            parts
+        };
+        (rows, checksum, snapshot, parts)
+    });
 
-    let (row_count, checksum, snapshot) = match result {
+    let (row_count, checksum, snapshot, parts) = match result {
         Ok(v) => v,
         Err(e) => {
             mark_failed(state, export_id, &format!("export failed: {e}")).await?;
@@ -840,13 +957,17 @@ pub async fn process(
         snapshot_json: None,
     };
 
+    let first_key = parts
+        .first()
+        .map_or_else(|| object_key.clone(), |p| p.object_key.clone());
     if let Err(e) = complete_export(
         state,
         export_id,
         row_count,
-        &object_key,
+        &first_key,
         &checksum,
         stream_token.as_deref(),
+        &parts,
         event,
     )
     .await
@@ -879,13 +1000,15 @@ async fn complete_export(
     object_key: &str,
     checksum: &str,
     stream_token: Option<&str>,
+    parts: &[ExportPart],
     event: AuditEvent,
 ) -> Result<(), AppError> {
+    let parts = serde_json::to_value(parts).map_err(AppError::internal)?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     sqlx::query(
         "UPDATE data_export \
             SET status = 'completed', row_count = $2, object_key = $3, checksum = $4, \
-                stream_token = $5, completed_at = NOW(), updated_at = NOW(), \
+                stream_token = $5, parts = $6, completed_at = NOW(), updated_at = NOW(), \
                 row_version = row_version + 1 \
           WHERE id = $1",
     )
@@ -894,6 +1017,7 @@ async fn complete_export(
     .bind(object_key)
     .bind(checksum)
     .bind(stream_token)
+    .bind(parts)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -1006,6 +1130,7 @@ async fn export_xlsx(
     state: &EngineState,
     query: XlsxQuery<'_>,
     dates: &DatePresentation,
+    display: &[String],
 ) -> Result<(i64, String, Option<String>), AppError> {
     let XlsxQuery {
         table,
@@ -1040,11 +1165,14 @@ async fn export_xlsx(
     let snapshot = rows.first().map(|(_, snap)| snap.clone());
     let values = rows
         .into_iter()
-        .map(|(raw, _)| serde_json::from_str::<Value>(&raw).map(|row| dates.apply(row)))
+        .map(|(raw, _)| {
+            serde_json::from_str::<Value>(&raw)
+                .map(|row| relabel(dates.apply(row), header, display))
+        })
         .collect::<Result<Vec<Value>, _>>()
         .map_err(AppError::internal)?;
     let buffer = attome_report::render::render_xlsx_with(
-        header,
+        display,
         &values,
         attome_report::render::formula_guard_enabled(state),
     )?;
@@ -1063,6 +1191,238 @@ async fn export_xlsx(
         .map_err(AppError::internal)?;
 
     Ok((row_count, checksum, snapshot))
+}
+
+/// A23-T10: `row` keyed by the display header instead of the column
+/// names (the XLSX renderer reads cells by header). Pure.
+fn relabel(row: Value, header: &[String], display: &[String]) -> Value {
+    if header == display {
+        return row;
+    }
+    let mut out = serde_json::Map::new();
+    if let Value::Object(map) = &row {
+        for (name, label) in header.iter().zip(display) {
+            out.insert(label.clone(), map.get(name).cloned().unwrap_or(Value::Null));
+        }
+    }
+    Value::Object(out)
+}
+
+/// A23-T10: the header in the requester's language: each attribute's
+/// `attribute` label in their `core.locale` (or the deployment's), else its
+/// name; `id` and `row_version` keep theirs, and a label two columns share
+/// gets the column name after it.
+async fn header_labels(
+    state: &EngineState,
+    user_id: Uuid,
+    entity: &str,
+    header: &[String],
+) -> Vec<String> {
+    let (_, org_ref) = entity_crud::fetch_audit_ctx(state, user_id).await;
+    let deployment = state.deployment_locale();
+    let locale = attome_core::setting_registry()
+        .get("core.locale")
+        .map(|d| {
+            state
+                .settings
+                .load()
+                .resolve(d, Some(user_id), Some(org_ref))
+                .0
+        })
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_else(|| deployment.clone());
+    let labels = state.labels.load();
+    let mut seen = std::collections::HashSet::new();
+    header
+        .iter()
+        .map(|column| {
+            if column == "id" || column == "row_version" {
+                return column.clone();
+            }
+            let label = labels
+                .resolve(
+                    "attribute",
+                    &format!("{entity}.{column}"),
+                    Some(&locale),
+                    &deployment,
+                )
+                .map(|row| row.display_name.clone())
+                .unwrap_or_else(|| column.clone());
+            if seen.insert(label.clone()) {
+                label
+            } else {
+                format!("{label} ({column})")
+            }
+        })
+        .collect()
+}
+
+/// A23-T10: one batch of rows as an Arrow record batch, every column text
+/// (a number, flag or list as its JSON text), so a file read back is the
+/// values as stored.
+fn record_batch(
+    schema: &std::sync::Arc<arrow_schema::Schema>,
+    header: &[String],
+    rows: &[serde_json::Map<String, Value>],
+) -> Result<arrow_array::RecordBatch, AppError> {
+    let columns: Vec<arrow_array::ArrayRef> = header
+        .iter()
+        .map(|column| {
+            let mut builder =
+                arrow_array::builder::StringBuilder::with_capacity(rows.len(), rows.len() * 16);
+            for row in rows {
+                match row.get(column) {
+                    None | Some(Value::Null) => builder.append_null(),
+                    Some(Value::String(text)) => builder.append_value(text),
+                    Some(other) => builder.append_value(other.to_string()),
+                }
+            }
+            std::sync::Arc::new(builder.finish()) as arrow_array::ArrayRef
+        })
+        .collect();
+    arrow_array::RecordBatch::try_new(schema.clone(), columns).map_err(AppError::internal)
+}
+
+/// A23-T10: the open Parquet part being written.
+struct OpenPart {
+    writer: parquet::arrow::ArrowWriter<Vec<u8>>,
+    rows: i64,
+}
+
+fn open_part(schema: &std::sync::Arc<arrow_schema::Schema>) -> Result<OpenPart, AppError> {
+    let props = parquet::file::properties::WriterProperties::builder()
+        .set_compression(parquet::basic::Compression::SNAPPY)
+        .set_max_row_group_size(PARQUET_ROW_GROUP)
+        .build();
+    Ok(OpenPart {
+        writer: parquet::arrow::ArrowWriter::try_new(Vec::new(), schema.clone(), Some(props))
+            .map_err(AppError::internal)?,
+        rows: 0,
+    })
+}
+
+/// Closes `part` and stores it as part `number` of the export.
+async fn store_part(
+    state: &EngineState,
+    entity: &str,
+    export_id: Uuid,
+    number: usize,
+    part: OpenPart,
+) -> Result<ExportPart, AppError> {
+    let bytes = part.writer.into_inner().map_err(AppError::internal)?;
+    let object_key = format!("data-exports/{entity}/{export_id}.part-{number:04}.parquet");
+    let path = ObjectPath::parse(&object_key)
+        .map_err(|e| AppError::internal(format!("invalid export object key: {e}")))?;
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    let checksum = hex::encode(hasher.finalize());
+    state
+        .base
+        .storage
+        .store()
+        .put(&path, bytes.into())
+        .await
+        .map_err(AppError::internal)?;
+    Ok(ExportPart {
+        object_key,
+        row_count: part.rows,
+        checksum,
+    })
+}
+
+/// A23-T10: a Parquet export, streamed from the same query as the others:
+/// rows go to the open part in row groups of [`PARQUET_ROW_GROUP`], and a
+/// part that reaches `split_rows` rows is closed and stored before the next
+/// opens. Only one part is held at a time (bounded by [`MAX_EXPORT_ROWS`]).
+async fn export_parquet(
+    state: &EngineState,
+    query: XlsxQuery<'_>,
+    entity: &str,
+    export_id: Uuid,
+    split_rows: i64,
+) -> Result<(i64, String, Option<String>, Vec<ExportPart>), AppError> {
+    use futures_util::StreamExt;
+    let XlsxQuery {
+        table,
+        select_list,
+        plan,
+        header,
+        path: _,
+    } = query;
+    let sql = format!(
+        "SELECT row_to_json(xexp)::text, pg_current_snapshot()::text \
+           FROM (SELECT {select_list} FROM {table} t {} \
+         ORDER BY t.id ASC LIMIT {}) xexp",
+        plan.where_sql,
+        MAX_EXPORT_ROWS + 1,
+    );
+    let mut q = sqlx::query_as::<_, (String, String)>(&sql);
+    for p in &plan.params {
+        q = q.bind(p.clone());
+    }
+    let mut stream = q.fetch(state.base.long_pool(&state.base.db));
+    let schema = std::sync::Arc::new(arrow_schema::Schema::new(
+        header
+            .iter()
+            .map(|c| arrow_schema::Field::new(c.as_str(), arrow_schema::DataType::Utf8, true))
+            .collect::<Vec<_>>(),
+    ));
+
+    let mut parts = Vec::new();
+    let mut total = 0_i64;
+    let mut snapshot = None;
+    let mut group: Vec<serde_json::Map<String, Value>> = Vec::with_capacity(PARQUET_ROW_GROUP);
+    let mut open: Option<OpenPart> = None;
+    loop {
+        let next = stream.next().await;
+        let done = next.is_none();
+        if let Some(item) = next {
+            let (raw, snap) = item.map_err(AppError::internal)?;
+            if snapshot.is_none() {
+                snapshot = Some(snap);
+            }
+            let value: Value = serde_json::from_str(&raw).map_err(AppError::internal)?;
+            group.push(value.as_object().cloned().unwrap_or_default());
+            total += 1;
+            if total > MAX_EXPORT_ROWS {
+                return Err(AppError::internal(format!(
+                    "export exceeded the {MAX_EXPORT_ROWS}-row cap while processing (the result set grew \
+                     after the request was accepted) — re-run the export with a narrower filter"
+                )));
+            }
+        }
+        let in_part = open.as_ref().map_or(0, |p| p.rows) + group.len() as i64;
+        let part_full = in_part >= split_rows;
+        if !group.is_empty() && (done || part_full || group.len() >= PARQUET_ROW_GROUP) {
+            let batch = record_batch(&schema, header, &group)?;
+            if open.is_none() {
+                open = Some(open_part(&schema)?);
+            }
+            if let Some(part) = open.as_mut() {
+                part.writer.write(&batch).map_err(AppError::internal)?;
+                part.rows += group.len() as i64;
+            }
+            group.clear();
+        }
+        if (part_full || done)
+            && let Some(part) = open.take()
+        {
+            parts.push(store_part(state, entity, export_id, parts.len() + 1, part).await?);
+        }
+        if done {
+            break;
+        }
+    }
+    // No rows: one empty file with the columns, so a reader still sees them.
+    if parts.is_empty() {
+        let part = open_part(&schema)?;
+        parts.push(store_part(state, entity, export_id, 1, part).await?);
+    }
+    let checksum = parts
+        .first()
+        .map(|p| p.checksum.clone())
+        .unwrap_or_default();
+    Ok((total, checksum, snapshot, parts))
 }
 
 pub fn routes() -> Router<EngineState> {

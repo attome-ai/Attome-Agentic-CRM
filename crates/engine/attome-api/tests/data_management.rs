@@ -575,6 +575,238 @@ async fn export_uses_long_pool() {
     );
 }
 
+/// A23-T10: queues an export with `body`, runs it inline, and answers its
+/// id once it completed.
+async fn run_export(
+    app: &axum::Router,
+    state: &EngineState,
+    cookie: &str,
+    user_id: Uuid,
+    logicalname: &str,
+    body: Value,
+) -> Uuid {
+    let res = app
+        .clone()
+        .oneshot(req(
+            "POST",
+            &format!("/api/v1/{logicalname}/export"),
+            cookie,
+            Some(&body),
+        ))
+        .await
+        .expect("enqueue export");
+    assert_eq!(res.status(), StatusCode::ACCEPTED, "enqueue export");
+    let export_id: Uuid = body_json(res).await["id"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    attome_api::data_export::process(
+        state,
+        attome_core::jobs::DataExportPayload {
+            export_id,
+            entity_logicalname: logicalname.to_owned(),
+            format: body["format"].as_str().unwrap().to_owned(),
+            columns: vec![],
+            filters: vec![],
+            user_id,
+        },
+    )
+    .await
+    .expect("run export job");
+    let (status, error): (String, Option<String>) =
+        sqlx::query_as("SELECT status, error FROM data_export WHERE id = $1")
+            .bind(export_id)
+            .fetch_one(&state.base.db)
+            .await
+            .expect("read the export row");
+    assert_eq!(status, "completed", "{error:?}");
+    export_id
+}
+
+/// A23-T10: an export's parts as stored: `(object_key, row_count)`.
+async fn export_parts(state: &EngineState, export_id: Uuid) -> Vec<(String, i64)> {
+    let parts: Value = sqlx::query_scalar("SELECT parts FROM data_export WHERE id = $1")
+        .bind(export_id)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("read the parts");
+    parts
+        .as_array()
+        .expect("parts")
+        .iter()
+        .map(|p| {
+            (
+                p["object_key"].as_str().unwrap().to_owned(),
+                p["row_count"].as_i64().unwrap(),
+            )
+        })
+        .collect()
+}
+
+async fn stored_object(state: &EngineState, key: &str) -> Vec<u8> {
+    let path = ObjectPath::parse(key).expect("valid object key");
+    state
+        .base
+        .storage
+        .store()
+        .get(&path)
+        .await
+        .expect("download the exported object")
+        .bytes()
+        .await
+        .expect("read the exported object")
+        .to_vec()
+}
+
+async fn insert_titles(state: &EngineState, logicalname: &str, n: usize) {
+    for i in 0..n {
+        sqlx::query(&format!(
+            "INSERT INTO \"{logicalname}\" (title) VALUES ($1)"
+        ))
+        .bind(format!("Row {i}"))
+        .execute(&state.base.db)
+        .await
+        .expect("insert fixture record");
+    }
+}
+
+/// A23-T10: a Parquet export reads back with id and row_version first and
+/// every row's values as stored.
+#[tokio::test]
+async fn export_parquet_round_trips() {
+    let system = skip_if_no_db!(test_system().await);
+    let state = system.state().clone();
+    let (admin_id, _email, admin_cookie) = seed_user(&system, true).await;
+    let app = full_app(system);
+    let (logicalname, _) =
+        provision_entity_with_sensitive_field(&app, &admin_cookie, "dm_parquet").await;
+    insert_titles(&state, &logicalname, 3).await;
+
+    let export_id = run_export(
+        &app,
+        &state,
+        &admin_cookie,
+        admin_id,
+        &logicalname,
+        json!({ "format": "parquet", "columns": [], "filter": [] }),
+    )
+    .await;
+    let parts = export_parts(&state, export_id).await;
+    assert_eq!(parts.len(), 1, "{parts:?}");
+    assert!(parts[0].0.ends_with(".part-0001.parquet"), "{parts:?}");
+    let bytes = stored_object(&state, &parts[0].0).await;
+    let reader = parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder::try_new(
+        bytes::Bytes::from(bytes),
+    )
+    .expect("a Parquet file")
+    .build()
+    .expect("a reader");
+    let mut titles = Vec::new();
+    for batch in reader {
+        let batch = batch.expect("a record batch");
+        let schema = batch.schema();
+        let names: Vec<&str> = schema.fields().iter().map(|f| f.name().as_str()).collect();
+        assert_eq!(&names[..2], &["id", "row_version"], "{names:?}");
+        let column = batch
+            .column_by_name("title")
+            .expect("the title column")
+            .as_any()
+            .downcast_ref::<arrow_array::StringArray>()
+            .expect("text");
+        titles.extend(column.iter().flatten().map(str::to_owned));
+    }
+    titles.sort();
+    assert_eq!(titles, ["Row 0", "Row 1", "Row 2"]);
+}
+
+/// A23-T10: `split_rows` starts a new part when one is full, and the status
+/// lists every part with its own link.
+#[tokio::test]
+async fn export_splits_parts() {
+    let system = skip_if_no_db!(test_system().await);
+    let state = system.state().clone();
+    let (admin_id, _email, admin_cookie) = seed_user(&system, true).await;
+    let app = full_app(system);
+    let (logicalname, _) =
+        provision_entity_with_sensitive_field(&app, &admin_cookie, "dm_split").await;
+    insert_titles(&state, &logicalname, 5).await;
+
+    let export_id = run_export(
+        &app,
+        &state,
+        &admin_cookie,
+        admin_id,
+        &logicalname,
+        json!({ "format": "parquet", "columns": [], "filter": [], "split_rows": 2 }),
+    )
+    .await;
+    let parts = export_parts(&state, export_id).await;
+    let counts: Vec<i64> = parts.iter().map(|(_, n)| *n).collect();
+    assert_eq!(counts, [2, 2, 1], "{parts:?}");
+
+    let res = app
+        .clone()
+        .oneshot(req(
+            "GET",
+            &format!("/api/v1/{logicalname}/export/{export_id}"),
+            &admin_cookie,
+            None,
+        ))
+        .await
+        .expect("export status");
+    assert_eq!(res.status(), StatusCode::OK);
+    let status = body_json(res).await;
+    let links = status["parts"].as_array().expect("parts");
+    assert_eq!(links.len(), 3, "{status}");
+    assert!(
+        links.iter().all(|l| l["download_url"].is_string()),
+        "{status}"
+    );
+}
+
+/// A23-T10: with `labels`, a CSV header reads in the requester's language;
+/// `id` and `row_version` keep their names.
+#[tokio::test]
+async fn export_labels_arabic() {
+    let system = skip_if_no_db!(test_system().await);
+    let state = system.state().clone();
+    let (admin_id, _email, admin_cookie) = seed_user(&system, true).await;
+    let app = full_app(system);
+    let (logicalname, _) =
+        provision_entity_with_sensitive_field(&app, &admin_cookie, "dm_labels").await;
+    insert_titles(&state, &logicalname, 1).await;
+    sqlx::query(
+        "INSERT INTO metadata_label (object_kind, object_ref, locale, display_name, owner_layer) \
+         VALUES ('attribute', $1, $2, 'العنوان', 'project')",
+    )
+    .bind(format!("{logicalname}.title"))
+    .bind(state.deployment_locale())
+    .execute(&state.base.db)
+    .await
+    .expect("an Arabic label for title");
+    let labels = attome_core::label_store::load_all(&state.base.db)
+        .await
+        .expect("load the labels");
+    state.labels.swap(labels);
+
+    let export_id = run_export(
+        &app,
+        &state,
+        &admin_cookie,
+        admin_id,
+        &logicalname,
+        json!({ "format": "csv", "columns": [], "filter": [], "labels": true }),
+    )
+    .await;
+    let parts = export_parts(&state, export_id).await;
+    let text = String::from_utf8(stored_object(&state, &parts[0].0).await).expect("UTF-8");
+    let header = text.lines().next().unwrap_or_default();
+    assert!(header.contains("العنوان"), "{header}");
+    assert!(header.contains("row_version"), "{header}");
+    assert!(!header.contains(",title"), "{header}");
+}
+
 /// M12 — a mapping-driven staged import whose lookup resolution fails for
 /// one record (an unresolvable `by_natural_key` value) is reported as that
 /// record's own `rejected` finding, not a whole-batch failure — the other,
