@@ -1,0 +1,17 @@
+{
+  "skill": "builder.explain",
+  "suite": "AD10 builder",
+  "question": "How does case escalation work?",
+  "flow_id": "0196f3a0-0000-7000-8000-00000000e5c1",
+  "rule_id": "0196f3a0-0000-7000-8000-00000000e5c2",
+  "catalogue": [
+    {
+      "kind": "entity",
+      "ref": "service_ticket",
+      "name_en": "Case",
+      "description_en": "A customer's request or problem, worked to resolution."
+    }
+  ],
+  "model_reply": "{\"status\": \"answered\", \"answer\": \"A case escalates when its SLA is breached: the rule Priority from SLA breach raises the case's priority, and the flow Escalate overdue cases starts on that change and notifies the queue's lead.\", \"citations\": [\"E1\", \"E2\", \"E3\"]}",
+  "expect_cited_kinds": ["entity", "workflow", "rule"]
+}

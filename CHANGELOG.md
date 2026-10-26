@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Configuration explained (AD6-T1): the AI action `builder.explain` answers "how does case escalation
+  work?" by searching the data catalogue for the question's words as the person, walking the found
+  entities' and flows' lineage, and citing the flows, rules, queries and entities involved; it changes
+  nothing, and an MCP agent hears only of admitted entities.
 - Timeline summary and questions (B1-T3): AI actions `timeline.summarize` and `timeline.ask` read the
   record's timeline as the person (an MCP agent's without related records) and answer citing its
   events, checked like `knowledge.answer`; summaries are cached per event list. The record timeline

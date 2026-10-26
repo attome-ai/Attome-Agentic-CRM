@@ -66,6 +66,8 @@ pub mod behaviour_routes;
 /// M101 slice 2 — the token budget, actually applied. `attome_inference::budget`
 /// shipped with zero call sites; this is the one that gives it some.
 pub mod budget_guard;
+/// AD6: the building agent's skills (AD6-T1 `builder.explain`).
+pub mod builder;
 /// C6 (D-556) — capability packs: a named, versioned set of action ids a
 /// policy references. Resolved once, at session start, into the same
 /// `allowed_action_ids` snapshot a hand-picked list produces; nothing at

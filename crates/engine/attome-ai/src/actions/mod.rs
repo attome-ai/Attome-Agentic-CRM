@@ -139,6 +139,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
     all.extend(timeline::descriptors());
+    all.push(crate::builder::explain::descriptor());
     all.extend(record_write::descriptors());
     all.extend(bulk::descriptors());
     all.extend(transition::descriptors());
@@ -232,6 +233,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(search_ask::executors());
     all.extend(catalog::executors());
     all.extend(timeline::executors());
+    all.push(Box::new(crate::builder::explain::BuilderExplain));
     all.extend(record_write::executors());
     all.extend(bulk::executors());
     all.push(Box::new(transition::RecordTransitions));

@@ -100,6 +100,11 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::agent_playground::playground_system_prompt(),
         },
         PromptEntry {
+            action_id: crate::builder::explain::BUILDER_EXPLAIN,
+            version: crate::builder::explain::EXPLAIN_PROMPT_VERSION,
+            text: crate::builder::explain::explain_system_prompt(),
+        },
+        PromptEntry {
             action_id: crate::actions::timeline::TIMELINE_SUMMARIZE,
             version: crate::actions::timeline::SUMMARIZE_PROMPT_VERSION,
             // The language is the caller's; the template shows the default.
