@@ -36210,6 +36210,103 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/metadata/versions/{version}/docs": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A published version's documentation",
+        "description": "AD6-T2: the documentation the publish of `version` generated: its\nentities and fields, flows, rules and the changes since the version\nbefore, as Markdown in English or Arabic. 404 until the job has written\nit.",
+        "operationId": "get_metadata_version_docs",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "description": "A published metadata version",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`en` (the default) or `ar`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The version's documentation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDoc"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such version, or its documentation is not written yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A language other than en and ar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/metadata/versions/{version}/nodes": {
       "get": {
         "tags": [
@@ -128657,6 +128754,15 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "pinned_only",
+            "in": "query",
+            "description": "B1-T2: only the entries pinned on this record.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -128831,6 +128937,250 @@
         "x-privilege": "{entity}.read",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/{entity}/{id}/timeline/pins/{kind}/{source_id}": {
+      "put": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Pin a timeline entry",
+        "description": "B1-T2: pins one timeline entry on the record, for everyone who opens it.\nNeeds the record's update access; at most 50 pins per record.",
+        "operationId": "pin_entry",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "The entry's kind",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "description": "The entry's source row",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Pinned"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update the entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller may not update it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record already holds 50 pins",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.update",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      },
+      "delete": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Unpin a timeline entry",
+        "description": "B1-T2: removes a pin from the record. Needs the record's update access.",
+        "operationId": "unpin_entry",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "The entry's kind",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "description": "The entry's source row",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Not pinned (any more)"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update the entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller may not update it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.delete",
+        "x-rate-class": "api",
+        "x-risk": "high"
       }
     },
     "/api/v1/{entity}/{id}/timers": {
@@ -149827,7 +150177,8 @@
                 "summary",
                 "detail",
                 "actor_kind",
-                "source_record"
+                "source_record",
+                "pinned"
               ],
               "properties": {
                 "actor": {
@@ -149851,6 +150202,10 @@
                 "occurred_at": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "pinned": {
+                  "type": "boolean",
+                  "description": "B1-T2: pinned on this record, shown above the rest."
                 },
                 "run_id": {
                   "type": [
@@ -188794,7 +189149,8 @@
                 "summary",
                 "detail",
                 "actor_kind",
-                "source_record"
+                "source_record",
+                "pinned"
               ],
               "properties": {
                 "actor": {
@@ -188818,6 +189174,10 @@
                 "occurred_at": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "pinned": {
+                  "type": "boolean",
+                  "description": "B1-T2: pinned on this record, shown above the rest."
                 },
                 "run_id": {
                   "type": [
@@ -209873,7 +210233,8 @@
           "summary",
           "detail",
           "actor_kind",
-          "source_record"
+          "source_record",
+          "pinned"
         ],
         "properties": {
           "actor": {
@@ -209897,6 +210258,10 @@
           "occurred_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "B1-T2: pinned on this record, shown above the rest."
           },
           "run_id": {
             "type": [
@@ -213507,6 +213872,33 @@
           }
         }
       },
+      "VersionDoc": {
+        "type": "object",
+        "description": "A version's stored documentation.",
+        "required": [
+          "version",
+          "lang",
+          "markdown",
+          "generated_at"
+        ],
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lang": {
+            "type": "string",
+            "description": "`en` or `ar`."
+          },
+          "markdown": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "VersionSummary": {
         "type": "object",
         "required": [
@@ -215173,6 +215565,7 @@
     }
   ],
   "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -215224,6 +215617,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": []
+  }
 }

@@ -6934,6 +6934,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/metadata/versions/{version}/docs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A published version's documentation
+         * @description AD6-T2: the documentation the publish of `version` generated: its
+         *     entities and fields, flows, rules and the changes since the version
+         *     before, as Markdown in English or Arabic. 404 until the job has written
+         *     it.
+         */
+        get: operations["get_metadata_version_docs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/metadata/versions/{version}/nodes": {
         parameters: {
             query?: never;
@@ -25675,6 +25698,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/timeline/pins/{kind}/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Pin a timeline entry
+         * @description B1-T2: pins one timeline entry on the record, for everyone who opens it.
+         *     Needs the record's update access; at most 50 pins per record.
+         */
+        put: operations["pin_entry"];
+        post?: never;
+        /**
+         * Unpin a timeline entry
+         * @description B1-T2: removes a pin from the record. Needs the record's update access.
+         */
+        delete: operations["unpin_entry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/timers": {
         parameters: {
             query?: never;
@@ -32999,6 +33047,8 @@ export interface components {
                 kind: components["schemas"]["TimelineEntryKind"];
                 /** Format: date-time */
                 occurred_at: string;
+                /** @description B1-T2: pinned on this record, shown above the rest. */
+                pinned: boolean;
                 /**
                  * Format: uuid
                  * @description B1-T1: the agent session or flow instance, when the entry came from one.
@@ -47969,6 +48019,8 @@ export interface components {
                 kind: components["schemas"]["TimelineEntryKind"];
                 /** Format: date-time */
                 occurred_at: string;
+                /** @description B1-T2: pinned on this record, shown above the rest. */
+                pinned: boolean;
                 /**
                  * Format: uuid
                  * @description B1-T1: the agent session or flow instance, when the entry came from one.
@@ -56073,6 +56125,8 @@ export interface components {
             kind: components["schemas"]["TimelineEntryKind"];
             /** Format: date-time */
             occurred_at: string;
+            /** @description B1-T2: pinned on this record, shown above the rest. */
+            pinned: boolean;
             /**
              * Format: uuid
              * @description B1-T1: the agent session or flow instance, when the entry came from one.
@@ -57449,6 +57503,16 @@ export interface components {
             title_changed: boolean;
             /** Format: int32 */
             to_version: number;
+        };
+        /** @description A version's stored documentation. */
+        VersionDoc: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description `en` or `ar`. */
+            lang: string;
+            markdown: string;
+            /** Format: int64 */
+            version: number;
         };
         VersionSummary: {
             /** Format: uuid */
@@ -80078,6 +80142,68 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_metadata_version_docs: {
+        parameters: {
+            query?: {
+                /** @description `en` (the default) or `ar`. */
+                lang?: string;
+            };
+            header?: never;
+            path: {
+                /** @description A published metadata version */
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The version's documentation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionDoc"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such version, or its documentation is not written yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A language other than en and ar */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -136174,6 +136300,8 @@ export interface operations {
                  *     true.
                  */
                 related?: boolean;
+                /** @description B1-T2: only the entries pinned on this record. */
+                pinned_only?: boolean;
             };
             header?: never;
             path: {
@@ -136278,6 +136406,141 @@ export interface operations {
                 };
             };
             /** @description No such record, or the caller cannot read it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown kind */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pin_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record */
+                id: string;
+                /** @description The entry's kind */
+                kind: string;
+                /** @description The entry's source row */
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pinned */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update the entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller may not update it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record already holds 50 pins */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown kind */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    unpin_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record */
+                id: string;
+                /** @description The entry's kind */
+                kind: string;
+                /** @description The entry's source row */
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not pinned (any more) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update the entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller may not update it */
             404: {
                 headers: {
                     [name: string]: unknown;
