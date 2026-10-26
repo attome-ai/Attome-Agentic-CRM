@@ -648,7 +648,8 @@ pub async fn asset_page(
             db,
             "catalog_usage_rollup",
             "SELECT row_to_json(u) FROM (SELECT record_count, last_write_at, search_impressions_30d, \
-                    computed_at FROM catalog_usage_rollup WHERE entity_logicalname = $1) u",
+                    readers, unused, computed_at FROM catalog_usage_rollup \
+              WHERE entity_logicalname = $1) u",
             &[entity],
         )
         .await?;
@@ -1108,6 +1109,103 @@ pub async fn decide_access(
             Err(error)
         }
     }
+}
+
+/// One reader of a labelled attribute.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct PersonalDataReader {
+    /// `query` (a stored query or report), `workflow`, `dashboard` or `rule`.
+    pub kind: String,
+    #[serde(rename = "ref")]
+    pub reader_ref: Uuid,
+    pub label: String,
+    /// It reads the whole entity, not only this attribute.
+    pub whole_entity: bool,
+}
+
+/// An attribute labelled personal, financial or health, and what reads it.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct PersonalDataItem {
+    pub entity: String,
+    pub attribute: String,
+    /// `personal`, `financial` or `health` (A1-T1).
+    pub sensitivity: String,
+    pub readers: Vec<PersonalDataReader>,
+}
+
+/// L4-T5: a page of the labelled attributes `scope` may see, by entity and
+/// attribute, each with its readers from the metadata references.
+pub async fn personal_data_map(
+    state: &EngineState,
+    scope: &AssetScope,
+    page_size: i64,
+    offset: i64,
+) -> Result<(Vec<PersonalDataItem>, i64), AppError> {
+    // The metadata tables are the migrator pool's (`schema.rs`'s convention).
+    let meta = &state.base.db_migrator;
+    let labelled = "FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+        WHERE a.sensitivity IN ('personal', 'financial', 'health') \
+          AND (a.is_active IS NULL OR a.is_active = true) \
+          AND (e.is_active IS NULL OR e.is_active = true) \
+          AND ($1::text[] IS NULL OR e.logicalname = ANY($1)) \
+          AND NOT ((e.logicalname || '.' || a.logicalname) = ANY($2))";
+    let rows: Vec<(String, String, String)> = sqlx::query_as(&format!(
+        "SELECT e.logicalname, a.logicalname, a.sensitivity {labelled} \
+          ORDER BY e.logicalname, a.logicalname LIMIT $3 OFFSET $4"
+    ))
+    .bind(scope.entities.as_deref())
+    .bind(&scope.hidden_attributes)
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(meta)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) {labelled}"))
+        .bind(scope.entities.as_deref())
+        .bind(&scope.hidden_attributes)
+        .fetch_one(meta)
+        .await
+        .map_err(AppError::internal)?;
+    let entities: Vec<String> = rows
+        .iter()
+        .map(|(e, _, _)| e.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    let references: Vec<(String, String, String, Uuid, String)> = sqlx::query_as(
+        "SELECT to_entity, to_attribute, from_kind, from_ref, from_label FROM metadata_reference \
+          WHERE to_entity = ANY($1) ORDER BY from_kind, from_label",
+    )
+    .bind(&entities)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let items = rows
+        .into_iter()
+        .map(|(entity, attribute, sensitivity)| {
+            let readers = references
+                .iter()
+                .filter(|(to_entity, to_attribute, ..)| {
+                    *to_entity == entity && (to_attribute.is_empty() || *to_attribute == attribute)
+                })
+                .map(
+                    |(_, to_attribute, kind, reader, label)| PersonalDataReader {
+                        kind: kind.clone(),
+                        reader_ref: *reader,
+                        label: label.clone(),
+                        whole_entity: to_attribute.is_empty(),
+                    },
+                )
+                .collect();
+            PersonalDataItem {
+                entity,
+                attribute,
+                sensitivity,
+                readers,
+            }
+        })
+        .collect();
+    Ok((items, total))
 }
 
 /// One asset as the export lists it: metadata only, never record values.

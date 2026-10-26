@@ -247,6 +247,11 @@ struct CatalogUsage {
     record_count: i64,
     last_write_at: Option<DateTime<Utc>>,
     search_impressions_30d: i64,
+    /// L4-T5: readers by kind (`query`, `workflow`, `dashboard`, `rule`).
+    #[schema(value_type = Object)]
+    readers: serde_json::Value,
+    /// L4-T5: no write in 90 days, no search in 30 and no reader.
+    unused: bool,
     computed_at: DateTime<Utc>,
 }
 
@@ -424,7 +429,7 @@ async fn get_entity(
     // `catalog_usage_rollup` column-for-column) — no separate tuple
     // needed.
     let usage: Option<CatalogUsage> = sqlx::query_as(
-        "SELECT record_count, last_write_at, search_impressions_30d, computed_at \
+        "SELECT record_count, last_write_at, search_impressions_30d, readers, unused, computed_at \
          FROM catalog_usage_rollup WHERE entity_logicalname = $1",
     )
     .bind(&logicalname)
@@ -838,6 +843,43 @@ async fn export_catalog(
     )))
 }
 
+/// The personal data map
+///
+/// Every attribute labelled personal, financial or health that the caller
+/// may see, with what reads it: stored queries and reports, flows,
+/// dashboards and rules, from the metadata references (a reader of the
+/// whole entity is marked so). Metadata only. Needs `metadata.read`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/catalog/personal-data-map",
+    operation_id = "catalog_personal_data_map",
+    tag = "catalog",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "A page of labelled attributes and their readers", body = PaginatedResponse<catalog_index::PersonalDataItem>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks metadata.read", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn personal_data_map(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Query(query): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<catalog_index::PersonalDataItem>>, AppError> {
+    ctx.require_key(METADATA_READ)?;
+    let window = query.window();
+    let scope = catalog_index::asset_scope(&state, &ctx);
+    let (items, total) =
+        catalog_index::personal_data_map(&state, &scope, window.page_size, window.offset).await?;
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        window.page,
+        window.page_size,
+    )))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/catalog/entities", get(list_entities))
@@ -863,6 +905,7 @@ pub fn routes() -> Router<EngineState> {
             post(decide_access_request),
         )
         .route("/api/v1/catalog/export", get(export_catalog))
+        .route("/api/v1/catalog/personal-data-map", get(personal_data_map))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -879,7 +922,8 @@ pub fn routes() -> Router<EngineState> {
     approve_description,
     post_access_request,
     decide_access_request,
-    export_catalog
+    export_catalog,
+    personal_data_map
 ))]
 struct ApiDocFragment;
 
@@ -1058,6 +1102,21 @@ pub async fn backfill_widget_metric_lineage(
 
 // ── Usage rollup (EngineJob::CatalogUsageRollup) ──────────────────────────
 
+/// L4-T5: days without a write after which an entity nobody reads is unused.
+pub const UNUSED_AFTER_DAYS: i64 = 90;
+
+/// Whether an entity is unused: no write in [`UNUSED_AFTER_DAYS`] days (or
+/// ever), no search showed it in 30 days, and nothing reads it. Pure.
+pub fn is_unused(
+    last_write_at: Option<DateTime<Utc>>,
+    search_impressions_30d: i64,
+    readers: i64,
+    now: DateTime<Utc>,
+) -> bool {
+    let stale = last_write_at.is_none_or(|at| now - at > chrono::Duration::days(UNUSED_AFTER_DAYS));
+    stale && search_impressions_30d == 0 && readers == 0
+}
+
 #[derive(Default, Debug)]
 pub struct UsageRollupStats {
     pub entities_computed: usize,
@@ -1112,20 +1171,46 @@ pub async fn run_usage_rollup(db: &DbPool) -> Result<UsageRollupStats, AppError>
         .await
         .map_err(AppError::internal)?;
 
+        // L4-T5: who reads the entity (stored queries and reports, flows,
+        // dashboards, rules), from the metadata references.
+        let reader_rows: Vec<(String, i64)> = sqlx::query_as(
+            "SELECT from_kind, count(DISTINCT from_ref) FROM metadata_reference \
+              WHERE to_entity = $1 GROUP BY from_kind ORDER BY from_kind",
+        )
+        .bind(entity)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        let readers: serde_json::Map<String, serde_json::Value> = reader_rows
+            .iter()
+            .map(|(kind, n)| (kind.clone(), serde_json::json!(n)))
+            .collect();
+        let unused = is_unused(
+            last_write_at,
+            impressions_30d,
+            reader_rows.iter().map(|(_, n)| n).sum(),
+            Utc::now(),
+        );
+
         sqlx::query(
             "INSERT INTO catalog_usage_rollup \
-                (entity_logicalname, record_count, last_write_at, search_impressions_30d, computed_at) \
-             VALUES ($1, $2, $3, $4, NOW()) \
+                (entity_logicalname, record_count, last_write_at, search_impressions_30d, \
+                 readers, unused, computed_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, NOW()) \
              ON CONFLICT (entity_logicalname) DO UPDATE SET \
                 record_count = EXCLUDED.record_count, \
                 last_write_at = EXCLUDED.last_write_at, \
                 search_impressions_30d = EXCLUDED.search_impressions_30d, \
+                readers = EXCLUDED.readers, \
+                unused = EXCLUDED.unused, \
                 computed_at = EXCLUDED.computed_at",
         )
         .bind(entity)
         .bind(record_count)
         .bind(last_write_at)
         .bind(impressions_30d)
+        .bind(serde_json::Value::Object(readers))
+        .bind(unused)
         .execute(db)
         .await
         .map_err(AppError::internal)?;

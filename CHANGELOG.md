@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Catalogue usage and the personal data map (L4-T5): the nightly usage rollup keeps each entity's
+  readers by kind (stored queries and reports, flows, dashboards, rules; from the metadata
+  references) and an `unused` flag (no write in 90 days, no search in 30, no reader), shown on the
+  entity's catalogue page (migration 0282). `GET /api/v1/catalog/personal-data-map` lists every
+  attribute labelled personal, financial or health the caller may see, with what reads it. There is
+  no per-entity query-run log, so query frequency is the readers and search impressions.
 - Data catalogue routes (L4-T4): `GET /api/v1/catalog/assets` (words, kind, domain, label; a
   `PaginatedResponse` plus `facets` by kind, domain and label over the visible assets the words
   match), `GET /api/v1/catalog/assets/{id}` (domain, label, terms, quality, profile, lineage, usage,

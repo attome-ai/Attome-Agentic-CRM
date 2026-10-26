@@ -1,6 +1,7 @@
 //! L4-T4: the asset catalogue routes end to end: search with facets, the
 //! asset page, a drafted then approved description (each with If-Match),
-//! and an access request decided by the owner with a role grant.
+//! and an access request decided by the owner with a role grant. L4-T5: the
+//! personal data map.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -185,5 +186,101 @@ fn search_page_describe_and_request_access() {
             .request(Method::GET, "/api/v1/catalog/export", None)
             .await;
         assert_eq!(status, StatusCode::NOT_FOUND);
+    });
+}
+
+// feature: L4
+#[test]
+fn personal_data_map_lists_labelled_attribute_and_reader() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let name = format!("pdm_{}", &Uuid::now_v7().simple().to_string()[..12]);
+        let (status, created) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/entities",
+                Some(json!({ "logicalname": name, "name": name })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{created}");
+        let entity_id = Uuid::parse_str(created["id"].as_str().unwrap()).unwrap();
+        for field in ["phone", "notes"] {
+            let (status, body) = app
+                .request(
+                    Method::POST,
+                    &format!("/api/v1/admin/entities/{entity_id}/fields"),
+                    Some(json!({ "logicalname": field, "name": field, "field_type": "text" })),
+                )
+                .await;
+            assert_eq!(status, StatusCode::CREATED, "{body}");
+        }
+        sqlx::query(
+            "UPDATE attribute_info SET sensitivity = 'personal', sensitivity_confirmed = true \
+              WHERE entity_ref = $1 AND logicalname = 'phone'",
+        )
+        .bind(entity_id)
+        .execute(app.db())
+        .await
+        .unwrap();
+        let report = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO metadata_reference (from_kind, from_ref, from_label, to_entity, to_attribute) \
+             VALUES ('query', $1, 'Monthly contact report', $2, 'phone'), \
+                    ('workflow', $3, 'Welcome flow', $2, '')",
+        )
+        .bind(report)
+        .bind(&name)
+        .bind(Uuid::now_v7())
+        .execute(app.db())
+        .await
+        .unwrap();
+
+        // Walk the map until the entity shows up (other tests label too).
+        let mut found = None;
+        for page in 1..=50 {
+            let (status, body) = app
+                .request(
+                    Method::GET,
+                    &format!("/api/v1/catalog/personal-data-map?page={page}&page_size=100"),
+                    None,
+                )
+                .await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+            let items = body["items"].as_array().unwrap().clone();
+            if let Some(item) = items.iter().find(|i| i["entity"] == json!(name)) {
+                found = Some(item.clone());
+                break;
+            }
+            if items.len() < 100 {
+                break;
+            }
+        }
+        let item = found.expect("the labelled attribute is on the map");
+        assert_eq!(
+            item["attribute"], "phone",
+            "only the labelled attribute: {item}"
+        );
+        assert_eq!(item["sensitivity"], "personal");
+        let readers = item["readers"].as_array().unwrap();
+        assert!(
+            readers.iter().any(|r| r["ref"] == json!(report)
+                && r["label"] == "Monthly contact report"
+                && r["whole_entity"] == false),
+            "{item}"
+        );
+        assert!(
+            readers
+                .iter()
+                .any(|r| r["kind"] == "workflow" && r["whole_entity"] == true),
+            "{item}"
+        );
+
+        // The rollup flags an entity nobody reads or writes as unused.
+        let now = chrono::Utc::now();
+        assert!(attome_api::catalog_admin::is_unused(None, 0, 0, now));
+        assert!(!attome_api::catalog_admin::is_unused(Some(now), 0, 0, now));
+        assert!(!attome_api::catalog_admin::is_unused(None, 0, 2, now));
     });
 }
