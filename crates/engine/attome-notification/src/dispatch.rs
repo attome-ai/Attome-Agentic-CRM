@@ -151,22 +151,43 @@ type TemplateRowTuple = (
     bool,
 );
 
-/// Substitutes `{{name}}` through the platform's one placeholder merge
-/// (`attome_html::merge_placeholders`). This caller's unknown-name rule: a
-/// placeholder with no matching variable is left **verbatim**, so a missing
-/// variable is visible in the delivered message rather than silently blank.
-///
-/// Values are inserted as given: this is the merge for the plain-text parts
-/// (`subject`, `body_text`), which are never rendered as HTML. The HTML body
-/// goes through [`apply_variables_html`] instead.
-fn apply_variables(text: &str, vars: &HashMap<String, String>) -> String {
+/// Renders `text` as a placeholder template (Z13-T8,
+/// `attome_html::tmpl::Template::placeholders`) with `vars` as its values.
+/// This caller's unknown-name rule: a placeholder with no matching variable
+/// is left **verbatim**, so a missing variable is visible in the delivered
+/// message rather than silently blank. A render that passes the engine's
+/// bounds (1 MB of output) keeps the template unmerged and logs why, rather
+/// than dropping the notification.
+fn merge_variables(
+    text: &str,
+    vars: &HashMap<String, String>,
+    output: attome_html::tmpl::Output,
+) -> String {
     if vars.is_empty() {
         return text.to_string();
     }
-    attome_html::merge_placeholders(text, |name| {
-        vars.get(name)
-            .map(|v| std::borrow::Cow::Borrowed(v.as_str()))
-    })
+    let template = attome_html::tmpl::Template::placeholders(text, |name| vars.contains_key(name));
+    let values = vars.iter().fold(
+        attome_rules::Context::new(chrono::Utc::now()),
+        |values, (name, value)| {
+            values.with_field(name.clone(), attome_rules::Value::Text(value.clone()))
+        },
+    );
+    match template.render(&attome_html::tmpl::RenderContext::new(values, "en", output)) {
+        Ok(merged) => merged,
+        Err(error) => {
+            tracing::warn!(%error, "notification template did not render; sending it unmerged");
+            text.to_string()
+        }
+    }
+}
+
+/// The merge for the plain-text parts (`subject`, `body_text`), which are
+/// never rendered as HTML: values are inserted as given (control characters
+/// other than line breaks and tabs dropped). The HTML body goes through
+/// [`apply_variables_html`] instead.
+fn apply_variables(text: &str, vars: &HashMap<String, String>) -> String {
+    merge_variables(text, vars, attome_html::tmpl::Output::Text)
 }
 
 /// The `{{name}}` merge for `body_html` (owner decision 2, CLEANUP-REVIEW
@@ -185,13 +206,7 @@ fn apply_variables(text: &str, vars: &HashMap<String, String>) -> String {
 ///
 /// Unknown names are left verbatim, as in [`apply_variables`].
 fn apply_variables_html(text: &str, vars: &HashMap<String, String>) -> String {
-    if vars.is_empty() {
-        return text.to_string();
-    }
-    attome_html::merge_placeholders(text, |name| {
-        vars.get(name)
-            .map(|v| std::borrow::Cow::Owned(attome_html::escape_html(v)))
-    })
+    merge_variables(text, vars, attome_html::tmpl::Output::Html)
 }
 
 fn parse_channel_list(s: &str) -> Vec<String> {

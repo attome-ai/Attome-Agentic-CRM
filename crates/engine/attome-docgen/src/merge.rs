@@ -23,10 +23,11 @@
 //! (documented limitation, not a silent truncation: an unmatched `{% if %}`
 //! /`{% endif %}` is a validation error, not partial output).
 
-use std::borrow::Cow;
 use std::collections::HashMap;
+use std::time::Duration;
 
 use attome_core::EngineState;
+use attome_html::tmpl::{Output, RenderContext, RenderLimits, Template};
 use attome_rules::{Context as RulesContext, Schema, Type, Value as RulesValue, compile};
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
@@ -208,47 +209,106 @@ fn eval_conditionals(body: &str, ctx: &MergeContext) -> Result<String, AppError>
     Ok(text)
 }
 
-/// Substitutes `{{ field }}` through the platform's one placeholder merge
-/// (`attome_html::merge_placeholders`). This caller's unknown-name rule: a
-/// well-formed field name that is not in the context renders **empty**; a
-/// `{{ ... }}` whose body is not a field name is not a merge field and stays
-/// verbatim.
-fn substitute_fields(body: &str, ctx: &MergeContext) -> String {
-    attome_html::merge_placeholders(body, |field| {
-        if !is_field_name(field) {
-            return None;
+/// How much one document render may do. A document is longer than an email,
+/// so the template engine's defaults (100 ms, 1 MB) are raised; the bound
+/// stays (guidelines §10).
+const DOCUMENT_LIMITS: RenderLimits = RenderLimits {
+    max_time: Duration::from_secs(2),
+    max_output_bytes: 32 * 1024 * 1024,
+    max_iterations: 10_000,
+};
+
+/// Substitutes `{{ field }}` through the template engine's placeholder form
+/// (`attome_html::tmpl::Template::placeholders`, Z13-T8). This caller's
+/// unknown-name rule: a well-formed field name that is not in the context
+/// renders **empty**; a `{{ ... }}` whose body is not a field name is not a
+/// merge field and stays verbatim. Values are written as text, HTML-escaped
+/// for where they land.
+fn substitute_fields(body: &str, ctx: &MergeContext) -> Result<String, AppError> {
+    let template = Template::placeholders(body, is_field_name);
+    let mut values = RulesContext::new(Utc::now());
+    for field in template.placeholder_names() {
+        // A missing key covers BOTH "field is genuinely null" and "field
+        // exists but this caller cannot read it" — see this module's top doc
+        // comment. Both render empty, which is the whole point: there is no
+        // way, from here, to distinguish the two.
+        if let Some(value) = ctx.data.get(field) {
+            values = values.with_field(field, RulesValue::Text(display_value(value)));
         }
-        Some(Cow::Owned(match ctx.data.get(field) {
-            // Missing key covers BOTH "field is genuinely null" and "field
-            // exists but this caller cannot read it" — see this module's
-            // top doc comment. Both render empty, which is the whole
-            // point: there is no way, from here, to distinguish the two.
-            Some(value) => attome_html::escape_html(&display_value(value)),
-            None => String::new(),
-        }))
-    })
+    }
+    template
+        .render(&RenderContext::new(values, "en", Output::Html).with_limits(DOCUMENT_LIMITS))
+        .map_err(|e| AppError::Validation(format!("the template does not render: {e}")))
 }
 
 /// Renders `body` against `ctx`: conditional sections first, then merge-field
 /// substitution over whatever text remains.
 pub fn render_template(body: &str, ctx: &MergeContext) -> Result<String, AppError> {
     let with_conditionals = eval_conditionals(body, ctx)?;
-    Ok(substitute_fields(&with_conditionals, ctx))
+    substitute_fields(&with_conditionals, ctx)
 }
 
 /// Which merge field names appear in `body` — used by the admin editor's
 /// live preview and by tests; not needed for rendering itself (unresolved
 /// fields already default to empty).
 pub fn referenced_fields(body: &str) -> HashMap<String, ()> {
-    let mut fields = HashMap::new();
     // The same scan `substitute_fields` does, so the two cannot disagree on
     // what counts as a merge field.
-    attome_html::merge_placeholders(body, |field| {
-        if !is_field_name(field) {
-            return None;
+    Template::placeholders(body, is_field_name)
+        .placeholder_names()
+        .map(|field| (field.to_owned(), ()))
+        .collect()
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, reason = "test assertions")]
+mod tests {
+    //! Z13-T8: snapshots of what the `{{name}}` merge rendered before it
+    //! moved onto the template engine; the output must not change.
+    use super::*;
+    use serde_json::json;
+
+    fn context(data: Value) -> MergeContext {
+        MergeContext {
+            entity: "quote".into(),
+            record_id: Uuid::nil(),
+            data: data.as_object().unwrap().clone(),
         }
-        fields.insert(field.to_owned(), ());
-        Some(Cow::Borrowed(""))
-    });
-    fields
+    }
+
+    #[test]
+    fn merge_output_is_unchanged() {
+        let ctx = context(json!({
+            "name": "Tom & 'Jerry' <b>",
+            "amount": 1250,
+            "rate": 1.5,
+            "approved": true,
+            "rejected": false,
+            "tags": ["a", "b"],
+            "nothing": null,
+            "nested": {"x": 1},
+        }));
+        let body = "<h1>{{ name }}</h1><p>{{amount}} at {{ rate }}: {{approved}}/{{rejected}}</p>\
+                    <p>{{tags}}|{{nothing}}|{{nested}}|{{hidden_field}}|{{ not a field }}|{{1x}}</p>\
+                    {% if amount > 1000 %}<p>large</p>{% endif %}{% if approved == false %}no{% endif %}";
+        assert_eq!(
+            render_template(body, &ctx).unwrap(),
+            "<h1>Tom &amp; &#39;Jerry&#39; &lt;b&gt;</h1><p>1250 at 1.5: Yes/No</p>\
+             <p>a, b||||{{ not a field }}|{{1x}}</p><p>large</p>"
+        );
+    }
+
+    #[test]
+    fn values_are_not_expanded_again() {
+        let ctx = context(json!({"a": "{{b}}", "b": "B"}));
+        assert_eq!(render_template("{{a}} {{b}}", &ctx).unwrap(), "{{b}} B");
+    }
+
+    #[test]
+    fn referenced_fields_are_the_merge_fields() {
+        let fields = referenced_fields("{{ a }} {{b}} {{ c d }} {{a}} {{9z}}");
+        let mut names: Vec<_> = fields.keys().cloned().collect();
+        names.sort();
+        assert_eq!(names, ["a", "b"]);
+    }
 }

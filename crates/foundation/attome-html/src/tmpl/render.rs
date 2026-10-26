@@ -129,6 +129,11 @@ impl Renderer {
                     let written = escape::write(&value, self.output, &self.place);
                     self.out.push_str(&written);
                 }
+                Node::Field(name) => {
+                    let value = values.field(name).unwrap_or(&Value::Null);
+                    let written = escape::write(value, self.output, &self.place);
+                    self.out.push_str(&written);
+                }
                 Node::Dir { body } => {
                     if self.output == Output::Html {
                         // `lang` is ASCII letters only (`Locale::parse`).

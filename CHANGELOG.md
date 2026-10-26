@@ -15,6 +15,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `module_configuration` row, so the update wrote nothing: the switch held only in the answering
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
+### Changed
+- Notification and document templates render through the template engine (Z13-T8): the old
+  `merge_placeholders` is gone and `Template::placeholders` reads the same `{{ name }}` form with each
+  caller's rule for unknown names. Two differences, both stricter: in HTML a value inside a URL
+  attribute is URL-checked (`javascript:` becomes `#`), and plain-text values drop control
+  characters other than line breaks and tabs.
+
 ### Added
 - Per-operation access levels in the record-access resolver (Q10-T2): `RecordAction` gains create,
   assign, share, export and bulk over migration `0076`'s columns, and a business-unit depth whose

@@ -22,6 +22,9 @@ pub(crate) enum Node {
         /// Z13-T4: region filters, applied in order.
         filters: Vec<Filter>,
     },
+    /// Z13-T8: a `{{ name }}` placeholder of [`super::Template::placeholders`]:
+    /// the value of field `name`, nothing when it has none.
+    Field(String),
     /// Z13-T4: `{% dir %}`: the block in the locale's direction.
     Dir {
         body: Vec<Node>,
@@ -39,6 +42,46 @@ pub(crate) enum Node {
         limit: usize,
         body: Vec<Node>,
     },
+}
+
+/// Z13-T8: splits `source` into text and `{{ name }}` placeholders, the
+/// whole syntax of a placeholder template. The scan is the one stored
+/// notification and document templates were written against:
+/// - `name` is the text between the braces, surrounding whitespace trimmed,
+///   so `{{name}}` and `{{ name }}` are the same placeholder;
+/// - a placeholder `is_field` rejects stays in the output as written, and the
+///   scan resumes one character later, so `{{{name}}}` renders as `{value}`
+///   and `{{a {{b}}` still finds `{{b}}`;
+/// - everything else is literal text, `{%` included;
+/// - one pass: a value is never scanned again.
+pub(crate) fn placeholders(source: &str, mut is_field: impl FnMut(&str) -> bool) -> Vec<Node> {
+    let mut nodes = Vec::new();
+    let mut text = String::new();
+    let mut rest = source;
+    while let Some(open) = rest.find("{{") {
+        let after_open = &rest[open + 2..];
+        let Some(close) = after_open.find("}}") else {
+            break;
+        };
+        let name = after_open[..close].trim();
+        if is_field(name) {
+            text.push_str(&rest[..open]);
+            if !text.is_empty() {
+                nodes.push(Node::Text(std::mem::take(&mut text)));
+            }
+            nodes.push(Node::Field(name.to_owned()));
+            rest = &after_open[close + 2..];
+        } else {
+            // Keep the first `{` and retry from the next character.
+            text.push_str(&rest[..=open]);
+            rest = &rest[open + 1..];
+        }
+    }
+    text.push_str(rest);
+    if !text.is_empty() {
+        nodes.push(Node::Text(text));
+    }
+    nodes
 }
 
 /// One piece of the source before the tree is built.

@@ -25,16 +25,16 @@
 //! `data:` never survive). Relative URLs are dropped too: a stored record is
 //! rendered on pages whose base URL the author does not control.
 //!
-//! [`escape_html`] and [`merge_placeholders`] (the `template` module) are the
-//! output-side twins: escaping a value into HTML and the one `{{name}}`
-//! substitution every template-rendering crate uses.
+//! [`escape_html`] (the `template` module) is the output-side twin: escaping a
+//! value into HTML. Templates, `{{name}}` placeholders included, render
+//! through [`tmpl::Template`].
 
 use std::collections::{HashMap, HashSet};
 
 pub mod main_content;
 mod template;
 pub mod tmpl;
-pub use template::{escape_html, merge_placeholders};
+pub use template::escape_html;
 
 use ammonia::{Builder, UrlRelative};
 

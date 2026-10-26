@@ -147,4 +147,147 @@ impl Template {
     pub fn render(&self, ctx: &RenderContext) -> Result<String, TemplateError> {
         render::render(&self.nodes, ctx)
     }
+
+    /// Z13-T8: a template whose only syntax is `{{ name }}` placeholders,
+    /// for the stored notification and document templates written before the
+    /// template language. Each `{{ name }}` that `is_field` accepts renders
+    /// field `name` of the render's values (nothing when it has none),
+    /// escaped for where it lands like any output; one it rejects, and all
+    /// other text, `{%` included, stays as written. So the caller's rule for
+    /// an unknown name is its `is_field`: reject it to keep it verbatim, or
+    /// accept it and leave the field unset to render it empty.
+    pub fn placeholders(source: &str, is_field: impl FnMut(&str) -> bool) -> Self {
+        Self {
+            nodes: parse::placeholders(source, is_field),
+        }
+    }
+
+    /// The field names a [`Self::placeholders`] template renders, in order of
+    /// appearance (repeats included).
+    pub fn placeholder_names(&self) -> impl Iterator<Item = &str> {
+        self.nodes.iter().filter_map(|node| match node {
+            parse::Node::Field(name) => Some(name.as_str()),
+            _ => None,
+        })
+    }
+}
+
+#[cfg(test)]
+mod placeholder_tests {
+    //! Z13-T8: the cases the `{{name}}` merge was pinned by, unchanged in
+    //! their expected output.
+    use super::*;
+    use attome_rules::{Context, Value};
+    use std::collections::HashMap;
+
+    fn vars(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
+            .collect()
+    }
+
+    fn values(v: &HashMap<String, String>) -> Context {
+        v.iter()
+            .fold(Context::new(chrono::Utc::now()), |c, (k, v)| {
+                c.with_field(k.clone(), Value::Text(v.clone()))
+            })
+    }
+
+    /// Unknown names kept verbatim, values as given.
+    fn merge_keep(t: &str, v: &HashMap<String, String>) -> String {
+        Template::placeholders(t, |n| v.contains_key(n))
+            .render(&RenderContext::new(values(v), "en", Output::Text))
+            .unwrap()
+    }
+
+    #[test]
+    fn known_placeholders_are_replaced_with_or_without_spaces() {
+        let v = vars(&[("name", "Ada"), ("amount", "42")]);
+        assert_eq!(
+            merge_keep("Hi {{name}}, you have {{ amount }} credits.", &v),
+            "Hi Ada, you have 42 credits."
+        );
+    }
+
+    #[test]
+    fn unknown_placeholders_are_kept_verbatim() {
+        let v = vars(&[("name", "Ada")]);
+        assert_eq!(
+            merge_keep("Hi {{name}}, ref {{ unknown }}.", &v),
+            "Hi Ada, ref {{ unknown }}."
+        );
+        assert_eq!(merge_keep("Hi {{name}}.", &HashMap::new()), "Hi {{name}}.");
+    }
+
+    #[test]
+    fn an_accepted_name_without_a_value_renders_empty() {
+        let out = Template::placeholders("a{{x}}b{{ y }}c", |_| true)
+            .render(&RenderContext::new(
+                Context::new(chrono::Utc::now()),
+                "en",
+                Output::Text,
+            ))
+            .unwrap();
+        assert_eq!(out, "abc");
+    }
+
+    #[test]
+    fn substituted_values_are_not_expanded_again() {
+        let v = vars(&[("a", "{{b}}"), ("b", "B")]);
+        assert_eq!(merge_keep("{{a}} {{b}}", &v), "{{b}} B");
+    }
+
+    #[test]
+    fn matching_is_leftmost_after_a_rejected_candidate() {
+        let v = vars(&[("name", "Ada"), ("b", "B")]);
+        assert_eq!(merge_keep("{{{name}}}", &v), "{Ada}");
+        assert_eq!(merge_keep("{{a {{b}}", &v), "{{a B");
+    }
+
+    #[test]
+    fn unterminated_and_empty_input_pass_through() {
+        let v = vars(&[("name", "Ada")]);
+        assert_eq!(merge_keep("Hi {{name", &v), "Hi {{name");
+        assert_eq!(merge_keep("", &v), "");
+        assert_eq!(merge_keep("no placeholders", &v), "no placeholders");
+    }
+
+    #[test]
+    fn multibyte_text_around_placeholders_is_preserved() {
+        let v = vars(&[("name", "أحمد")]);
+        assert_eq!(merge_keep("مرحبا {{name}}!", &v), "مرحبا أحمد!");
+    }
+
+    #[test]
+    fn template_tags_are_plain_text_in_a_placeholder_template() {
+        let v = vars(&[("name", "Ada")]);
+        assert_eq!(
+            merge_keep("{% if x %}{{ name }}{% end %}", &v),
+            "{% if x %}Ada{% end %}"
+        );
+    }
+
+    #[test]
+    fn html_output_escapes_values_where_they_land() {
+        let v = vars(&[
+            ("name", "<b>Tom & 'Jerry'</b>"),
+            ("url", "javascript:alert(1)"),
+        ]);
+        let out = Template::placeholders(r#"<p>{{name}}</p><a href="{{url}}">x</a>"#, |n| {
+            v.contains_key(n)
+        })
+        .render(&RenderContext::new(values(&v), "en", Output::Html))
+        .unwrap();
+        assert_eq!(
+            out,
+            r##"<p>&lt;b&gt;Tom &amp; &#39;Jerry&#39;&lt;/b&gt;</p><a href="#">x</a>"##
+        );
+    }
+
+    #[test]
+    fn placeholder_names_lists_accepted_fields_in_order() {
+        let t = Template::placeholders("{{a}} {{ b c }} {{b}} {{a}}", |n| !n.contains(' '));
+        assert_eq!(t.placeholder_names().collect::<Vec<_>>(), ["a", "b", "a"]);
+    }
 }
