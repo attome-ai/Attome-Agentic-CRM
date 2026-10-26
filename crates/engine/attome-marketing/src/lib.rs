@@ -27,9 +27,9 @@ pub mod email_render;
 pub mod events;
 /// E10-T1: marketing forms and their public submission.
 pub mod forms;
+pub mod handoff_sla;
 /// E24-T1: identity links and their deterministic rules.
 pub mod identity;
-pub mod handoff_sla;
 pub mod journey;
 pub mod landing;
 pub mod loyalty;

@@ -48,6 +48,9 @@ use crate::legs::{LegPhase, SqlLeg};
 use crate::router::{Audience, Route};
 use crate::telemetry::GapTopic;
 
+/// An owner id and name as the facet read gives them.
+type OwnerRow = (Option<Uuid>, Option<String>);
+
 /// Process-local, keyed on `"{user_id}:{epoch}"`. A static rather than state on
 /// `EngineState` because it holds nothing per-deployment and needs no wiring —
 /// see `access_cache`'s header for why in-process is correct here.
@@ -933,7 +936,7 @@ async fn facets_of(state: &EngineState, fused: &[crate::controls::FusedRow]) -> 
     }
     let entities: Vec<String> = fused.iter().map(|r| r.1.clone()).collect();
     let ids: Vec<Uuid> = fused.iter().map(|r| r.0).collect();
-    let rows: Result<Vec<(Option<Uuid>, Option<String>)>, sqlx::Error> = sqlx::query_as(
+    let rows: Result<Vec<OwnerRow>, sqlx::Error> = sqlx::query_as(
         "SELECT i.owner_id, to_char(date_trunc('month', i.source_modifiedon), 'YYYY-MM') \
            FROM search_index i \
            JOIN UNNEST($1::text[], $2::uuid[]) AS u(entity, id) \

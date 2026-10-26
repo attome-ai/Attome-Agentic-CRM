@@ -88,10 +88,6 @@ pub mod context;
 /// C11 B1 (P-1) — the context window: newest first, whole exchanges, bounded
 /// by tokens, in native tool-call structure. Pure; `conversation` loads.
 pub mod context_window;
-/// AE1-T1: published custom actions, the registry's second source.
-pub mod custom_action;
-/// G6-T2: macros, published lists of actions run on records.
-pub mod macros;
 /// C2 (D-552, I-12) — the durable conversational ledger: conversations,
 /// the append-only message transcript, and the `context_messages` projection
 /// that is the only thing permitted to shape model input from it (I-15).
@@ -99,6 +95,8 @@ pub mod conversation;
 pub mod conversation_event;
 /// C4 — the chat HTTP API over `conversation`, `turn` and `confirm`.
 pub mod conversation_routes;
+/// AE1-T1: published custom actions, the registry's second source.
+pub mod custom_action;
 pub mod decision;
 /// AH8 — the undo window: actions held before they run, cancellable.
 pub mod deferred;
@@ -125,6 +123,8 @@ pub mod handback;
 /// BIN-FX1 — the pooled generation client, built once per config.
 pub mod inference_client;
 pub mod injection;
+/// G6-T2: macros, published lists of actions run on records.
+pub mod macros;
 /// M101 slice 2 — the Model Context Protocol surface over the existing
 /// registry. A transport adapter: `tools/list` is `visible_to`, `tools/call`
 /// is `dispatch`, and nothing is added to the closed catalogue (I-5).

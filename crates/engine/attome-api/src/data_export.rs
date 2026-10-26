@@ -1292,7 +1292,7 @@ struct OpenPart {
 fn open_part(schema: &std::sync::Arc<arrow_schema::Schema>) -> Result<OpenPart, AppError> {
     let props = parquet::file::properties::WriterProperties::builder()
         .set_compression(parquet::basic::Compression::SNAPPY)
-        .set_max_row_group_size(PARQUET_ROW_GROUP)
+        .set_max_row_group_row_count(Some(PARQUET_ROW_GROUP))
         .build();
     Ok(OpenPart {
         writer: parquet::arrow::ArrowWriter::try_new(Vec::new(), schema.clone(), Some(props))

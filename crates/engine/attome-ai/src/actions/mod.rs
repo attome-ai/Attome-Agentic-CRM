@@ -25,6 +25,8 @@ pub mod billing_payment;
 pub mod billing_subscription;
 pub mod bin;
 pub mod bot_handoff;
+/// B13-T11: a theme drafted from brand guidelines.
+pub mod brand_draft;
 pub mod bulk;
 pub mod business;
 /// Z12-T12: holidays an agent lists and proposes.
@@ -109,8 +111,6 @@ pub mod system_status;
 pub mod table;
 /// B1-T3: a record's timeline, summarised and asked.
 pub mod timeline;
-/// B13-T11: a theme drafted from brand guidelines.
-pub mod brand_draft;
 pub mod transition;
 pub mod translate;
 // T2-T5: a page drafted from a description.

@@ -91,8 +91,6 @@ mod autonumber_admin;
 /// D-789 §6.1 — `/api/v1/admin/business-rules` (CRUD, validate, test,
 /// publish). Replaces `/api/v1/admin/rules*` (D-790).
 pub mod business_rule_admin;
-/// Z11-T12: expression validate and spec for editors and agents.
-pub mod expression_admin;
 /// D-789 §8 — the `business_rules` field-reference hook (rename, delete,
 /// retype) registered in `field_hooks`.
 pub mod business_rule_hooks;
@@ -135,6 +133,8 @@ mod email_admin;
 pub mod email_domains;
 /// Z8-T5: provider bounce, complaint and unsubscribe webhooks.
 mod email_webhooks;
+/// Z11-T12: expression validate and spec for editors and agents.
+pub mod expression_admin;
 /// `pub` only for the two re-exports below (`read_record`,
 /// `resolve_entity_public`), which `attome-ai` calls so a read action reuses
 /// this crate's own authorization path instead of growing a second one. Every

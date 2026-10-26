@@ -185,7 +185,7 @@ async fn payload_shapes_changes_delivery_keeps_old_and_new_values() {
     };
     let mut conn = db.acquire().await.expect("acquire");
     change_feed::emit_with(
-        &mut *conn,
+        &mut conn,
         &entity,
         record,
         ChangeOperation::Update,

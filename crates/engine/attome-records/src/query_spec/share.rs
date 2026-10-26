@@ -159,7 +159,10 @@ pub async fn access_for(
     .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
-    Ok(rows.iter().filter_map(|a| ShareAccess::parse(a.as_str())).max())
+    Ok(rows
+        .iter()
+        .filter_map(|a| ShareAccess::parse(a.as_str()))
+        .max())
 }
 
 async fn query_is_live(db: &DbPool, query_id: Uuid) -> Result<bool, AppError> {

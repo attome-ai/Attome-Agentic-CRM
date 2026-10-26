@@ -119,6 +119,9 @@ pub fn in_adherence(
         || fits(scheduled_at(intervals, minute + tolerance), actual)
 }
 
+/// A published shift: who, start, end, activity.
+type ShiftRow = (Uuid, DateTime<Utc>, DateTime<Utc>, Option<String>);
+
 /// One UTC day's published shifts per person.
 #[derive(Debug, Default)]
 pub struct ScheduleCache {
@@ -138,7 +141,7 @@ impl ScheduleCache {
             return Ok(());
         }
         let from = day.and_hms_opt(0, 0, 0).unwrap_or_default().and_utc();
-        let rows: Vec<(Uuid, DateTime<Utc>, DateTime<Utc>, Option<String>)> = sqlx::query_as(
+        let rows: Vec<ShiftRow> = sqlx::query_as(
             "SELECT a.user_ref, a.start_at::timestamptz, a.end_at::timestamptz, a.activity::text \
                FROM wfm_shift_assignment a JOIN wfm_schedule s ON s.id = a.schedule_ref \
               WHERE s.status::text = 'published' \

@@ -46,12 +46,12 @@ pub mod engine;
 pub mod esign;
 pub mod files;
 pub mod files_scan;
-/// A23-T2: CSV and XLSX import files read into rows of text cells.
-pub mod import_reader;
-/// A23-T7: import phases as durable jobs, and recurring imports.
-pub mod import_jobs;
 /// A23-T9: an import's row errors as a file to fix and send back.
 pub mod import_error_file;
+/// A23-T7: import phases as durable jobs, and recurring imports.
+pub mod import_jobs;
+/// A23-T2: CSV and XLSX import files read into rows of text cells.
+pub mod import_reader;
 /// A23-T8: the import routes.
 pub mod import_routes;
 /// A23-T3: staging an import file's rows into import_stage with COPY.

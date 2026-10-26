@@ -215,12 +215,15 @@ async fn touches(
     Ok(out)
 }
 
+/// A won opportunity's account, close and amount.
+type WonRow = (Option<Uuid>, Option<DateTime<Utc>>, Option<f64>);
+
 /// Computes and stores one won opportunity's credit; the rows written.
 pub async fn compute_opportunity(
     state: &EngineState,
     opportunity: Uuid,
 ) -> Result<usize, AppError> {
-    let row: Option<(Option<Uuid>, Option<DateTime<Utc>>, Option<f64>)> = sqlx::query_as(
+    let row: Option<WonRow> = sqlx::query_as(
         "SELECT account_ref, close_date, amount::float8 FROM opportunity \
           WHERE id = $1 AND stage::text = 'closed_won' \
             AND (is_active IS NULL OR is_active = true)",
