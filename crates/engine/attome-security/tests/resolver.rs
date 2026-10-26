@@ -1727,3 +1727,50 @@ async fn permission_set_never_grants_system_admin() {
     let privileges = resolve_privileges(&db, user_id).await.expect("privileges");
     assert!(!privileges.contains("system.admin"), "{privileges:?}");
 }
+
+// ── Q10-T10: access paths ──
+
+/// The paths behind a level are the resolver's own rows: a direct role at
+/// its level and a permission set at its level, whose MAX is the level the
+/// resolver returns.
+#[tokio::test]
+async fn effective_access_lists_role_and_set_paths() {
+    use attome_security::explain::{AccessPath, role_paths};
+    let db = skip_if_no_db!(test_db().await);
+    let (entity_id, logicalname, read_priv) = provision_entity_with_privilege(&db, "read").await;
+    let user_id = seed_bare_user(&db).await;
+    let role_id = seed_role(&db).await;
+    link_user_to_role(&db, user_id, role_id).await;
+    grant_privilege_to_role(&db, role_id, read_priv).await;
+    set_role_entity_ops(&db, role_id, entity_id, 1, 1, None, 0, true).await;
+    let set_id = assign_permission_set(&db, user_id, entity_id, read_priv, 0, None).await;
+
+    let paths = role_paths(&db, user_id, entity_id, &logicalname, RecordAction::Read)
+        .await
+        .expect("paths");
+    assert!(
+        paths.contains(&AccessPath::Role {
+            role_id,
+            level: 1,
+            bu_children: true
+        }),
+        "{paths:?}"
+    );
+    assert!(
+        paths.contains(&AccessPath::PermissionSet { set_id, level: 3 }),
+        "{paths:?}"
+    );
+    let level =
+        resolve_entity_access_level(&db, user_id, entity_id, &logicalname, RecordAction::Read)
+            .await
+            .expect("level");
+    assert_eq!(level, AccessLevel::Global, "the MAX of the paths");
+
+    let none = seed_bare_user(&db).await;
+    assert!(
+        role_paths(&db, none, entity_id, &logicalname, RecordAction::Read)
+            .await
+            .expect("paths")
+            .is_empty()
+    );
+}

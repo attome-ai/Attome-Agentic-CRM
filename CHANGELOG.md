@@ -23,6 +23,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Access paths (Q10-T10): `GET /api/v1/admin/security/users/{id}/effective-access?entity=&action=`
+  adds `paths`, every role, team, permission set, conditional grant, position and direct grant that
+  gives the person a level on the entity for the operation, from the resolver's own statement.
 - Permission sets (Q10-T4, Q10-T5): migration `0294` adds `permission_set` with its entity levels,
   privileges and assignments to a user or a team, optionally until an end date. A live assignment
   adds the set's privileges and levels to the person exactly like one more role; an ended one gives

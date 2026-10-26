@@ -20,11 +20,28 @@ use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::get,
 };
-use serde::Serialize;
-use utoipa::ToSchema;
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
+
+use crate::db::RecordAction;
+use crate::explain::AccessPath;
+
+/// Q10-T10: name an entity (and an operation) to get the paths to it.
+#[derive(Debug, Deserialize, IntoParams)]
+pub(super) struct EffectiveAccessQuery {
+    /// An entity's logical name: the response then lists every role, team,
+    /// set, conditional grant, position and direct grant that gives a level
+    /// on it.
+    #[serde(default)]
+    entity: Option<String>,
+    /// `read` (default), `update`, `delete`, `create`, `assign`, `share`,
+    /// `export` or `bulk`.
+    #[serde(default)]
+    action: Option<String>,
+}
 use uuid::Uuid;
 
 #[derive(Serialize, ToSchema)]
@@ -77,6 +94,9 @@ pub struct EffectiveAccessPreview {
     is_active: Option<bool>,
     configured: ConfiguredAccess,
     effective: EffectiveAccess,
+    /// Q10-T10: with `?entity=`, every path to a level on it for `action`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    paths: Option<Vec<AccessPath>>,
 }
 
 impl std::fmt::Debug for EffectiveAccessPreview {
@@ -93,7 +113,7 @@ impl std::fmt::Debug for EffectiveAccessPreview {
     get,
     path = "/api/v1/admin/security/users/{id}/effective-access",
     tag = "admin-security",
-    params(("id" = Uuid, Path, description = "The user")),
+    params(("id" = Uuid, Path, description = "The user"), EffectiveAccessQuery),
     responses(
         (status = 200, description = "Success", body = EffectiveAccessPreview),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -106,7 +126,23 @@ pub(super) async fn effective_access_preview(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
     Path(user_id): Path<Uuid>,
+    Query(query): Query<EffectiveAccessQuery>,
 ) -> Result<Json<EffectiveAccessPreview>, AppError> {
+    let action = match query.action.as_deref().unwrap_or("read") {
+        "read" => RecordAction::Read,
+        "update" => RecordAction::Update,
+        "delete" => RecordAction::Delete,
+        "create" => RecordAction::Create,
+        "assign" => RecordAction::Assign,
+        "share" => RecordAction::Share,
+        "export" => RecordAction::Export,
+        "bulk" => RecordAction::Bulk,
+        _ => {
+            return Err(AppError::Validation(
+                "action must be read, update, delete, create, assign, share, export or bulk".into(),
+            ));
+        }
+    };
     let user_row: Option<(Option<String>, Option<bool>)> =
         sqlx::query_as("SELECT email, is_active FROM user_account WHERE id = $1")
             .bind(user_id)
@@ -181,6 +217,17 @@ pub(super) async fn effective_access_preview(
     .await
     .map_err(AppError::internal)?;
 
+    let paths = match query.entity.as_deref().map(str::trim) {
+        Some(entity) if !entity.is_empty() => {
+            let entity_ref = super::shared::resolve_entity_ref(&state.base.db, entity).await?;
+            Some(
+                crate::explain::role_paths(&state.base.db, user_id, entity_ref, entity, action)
+                    .await?,
+            )
+        }
+        _ => None,
+    };
+
     // Uncached on purpose — see the module doc comment above.
     let resolved = crate::resolve_uncached(&state.base.db, user_id).await?;
     let mut privileges: Vec<String> = resolved.privileges.into_iter().collect();
@@ -210,6 +257,7 @@ pub(super) async fn effective_access_preview(
             position_hierarchy_enabled: resolved.position_hierarchy_enabled,
             subordinate_user_ids: resolved.subordinate_user_ids,
         },
+        paths,
     }))
 }
 

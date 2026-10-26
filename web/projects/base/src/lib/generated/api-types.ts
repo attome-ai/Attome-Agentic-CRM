@@ -27306,6 +27306,53 @@ export interface components {
             /** Format: int64 */
             total: number;
         };
+        /**
+         * @description One way a person holds a level on an entity for an operation: the rows
+         *     [`crate::db::resolve_entity_access_level`] takes the MAX over, one by one.
+         */
+        AccessPath: {
+            bu_children: boolean;
+            /** @enum {string} */
+            kind: "role";
+            /** Format: int32 */
+            level: number;
+            /** Format: uuid */
+            role_id: string;
+        } | {
+            bu_children: boolean;
+            /** @enum {string} */
+            kind: "team";
+            /** Format: int32 */
+            level: number;
+            /** Format: uuid */
+            role_id: string;
+            /** Format: uuid */
+            team_id: string;
+        } | {
+            /** @enum {string} */
+            kind: "permission_set";
+            /** Format: int32 */
+            level: number;
+            /** Format: uuid */
+            set_id: string;
+        } | {
+            /** Format: int64 */
+            conditions: number;
+            /** @enum {string} */
+            kind: "conditional_grant";
+            /** Format: uuid */
+            role_id: string;
+        } | {
+            /** @enum {string} */
+            kind: "position";
+            /** Format: uuid */
+            position_id: string;
+        } | {
+            /** @enum {string} */
+            kind: "direct_grant";
+            /** Format: int32 */
+            level: number;
+        };
         AccessReviewCampaign: {
             /** Format: date-time */
             created_at: string;
@@ -35536,6 +35583,8 @@ export interface components {
             configured: components["schemas"]["ConfiguredAccess"];
             effective: components["schemas"]["EffectiveAccess"];
             is_active?: boolean | null;
+            /** @description Q10-T10: with `?entity=`, every path to a level on it for `action`. */
+            paths?: components["schemas"]["AccessPath"][] | null;
             user_email?: string | null;
             /** Format: uuid */
             user_id: string;
@@ -92741,6 +92790,17 @@ export interface operations {
             path: {
                 /** @description The user */
                 id: string;
+                /**
+                 * @description An entity's logical name: the response then lists every role, team,
+                 *     set, conditional grant, position and direct grant that gives a level
+                 *     on it.
+                 */
+                entity: string | null;
+                /**
+                 * @description `read` (default), `update`, `delete`, `create`, `assign`, `share`,
+                 *     `export` or `bulk`.
+                 */
+                action: string | null;
             };
             cookie?: never;
         };

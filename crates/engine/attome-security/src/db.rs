@@ -728,7 +728,7 @@ pub(crate) const HELD_SET_IDS: &str = "SELECT a.set_ref \
 /// Q10-T4: a permission set's depth reads its own access row with
 /// [`role_depth_sql`], as a role that is not in D-589 legacy mode: a set is
 /// new, so export and bulk are only what it grants.
-const SET_AS_ROLE: &str = "(SELECT 1::smallint AS bulk_field_mode)";
+pub(crate) const SET_AS_ROLE: &str = "(SELECT 1::smallint AS bulk_field_mode)";
 
 /// Q10-T2: one role's depth for the operation bound at `action` (a
 /// `RecordAction::as_str`), over `ea` (its `role_mm_entity_access` row,
@@ -736,7 +736,7 @@ const SET_AS_ROLE: &str = "(SELECT 1::smallint AS bulk_field_mode)";
 /// default of `Global`, except for export and bulk on a role that is not in
 /// D-589 legacy mode, which default to `None`. The read, update and delete
 /// arms are the columns they always were.
-fn role_depth_sql(action: &str) -> String {
+pub(crate) fn role_depth_sql(action: &str) -> String {
     format!(
         r#"COALESCE(
                 CASE {action}::text

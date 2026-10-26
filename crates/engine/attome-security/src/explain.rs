@@ -317,6 +317,168 @@ pub async fn explain(
     })
 }
 
+// ── Q10-T10: every path that gives a person a level ──
+
+/// One way a person holds a level on an entity for an operation: the rows
+/// [`crate::db::resolve_entity_access_level`] takes the MAX over, one by one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum AccessPath {
+    /// A role held directly. `level` 0 None .. 3 Global.
+    Role {
+        role_id: Uuid,
+        level: i16,
+        bu_children: bool,
+    },
+    /// A role held through a team.
+    Team {
+        team_id: Uuid,
+        role_id: Uuid,
+        level: i16,
+        bu_children: bool,
+    },
+    /// A live permission set (Q10-T4), assigned directly or through a team.
+    PermissionSet { set_id: Uuid, level: i16 },
+    /// A role whose grant of the operation carries record conditions (D-369):
+    /// it applies only to records that meet them.
+    ConditionalGrant { role_id: Uuid, conditions: i64 },
+    /// The person's position, when a role lets them see their subordinates'
+    /// records (F138).
+    Position { position_id: Uuid },
+    /// A privilege granted to the person directly, without a role: Global.
+    DirectGrant { level: i16 },
+}
+
+type PathRow = (String, Option<Uuid>, Uuid, i16, bool, i64);
+
+/// Every path that gives `user_id` a level on `entity_name` for `action`,
+/// from the resolver's own statement: the same held roles and sets, the same
+/// privilege key and the same depth expression, returned row by row instead
+/// of as their MAX. An empty list means no path: the level is None.
+pub async fn role_paths(
+    db: &DbPool,
+    user_id: Uuid,
+    entity_ref: Uuid,
+    entity_name: &str,
+    action: RecordAction,
+) -> Result<Vec<AccessPath>, AppError> {
+    let privilege_key = format!("{entity_name}.{}", action.privilege_action());
+    let depth = crate::db::role_depth_sql("$4");
+    let set_as_role = crate::db::SET_AS_ROLE;
+    let held_sets = crate::db::HELD_SET_IDS;
+    let children = r#"COALESCE(CASE $4::text
+            WHEN 'read'   THEN ea.read_bu_children
+            WHEN 'update' THEN ea.write_bu_children
+            WHEN 'delete' THEN ea.delete_bu_children
+            WHEN 'assign' THEN ea.assign_bu_children
+            WHEN 'share'  THEN ea.share_bu_children
+        END, true)"#;
+    let sql = format!(
+        r#"
+        SELECT 'role' AS via, NULL::uuid AS team_id, r.id, {depth} AS depth, {children} AS children,
+               (SELECT COUNT(*) FROM role_privilege_condition c
+                WHERE c.role_privilege_ref = rp.id AND c.is_deleted = false) AS conditions
+        FROM user_account_mm_role ur
+        JOIN role r ON r.id = ur.role_ref AND r.is_deleted = false
+        JOIN role_mm_privilege rp ON rp.role_ref = r.id AND rp.is_deleted = false
+        JOIN privilege p ON p.id = rp.privilege_ref AND p.is_active = true AND p.key = $3
+        LEFT JOIN role_mm_entity_access ea
+            ON ea.role_ref = r.id AND ea.entity_ref = $2 AND ea.is_deleted = false
+        WHERE ur.user_ref = $1 AND ur.is_deleted = false
+
+        UNION ALL
+
+        SELECT 'team', ut.team_ref, r.id, {depth}, {children},
+               (SELECT COUNT(*) FROM role_privilege_condition c
+                WHERE c.role_privilege_ref = rp.id AND c.is_deleted = false)
+        FROM user_account_mm_team ut
+        JOIN role_mm_team rt ON rt.team_ref = ut.team_ref AND rt.is_deleted = false
+        JOIN role r ON r.id = rt.role_ref AND r.is_deleted = false
+        JOIN role_mm_privilege rp ON rp.role_ref = r.id AND rp.is_deleted = false
+        JOIN privilege p ON p.id = rp.privilege_ref AND p.is_active = true AND p.key = $3
+        LEFT JOIN role_mm_entity_access ea
+            ON ea.role_ref = r.id AND ea.entity_ref = $2 AND ea.is_deleted = false
+        WHERE ut.user_ref = $1 AND ut.is_deleted = false
+
+        UNION ALL
+
+        SELECT 'set', NULL::uuid, sp.set_ref, {depth}, {children}, 0::bigint
+        FROM permission_set_privilege sp
+        CROSS JOIN {set_as_role} r
+        JOIN privilege p ON p.id = sp.privilege_ref AND p.is_active = true AND p.key = $3
+        LEFT JOIN permission_set_entity_access ea
+            ON ea.set_ref = sp.set_ref AND ea.entity_ref = $2 AND ea.is_deleted = false
+        WHERE sp.is_deleted = false AND sp.set_ref IN ({held_sets})
+
+        UNION ALL
+
+        SELECT 'direct', NULL::uuid, up.id, 3::smallint, true, 0::bigint
+        FROM user_account_mm_privilege up
+        JOIN privilege p ON p.id = up.privilege_ref AND p.is_active = true AND p.key = $3
+        WHERE up.user_ref = $1 AND up.is_active = true
+        "#
+    );
+    let rows: Vec<PathRow> = sqlx::query_as(&sql)
+        .bind(user_id)
+        .bind(entity_ref)
+        .bind(&privilege_key)
+        .bind(action.as_str())
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+
+    let mut paths = Vec::with_capacity(rows.len());
+    let mut hierarchy_roles = Vec::new();
+    for (via, team_id, id, level, bu_children, conditions) in rows {
+        match (via.as_str(), team_id) {
+            ("team", Some(team_id)) => paths.push(AccessPath::Team {
+                team_id,
+                role_id: id,
+                level,
+                bu_children,
+            }),
+            ("set", _) => paths.push(AccessPath::PermissionSet { set_id: id, level }),
+            ("direct", _) => paths.push(AccessPath::DirectGrant { level }),
+            _ => paths.push(AccessPath::Role {
+                role_id: id,
+                level,
+                bu_children,
+            }),
+        }
+        if via != "set" && via != "direct" {
+            hierarchy_roles.push(id);
+            if conditions > 0 {
+                paths.push(AccessPath::ConditionalGrant {
+                    role_id: id,
+                    conditions,
+                });
+            }
+        }
+    }
+
+    // F138: a role holding the operation that lets its holder see their
+    // subordinates' records makes the person's position a path too.
+    if !hierarchy_roles.is_empty() {
+        let position: Option<Uuid> = sqlx::query_scalar(
+            "SELECT mp.position_ref FROM user_account_mm_position mp \
+             JOIN position p ON p.id = mp.position_ref AND p.is_deleted = false \
+             WHERE mp.user_ref = $1 AND mp.is_deleted = false \
+               AND EXISTS (SELECT 1 FROM role r WHERE r.id = ANY($2) \
+                           AND r.position_hierarchy_enabled = true) \
+             ORDER BY p.name LIMIT 1",
+        )
+        .bind(user_id)
+        .bind(&hierarchy_roles)
+        .fetch_optional(db)
+        .await
+        .map_err(AppError::internal)?;
+        if let Some(position_id) = position {
+            paths.push(AccessPath::Position { position_id });
+        }
+    }
+    Ok(paths)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

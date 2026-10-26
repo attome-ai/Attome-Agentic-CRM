@@ -54371,6 +54371,30 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "An entity's logical name: the response then lists every role, team,\nset, conditional grant, position and direct grant that gives a level\non it.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "description": "`read` (default), `update`, `delete`, `create`, `assign`, `share`,\n`export` or `bulk`.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           }
         ],
         "responses": {
@@ -137039,6 +137063,164 @@
           }
         }
       },
+      "AccessPath": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "A role held directly. `level` 0 None .. 3 Global.",
+            "required": [
+              "role_id",
+              "level",
+              "bu_children",
+              "kind"
+            ],
+            "properties": {
+              "bu_children": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "role"
+                ]
+              },
+              "level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "role_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A role held through a team.",
+            "required": [
+              "team_id",
+              "role_id",
+              "level",
+              "bu_children",
+              "kind"
+            ],
+            "properties": {
+              "bu_children": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "team"
+                ]
+              },
+              "level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "role_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "team_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A live permission set (Q10-T4), assigned directly or through a team.",
+            "required": [
+              "set_id",
+              "level",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "permission_set"
+                ]
+              },
+              "level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "set_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A role whose grant of the operation carries record conditions (D-369):\nit applies only to records that meet them.",
+            "required": [
+              "role_id",
+              "conditions",
+              "kind"
+            ],
+            "properties": {
+              "conditions": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "conditional_grant"
+                ]
+              },
+              "role_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The person's position, when a role lets them see their subordinates'\nrecords (F138).",
+            "required": [
+              "position_id",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "position"
+                ]
+              },
+              "position_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A privilege granted to the person directly, without a role: Global.",
+            "required": [
+              "level",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "direct_grant"
+                ]
+              },
+              "level": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          }
+        ],
+        "description": "One way a person holds a level on an entity for an operation: the rows\n[`crate::db::resolve_entity_access_level`] takes the MAX over, one by one."
+      },
       "AccessReviewCampaign": {
         "type": "object",
         "required": [
@@ -158217,6 +158399,16 @@
               "boolean",
               "null"
             ]
+          },
+          "paths": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AccessPath"
+            },
+            "description": "Q10-T10: with `?entity=`, every path to a level on it for `action`."
           },
           "user_email": {
             "type": [
