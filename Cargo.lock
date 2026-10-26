@@ -625,6 +625,7 @@ dependencies = [
 name = "attome-ai"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
  "attome-approval",
  "attome-audit",
  "attome-auth",
@@ -2420,8 +2421,10 @@ dependencies = [
  "attome-config",
  "attome-core",
  "attome-db",
+ "attome-jobs",
  "attome-modules",
  "attome-records",
+ "attome-rules",
  "attome-security",
  "attome-server",
  "attome-testkit",

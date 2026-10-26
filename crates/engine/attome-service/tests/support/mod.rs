@@ -205,6 +205,7 @@ pub fn register_bundle_state_models(state: &EngineState) {
                     approval_plan: None,
                     pending_state: None,
                     on_reject_state: None,
+                    auto_condition: t["auto_condition"].as_str().map(str::to_owned),
                 })
                 .collect();
             entries.push((

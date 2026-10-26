@@ -13,6 +13,8 @@
 
 pub mod admin;
 pub mod approval;
+/// M8-T3: transitions that happen by themselves.
+pub mod auto_transitions;
 pub mod model;
 pub mod reconcile;
 pub mod record_routes;

@@ -123,6 +123,10 @@ pub struct TransitionDef {
     pub pending_state: Option<String>,
     /// Where a rejection sends the record; `None` = `from_state`.
     pub on_reject_state: Option<String>,
+    /// M8-T3: an attome-rules condition over the record's fields; when it
+    /// holds for a record in `from_state`, the transition happens by itself
+    /// (`attome_state::auto_transitions`). `None` for a transition people make.
+    pub auto_condition: Option<String>,
 }
 
 impl TransitionDef {
@@ -193,6 +197,11 @@ impl StateModelRegistry {
         self.by_entity.len()
     }
 
+    /// The entities with a configured lifecycle (M8-T3's daily sweep).
+    pub fn entities(&self) -> impl Iterator<Item = &str> {
+        self.by_entity.keys().map(String::as_str)
+    }
+
     pub fn is_empty(&self) -> bool {
         self.by_entity.is_empty()
     }
@@ -225,6 +234,7 @@ struct TransitionRow {
     approval_plan: Option<serde_json::Value>,
     pending_state: Option<String>,
     on_reject_state: Option<String>,
+    auto_condition: Option<String>,
 }
 
 /// Builds a full registry snapshot from Postgres: one query over
@@ -245,7 +255,7 @@ pub async fn load(db: &DbPool) -> Result<StateModelRegistry, AppError> {
     let transitions: Vec<TransitionRow> = sqlx::query_as(
         "SELECT id, model_ref, from_state, to_state, name, required_privilege, \
                 guard_expression, entry_actions, exit_actions, display_order, row_version, \
-                approval_plan, pending_state, on_reject_state \
+                approval_plan, pending_state, on_reject_state, auto_condition \
          FROM state_transition WHERE is_deleted = false \
          ORDER BY display_order, from_state, to_state",
     )
@@ -293,6 +303,7 @@ pub async fn load(db: &DbPool) -> Result<StateModelRegistry, AppError> {
                 approval_plan,
                 pending_state: t.pending_state,
                 on_reject_state: t.on_reject_state,
+                auto_condition: t.auto_condition,
             });
     }
 
@@ -540,6 +551,7 @@ mod tests {
             approval_plan: None,
             pending_state: None,
             on_reject_state: None,
+            auto_condition: None,
         }
     }
 

@@ -311,6 +311,12 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // M8-T1: transition exit and entry actions, every minute.
     crate::jobs::spawn_transition_actions_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // M8-T3: automatic transitions, after each write and daily.
+    crate::jobs::spawn_auto_transitions_schedulers(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+        std::time::Duration::from_secs(86_400),
+    );
     // D17-T1: sequence exits (reply, meeting, stage change), every minute.
     crate::jobs::spawn_sequence_exits_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // F11-T9: loyalty points deferred and recognised, daily.

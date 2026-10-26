@@ -926,11 +926,12 @@ async fn export_state_models(db: &DbPool, bundle: &mut Bundle) -> Result<(), App
         approval_plan: Option<serde_json::Value>,
         pending_state: Option<String>,
         on_reject_state: Option<String>,
+        auto_condition: Option<String>,
     }
     let transitions: Vec<TransitionRow> = sqlx::query_as(
         "SELECT model_ref, from_state, to_state, name, required_privilege, guard_expression, \
                 entry_actions, exit_actions, display_order, approval_plan, pending_state, \
-                on_reject_state
+                on_reject_state, auto_condition
          FROM state_transition
          WHERE is_deleted = false",
     )
@@ -965,6 +966,7 @@ async fn export_state_models(db: &DbPool, bundle: &mut Bundle) -> Result<(), App
                 approval_plan,
                 pending_state: t.pending_state,
                 on_reject_state: t.on_reject_state,
+                auto_condition: t.auto_condition,
             });
         }
     }

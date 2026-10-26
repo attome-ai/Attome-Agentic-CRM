@@ -114,6 +114,10 @@ pub struct TransitionListItem {
     /// Where a rejection sends the record; absent means `from_state`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub on_reject_state: Option<String>,
+    /// M8-T3: the condition that makes the transition happen by itself.
+    /// Omitted when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auto_condition: Option<String>,
     /// Solution 7 (D-785): the layer that owns this transition (it may differ
     /// from its model's: a project may add a transition to a platform model).
     pub owner_layer: String,
@@ -155,6 +159,11 @@ pub struct CreateTransitionBody {
     /// with `approval_plan`.
     #[serde(default)]
     pub on_reject_state: Option<String>,
+    /// M8-T3: an attome-rules condition over the record's fields (such as
+    /// `due_date < today()`). When it holds for a record in `from_state`,
+    /// the transition happens by itself, checked after each write and daily.
+    #[serde(default)]
+    pub auto_condition: Option<String>,
 }
 
 impl std::fmt::Debug for CreateTransitionBody {
@@ -196,6 +205,10 @@ pub struct UpdateTransitionBody {
     pub pending_state: Option<String>,
     #[serde(default)]
     pub on_reject_state: Option<String>,
+    /// Full replacement: omitted makes the transition a manual one again.
+    /// See `CreateTransitionBody::auto_condition`.
+    #[serde(default)]
+    pub auto_condition: Option<String>,
 }
 
 impl std::fmt::Debug for UpdateTransitionBody {

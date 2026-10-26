@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Automatic transitions (M8-T3): a state transition's new `auto_condition` (an attome-rules condition)
+  moves a record by itself when it holds, checked after each write and daily (an invoice past its
+  due date becomes overdue). Migration `0291_state_auto_transition` adds the column. See
+  `docs/state-models.md`.
 - Action buttons (AE1-T5): custom actions run from a record form's Actions menu, or on the selected
   records of a list in one call. See `docs/agents.md`.
 - Risk tiers on every surface (AE1-T4): a person invoking a consequential action now confirms it

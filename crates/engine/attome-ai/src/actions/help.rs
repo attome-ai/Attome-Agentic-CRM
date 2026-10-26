@@ -244,6 +244,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/solo-memory-backend.md"),
     ),
     (
+        "docs/state-models.md",
+        include_str!("../../../../../docs/state-models.md"),
+    ),
+    (
         "docs/storage.md",
         include_str!("../../../../../docs/storage.md"),
     ),

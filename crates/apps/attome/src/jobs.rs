@@ -3027,6 +3027,9 @@ const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
 const DEDUP_KEY_TRANSITION_ACTIONS_SWEEP: &str = "state-transition-actions-sweep";
 /// D17-T1: the sequence exits sweep (a registered job type).
 const DEDUP_KEY_SEQUENCE_EXITS: &str = "workflow-sequence-exits";
+/// M8-T3: the automatic transitions passes (registered job types).
+const DEDUP_KEY_AUTO_TRANSITIONS: &str = "state-auto-transitions";
+const DEDUP_KEY_AUTO_TRANSITIONS_DAILY: &str = "state-auto-transitions-daily";
 /// F11-T9: the nightly loyalty revenue run (a registered job type).
 const DEDUP_KEY_REVREC_LOYALTY: &str = "revrec-loyalty";
 /// G17-T10: the nightly adherence roll-up (a registered job type).
@@ -3242,6 +3245,16 @@ pub const STATE_TRANSITION_ACTIONS_SWEEP: attome_jobs::JobType =
 /// D17-T1: exits contacts who answered a sequence, every minute.
 pub const WORKFLOW_SEQUENCE_EXITS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_workflow::sequence::SWEEP_JOB, 1);
+
+/// M8-T3: automatic transitions of the records written since the last
+/// pass, every minute.
+pub const STATE_AUTO_TRANSITIONS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_state::auto_transitions::SWEEP_JOB, 1);
+
+/// M8-T3: automatic transitions whose conditions became true with time,
+/// daily.
+pub const STATE_AUTO_TRANSITIONS_DAILY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_state::auto_transitions::DAILY_JOB, 1);
 
 /// F11-T9: loyalty points deferred and recognised, nightly.
 pub const REVREC_LOYALTY: attome_jobs::JobType =
@@ -5005,6 +5018,32 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            STATE_AUTO_TRANSITIONS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let moved = attome_state::auto_transitions::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if moved > 0 {
+                    tracing::info!(moved, "automatic transitions: run complete");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            STATE_AUTO_TRANSITIONS_DAILY,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let moved = attome_state::auto_transitions::daily(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(moved, "automatic transitions (daily): run complete");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             WORKFLOW_SEQUENCE_EXITS,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let outcome = attome_workflow::sequence::sweep(&state)
@@ -5504,6 +5543,12 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == WORKFLOW_SEQUENCE_EXITS.name => {
             DEDUP_KEY_SEQUENCE_EXITS
+        }
+        EngineJob::Registered(job) if job.name == STATE_AUTO_TRANSITIONS.name => {
+            DEDUP_KEY_AUTO_TRANSITIONS
+        }
+        EngineJob::Registered(job) if job.name == STATE_AUTO_TRANSITIONS_DAILY.name => {
+            DEDUP_KEY_AUTO_TRANSITIONS_DAILY
         }
         EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
             DEDUP_KEY_SOCIAL_REVIEWS_SYNC
@@ -7155,6 +7200,38 @@ pub fn spawn_transition_actions_scheduler(db: DbPool, interval: std::time::Durat
         DEDUP_KEY_TRANSITION_ACTIONS_SWEEP,
         "transition actions",
     );
+}
+
+/// M8-T3: the automatic transitions passes: `interval` after each write
+/// (every minute) and `daily_interval` for conditions that come true with
+/// time.
+pub fn spawn_auto_transitions_schedulers(
+    db: DbPool,
+    interval: std::time::Duration,
+    daily_interval: std::time::Duration,
+) {
+    register_job_types();
+    for (job_type, key, interval, label) in [
+        (
+            STATE_AUTO_TRANSITIONS,
+            DEDUP_KEY_AUTO_TRANSITIONS,
+            interval,
+            "automatic transitions",
+        ),
+        (
+            STATE_AUTO_TRANSITIONS_DAILY,
+            DEDUP_KEY_AUTO_TRANSITIONS_DAILY,
+            daily_interval,
+            "automatic transitions (daily)",
+        ),
+    ] {
+        match attome_core::jobs::JOB_TYPES.job(job_type.name, &()) {
+            Ok(job) => {
+                spawn_dedup_scheduler(db.clone(), interval, EngineJob::Registered(job), key, label)
+            }
+            Err(error) => tracing::error!(%error, label, "not scheduled"),
+        }
+    }
 }
 
 /// D17-T1: every minute, the contacts who answered a sequence leave it.

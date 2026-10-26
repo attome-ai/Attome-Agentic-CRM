@@ -33,6 +33,8 @@ pub struct TransitionDesc {
     pub approval_plan: Option<attome_approval::ApprovalPlan>,
     pub pending_state: Option<String>,
     pub on_reject_state: Option<String>,
+    /// M8-T3: see `attome_core::TransitionDef::auto_condition`.
+    pub auto_condition: Option<String>,
 }
 
 impl std::fmt::Debug for TransitionDesc {
@@ -80,6 +82,7 @@ struct TransitionRow {
     approval_plan: Option<serde_json::Value>,
     pending_state: Option<String>,
     on_reject_state: Option<String>,
+    auto_condition: Option<String>,
 }
 
 fn validate(desc: &StateModelDesc) -> Result<(), AppError> {
@@ -215,7 +218,7 @@ pub async fn reconcile_state_model(
     let live_transitions: Vec<TransitionRow> = sqlx::query_as(
         "SELECT id, from_state, to_state, name, required_privilege, guard_expression, \
                 entry_actions, exit_actions, display_order, approval_plan, pending_state, \
-                on_reject_state \
+                on_reject_state, auto_condition \
          FROM state_transition WHERE model_ref = $1 AND is_deleted = false",
     )
     .bind(model_id)
@@ -243,6 +246,7 @@ pub async fn reconcile_state_model(
                 && r.approval_plan == plan_json
                 && r.pending_state == t.pending_state
                 && r.on_reject_state == t.on_reject_state
+                && r.auto_condition == t.auto_condition
         });
         if matches {
             continue;
@@ -252,8 +256,8 @@ pub async fn reconcile_state_model(
             "INSERT INTO state_transition \
                  (model_ref, from_state, to_state, name, required_privilege, \
                   guard_expression, entry_actions, exit_actions, display_order, \
-                  approval_plan, pending_state, on_reject_state, owner_layer) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
+                  approval_plan, pending_state, on_reject_state, owner_layer, auto_condition) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
              ON CONFLICT (model_ref, from_state, to_state) WHERE is_deleted = false \
              DO UPDATE SET name = EXCLUDED.name, \
                  required_privilege = EXCLUDED.required_privilege, \
@@ -264,6 +268,7 @@ pub async fn reconcile_state_model(
                  approval_plan = EXCLUDED.approval_plan, \
                  pending_state = EXCLUDED.pending_state, \
                  on_reject_state = EXCLUDED.on_reject_state, \
+                 auto_condition = EXCLUDED.auto_condition, \
                  updated_at = NOW(), row_version = state_transition.row_version + 1",
         )
         .bind(model_id)
@@ -279,6 +284,7 @@ pub async fn reconcile_state_model(
         .bind(&t.pending_state)
         .bind(&t.on_reject_state)
         .bind(owner_layer)
+        .bind(&t.auto_condition)
         .execute(&mut *tx)
         .await
         .map_err(AppError::internal)?;

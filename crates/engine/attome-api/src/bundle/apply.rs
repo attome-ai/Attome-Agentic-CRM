@@ -1125,6 +1125,7 @@ async fn run_step(
                         approval_plan: t.approval_plan.clone(),
                         pending_state: t.pending_state.clone(),
                         on_reject_state: t.on_reject_state.clone(),
+                        auto_condition: t.auto_condition.clone(),
                     })
                     .collect(),
             };

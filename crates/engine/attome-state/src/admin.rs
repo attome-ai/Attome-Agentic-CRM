@@ -94,13 +94,14 @@ struct TransitionRow {
     approval_plan: Option<serde_json::Value>,
     pending_state: Option<String>,
     on_reject_state: Option<String>,
+    auto_condition: Option<String>,
     owner_layer: String,
 }
 
 /// Every column `TransitionRow` reads, for the SELECT/RETURNING lists below.
 const TRANSITION_COLUMNS: &str = "id, model_ref, from_state, to_state, name, required_privilege, \
      guard_expression, entry_actions, exit_actions, display_order, row_version, approval_plan, \
-     pending_state, on_reject_state, owner_layer";
+     pending_state, on_reject_state, auto_condition, owner_layer";
 
 impl From<TransitionRow> for TransitionListItem {
     fn from(r: TransitionRow) -> Self {
@@ -122,6 +123,7 @@ impl From<TransitionRow> for TransitionListItem {
             approval_plan: r.approval_plan.and_then(|v| serde_json::from_value(v).ok()),
             pending_state: r.pending_state,
             on_reject_state: r.on_reject_state,
+            auto_condition: r.auto_condition,
             owner_layer: r.owner_layer,
         }
     }
@@ -206,6 +208,30 @@ async fn check_live_model_owner(
 
 /// The entity a model belongs to (live or soft-deleted): a transition's
 /// logical key is scoped by it.
+/// M8-T3: a transition's automatic condition, trimmed (blank is none),
+/// refused unless it compiles to a yes-or-no over the model entity's fields.
+async fn checked_auto_condition(
+    state: &EngineState,
+    tx: &mut attome_db::Tx<'_>,
+    model_id: Uuid,
+    raw: Option<&str>,
+) -> Result<Option<String>, AppError> {
+    let Some(source) = raw.map(str::trim).filter(|s| !s.is_empty()) else {
+        return Ok(None);
+    };
+    let entity = model_entity_in_tx(tx, model_id).await?;
+    let attrs = state
+        .entities
+        .load()
+        .get(entity.as_str())
+        .map(|m| m.attrs.clone())
+        .unwrap_or_default();
+    match crate::auto_transitions::check_condition(&attrs, source) {
+        None => Ok(Some(source.to_owned())),
+        Some(problem) => Err(AppError::Validation(format!("auto_condition: {problem}"))),
+    }
+}
+
 async fn model_entity_in_tx(
     tx: &mut attome_db::Tx<'_>,
     model_id: Uuid,
@@ -787,13 +813,15 @@ async fn create_transition(
     named_states.extend(approval.states());
     let initial_state = validate_transition_states(&mut tx, id, &named_states).await?;
     approval.validate(&from_state, &to_state, &initial_state)?;
+    let auto_condition =
+        checked_auto_condition(&state, &mut tx, id, body.auto_condition.as_deref()).await?;
 
     let row: TransitionRow = sqlx::query_as(&format!(
         "INSERT INTO state_transition \
              (model_ref, from_state, to_state, name, required_privilege, guard_expression, \
               entry_actions, exit_actions, display_order, approval_plan, pending_state, \
-              on_reject_state, owner_layer) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
+              on_reject_state, owner_layer, auto_condition) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
          RETURNING {TRANSITION_COLUMNS}"
     ))
     .bind(id)
@@ -809,6 +837,7 @@ async fn create_transition(
     .bind(&approval.pending_state)
     .bind(&approval.on_reject_state)
     .bind(layer.as_str())
+    .bind(&auto_condition)
     .fetch_one(&mut *tx)
     .await
     .map_err(map_unique_violation)?;
@@ -920,12 +949,15 @@ async fn update_transition(
     named_states.extend(approval.states());
     let initial_state = validate_transition_states(&mut tx, id, &named_states).await?;
     approval.validate(&from_state, &to_state, &initial_state)?;
+    let auto_condition =
+        checked_auto_condition(&state, &mut tx, id, body.auto_condition.as_deref()).await?;
 
     let row: Option<TransitionRow> = sqlx::query_as(&format!(
         "UPDATE state_transition \
          SET from_state = $3, to_state = $4, name = $5, required_privilege = $6, \
              guard_expression = $7, entry_actions = $8, exit_actions = $9, display_order = $10, \
              approval_plan = $12, pending_state = $13, on_reject_state = $14, \
+             auto_condition = $15, \
              updated_at = NOW(), row_version = row_version + 1 \
          WHERE id = $1 AND model_ref = $2 AND is_deleted = false AND row_version = $11 \
          RETURNING {TRANSITION_COLUMNS}"
@@ -944,6 +976,7 @@ async fn update_transition(
     .bind(approval.plan_json()?)
     .bind(&approval.pending_state)
     .bind(&approval.on_reject_state)
+    .bind(&auto_condition)
     .fetch_optional(&mut *tx)
     .await
     .map_err(map_unique_violation)?;
@@ -1159,6 +1192,7 @@ mod tests {
             approval_plan: None,
             pending_state: None,
             on_reject_state: None,
+            auto_condition: None,
             owner_layer: "project".into(),
         }
     }

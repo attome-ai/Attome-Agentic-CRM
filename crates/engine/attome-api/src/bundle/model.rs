@@ -734,6 +734,10 @@ pub struct StateTransitionDef {
     /// Where a rejection sends the record; absent means `from_state`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub on_reject_state: Option<String>,
+    /// M8-T3: the condition that makes the transition happen by itself.
+    /// Omitted from an export when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_condition: Option<String>,
 }
 
 /// M05 Phase 1 (D-426) — one `metadata_label` row: a per-locale

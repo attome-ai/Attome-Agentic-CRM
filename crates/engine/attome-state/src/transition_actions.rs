@@ -194,6 +194,7 @@ mod tests {
             approval_plan: None,
             pending_state: None,
             on_reject_state: None,
+            auto_condition: None,
         }
     }
 
