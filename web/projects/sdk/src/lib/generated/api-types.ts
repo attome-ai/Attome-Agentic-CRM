@@ -9811,6 +9811,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/privilege-removal-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Privilege removal proposals
+         * @description Drafts for role privileges none of the role's holders used in 90 days, newest first. Administrators only.
+         */
+        get: operations["list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/privileges": {
         parameters: {
             query?: never;
@@ -47900,6 +47920,41 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RemovalProposal: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /**
+                 * Format: int32
+                 * @description The role's holders when the proposal was made.
+                 */
+                holders: number;
+                /** Format: uuid */
+                id: string;
+                /**
+                 * Format: date
+                 * @description The last day any of them used it, if ever recorded.
+                 */
+                last_used?: string | null;
+                privilege_key: string;
+                /** Format: uuid */
+                role_id: string;
+                /** @description `draft`, `accepted` or `dismissed`. */
+                status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ReportItemView: {
             items: (components["schemas"]["ReportItem"] & {
                 /**
@@ -52902,6 +52957,28 @@ export interface components {
             entity: string;
             /** Format: uuid */
             id: string;
+        };
+        /** @description One removal proposal. */
+        RemovalProposal: {
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: int32
+             * @description The role's holders when the proposal was made.
+             */
+            holders: number;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description The last day any of them used it, if ever recorded.
+             */
+            last_used?: string | null;
+            privilege_key: string;
+            /** Format: uuid */
+            role_id: string;
+            /** @description `draft`, `accepted` or `dismissed`. */
+            status: string;
         };
         /** @description `POST .../fields/{field_id}/rename`. */
         RenameFieldBody: {
@@ -90898,6 +90975,67 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description `draft`, `accepted` or `dismissed`; every proposal when omitted. */
+                status: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RemovalProposal"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown status */
             422: {
                 headers: {
                     [name: string]: unknown;

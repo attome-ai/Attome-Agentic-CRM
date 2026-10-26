@@ -405,6 +405,13 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(3600),
     );
+    // Q10-T9: privilege use, flushed every five minutes, and the
+    // unused-privilege proposals once a day.
+    crate::jobs::spawn_privilege_usage_flush(db.clone(), std::time::Duration::from_secs(300));
+    crate::jobs::spawn_privilege_usage_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 3600),
+    );
     // E7-T4: scheduled marketing lists, checked hourly.
     crate::jobs::spawn_segment_refresh_scheduler(db.clone(), std::time::Duration::from_secs(3600));
     // The nightly marketing pass: loyalty, referrals, target accounts, bounces.

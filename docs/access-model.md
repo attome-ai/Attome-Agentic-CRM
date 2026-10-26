@@ -103,3 +103,11 @@ when the grant would complete the pair:
 - `GET /api/v1/admin/security/users/{id}/effective-access?entity=&action=` lists every path to a
   person's level on an entity: roles direct and through teams, permission sets, conditional grants, the
   position for hierarchy roles, and direct grants.
+
+## Unused privileges
+
+Each node counts privilege use per person and day (the four central privilege checks; a few engine
+routes that read privileges directly are not counted). A daily job drafts a removal proposal for each
+role privilege none of the role's holders used in 90 days
+(`GET /api/v1/admin/security/privilege-removal-proposals`). A proposal is only a draft for a person to
+review; a dismissed one is not proposed again for 90 days.

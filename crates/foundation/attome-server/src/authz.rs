@@ -368,7 +368,11 @@ impl<K: PrivilegeKey> AuthorizationPolicy for Privilege<K> {
     const NAME: &'static str = K::KEY;
 
     fn authorize(ctx: &SecurityContext, _scope: PolicyScope<'_>) -> Result<(), AppError> {
-        if ctx.is_admin || ctx.privileges.contains(K::KEY) {
+        if ctx.is_admin {
+            Ok(())
+        } else if ctx.privileges.contains(K::KEY) {
+            // Q10-T9: counted for the unused-privilege proposals.
+            crate::privilege_usage::record(ctx.user_id, K::KEY);
             Ok(())
         } else {
             Err(AppError::Forbidden)
@@ -491,9 +495,12 @@ impl<A: RecordActionKind> AuthorizationPolicy for RecordScoped<A> {
             // trait from xrm-security (guidelines §1). The pair is locked
             // together by `record_scoped_policy_matches_require` in
             // xrm-security's context tests.
-            if !ctx.privileges.contains(&format!("{entity}.{action}")) {
+            let key = format!("{entity}.{action}");
+            if !ctx.privileges.contains(&key) {
                 return Err(AppError::Forbidden);
             }
+            // Q10-T9: counted for the unused-privilege proposals.
+            crate::privilege_usage::record(ctx.user_id, &key);
         }
         Ok(())
     }

@@ -37,6 +37,7 @@ pub mod sharing_rules;
 /// Q9-T1 — the sign-in network, hours and country rules of held roles.
 pub mod sign_in_rules;
 pub mod strict_authz;
+pub mod usage;
 pub mod visibility;
 
 pub use cache::SECURITY_VERSION_CHANNEL;

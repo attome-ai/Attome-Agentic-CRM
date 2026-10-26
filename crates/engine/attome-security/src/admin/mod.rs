@@ -36,6 +36,7 @@ mod mfa_coverage;
 mod organizations;
 mod permission_sets;
 mod positions;
+mod privilege_usage;
 mod privileges;
 mod role_conflicts;
 mod role_entity_access;
@@ -77,6 +78,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         bulk_access::openapi_fragment(),
         bulk_fields::openapi_fragment(),
         sessions::openapi_fragment(),
+        privilege_usage::openapi_fragment(),
         privileges::openapi_fragment(),
         roles::openapi_fragment(),
         role_grants::openapi_fragment(),
@@ -113,6 +115,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(bulk_fields::routes())
         .merge(grants::routes())
         .merge(sessions::routes())
+        .merge(privilege_usage::routes())
         .merge(privileges::routes())
         .merge(roles::routes())
         .merge(role_grants::routes())

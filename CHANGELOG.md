@@ -23,6 +23,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Unused-privilege proposals (Q10-T9): each node counts privilege use per person and day (migration
+  `0297`, `privilege_usage_daily`, flushed every five minutes), and a daily job drafts a removal
+  proposal for each role privilege none of the role's holders used in 90 days, listed at
+  `GET /api/v1/admin/security/privilege-removal-proposals`. Drafts only; nothing is removed.
 - Suggested roles (Q10-T7): modules suggest roles (sales rep and sales manager in sales, auditor in
   core), listed at `GET /api/v1/admin/security/role-templates` for the licensed modules and installed
   as an ordinary, editable copy with `POST .../role-templates/{key}/install` (recorded in the

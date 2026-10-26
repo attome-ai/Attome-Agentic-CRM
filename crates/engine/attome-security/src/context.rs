@@ -153,6 +153,8 @@ impl SecurityContextExt for SecurityContext {
         }
         let key = format!("{entity}.{action}");
         if self.privileges.contains(&key) {
+            // Q10-T9: counted for the unused-privilege proposals.
+            attome_server::privilege_usage::record(self.user_id, &key);
             Ok(())
         } else {
             Err(AppError::Forbidden)
@@ -160,7 +162,10 @@ impl SecurityContextExt for SecurityContext {
     }
 
     fn require_key(&self, key: &str) -> Result<(), AppError> {
-        if self.is_admin || self.privileges.contains(key) {
+        if self.is_admin {
+            Ok(())
+        } else if self.privileges.contains(key) {
+            attome_server::privilege_usage::record(self.user_id, key);
             Ok(())
         } else {
             Err(AppError::Forbidden)

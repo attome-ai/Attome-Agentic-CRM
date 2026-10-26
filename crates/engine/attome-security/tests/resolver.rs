@@ -1774,3 +1774,59 @@ async fn effective_access_lists_role_and_set_paths() {
             .is_empty()
     );
 }
+
+// ── Q10-T9: unused-privilege proposals ──
+
+/// A role privilege a holder used recently is left alone; one nobody used
+/// in 90 days gets one draft, and a second run makes no second draft.
+#[tokio::test]
+async fn unused_operation_gets_draft_proposal() {
+    let db = skip_if_no_db!(test_db().await);
+    let (_, logicalname, read_priv) = provision_entity_with_privilege(&db, "read").await;
+    let update_priv: Uuid = sqlx::query_scalar("SELECT id FROM privilege WHERE key = $1")
+        .bind(format!("{logicalname}.update"))
+        .fetch_one(&db)
+        .await
+        .expect("the update privilege exists");
+    let user_id = seed_bare_user(&db).await;
+    let role_id = seed_role(&db).await;
+    link_user_to_role(&db, user_id, role_id).await;
+    grant_privilege_to_role(&db, role_id, read_priv).await;
+    grant_privilege_to_role(&db, role_id, update_priv).await;
+
+    // Read was used ten days ago; update never was.
+    sqlx::query(
+        "INSERT INTO privilege_usage_daily (day, user_ref, privilege_key, uses) \
+         VALUES (CURRENT_DATE - 10, $1, $2, 3)",
+    )
+    .bind(user_id)
+    .bind(format!("{logicalname}.read"))
+    .execute(&db)
+    .await
+    .expect("record a use");
+
+    let now = chrono::Utc::now();
+    attome_security::usage::propose_unused(&db, now)
+        .await
+        .expect("propose");
+    let drafts: Vec<String> = sqlx::query_scalar(
+        "SELECT privilege_key FROM privilege_removal_proposal \
+         WHERE role_ref = $1 AND status = 'draft' ORDER BY privilege_key",
+    )
+    .bind(role_id)
+    .fetch_all(&db)
+    .await
+    .expect("drafts");
+    assert_eq!(drafts, vec![format!("{logicalname}.update")]);
+
+    attome_security::usage::propose_unused(&db, now)
+        .await
+        .expect("propose again");
+    let count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM privilege_removal_proposal WHERE role_ref = $1")
+            .bind(role_id)
+            .fetch_one(&db)
+            .await
+            .expect("count");
+    assert_eq!(count, 1, "one draft per role and privilege");
+}

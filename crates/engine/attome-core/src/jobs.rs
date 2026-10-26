@@ -515,6 +515,9 @@ pub enum EngineJob {
     MarketingSweep,
     /// Q10-T6: removes role grants past their end date. Bare unit variant.
     RoleGrantExpiry,
+    /// Q10-T9: drafts removal proposals for role privileges nobody used in
+    /// 90 days and prunes old usage rows. Bare unit variant.
+    PrivilegeUsageDaily,
     /// D7-T3: gives new deals their owner's default team, off the change
     /// feed. Bare unit variant.
     SalesDefaultTeamSweep,
@@ -1127,6 +1130,7 @@ impl EngineJob {
             | Self::SegmentRefreshDue
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
+            | Self::PrivilegeUsageDaily
             | Self::SalesDefaultTeamSweep
             | Self::QualityIncrementalSweep
             | Self::RevrecContractSweep
@@ -1284,6 +1288,7 @@ impl EngineJob {
             EngineJob::SegmentRefreshDue => "SegmentRefreshDue",
             EngineJob::MarketingSweep => "MarketingSweep",
             EngineJob::RoleGrantExpiry => "RoleGrantExpiry",
+            EngineJob::PrivilegeUsageDaily => "PrivilegeUsageDaily",
             EngineJob::SalesDefaultTeamSweep => "SalesDefaultTeamSweep",
             EngineJob::QualityIncrementalSweep => "QualityIncrementalSweep",
             EngineJob::RevrecContractSweep => "RevrecContractSweep",
@@ -1440,6 +1445,7 @@ impl EngineJob {
             | Self::SegmentRefreshDue
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
+            | Self::PrivilegeUsageDaily
             | Self::SalesDefaultTeamSweep
             | Self::QualityIncrementalSweep
             | Self::RevrecContractSweep
@@ -1612,6 +1618,7 @@ impl EngineJob {
             | Self::SegmentRefreshDue
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
+            | Self::PrivilegeUsageDaily
             | Self::SalesDefaultTeamSweep
             | Self::QualityIncrementalSweep
             | Self::RevrecContractSweep
@@ -2063,6 +2070,7 @@ mod tests {
         assert_round_trips(EngineJob::SegmentRefreshDue);
         assert_round_trips(EngineJob::MarketingSweep);
         assert_round_trips(EngineJob::RoleGrantExpiry);
+        assert_round_trips(EngineJob::PrivilegeUsageDaily);
         assert_round_trips(EngineJob::SalesDefaultTeamSweep);
         assert_round_trips(EngineJob::QualityIncrementalSweep);
         assert_round_trips(EngineJob::RevrecContractSweep);

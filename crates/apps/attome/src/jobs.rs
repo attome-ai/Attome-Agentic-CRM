@@ -1425,6 +1425,17 @@ async fn dispatch_platform_job(
                 tracing::info!(removed, "role grants: expired grants removed");
             }
         }
+        // Q10-T9: removal proposals for unused role privileges, daily.
+        EngineJob::PrivilegeUsageDaily => {
+            let drafted =
+                attome_security::usage::propose_unused(&attome_state.base.db, chrono::Utc::now())
+                    .await?;
+            tracing::info!(
+                drafted,
+                dropped = attome_server::privilege_usage::dropped(),
+                "privilege usage: removal proposals drafted"
+            );
+        }
         // E7-T4: scheduled segment refreshes, hourly.
         EngineJob::SegmentRefreshDue => {
             let refreshed =
@@ -2938,6 +2949,7 @@ const DEDUP_KEY_MARKETING_NIGHTLY: &str = "marketing-nightly";
 const DEDUP_KEY_SEGMENT_REFRESH_DUE: &str = "segment-refresh-due";
 const DEDUP_KEY_MARKETING_SWEEP: &str = "marketing-sweep";
 const DEDUP_KEY_ROLE_GRANT_EXPIRY: &str = "role-grant-expiry";
+const DEDUP_KEY_PRIVILEGE_USAGE_DAILY: &str = "privilege-usage-daily";
 const DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP: &str = "sales-default-team-sweep";
 const DEDUP_KEY_QUALITY_INCREMENTAL_SWEEP: &str = "quality-incremental-sweep";
 const DEDUP_KEY_REVREC_CONTRACT_SWEEP: &str = "revrec-contract-sweep";
@@ -5332,6 +5344,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SegmentRefreshDue => DEDUP_KEY_SEGMENT_REFRESH_DUE,
         EngineJob::MarketingSweep => DEDUP_KEY_MARKETING_SWEEP,
         EngineJob::RoleGrantExpiry => DEDUP_KEY_ROLE_GRANT_EXPIRY,
+        EngineJob::PrivilegeUsageDaily => DEDUP_KEY_PRIVILEGE_USAGE_DAILY,
         EngineJob::SalesDefaultTeamSweep => DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP,
         EngineJob::QualityIncrementalSweep => DEDUP_KEY_QUALITY_INCREMENTAL_SWEEP,
         EngineJob::RevrecContractSweep => DEDUP_KEY_REVREC_CONTRACT_SWEEP,
@@ -7577,6 +7590,31 @@ pub fn spawn_role_grant_expiry_scheduler(db: DbPool, interval: std::time::Durati
         DEDUP_KEY_ROLE_GRANT_EXPIRY,
         "role grant expiry",
     );
+}
+
+/// Q10-T9: once a day, the unused-privilege proposals.
+pub fn spawn_privilege_usage_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::PrivilegeUsageDaily,
+        DEDUP_KEY_PRIVILEGE_USAGE_DAILY,
+        "privilege usage daily",
+    );
+}
+
+/// Q10-T9: every five minutes, this node's privilege-use counts into
+/// `privilege_usage_daily`. Per node, not a job: the counts live in this
+/// process. Losing one interval on a crash loses analytics, never access.
+pub fn spawn_privilege_usage_flush(db: DbPool, interval: std::time::Duration) {
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(interval).await;
+            if let Err(error) = attome_server::privilege_usage::flush(&db).await {
+                tracing::warn!(%error, "privilege usage: flush failed; the counts wait for the next one");
+            }
+        }
+    });
 }
 
 /// E7-T4: every hour, the scheduled marketing lists that are due.
