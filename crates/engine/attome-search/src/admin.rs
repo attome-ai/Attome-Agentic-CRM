@@ -26,7 +26,6 @@ use axum::{
     routing::{delete, get},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -500,7 +499,7 @@ async fn create_synonym(
         (status = 404, description = "No such group", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
 )]
 async fn delete_synonym(
     State(state): State<EngineState>,
@@ -537,7 +536,7 @@ async fn remove(
     write_security_event(
         &mut tx,
         &attome_audit::audit_service(state),
-        event(actor, AuditOperation::Delete, name, comment),
+        event(actor, AuditOperation::HardDelete, name, comment),
     )
     .await?;
     attome_db::tx::commit(tx).await?;
@@ -666,7 +665,7 @@ async fn create_stopword(
         (status = 404, description = "No such stop word", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
 )]
 async fn delete_stopword(
     State(state): State<EngineState>,
@@ -829,7 +828,7 @@ async fn create_pin(
         (status = 404, description = "No such pin", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
 )]
 async fn delete_pin(
     State(state): State<EngineState>,
