@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Search page and search settings (A25-T11): `/xrm/search` groups results by entity with counts over
+  every result, filters by the entity facet (owner and month counts beside it), asks in words with
+  the parsed filter and a cited direct answer, explains each result's score for builders, keeps
+  recent searches in the browser and saves a search with an alert; `/xrm/admin/search/settings` sets
+  each attribute's mode and weight (saved with `If-Match`) and edits synonyms, stop words and pins
+  beside the size, backlog and quality panels. English and Arabic, right to left.
 - Search in words (A25-T7): `GET /api/v1/search?q=...&mode=ask` sends the words to the new read
   action `search.parse_filter`, which answers a QuerySpec `{entity, where}` (the `query/run` form;
   no SQL) over what the caller may read, checked against their metadata; the filter is returned in

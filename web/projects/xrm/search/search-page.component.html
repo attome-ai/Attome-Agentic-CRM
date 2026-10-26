@@ -1,0 +1,174 @@
+<section class="search-page">
+  <h1 class="search-page__title">{{ 'searchPage.title' | translate }}</h1>
+
+  <form class="search-page__bar" (submit)="$event.preventDefault(); run()">
+    <input
+      class="search-page__input"
+      type="search"
+      dir="auto"
+      [value]="query()"
+      (input)="onQuery($event)"
+      [attr.aria-label]="'searchPage.query' | translate"
+      [placeholder]="'searchPage.placeholder' | translate"
+    />
+    <button type="submit" class="btn btn-primary" [disabled]="loading()">
+      {{ (loading() ? 'searchPage.searching' : 'searchPage.search') | translate }}
+    </button>
+    <label class="search-page__toggle">
+      <input type="checkbox" [checked]="ask()" (change)="toggleAsk()" />
+      {{ 'searchPage.ask' | translate }}
+    </label>
+    <label class="search-page__toggle">
+      <input type="checkbox" [checked]="explain()" (change)="toggleExplain()" />
+      {{ 'searchPage.explain' | translate }}
+    </label>
+  </form>
+
+  @if (recent().length && !response()) {
+    <div class="search-page__recent">
+      <span>{{ 'searchPage.recent' | translate }}</span>
+      @for (r of recent(); track r) {
+        <button type="button" class="btn btn-text" dir="auto" (click)="runRecent(r)">{{ r }}</button>
+      }
+    </div>
+  }
+
+  @if (error()) {
+    <p class="search-page__error" role="alert">{{ error() }}</p>
+  }
+
+  @if (askResult(); as a) {
+    <div class="search-page__ask" data-ask>
+      @if (a.status === 'parsed') {
+        <span class="search-page__chip" dir="auto" data-filter>{{ 'searchPage.filter' | translate }}: {{ filterText(a) }}</span>
+      } @else {
+        <span class="search-page__note">{{ 'searchPage.askDeclined' | translate }}</span>
+      }
+      @if (a.answer; as answer) {
+        <article class="search-page__answer" data-answer>
+          @if (answer.answer) {
+            <p dir="auto">{{ answer.answer }}</p>
+            @if (answer.citations?.length) {
+              <ul class="search-page__citations">
+                @for (c of answer.citations; track c.record_id) {
+                  <li>
+                    <a [routerLink]="formRoute(c.entity)" [queryParams]="{ id: c.record_id }" dir="auto">
+                      {{ c.title || ('omniSearch.untitled' | translate) }}
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          } @else {
+            <p>{{ 'searchPage.noAnswer' | translate }}</p>
+          }
+        </article>
+      }
+    </div>
+  }
+
+  @if (response(); as r) {
+    <div class="search-page__body">
+      <aside class="search-page__facets" [attr.aria-label]="'searchPage.facets' | translate">
+        @if (facets(); as f) {
+          <h2>{{ 'searchPage.byEntity' | translate }}</h2>
+          <ul>
+            @for (e of f.entity; track e.value) {
+              <li>
+                <button
+                  type="button"
+                  class="btn btn-text"
+                  [class.is-active]="activeEntity() === e.value"
+                  [attr.aria-pressed]="activeEntity() === e.value"
+                  (click)="filterEntity(e.value)"
+                  data-facet-entity
+                >{{ e.value }} ({{ e.count }})</button>
+              </li>
+            }
+          </ul>
+          @if (f.modified_month.length) {
+            <h2>{{ 'searchPage.byMonth' | translate }}</h2>
+            <ul>
+              @for (m of f.modified_month; track m.value) {
+                <li>{{ m.value }} ({{ m.count }})</li>
+              }
+            </ul>
+          }
+          @if (f.owner.length) {
+            <h2>{{ 'searchPage.byOwner' | translate }}</h2>
+            <p class="search-page__note">{{ 'searchPage.owners' | translate: { count: f.owner.length } }}</p>
+          }
+        }
+      </aside>
+
+      <div class="search-page__results">
+        @if (relaxed()) {
+          <p class="search-page__note">{{ 'omniSearch.relaxed' | translate }}</p>
+        }
+        @if (r.degraded.length) {
+          <p class="search-page__note">{{ 'omniSearch.degraded' | translate }}</p>
+        }
+        @if (!groups().length) {
+          <p>{{ 'omniSearch.noMatches' | translate }}</p>
+        }
+        @for (g of groups(); track g.entity) {
+          <section class="search-page__group" data-group>
+            <h2 class="search-page__group-title">
+              <span data-group-entity>{{ g.entity }}</span>
+              <span class="search-page__count" data-group-count>{{ g.count }}</span>
+            </h2>
+            <ul>
+              @for (h of g.hits; track h.record_id) {
+                <li class="search-page__hit">
+                  <a [routerLink]="formRoute(h.entity_logicalname)" [queryParams]="{ id: h.record_id }" dir="auto">
+                    {{ h.title || ('omniSearch.untitled' | translate) }}
+                  </a>
+                  @if (h.subtitle) {
+                    <span class="search-page__subtitle" dir="auto">{{ h.subtitle }}</span>
+                  }
+                  @if (h.explain; as x) {
+                    <details class="search-page__explain">
+                      <summary>{{ 'searchPage.why' | translate }}</summary>
+                      <dl>
+                        <dt>{{ 'searchPage.fused' | translate }}</dt><dd>{{ x.fused }}</dd>
+                        <dt>{{ 'searchPage.boost' | translate }}</dt><dd>{{ x.boost }} (+{{ x.boost_added }})</dd>
+                        <dt>{{ 'searchPage.personal' | translate }}</dt><dd>{{ x.owner + x.opened + x.team }}</dd>
+                        <dt>{{ 'searchPage.legs' | translate }}</dt><dd>{{ x.legs.join(', ') }}</dd>
+                        @if (x.synonyms.length) {
+                          <dt>{{ 'searchPage.synonyms' | translate }}</dt><dd dir="auto">{{ x.synonyms.join(', ') }}</dd>
+                        }
+                        @if (x.pinned) {
+                          <dt>{{ 'searchPage.pinned' | translate }}</dt><dd>{{ 'searchPage.yes' | translate }}</dd>
+                        }
+                        <dt>{{ 'searchPage.score' | translate }}</dt><dd>{{ x.score }}</dd>
+                      </dl>
+                    </details>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        <form class="search-page__save" (submit)="$event.preventDefault(); saveSearch()">
+          <input
+            type="text"
+            dir="auto"
+            [value]="saveName()"
+            (input)="onSaveName($event)"
+            [attr.aria-label]="'searchPage.saveName' | translate"
+            [placeholder]="'searchPage.saveName' | translate"
+          />
+          <label class="search-page__toggle">
+            <input type="checkbox" [checked]="saveAlert()" (change)="toggleAlert()" />
+            {{ 'searchPage.alertMe' | translate }}
+          </label>
+          <button type="submit" class="btn">{{ 'searchPage.save' | translate }}</button>
+          @if (saved()) {
+            <span role="status">{{ 'searchPage.saved' | translate }}</span>
+          }
+        </form>
+      </div>
+    </div>
+  }
+</section>

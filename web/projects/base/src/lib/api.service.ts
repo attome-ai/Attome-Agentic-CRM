@@ -29,7 +29,7 @@ export interface WriteOptions {
    * non-GET once after a refresh.
    */
   idempotencyKey?: string;
-  /** A `row_version` sent as `If-Match` on a POST that guards one (a publish, say). */
+  /** A `row_version` sent as `If-Match` on a POST or PUT that guards one (a publish, a replace). */
   ifMatch?: number;
   /**
    * A18: sent as `Attome-Operation-Id`, grouping several deletes into one
@@ -339,7 +339,8 @@ export class ApiService {
 
   put<T>(path: string, body: unknown, options: WriteOptions = {}): Observable<T> {
     return this.http.put<T>(this.url(path), body, {
-      headers: this.mutationHeaders(options),
+      // A25-T11: a PUT that replaces a versioned row sends its `If-Match` too.
+      headers: this.mutationHeaders(options, options.ifMatch),
       withCredentials: true,
     }).pipe(catchError(this.handleError));
   }

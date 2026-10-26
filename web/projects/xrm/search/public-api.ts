@@ -12,6 +12,11 @@ export type {
   SearchResponse, SearchHit, SearchTotal, MatchQuality, HitGroup, OmniSelection,
 } from '@attome/xrm/search/omni';
 export { SearchLabComponent } from './lab/lab.component';
+// A25-T11: the search page and search administration.
+export { SearchPageComponent } from './search-page.component';
+export { SearchSettingsComponent } from './search-settings.component';
+export { SearchPageService } from './services/search-page.service';
+export type { AskResult, AskingSearchResponse } from './services/search-page.service';
 export { GapQueueComponent } from './gaps/gap-queue.component';
 export { KnowledgeCoverageComponent } from './coverage/knowledge-coverage.component';
 export { DraftQueueComponent } from './drafts/draft-queue.component';

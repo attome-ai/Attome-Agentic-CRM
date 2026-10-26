@@ -254,12 +254,26 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/search').then(m => m.SearchLabComponent),
           },
           {
+            // A25-T11: the search page, grouped results with facets, asking in
+            // words and saved searches, as the logged-in caller.
+            path: 'search',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/search').then(m => m.SearchPageComponent),
+          },
+          {
             // D-489 — the authors' knowledge-gap queue. An admin surface
             // (routes are `Authorized<Admin>` on the backend), so it sits in
             // this `/xrm/admin/...` group rather than beside the search lab.
             path: 'knowledge/gaps',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/search').then(m => m.GapQueueComponent),
+          },
+          {
+            // A25-T11: search administration (attribute modes, synonyms, stop
+            // words, pins, size and quality). The routes are administrators'.
+            path: 'search/settings',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/search').then(m => m.SearchSettingsComponent),
           },
           {
             // Chatbot plan C8 — per-collection knowledge coverage. Admin-only

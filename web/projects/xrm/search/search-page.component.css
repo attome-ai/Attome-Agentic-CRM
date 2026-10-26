@@ -1,0 +1,124 @@
+.search-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-block: 1rem;
+  padding-inline: 1.5rem;
+}
+
+.search-page__bar,
+.search-page__save,
+.search-page__recent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.search-page__input {
+  flex: 1 1 20rem;
+  min-inline-size: 0;
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-alt);
+  color: var(--color-text-primary);
+}
+
+.search-page__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.search-page__body {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 720px) {
+  .search-page__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.search-page__facets ul,
+.search-page__group ul,
+.search-page__citations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.search-page__facets h2,
+.search-page__group-title {
+  font-size: 0.95rem;
+  margin-block: 0.75rem 0.25rem;
+}
+
+.search-page__facets .is-active {
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.search-page__group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.search-page__count {
+  padding-inline: 0.5rem;
+  border-radius: 999px;
+  background: var(--color-bg-alt);
+  color: var(--color-text-secondary);
+}
+
+.search-page__hit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-block: 0.35rem;
+  border-block-end: 1px solid var(--color-border);
+}
+
+.search-page__subtitle,
+.search-page__note {
+  color: var(--color-text-secondary);
+}
+
+.search-page__explain dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  margin-block: 0.5rem;
+}
+
+.search-page__ask {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.search-page__chip {
+  align-self: flex-start;
+  padding-block: 0.25rem;
+  padding-inline: 0.75rem;
+  border-radius: 999px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+
+.search-page__answer {
+  padding: 0.75rem;
+  border-inline-start: 3px solid var(--color-accent);
+  background: var(--color-bg-alt);
+}
+
+.search-page__error {
+  color: var(--color-danger);
+}

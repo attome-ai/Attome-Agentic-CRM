@@ -1,0 +1,184 @@
+<section class="search-settings">
+  <h1>{{ 'searchSettings.title' | translate }}</h1>
+
+  @if (error()) {
+    <p class="search-settings__error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="search-settings__panels">
+    @if (size(); as s) {
+      <div class="search-settings__panel" data-size>
+        <h2>{{ 'searchSettings.size' | translate }}</h2>
+        <p>{{ 'searchSettings.sizeLine' | translate: { rows: s.rows, size: bytes(s.bytes) } }}</p>
+      </div>
+    }
+    @if (backlog(); as b) {
+      <div class="search-settings__panel" data-status>
+        <h2>{{ 'searchSettings.status' | translate }}</h2>
+        <p>{{ 'searchSettings.backlog' | translate: { count: b.pending } }}</p>
+        @if (b.oldest) {
+          <p class="search-settings__note">{{ 'searchSettings.oldest' | translate: { at: b.oldest } }}</p>
+        }
+      </div>
+    }
+    @if (quality(); as q) {
+      <div class="search-settings__panel" data-quality>
+        <h2>{{ 'searchSettings.quality' | translate }}</h2>
+        <p>{{ 'searchSettings.qualityLine' | translate: { searches: q.searches, days: q.days } }}</p>
+        <p>{{ 'searchSettings.zeroResults' | translate: { rate: percent(q.zero_result_rate) } }}</p>
+        <p>{{ 'searchSettings.refinements' | translate: { rate: percent(q.refinement_rate) } }}</p>
+      </div>
+    }
+  </div>
+
+  <h2>{{ 'searchSettings.attributes' | translate }}</h2>
+  <label class="search-settings__field">
+    {{ 'searchSettings.entity' | translate }}
+    <select (change)="chooseEntity($event)">
+      <option value="">{{ 'searchSettings.chooseEntity' | translate }}</option>
+      @for (e of entities(); track e) {
+        <option [value]="e" [selected]="entity() === e">{{ e }}</option>
+      }
+    </select>
+  </label>
+
+  @if (settings()) {
+    <p class="search-settings__note">
+      @if (entityRows() !== null) {
+        {{ 'searchSettings.entityRows' | translate: { rows: entityRows() } }}
+      }
+      @if (entityBytes()) {
+        {{ 'searchSettings.entityBytes' | translate: { size: entityBytes() } }}
+      }
+    </p>
+    <table class="search-settings__table">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'searchSettings.attribute' | translate }}</th>
+          <th scope="col">{{ 'searchSettings.mode' | translate }}</th>
+          <th scope="col">{{ 'searchSettings.weight' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (a of attributes(); track a.attribute) {
+          <tr data-attribute-row>
+            <td>{{ a.attribute }}</td>
+            <td>
+              <select [attr.aria-label]="'searchSettings.mode' | translate" (change)="onMode(a.attribute, $event)">
+                @for (m of modes; track m) {
+                  <option [value]="m" [selected]="a.mode === m">{{ ('searchSettings.mode_' + m) | translate }}</option>
+                }
+              </select>
+            </td>
+            <td>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                [value]="a.weight"
+                [attr.aria-label]="'searchSettings.weight' | translate"
+                (change)="onWeight(a.attribute, $event)"
+              />
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+      {{ (saving() ? 'searchSettings.saving' : 'searchSettings.save') | translate }}
+    </button>
+    @if (savedNote()) {
+      <span role="status">{{ 'searchSettings.saved' | translate }}</span>
+    }
+  }
+
+  <div class="search-settings__lists">
+    <div class="search-settings__panel">
+      <h2>{{ 'searchSettings.synonyms' | translate }}</h2>
+      <ul>
+        @for (s of synonyms(); track s.id) {
+          <li>
+            <span dir="auto">{{ s.terms.join(', ') }}</span>
+            <button type="button" class="btn btn-text" (click)="deleteSynonym(s.id)">{{ 'searchSettings.remove' | translate }}</button>
+          </li>
+        }
+      </ul>
+      <form class="search-settings__add" (submit)="$event.preventDefault(); addSynonym()">
+        <input
+          type="text"
+          dir="auto"
+          [value]="newSynonym()"
+          (input)="onText('synonym', $event)"
+          [attr.aria-label]="'searchSettings.synonymTerms' | translate"
+          [placeholder]="'searchSettings.synonymTerms' | translate"
+        />
+        <select [attr.aria-label]="'searchSettings.language' | translate" (change)="onLang($event)">
+          <option value="en">{{ 'searchSettings.english' | translate }}</option>
+          <option value="ar">{{ 'searchSettings.arabic' | translate }}</option>
+        </select>
+        <button type="submit" class="btn">{{ 'searchSettings.add' | translate }}</button>
+      </form>
+    </div>
+
+    <div class="search-settings__panel">
+      <h2>{{ 'searchSettings.stopwords' | translate }}</h2>
+      <ul>
+        @for (w of stopwords(); track w.word) {
+          <li>
+            <span dir="auto">{{ w.word }}</span>
+            <button type="button" class="btn btn-text" (click)="deleteStopword(w.word)">{{ 'searchSettings.remove' | translate }}</button>
+          </li>
+        }
+      </ul>
+      <form class="search-settings__add" (submit)="$event.preventDefault(); addStopword()">
+        <input
+          type="text"
+          dir="auto"
+          [value]="newStopword()"
+          (input)="onText('stopword', $event)"
+          [attr.aria-label]="'searchSettings.stopword' | translate"
+          [placeholder]="'searchSettings.stopword' | translate"
+        />
+        <button type="submit" class="btn">{{ 'searchSettings.add' | translate }}</button>
+      </form>
+    </div>
+
+    <div class="search-settings__panel">
+      <h2>{{ 'searchSettings.pins' | translate }}</h2>
+      <ul>
+        @for (p of pins(); track p.id) {
+          <li>
+            <span dir="auto">{{ p.query_norm }}</span>
+            <span>{{ p.entity_logicalname }} #{{ p.position }}</span>
+            <button type="button" class="btn btn-text" (click)="deletePin(p.id)">{{ 'searchSettings.remove' | translate }}</button>
+          </li>
+        }
+      </ul>
+      <form class="search-settings__add" (submit)="$event.preventDefault(); addPin()">
+        <input
+          type="text"
+          dir="auto"
+          [value]="pinQuery()"
+          (input)="onText('pinQuery', $event)"
+          [attr.aria-label]="'searchSettings.pinQuery' | translate"
+          [placeholder]="'searchSettings.pinQuery' | translate"
+        />
+        <input
+          type="text"
+          [value]="pinEntity()"
+          (input)="onText('pinEntity', $event)"
+          [attr.aria-label]="'searchSettings.entity' | translate"
+          [placeholder]="'searchSettings.entity' | translate"
+        />
+        <input
+          type="text"
+          [value]="pinRecord()"
+          (input)="onText('pinRecord', $event)"
+          [attr.aria-label]="'searchSettings.pinRecord' | translate"
+          [placeholder]="'searchSettings.pinRecord' | translate"
+        />
+        <button type="submit" class="btn">{{ 'searchSettings.add' | translate }}</button>
+      </form>
+    </div>
+  </div>
+</section>
