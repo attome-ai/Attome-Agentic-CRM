@@ -618,7 +618,7 @@ async fn create_stopword(
     Json(body): Json<SearchStopword>,
 ) -> Result<(StatusCode, Json<SearchStopword>), AppError> {
     let word = crate::normalize_ar(&clean_term(&body.word)?);
-    check_lang(Some(&body.lang))?;
+    check_lang(Some(body.lang.as_str()))?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     sqlx::query(
         "INSERT INTO search_stopword (word, lang) VALUES ($1, $2) \
