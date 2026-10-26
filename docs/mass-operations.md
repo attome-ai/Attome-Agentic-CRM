@@ -100,7 +100,7 @@ the replay starts, so two undos cannot both run.
 
 A larger one becomes `undoing`, and a chain of `HeavyOpUndoChunk` jobs writes its chunks back from
 the last one down, as the person who started it. Each chunk is replayed once and marked `undone`
-with its counts. The operation becomes `undone` after the first chunk.
+with its counts. The operation becomes `undone` once chunk 0, the last to replay, is done.
 
 The values an operation replaced are kept for `limits.heavy_op.undo_retention_days` (30 by
 default) after it finishes. A daily job clears older ones, and undo is then refused with `409`.
