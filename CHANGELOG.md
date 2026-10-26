@@ -16,6 +16,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- E13: page search settings, structured data, sitemaps, robots, hreflang, SEO audit, topics, search console and IndexNow (content module).
 - Secrets runbook (Z1-T16): `docs/secrets.md` now covers key rings (`ring:`), the rotation steps
   (`attome secrets rotate`, restart, `rewrap`), the inventory and the production rule against a
   secret typed into the file.
