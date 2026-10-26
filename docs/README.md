@@ -15,6 +15,7 @@
 ## Reference
 
 - [Architecture](architecture.md)
+- [Built-in edge](edge.md): TLS from files or ACME, HTTP/3, what the edge refuses before authentication and the route-policy extensions.
 - [Agents](agents.md): what agents may do, their tools, delegation and safety.
 - [Identity brokers](identity-brokers.md): signing in with a SAML-only identity provider through Entra ID, Okta, AD FS or Keycloak over OpenID Connect.
 - [Hijri calendar](hijri.md): Umm al-Qura dates, corrections, grouping, autonumbers and holidays.
