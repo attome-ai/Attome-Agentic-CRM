@@ -208,6 +208,55 @@ pub struct SearchParams {
     /// of `metadata.read` get explanations; for anyone else this is ignored.
     #[serde(default)]
     pub explain: bool,
+    /// A25-T9: also count the results by entity, owner and month changed.
+    #[serde(default)]
+    pub facets: bool,
+}
+
+/// A25-T9: what a search computes beside its page.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct SearchOptions {
+    /// Each hit's [`crate::explain::ScoreParts`] (the caller checked
+    /// [`crate::explain::may_explain`]).
+    pub explain: bool,
+    /// The response's [`SearchFacets`].
+    pub facets: bool,
+}
+
+/// One facet value and how many results have it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+pub struct FacetCount {
+    pub value: String,
+    pub count: i64,
+}
+
+/// A25-T9: the results counted by entity, owner (user id) and the month
+/// they last changed (`YYYY-MM`), over every result the caller may see, not
+/// only the page; the most common 20 of each.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, ToSchema)]
+pub struct SearchFacets {
+    pub entity: Vec<FacetCount>,
+    pub owner: Vec<FacetCount>,
+    pub modified_month: Vec<FacetCount>,
+}
+
+/// The most values one facet lists.
+pub const MAX_FACET_VALUES: usize = 20;
+
+/// Counts `values`, most common first (ties by value), at most
+/// [`MAX_FACET_VALUES`]. Pure.
+pub fn facet_counts<I: IntoIterator<Item = String>>(values: I) -> Vec<FacetCount> {
+    let mut counts: std::collections::BTreeMap<String, i64> = std::collections::BTreeMap::new();
+    for v in values {
+        *counts.entry(v).or_default() += 1;
+    }
+    let mut out: Vec<FacetCount> = counts
+        .into_iter()
+        .map(|(value, count)| FacetCount { value, count })
+        .collect();
+    out.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.value.cmp(&b.value)));
+    out.truncate(MAX_FACET_VALUES);
+    out
 }
 
 fn default_page() -> i64 {
@@ -261,6 +310,9 @@ pub struct SearchResponse {
     /// ranked search. Sent only when true.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub limited: bool,
+    /// A25-T9: the facets, when asked for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub facets: Option<SearchFacets>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -386,15 +438,18 @@ async fn search(
                 .await?;
         return Ok(Json(response));
     }
-    let explain = params.explain && crate::explain::may_explain(&ctx);
-    let response = execute_search_explained(
+    let options = SearchOptions {
+        explain: params.explain && crate::explain::may_explain(&ctx),
+        facets: params.facets,
+    };
+    let response = execute_search_with(
         &state,
         &ctx,
         &q,
         params.page,
         params.page_size,
         audience,
-        explain,
+        options,
     )
     .await?;
     Ok(Json(response))
@@ -420,22 +475,30 @@ pub async fn execute_search(
     page_size: i64,
     audience: Audience,
 ) -> Result<SearchResponse, AppError> {
-    execute_search_explained(state, ctx, q, page, page_size, audience, false).await
+    execute_search_with(
+        state,
+        ctx,
+        q,
+        page,
+        page_size,
+        audience,
+        SearchOptions::default(),
+    )
+    .await
 }
 
-/// A25-T4: [`execute_search`], each hit carrying its [`crate::explain::ScoreParts`]
-/// when `explain` (the caller has already checked
-/// [`crate::explain::may_explain`]). Nothing is computed for explanations
-/// when it is false.
-pub async fn execute_search_explained(
+/// A25-T4, A25-T9: [`execute_search`] with explanations and facets as
+/// `options` asks. Nothing is computed for either unless asked.
+pub async fn execute_search_with(
     state: &EngineState,
     ctx: &SecurityContext,
     q: &str,
     page: i64,
     page_size: i64,
     audience: Audience,
-    explain: bool,
+    options: SearchOptions,
 ) -> Result<SearchResponse, AppError> {
+    let explain = options.explain;
     let route = crate::router::route(q, audience);
 
     // An aggregation question is answered by a stored query, not by retrieval.
@@ -455,6 +518,7 @@ pub async fn execute_search_explained(
             }),
             impression_id: None,
             limited: false,
+            facets: None,
         });
     }
 
@@ -715,6 +779,11 @@ pub async fn execute_search_explained(
     }
 
     let found = fused.len() as u64;
+    let facets = if options.facets {
+        Some(facets_of(state, &fused).await)
+    } else {
+        None
+    };
     // The score floor is the crude half of the abstention contract: a human
     // ignores an irrelevant fourth result, a model cites it.
     let page_rows: Vec<_> = fused
@@ -811,8 +880,50 @@ pub async fn execute_search_explained(
         route_hint: None,
         impression_id,
         limited: false,
+        facets,
         items,
     })
+}
+
+/// A25-T9: the facets of every result the caller may see (`fused` is
+/// already permission-filtered). Owner and month come from the index rows; a
+/// read that fails leaves those two empty and is logged.
+async fn facets_of(state: &EngineState, fused: &[crate::controls::FusedRow]) -> SearchFacets {
+    let entity = facet_counts(fused.iter().map(|r| r.1.clone()));
+    if fused.is_empty() {
+        return SearchFacets {
+            entity,
+            ..SearchFacets::default()
+        };
+    }
+    let entities: Vec<String> = fused.iter().map(|r| r.1.clone()).collect();
+    let ids: Vec<Uuid> = fused.iter().map(|r| r.0).collect();
+    let rows: Result<Vec<(Option<Uuid>, Option<String>)>, sqlx::Error> = sqlx::query_as(
+        "SELECT i.owner_id, to_char(date_trunc('month', i.source_modifiedon), 'YYYY-MM') \
+           FROM search_index i \
+           JOIN UNNEST($1::text[], $2::uuid[]) AS u(entity, id) \
+             ON i.entity_logicalname = u.entity AND i.record_id = u.id \
+          WHERE i.corpus = $3",
+    )
+    .bind(&entities)
+    .bind(&ids)
+    .bind(crate::drain::CORPUS_RECORD)
+    .fetch_all(&state.base.db)
+    .await;
+    match rows {
+        Ok(rows) => SearchFacets {
+            entity,
+            owner: facet_counts(rows.iter().filter_map(|(o, _)| o.map(|o| o.to_string()))),
+            modified_month: facet_counts(rows.iter().filter_map(|(_, m)| m.clone())),
+        },
+        Err(error) => {
+            tracing::warn!(%error, "search: owner and month facets unavailable");
+            SearchFacets {
+                entity,
+                ..SearchFacets::default()
+            }
+        }
+    }
 }
 
 /// A25-T3: `search.personal_weights`, all zero unless set.
@@ -1129,6 +1240,7 @@ fn empty_response(route: &Route, page: i64, page_size: i64) -> SearchResponse {
         route_hint: None,
         impression_id: None,
         limited: false,
+        facets: None,
     }
 }
 
@@ -1518,6 +1630,35 @@ pub struct ApiDocFragment;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn facet_counts_are_most_common_first_and_bounded() {
+        let values = ["b", "a", "b", "c", "b", "a"]
+            .iter()
+            .map(|v| (*v).to_owned());
+        let counts = facet_counts(values);
+        assert_eq!(
+            counts,
+            vec![
+                FacetCount {
+                    value: "b".into(),
+                    count: 3
+                },
+                FacetCount {
+                    value: "a".into(),
+                    count: 2
+                },
+                FacetCount {
+                    value: "c".into(),
+                    count: 1
+                },
+            ]
+        );
+        assert_eq!(
+            facet_counts((0..50).map(|i| i.to_string())).len(),
+            MAX_FACET_VALUES
+        );
+    }
 
     /// A long paste is rejected before it reaches PostgreSQL. GIN cost is
     /// roughly linear in term count, so a 500-term tsquery is a cheap

@@ -254,3 +254,103 @@ fn admin_search_routes_forbid_non_admin() {
         assert_eq!(status, StatusCode::FORBIDDEN);
     });
 }
+
+/// A25-T9: facets count only what the caller may see: a reader of one
+/// entity never learns how many results another entity holds.
+// feature: A25
+#[test]
+fn facet_counts_exclude_hidden_records() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let tag = &Uuid::now_v7().simple().to_string()[..8];
+        let word = format!("facetword{tag}");
+        let (seen, _) = indexed(&app, &[&format!("{word} one"), &format!("{word} two")]).await;
+        let (hidden, _) = indexed(&app, &[&format!("{word} three")]).await;
+
+        // A reader of `seen` only.
+        let (status, role) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/security/roles",
+                Some(json!({ "name": format!("facets-{tag}") })),
+            )
+            .await;
+        assert!(status.is_success(), "{status} {role}");
+        let role_id = role["id"].as_str().unwrap().to_owned();
+        let key = format!("{seen}.read");
+        attome_security::db::ensure_privilege(
+            app.db(),
+            &key,
+            &key,
+            "test",
+            attome_core::changeset::Layer::Project,
+        )
+        .await
+        .unwrap();
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/security/role-grants",
+                Some(json!({ "role_id": role_id, "privilege_key": key })),
+            )
+            .await;
+        assert!(status.is_success(), "{status} {body}");
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/security/role-entity-access",
+                Some(json!({ "role_id": role_id, "entity": seen, "read_access_level": 3 })),
+            )
+            .await;
+        assert!(status.is_success(), "{status} {body}");
+        let reader = seed_user(app.db(), "facet-reader").await;
+        sqlx::query("INSERT INTO user_account_mm_role (user_ref, role_ref) VALUES ($1, $2::uuid)")
+            .bind(reader.id)
+            .bind(&role_id)
+            .execute(app.db())
+            .await
+            .unwrap();
+        let reader = app.state.base.security.resolve(reader.id).await.unwrap();
+
+        let options = attome_search::routes::SearchOptions {
+            explain: false,
+            facets: true,
+        };
+        let answer = attome_search::routes::execute_search_with(
+            &app.state,
+            &reader,
+            &word,
+            1,
+            20,
+            Audience::Human,
+            options,
+        )
+        .await
+        .unwrap();
+        let facets = answer.facets.expect("facets were asked for");
+        let entities: Vec<(&str, i64)> = facets
+            .entity
+            .iter()
+            .map(|f| (f.value.as_str(), f.count))
+            .collect();
+        assert_eq!(entities, vec![(seen.as_str(), 2)], "{facets:?}");
+        assert!(!format!("{facets:?}").contains(&hidden));
+
+        // An administrator sees both.
+        let admin = app.state.base.security.resolve(app.admin.id).await.unwrap();
+        let all = attome_search::routes::execute_search_with(
+            &app.state,
+            &admin,
+            &word,
+            1,
+            20,
+            Audience::Human,
+            options,
+        )
+        .await
+        .unwrap();
+        assert_eq!(all.facets.unwrap().entity.len(), 2);
+    });
+}

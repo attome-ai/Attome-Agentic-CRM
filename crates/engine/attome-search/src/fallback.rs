@@ -178,6 +178,7 @@ pub async fn fallback_search(
     let has_more = found > page_size.unsigned_abs();
     items.truncate(usize::try_from(page_size).unwrap_or(0));
     Ok(SearchResponse {
+        facets: None,
         items,
         total: Total::Exact { value: found },
         page,

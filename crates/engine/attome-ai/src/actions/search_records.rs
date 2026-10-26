@@ -204,6 +204,7 @@ async fn admitted_search(
             route_hint: None,
             impression_id: None,
             limited: false,
+            facets: None,
         });
     }
 
@@ -279,6 +280,7 @@ async fn admitted_search(
         route_hint: first.route_hint,
         impression_id: None,
         limited: false,
+        facets: None,
     })
 }
 

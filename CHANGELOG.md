@@ -16,6 +16,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Search facets (A25-T9): `GET /api/v1/search?...&facets=true` adds `facets` to the answer, the
+  results counted by entity, owner and month changed over every result the caller may see (not
+  only the page), the 20 most common of each.
 - Search explanations (A25-T4): `GET /api/v1/search?...&explain=true` gives administrators and
   holders of `metadata.read` each result's `explain`: the legs that matched with their values, the
   fused score, what the entity boost and personal ranking added, whether a pin placed it, and the
