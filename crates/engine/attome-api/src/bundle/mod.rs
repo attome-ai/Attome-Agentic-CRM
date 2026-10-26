@@ -76,9 +76,10 @@ pub use export::{PLATFORM_VERSION, applied_schema_version, export_bundle};
 pub use ledger::{ACTION_BUNDLE_APPLY, PlanRow, PlanStatus, enqueue_apply};
 pub use model::{
     AppDef, AttributeDef, AttributePatch, BUNDLE_FORMAT, Bundle, BundleDependency, EntityDef,
-    FieldSecurityProfileDef, FormatError, GrantCondition, KNOWN_FIELD_TYPES, PrivilegeDef,
-    ProfileField, QueryDef, QueryEntityMapping, QueryRef, RecordSet, Requires, RoleDef,
-    RoleEntityAccess, RoleGrant, SidebarDef, ViewDef, check_format, parse_bundle,
+    FieldSecurityProfileDef, FormatError, GrantCondition, KNOWN_FIELD_TYPES, PermissionSetAccess,
+    PermissionSetDef, PrivilegeDef, ProfileField, QueryDef, QueryEntityMapping, QueryRef,
+    RecordSet, Requires, RoleDef, RoleEntityAccess, RoleGrant, SidebarDef, ViewDef, check_format,
+    parse_bundle,
 };
 pub use plan::{
     BundlePlan, Diff, PlanAction, PlanEntry, PlanOptions, PlanSummary, build_plan, check_requires,

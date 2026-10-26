@@ -34,6 +34,7 @@ mod invitations;
 mod mfa;
 mod mfa_coverage;
 mod organizations;
+mod permission_sets;
 mod positions;
 mod privileges;
 mod role_entity_access;
@@ -91,6 +92,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         invitations::openapi_fragment(),
         identity_links::openapi_fragment(),
         organizations::openapi_fragment(),
+        permission_sets::openapi_fragment(),
         effective_access::openapi_fragment(),
         users::openapi_fragment(),
     ] {
@@ -124,6 +126,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(invitations::routes())
         .merge(identity_links::routes())
         .merge(organizations::routes())
+        .merge(permission_sets::routes())
         .merge(effective_access::routes())
         .merge(users::routes())
 }

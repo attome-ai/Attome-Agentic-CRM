@@ -66,6 +66,8 @@ pub const COMPONENT_ROLE_ENTITY_ACCESS: &str = "role_entity_access";
 pub const COMPONENT_PRIVILEGE: &str = "privilege";
 pub const COMPONENT_FIELD_SECURITY_PROFILE: &str = "field_security_profile";
 pub const COMPONENT_PROFILE_FIELD: &str = "profile_field";
+/// Q10-T5 — one `permission_set` with its privileges and entity levels.
+pub const COMPONENT_PERMISSION_SET: &str = "permission_set";
 /// Bundle-level checks (format, `requires`) that are not about one object.
 pub const COMPONENT_BUNDLE: &str = "bundle";
 /// Phase 3 — one row of a [`RecordSet`], keyed `entity[k1=v1,k2=v2]`.
@@ -153,6 +155,10 @@ pub struct Bundle {
     pub privileges: Vec<PrivilegeDef>,
     #[serde(default)]
     pub field_security_profiles: Vec<FieldSecurityProfileDef>,
+    /// Q10-T5 — permission sets; their assignments are environment data and
+    /// never travel.
+    #[serde(default)]
+    pub permission_sets: Vec<PermissionSetDef>,
     /// Phase 3 (reference data) — see [`RecordSet`]. Always present; empty
     /// when the bundle carries no reference data.
     #[serde(default)]
@@ -654,6 +660,133 @@ pub struct ProfileField {
     pub can_update: bool,
 }
 
+/// Q10-T5 — `permission_set`, its `permission_set_privilege` keys and its
+/// `permission_set_entity_access` rows (entity by logicalname). Its
+/// assignments to users and teams are environment data and never travel.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct PermissionSetDef {
+    pub name: String,
+    #[serde(default)]
+    pub name_ar: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub is_customized: bool,
+    /// Privilege keys.
+    #[serde(default)]
+    pub privileges: Vec<String>,
+    #[serde(default)]
+    pub entity_access: Vec<PermissionSetAccess>,
+}
+
+fn default_children() -> bool {
+    true
+}
+
+/// One `permission_set_entity_access` row: the role access columns (D-133,
+/// Q10-T1), entity by logicalname.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct PermissionSetAccess {
+    pub entity: String,
+    #[serde(default = "default_access_level")]
+    pub read_access_level: i16,
+    #[serde(default = "default_access_level")]
+    pub write_access_level: i16,
+    #[serde(default = "default_access_level")]
+    pub delete_access_level: i16,
+    #[serde(default)]
+    pub create_access_level: Option<i16>,
+    #[serde(default)]
+    pub assign_access_level: Option<i16>,
+    #[serde(default)]
+    pub share_access_level: Option<i16>,
+    #[serde(default)]
+    pub export_access_level: i16,
+    #[serde(default)]
+    pub bulk_access_level: i16,
+    #[serde(default = "default_children")]
+    pub read_bu_children: bool,
+    #[serde(default = "default_children")]
+    pub write_bu_children: bool,
+    #[serde(default = "default_children")]
+    pub delete_bu_children: bool,
+    #[serde(default = "default_children")]
+    pub assign_bu_children: bool,
+    #[serde(default = "default_children")]
+    pub share_bu_children: bool,
+}
+
+impl PermissionSetDef {
+    /// The set as the security engine's desired state.
+    pub fn desc(&self) -> attome_security::permission_sets::PermissionSetDesc {
+        attome_security::permission_sets::PermissionSetDesc {
+            name: self.name.clone(),
+            name_ar: self.name_ar.clone(),
+            description: self.description.clone(),
+            privileges: self.privileges.clone(),
+            entity_access: self
+                .entity_access
+                .iter()
+                .map(|a| (a.entity.clone(), a.levels()))
+                .collect(),
+        }
+    }
+
+    /// A set as the bundle carries it.
+    pub fn from_desc(
+        desc: attome_security::permission_sets::PermissionSetDesc,
+        is_customized: bool,
+    ) -> Self {
+        Self {
+            name: desc.name,
+            name_ar: desc.name_ar,
+            description: desc.description,
+            is_customized,
+            privileges: desc.privileges,
+            entity_access: desc
+                .entity_access
+                .into_iter()
+                .map(|(entity, l)| PermissionSetAccess {
+                    entity,
+                    read_access_level: l.read,
+                    write_access_level: l.write,
+                    delete_access_level: l.delete,
+                    create_access_level: l.create,
+                    assign_access_level: l.assign,
+                    share_access_level: l.share,
+                    export_access_level: l.export,
+                    bulk_access_level: l.bulk,
+                    read_bu_children: l.read_bu_children,
+                    write_bu_children: l.write_bu_children,
+                    delete_bu_children: l.delete_bu_children,
+                    assign_bu_children: l.assign_bu_children,
+                    share_bu_children: l.share_bu_children,
+                })
+                .collect(),
+        }
+    }
+}
+
+impl PermissionSetAccess {
+    pub fn levels(&self) -> attome_security::permission_sets::SetLevels {
+        attome_security::permission_sets::SetLevels {
+            read: self.read_access_level,
+            write: self.write_access_level,
+            delete: self.delete_access_level,
+            create: self.create_access_level,
+            assign: self.assign_access_level,
+            share: self.share_access_level,
+            export: self.export_access_level,
+            bulk: self.bulk_access_level,
+            read_bu_children: self.read_bu_children,
+            write_bu_children: self.write_bu_children,
+            delete_bu_children: self.delete_bu_children,
+            assign_bu_children: self.assign_bu_children,
+            share_bu_children: self.share_bu_children,
+        }
+    }
+}
+
 /// Phase 3 reference data: rows of one entity keyed by a declared business
 /// key (P-environment-promotion §5 step 24). `key_fields` name the row's
 /// attributes that together form its identity (e.g. `["name"]` for a
@@ -1040,6 +1173,7 @@ impl Bundle {
             roles: Vec::new(),
             privileges: Vec::new(),
             field_security_profiles: Vec::new(),
+            permission_sets: Vec::new(),
             record_sets: Vec::new(),
             settings: Vec::new(),
             state_models: Vec::new(),
@@ -1114,6 +1248,12 @@ impl Bundle {
         }
         self.field_security_profiles
             .sort_by(|a, b| a.name.cmp(&b.name));
+
+        for s in &mut self.permission_sets {
+            sort_dedup(&mut s.privileges);
+            s.entity_access.sort_by(|a, b| a.entity.cmp(&b.entity));
+        }
+        self.permission_sets.sort_by(|a, b| a.name.cmp(&b.name));
 
         for rs in &mut self.record_sets {
             let keys = rs.key_fields.clone();

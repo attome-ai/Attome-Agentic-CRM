@@ -458,6 +458,8 @@ enum Step<'a> {
     Calendar(&'a CalendarDef),
     Sidebar(&'a SidebarDef),
     Profile(&'a FieldSecurityProfileDef),
+    /// Q10-T5.
+    PermissionSet(&'a PermissionSetDef),
     Role(&'a RoleDef),
     /// M07 Phase 1 (D-405/D-406). Transitions are set semantics inside their
     /// parent, same as `Profile`'s fields — no separate `Step` per edge.
@@ -608,6 +610,15 @@ fn build_steps<'a>(bundle: &'a Bundle, plan: &'a StoredPlan) -> Vec<PlannedStep<
         });
     }
 
+    for s in &bundle.permission_sets {
+        steps.push(PlannedStep {
+            component: COMPONENT_PERMISSION_SET,
+            key: s.name.clone(),
+            action: action_of(COMPONENT_PERMISSION_SET, &s.name),
+            step: Step::PermissionSet(s),
+        });
+    }
+
     for p in &bundle.field_security_profiles {
         let mut action = action_of(COMPONENT_FIELD_SECURITY_PROFILE, &p.name);
         if action == PlanAction::Noop
@@ -741,6 +752,7 @@ fn build_steps<'a>(bundle: &'a Bundle, plan: &'a StoredPlan) -> Vec<PlannedStep<
         COMPONENT_ENTITY,
         COMPONENT_ROLE,
         COMPONENT_FIELD_SECURITY_PROFILE,
+        COMPONENT_PERMISSION_SET,
         COMPONENT_STATE_MODEL,
     ];
     for component in retire_order {
@@ -778,6 +790,7 @@ fn static_component(name: &str) -> &'static str {
         COMPONENT_ENTITY => COMPONENT_ENTITY,
         COMPONENT_ROLE => COMPONENT_ROLE,
         COMPONENT_FIELD_SECURITY_PROFILE => COMPONENT_FIELD_SECURITY_PROFILE,
+        COMPONENT_PERMISSION_SET => COMPONENT_PERMISSION_SET,
         COMPONENT_STATE_MODEL => COMPONENT_STATE_MODEL,
         COMPONENT_PRIVILEGE => COMPONENT_PRIVILEGE,
         COMPONENT_ROLE_GRANT => COMPONENT_ROLE_GRANT,
@@ -1086,6 +1099,30 @@ async fn run_step(
             if wrote(outcome) {
                 security::invalidate_profile_holders(db, &ctx.state.base.security, profile_id)
                     .await?;
+            }
+            summary.record(outcome);
+            Ok(())
+        }
+        (Step::PermissionSet(s), _) => {
+            let db = ctx.provisioning_pool();
+            let pol = policy(ctx.additive_only, s.is_customized);
+            let desired_id = derived_id(COMPONENT_PERMISSION_SET, &s.name);
+            let (set_id, outcome) = with_lock_retry!({
+                attome_security::permission_sets::reconcile_permission_set(
+                    db,
+                    &s.desc(),
+                    pol,
+                    Some(desired_id),
+                )
+                .await
+            })?;
+            if wrote(outcome) {
+                attome_security::permission_sets::invalidate_set_holders(
+                    db,
+                    &ctx.state.base.security,
+                    set_id,
+                )
+                .await?;
             }
             summary.record(outcome);
             Ok(())
@@ -1773,6 +1810,25 @@ async fn run_retire(
                         .await?;
                 }
                 outcome
+            }
+        }
+        COMPONENT_PERMISSION_SET => {
+            match attome_security::permission_sets::live_set(db, key).await? {
+                Some((set_id, _, _)) if ctx.live.permission_sets.iter().any(|s| s.name == key) => {
+                    let outcome = with_lock_retry!(
+                        attome_security::permission_sets::retire_permission_set(db, key).await
+                    )?;
+                    if wrote(outcome) {
+                        attome_security::permission_sets::invalidate_set_holders(
+                            db,
+                            &state.base.security,
+                            set_id,
+                        )
+                        .await?;
+                    }
+                    outcome
+                }
+                _ => ReconcileOutcome::Unchanged,
             }
         }
         COMPONENT_STATE_MODEL => {

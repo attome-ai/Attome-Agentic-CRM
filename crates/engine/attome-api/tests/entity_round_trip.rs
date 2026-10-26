@@ -10570,3 +10570,175 @@ fn masked_field_reads_masked_and_cannot_be_updated() {
         );
     })
 }
+
+// ── Q10-T5: permission sets over the admin API ──
+
+fn json_req(method: &str, uri: &str, cookie: &str, body: Option<Value>) -> Request<Body> {
+    let builder = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("cookie", cookie);
+    match body {
+        Some(b) => builder
+            .header("content-type", "application/json")
+            .body(Body::from(b.to_string()))
+            .unwrap(),
+        None => builder.body(Body::empty()).unwrap(),
+    }
+}
+
+/// An administrator builds a set (a privilege and an entity level), assigns
+/// it to a user who had nothing, and the user can list the entity; removing
+/// the assignment takes it away again.
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/security/permission-sets, POST /api/v1/admin/security/permission-sets/{id}/privileges, POST /api/v1/admin/security/permission-sets/{id}/entity-access, GET /api/v1/admin/security/permission-sets/{id}, POST /api/v1/admin/security/permission-sets/{id}/assignments, DELETE /api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}, GET /api/v1/{entity}
+#[test]
+fn create_set_and_assign_to_user() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin = seed_admin(&system).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+
+        let logicalname = format!("set_test_{}", Uuid::now_v7().simple());
+        let res = app
+            .clone()
+            .oneshot(json_req(
+                "POST",
+                "/api/v1/admin/entities",
+                &admin,
+                Some(serde_json::json!({"logicalname": logicalname, "name": "Set Test"})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+
+        let user_id = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO user_account (id, email, user_name, is_active) VALUES ($1, $2, $2, true)",
+        )
+        .bind(user_id)
+        .bind(format!("set-holder-{user_id}@test.local"))
+        .execute(&db)
+        .await
+        .unwrap();
+        let user = session_cookie(user_id);
+        let list =
+            |cookie: String| json_req("GET", &format!("/api/v1/{logicalname}"), &cookie, None);
+        let res = app.clone().oneshot(list(user.clone())).await.unwrap();
+        assert_eq!(res.status(), StatusCode::FORBIDDEN, "nothing granted yet");
+
+        let res = app
+            .clone()
+            .oneshot(json_req(
+                "POST",
+                "/api/v1/admin/security/permission-sets",
+                &admin,
+                Some(serde_json::json!({"name": format!("readers-{user_id}"), "name_ar": "قراء"})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let set_id = body_json(res).await["id"].as_str().unwrap().to_owned();
+        let base = format!("/api/v1/admin/security/permission-sets/{set_id}");
+
+        let res = app
+            .clone()
+            .oneshot(json_req(
+                "POST",
+                &format!("{base}/privileges"),
+                &admin,
+                Some(serde_json::json!({"privilege_key": format!("{logicalname}.read")})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::NO_CONTENT);
+        let res = app
+            .clone()
+            .oneshot(json_req(
+                "POST",
+                &format!("{base}/entity-access"),
+                &admin,
+                Some(serde_json::json!({"entity": logicalname, "export_access_level": 2})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let res = app
+            .clone()
+            .oneshot(json_req("GET", &base, &admin, None))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let detail = body_json(res).await;
+        assert_eq!(detail["privileges"][0], format!("{logicalname}.read"));
+        assert_eq!(detail["entity_access"][0]["export_access_level"], 2);
+
+        let res = app
+            .clone()
+            .oneshot(json_req(
+                "POST",
+                &format!("{base}/assignments"),
+                &admin,
+                Some(serde_json::json!({"user_id": user_id, "reason": "audit season"})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let assignment = body_json(res).await["id"].as_str().unwrap().to_owned();
+        let res = app.clone().oneshot(list(user.clone())).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK, "the set gives the read");
+
+        let res = app
+            .clone()
+            .oneshot(json_req(
+                "DELETE",
+                &format!("{base}/assignments/{assignment}"),
+                &admin,
+                None,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::NO_CONTENT);
+        let res = app.oneshot(list(user)).await.unwrap();
+        assert_eq!(res.status(), StatusCode::FORBIDDEN, "removed again");
+    })
+}
+
+/// A set can never carry system administration.
+// op: POST /api/v1/admin/security/permission-sets, POST /api/v1/admin/security/permission-sets/{id}/privileges
+#[test]
+fn set_with_admin_privilege_is_refused() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin = seed_admin(&system).await;
+        let app = full_app(system);
+        let res = app
+            .clone()
+            .oneshot(json_req(
+                "POST",
+                "/api/v1/admin/security/permission-sets",
+                &admin,
+                Some(serde_json::json!({"name": format!("admins-{}", Uuid::now_v7())})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let set_id = body_json(res).await["id"].as_str().unwrap().to_owned();
+        let res = app
+            .oneshot(json_req(
+                "POST",
+                &format!("/api/v1/admin/security/permission-sets/{set_id}/privileges"),
+                &admin,
+                Some(serde_json::json!({"privilege_key": "system.admin"})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let body = body_json(res).await;
+        assert!(
+            body.to_string().contains("set_cannot_grant_admin"),
+            "{body}"
+        );
+    })
+}

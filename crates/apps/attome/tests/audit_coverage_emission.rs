@@ -1729,6 +1729,18 @@ async fn field_profile(fx: &Fx) -> Uuid {
     )
 }
 
+async fn permission_set(fx: &Fx) -> Uuid {
+    id_of(
+        &admin(
+            fx,
+            "POST",
+            "/api/v1/admin/security/permission-sets",
+            Some(json!({"name": uniq("set")})),
+        )
+        .await,
+    )
+}
+
 async fn organization(fx: &Fx) -> Uuid {
     let id = Uuid::now_v7();
     sqlx::query("INSERT INTO organization (id, is_active, name) VALUES ($1, true, $2)")
@@ -2504,6 +2516,106 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             request(
                 "DELETE",
                 &format!("{S}/field-profiles/{id}/assignments/{rid}"),
+                t,
+                None,
+            )
+        }
+        // ── permission sets (Q10-T5) ────────────────────────────────────────
+        "POST /api/v1/admin/security/permission-sets" => request(
+            "POST",
+            &format!("{S}/permission-sets"),
+            t,
+            Some(json!({"name": uniq("set")})),
+        ),
+        "PATCH /api/v1/admin/security/permission-sets/{id}" => {
+            let id = permission_set(fx).await;
+            request(
+                "PATCH",
+                &format!("{S}/permission-sets/{id}"),
+                t,
+                Some(json!({"description": "changed"})),
+            )
+        }
+        "DELETE /api/v1/admin/security/permission-sets/{id}" => {
+            let id = permission_set(fx).await;
+            request("DELETE", &format!("{S}/permission-sets/{id}"), t, None)
+        }
+        "POST /api/v1/admin/security/permission-sets/{id}/entity-access" => {
+            let id = permission_set(fx).await;
+            request(
+                "POST",
+                &format!("{S}/permission-sets/{id}/entity-access"),
+                t,
+                Some(json!({"entity": fx.entity, "export_access_level": 3})),
+            )
+        }
+        "DELETE /api/v1/admin/security/permission-sets/{id}/entity-access/{entity}" => {
+            let id = permission_set(fx).await;
+            admin(
+                fx,
+                "POST",
+                &format!("{S}/permission-sets/{id}/entity-access"),
+                Some(json!({"entity": fx.entity})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("{S}/permission-sets/{id}/entity-access/{}", fx.entity),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/security/permission-sets/{id}/privileges" => {
+            let id = permission_set(fx).await;
+            request(
+                "POST",
+                &format!("{S}/permission-sets/{id}/privileges"),
+                t,
+                Some(json!({"privilege_key": format!("{}.read", fx.entity)})),
+            )
+        }
+        "DELETE /api/v1/admin/security/permission-sets/{id}/privileges/{key}" => {
+            let id = permission_set(fx).await;
+            let key = format!("{}.read", fx.entity);
+            admin(
+                fx,
+                "POST",
+                &format!("{S}/permission-sets/{id}/privileges"),
+                Some(json!({"privilege_key": key})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("{S}/permission-sets/{id}/privileges/{key}"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/security/permission-sets/{id}/assignments" => {
+            let id = permission_set(fx).await;
+            let (user, _) = seed_user(&fx.base, "set-holder").await;
+            request(
+                "POST",
+                &format!("{S}/permission-sets/{id}/assignments"),
+                t,
+                Some(json!({"user_id": user})),
+            )
+        }
+        "DELETE /api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}" => {
+            let id = permission_set(fx).await;
+            let (user, _) = seed_user(&fx.base, "set-holder").await;
+            let assignment = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("{S}/permission-sets/{id}/assignments"),
+                    Some(json!({"user_id": user})),
+                )
+                .await,
+            );
+            request(
+                "DELETE",
+                &format!("{S}/permission-sets/{id}/assignments/{assignment}"),
                 t,
                 None,
             )

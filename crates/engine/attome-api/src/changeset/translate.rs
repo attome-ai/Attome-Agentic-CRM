@@ -55,8 +55,9 @@ use crate::bundle::export::{
 };
 use crate::bundle::model::{
     AppDef, CalendarDef, CalendarExceptionDef, FieldSecurityProfileDef, GrantCondition, HolidayDef,
-    HolidayRuleDef, LabelDef, PrivilegeDef, QueryEntityMapping, QueryRef, RelationshipDef, RoleDef,
-    RuleDef, SeasonDef, StateModelDef, StateTransitionDef,
+    HolidayRuleDef, LabelDef, PermissionSetAccess, PermissionSetDef, PrivilegeDef,
+    QueryEntityMapping, QueryRef, RelationshipDef, RoleDef, RuleDef, SeasonDef, StateModelDef,
+    StateTransitionDef,
 };
 
 /// Columns that are identity or bookkeeping, never part of a definition.
@@ -437,6 +438,25 @@ pub(crate) async fn translate(
             };
             Some(json!({ "permissions": { "can_read": can_read, "can_update": can_update } }))
         }
+        // Q10-T5: a set's row, without its two child lists.
+        Op::UpsertPermissionSet => {
+            let def: PermissionSetDef = c.parse(&[])?;
+            args_definition(c.definition(&def, &["privileges", "entity_access"])?)
+        }
+        Op::SetPermissionSetEntityAccess => {
+            let mut extra = Vec::new();
+            if c.get("entity").is_none() {
+                let id = c
+                    .uuid("entity_ref")?
+                    .ok_or_else(|| c.defect("its snapshot has no `entity_ref`"))?;
+                let name = entity_name(conn, id)
+                    .await?
+                    .ok_or_else(|| c.defect(format_args!("entity {id} not found")))?;
+                extra.push(("entity", Value::String(name)));
+            }
+            let access: PermissionSetAccess = c.parse(&extra)?;
+            Some(json!({ "access": c.definition(&access, &["entity"])? }))
+        }
         Op::UpsertRecord => {
             let values = match c.get("values") {
                 Some(v) => v.clone(),
@@ -474,6 +494,10 @@ pub(crate) async fn translate(
         | Op::RemoveEntityDefaultShare
         | Op::AssignFieldProfile
         | Op::UnassignFieldProfile
+        | Op::RetirePermissionSet
+        | Op::ClearPermissionSetEntityAccess
+        | Op::GrantPermissionSetPrivilege
+        | Op::RevokePermissionSetPrivilege
         | Op::DeleteField => None,
         // Phase 2 (design §4.3): the executors record `args` as the snapshot,
         // so translation is the identity. TODO(P2-E): name-at-seq for

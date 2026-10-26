@@ -519,6 +519,7 @@ pub fn diff_bundles(live: &Bundle, desired: &Bundle, opts: PlanOptions) -> Diff 
     diff_sidebar(&live, &desired, &mut diff, opts);
     diff_roles(&live, &desired, &mut diff, opts);
     diff_profiles(&live, &desired, &mut diff, opts);
+    diff_permission_sets(&live, &desired, &mut diff, opts);
     diff_state_models(&live, &desired, &mut diff, opts);
     diff_relationships(&live, &desired, &mut diff, opts);
     diff_apps(&live, &desired, &mut diff, opts);
@@ -1068,6 +1069,35 @@ fn diff_profiles(live: &Bundle, desired: &Bundle, diff: &mut Diff, opts: PlanOpt
     for lp in &live.field_security_profiles {
         if !desired_names.contains(lp.name.as_str()) {
             diff.retire(opts, COMPONENT_FIELD_SECURITY_PROFILE, lp.name.clone());
+        }
+    }
+}
+
+/// Q10-T5 — a permission set is one plan line: its privileges and entity
+/// levels are compared as part of it (set semantics, applied whole).
+fn diff_permission_sets(live: &Bundle, desired: &Bundle, diff: &mut Diff, opts: PlanOptions) {
+    let live_by_name: BTreeMap<&str, &PermissionSetDef> = live
+        .permission_sets
+        .iter()
+        .map(|s| (s.name.as_str(), s))
+        .collect();
+    let desired_names: BTreeSet<&str> = desired
+        .permission_sets
+        .iter()
+        .map(|s| s.name.as_str())
+        .collect();
+    for s in &desired.permission_sets {
+        diff.push(upsert_entry(
+            COMPONENT_PERMISSION_SET,
+            s.name.clone(),
+            live_by_name.get(s.name.as_str()).copied(),
+            s,
+            &[],
+        ));
+    }
+    for ls in &live.permission_sets {
+        if !desired_names.contains(ls.name.as_str()) {
+            diff.retire(opts, COMPONENT_PERMISSION_SET, ls.name.clone());
         }
     }
 }

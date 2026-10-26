@@ -250,6 +250,13 @@ export const OPS = {
   upsert_theme: op(E, ['theme_scope'], ['definition']),
   publish_theme: op(E, ['theme_scope']),
   retire_theme: op(C, ['theme_scope']),
+  // permission sets (Q10-T4/T5): the set, its entity levels and its privileges
+  upsert_permission_set: op(E, ['permission_set'], ['definition']),
+  retire_permission_set: op(C, ['permission_set']),
+  set_permission_set_entity_access: op(E, ['permission_set', 'entity'], ['access']),
+  clear_permission_set_entity_access: op(C, ['permission_set', 'entity']),
+  grant_permission_set_privilege: op(E, ['permission_set', 'privilege']),
+  revoke_permission_set_privilege: op(C, ['permission_set', 'privilege']),
 };
 
 // Ops a customer changeset may never carry (rulings 0.4/0.5: no structure).

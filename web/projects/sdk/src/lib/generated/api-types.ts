@@ -9527,6 +9527,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/permission-sets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Permission sets
+         * @description Every live permission set, by name. Administrators only.
+         */
+        get: operations["list_sets"];
+        put?: never;
+        /**
+         * Create a permission set
+         * @description Creates an empty permission set; add privileges and entity levels next. Administrators only; audited and recorded in the changeset.
+         */
+        post: operations["create_set"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/permission-sets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A permission set
+         * @description One set with its privileges and entity levels. Administrators only.
+         */
+        get: operations["get_set"];
+        put?: never;
+        post?: never;
+        /**
+         * Remove a permission set
+         * @description Retires a set and ends its assignments; everyone it reached loses what it gave. Administrators only; audited and recorded in the changeset.
+         */
+        delete: operations["delete_set"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a permission set
+         * @description Changes a set's Arabic name or description. `If-Match: "<row_version>"` guards against a lost update. Administrators only; audited and recorded in the changeset.
+         */
+        patch: operations["update_set"];
+        trace?: never;
+    };
+    "/api/v1/admin/security/permission-sets/{id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A permission set's assignments
+         * @description Who the set is assigned to, live and ended. Administrators only.
+         */
+        get: operations["list_assignments"];
+        put?: never;
+        /**
+         * Assign a permission set
+         * @description Gives the set to a user or a team, optionally until an end date. Environment data, not recorded in the changeset. Administrators only; audited.
+         */
+        post: operations["create_assignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a permission set assignment
+         * @description The user or team stops getting the set. Administrators only; audited.
+         */
+        delete: operations["delete_assignment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/permission-sets/{id}/entity-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set an entity's levels in a permission set
+         * @description Adds or replaces one entity's levels in a set. Administrators only; audited and recorded in the changeset.
+         */
+        post: operations["set_entity_access"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/permission-sets/{id}/entity-access/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Clear an entity's levels from a permission set
+         * @description The set stops giving anything on that entity. Administrators only; audited and recorded in the changeset.
+         */
+        delete: operations["clear_entity_access"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/permission-sets/{id}/privileges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a privilege to a permission set
+         * @description Never `system.admin` (422 `set_cannot_grant_admin`). Administrators only; audited and recorded in the changeset.
+         */
+        post: operations["grant_privilege"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/permission-sets/{id}/privileges/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take a privilege out of a permission set
+         * @description Administrators only; audited and recorded in the changeset.
+         */
+        delete: operations["revoke_privilege"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/positions": {
         parameters: {
             query?: never;
@@ -28572,6 +28748,21 @@ export interface components {
              */
             row_version?: number | null;
         };
+        AssignmentItem: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            ends_at?: string | null;
+            /** Format: uuid */
+            granted_by?: string | null;
+            /** Format: uuid */
+            id: string;
+            reason?: string | null;
+            /** Format: uuid */
+            team_id?: string | null;
+            /** Format: uuid */
+            user_id?: string | null;
+        };
         /** @description An assignment change. */
         AssignmentPatch: {
             /** Format: date-time */
@@ -29981,6 +30172,11 @@ export interface components {
              *     key on.
              */
             name?: string | null;
+            /**
+             * @description Q10-T5 — permission sets; their assignments are environment data and
+             *     never travel.
+             */
+            permission_sets?: components["schemas"]["PermissionSetDef"][];
             privileges?: components["schemas"]["PrivilegeDef"][];
             queries?: components["schemas"]["QueryDef"][];
             /**
@@ -32506,6 +32702,19 @@ export interface components {
             expires_in_days?: number | null;
             name: string;
         };
+        /** @description Exactly one of `user_id` and `team_id`. */
+        CreateAssignmentBody: {
+            /**
+             * Format: date-time
+             * @description When the assignment stops giving anything; open-ended when omitted.
+             */
+            ends_at?: string | null;
+            reason?: string | null;
+            /** Format: uuid */
+            team_id?: string | null;
+            /** Format: uuid */
+            user_id?: string | null;
+        };
         CreateCaseDefBody: {
             activity_mapping?: unknown;
             is_active?: boolean;
@@ -32719,6 +32928,11 @@ export interface components {
             template_id?: string | null;
             title: string;
             url_path: string;
+        };
+        CreatePermissionSetBody: {
+            description?: string | null;
+            name: string;
+            name_ar?: string | null;
         };
         CreatePersonalViewBody: {
             /**
@@ -42429,6 +42643,35 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AssignmentItem: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: date-time */
+                ends_at?: string | null;
+                /** Format: uuid */
+                granted_by?: string | null;
+                /** Format: uuid */
+                id: string;
+                reason?: string | null;
+                /** Format: uuid */
+                team_id?: string | null;
+                /** Format: uuid */
+                user_id?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_AuditSearchRow: {
             items: {
                 /** Format: int32 */
@@ -46571,6 +46814,33 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PermissionSetItem: {
+            items: {
+                description?: string | null;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                name_ar?: string | null;
+                owner_layer: string;
+                /**
+                 * Format: int64
+                 * @description Send back as `If-Match` on the next `PATCH`.
+                 */
+                row_version: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_PersonalDataItem: {
             items: {
                 attribute: string;
@@ -49593,6 +49863,68 @@ export interface components {
             entity_name: string;
             /** Format: uuid */
             id: string;
+        };
+        /**
+         * @description One `permission_set_entity_access` row: the role access columns (D-133,
+         *     Q10-T1), entity by logicalname.
+         */
+        PermissionSetAccess: {
+            /** Format: int32 */
+            assign_access_level?: number | null;
+            assign_bu_children?: boolean;
+            /** Format: int32 */
+            bulk_access_level?: number;
+            /** Format: int32 */
+            create_access_level?: number | null;
+            /** Format: int32 */
+            delete_access_level?: number;
+            delete_bu_children?: boolean;
+            entity: string;
+            /** Format: int32 */
+            export_access_level?: number;
+            /** Format: int32 */
+            read_access_level?: number;
+            read_bu_children?: boolean;
+            /** Format: int32 */
+            share_access_level?: number | null;
+            share_bu_children?: boolean;
+            /** Format: int32 */
+            write_access_level?: number;
+            write_bu_children?: boolean;
+        };
+        /**
+         * @description Q10-T5 — `permission_set`, its `permission_set_privilege` keys and its
+         *     `permission_set_entity_access` rows (entity by logicalname). Its
+         *     assignments to users and teams are environment data and never travel.
+         */
+        PermissionSetDef: {
+            description?: string | null;
+            entity_access?: components["schemas"]["PermissionSetAccess"][];
+            is_customized?: boolean;
+            name: string;
+            name_ar?: string | null;
+            /** @description Privilege keys. */
+            privileges?: string[];
+        };
+        /** @description A set with its privileges and entity levels. */
+        PermissionSetDetail: components["schemas"]["PermissionSetItem"] & {
+            entity_access: components["schemas"]["SetEntityAccessItem"][];
+            /** @description Privilege keys. */
+            privileges: string[];
+        };
+        /** @description A permission set. */
+        PermissionSetItem: {
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            name_ar?: string | null;
+            owner_layer: string;
+            /**
+             * Format: int64
+             * @description Send back as `If-Match` on the next `PATCH`.
+             */
+            row_version: number;
         };
         /** @description An attribute labelled personal, financial or health, and what reads it. */
         PersonalDataItem: {
@@ -54934,6 +55266,40 @@ export interface components {
             row_version?: number | null;
             value: boolean;
         };
+        /** @description One entity's levels in a set: 0 None, 1 Team, 2 Business unit, 3 Global. */
+        SetEntityAccessItem: {
+            /**
+             * Format: int32
+             * @description Null: the write level.
+             */
+            assign_access_level?: number | null;
+            assign_bu_children?: boolean;
+            /** Format: int32 */
+            bulk_access_level?: number;
+            /**
+             * Format: int32
+             * @description Null: the write level.
+             */
+            create_access_level?: number | null;
+            /** Format: int32 */
+            delete_access_level?: number;
+            delete_bu_children?: boolean;
+            entity: string;
+            /** Format: int32 */
+            export_access_level?: number;
+            /** Format: int32 */
+            read_access_level?: number;
+            read_bu_children?: boolean;
+            /**
+             * Format: int32
+             * @description Null: the write level.
+             */
+            share_access_level?: number | null;
+            share_bu_children?: boolean;
+            /** Format: int32 */
+            write_access_level?: number;
+            write_bu_children?: boolean;
+        };
         SetEnvVariable: {
             /**
              * Format: int64
@@ -54974,6 +55340,9 @@ export interface components {
             can_read?: boolean;
             can_update?: boolean;
             entity_name: string;
+        };
+        SetPrivilegeBody: {
+            privilege_key: string;
         };
         /** @description `PUT /api/v1/chat/channels/{id}/retention`. */
         SetRetention: {
@@ -58109,6 +58478,14 @@ export interface components {
             seo_title?: string | null;
             title?: string | null;
             url_path?: string | null;
+        };
+        /**
+         * @description Fields left out stay as they are; the name is the set's key and does not
+         *     change.
+         */
+        UpdatePermissionSetBody: {
+            description?: string | null;
+            name_ar?: string | null;
         };
         UpdatePersonalViewBody: {
             icon?: string;
@@ -89221,6 +89598,726 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_sets: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PermissionSetItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePermissionSetBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PermissionSetItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A set with this name exists, or no open changeset to record into */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PermissionSetDetail"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Owned by another layer, or no open changeset */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePermissionSetBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PermissionSetItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The set changed since `If-Match`, it is owned by another layer, or no open changeset */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_assignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assignments, newest first (page 1 holds them all) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AssignmentItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_assignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAssignmentBody"];
+            };
+        };
+        responses: {
+            /** @description Assigned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not exactly one of user_id and team_id, an unknown one, or an end date in the past */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_assignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+                /** @description The assignment */
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live assignment of this set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_entity_access: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetEntityAccessItem"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetEntityAccessItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set or entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Owned by another layer, or no open changeset */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A level outside 0..3 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clear_entity_access: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such set, or the set gives nothing on that entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Owned by another layer, or no open changeset */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    grant_privilege: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPrivilegeBody"];
+            };
+        };
+        responses: {
+            /** @description Granted (or already granted) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Owned by another layer, or no open changeset */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown privilege, or `set_cannot_grant_admin` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revoke_privilege: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+                /** @description The privilege key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked (or was not granted) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Owned by another layer, or no open changeset */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown privilege */
             422: {
                 headers: {
                     [name: string]: unknown;

@@ -223,7 +223,13 @@
             "delete_field",
             "upsert_theme",
             "publish_theme",
-            "retire_theme"
+            "retire_theme",
+            "upsert_permission_set",
+            "retire_permission_set",
+            "set_permission_set_entity_access",
+            "clear_permission_set_entity_access",
+            "grant_permission_set_privilege",
+            "revoke_permission_set_privilege"
           ]
         },
         "phase": {
@@ -457,6 +463,24 @@
         },
         {
           "$ref": "#/$defs/op_retire_theme"
+        },
+        {
+          "$ref": "#/$defs/op_upsert_permission_set"
+        },
+        {
+          "$ref": "#/$defs/op_retire_permission_set"
+        },
+        {
+          "$ref": "#/$defs/op_set_permission_set_entity_access"
+        },
+        {
+          "$ref": "#/$defs/op_clear_permission_set_entity_access"
+        },
+        {
+          "$ref": "#/$defs/op_grant_permission_set_privilege"
+        },
+        {
+          "$ref": "#/$defs/op_revoke_permission_set_privilege"
         }
       ]
     },
@@ -3353,6 +3377,218 @@
           "additionalProperties": false,
           "properties": {
             "theme_scope": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        }
+      }
+    },
+    "op_upsert_permission_set": {
+      "description": "upsert_permission_set (stage 1)",
+      "properties": {
+        "op": {
+          "const": "upsert_permission_set"
+        },
+        "phase": {
+          "const": "expand"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "permission_set"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "permission_set": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        },
+        "args": {
+          "type": "object",
+          "required": [
+            "definition"
+          ]
+        }
+      },
+      "required": [
+        "args"
+      ]
+    },
+    "op_retire_permission_set": {
+      "description": "retire_permission_set (stage 1)",
+      "properties": {
+        "op": {
+          "const": "retire_permission_set"
+        },
+        "phase": {
+          "const": "contract"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "permission_set"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "permission_set": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        }
+      }
+    },
+    "op_set_permission_set_entity_access": {
+      "description": "set_permission_set_entity_access (stage 1)",
+      "properties": {
+        "op": {
+          "const": "set_permission_set_entity_access"
+        },
+        "phase": {
+          "const": "expand"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "permission_set",
+            "entity"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "permission_set": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            },
+            "entity": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        },
+        "args": {
+          "type": "object",
+          "required": [
+            "access"
+          ]
+        }
+      },
+      "required": [
+        "args"
+      ]
+    },
+    "op_clear_permission_set_entity_access": {
+      "description": "clear_permission_set_entity_access (stage 1)",
+      "properties": {
+        "op": {
+          "const": "clear_permission_set_entity_access"
+        },
+        "phase": {
+          "const": "contract"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "permission_set",
+            "entity"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "permission_set": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            },
+            "entity": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        }
+      }
+    },
+    "op_grant_permission_set_privilege": {
+      "description": "grant_permission_set_privilege (stage 1)",
+      "properties": {
+        "op": {
+          "const": "grant_permission_set_privilege"
+        },
+        "phase": {
+          "const": "expand"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "permission_set",
+            "privilege"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "permission_set": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            },
+            "privilege": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            }
+          }
+        }
+      }
+    },
+    "op_revoke_permission_set_privilege": {
+      "description": "revoke_permission_set_privilege (stage 1)",
+      "properties": {
+        "op": {
+          "const": "revoke_permission_set_privilege"
+        },
+        "phase": {
+          "const": "contract"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "permission_set",
+            "privilege"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "permission_set": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "$ref": "#/$defs/uuidLike"
+              }
+            },
+            "privilege": {
               "type": "string",
               "minLength": 1,
               "not": {

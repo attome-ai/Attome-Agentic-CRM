@@ -306,6 +306,12 @@ pub async fn export_bundle(db: &DbPool) -> Result<Bundle, AppError> {
     export_privileges(db, &mut bundle).await?;
     export_roles(db, &mut bundle).await?;
     export_field_security_profiles(db, &mut bundle).await?;
+    // Q10-T5: permission sets, without their assignments.
+    bundle.permission_sets = attome_security::permission_sets::export_sets(db)
+        .await?
+        .into_iter()
+        .map(|(desc, is_customized)| PermissionSetDef::from_desc(desc, is_customized))
+        .collect();
     export_settings(db, &mut bundle).await?;
     export_state_models(db, &mut bundle).await?;
     export_labels(db, &mut bundle).await?;

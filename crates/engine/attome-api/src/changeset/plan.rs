@@ -194,6 +194,7 @@ pub fn required_args(op: Op) -> &'static [&'static str] {
         | Op::AddRoleGrantCondition
         | Op::SetEntityDefaultShare
         | Op::UpsertFieldProfile
+        | Op::UpsertPermissionSet
         | Op::UpsertDataDomain
         | Op::UpsertTheme => &["definition"],
         Op::SetEntityDomain => &["domain"],
@@ -204,6 +205,7 @@ pub fn required_args(op: Op) -> &'static [&'static str] {
         Op::SetRoleEntityAccess => &["access"],
         Op::SetRoleBulkFields => &["fields"],
         Op::SetFieldProfileField => &["permissions"],
+        Op::SetPermissionSetEntityAccess => &["access"],
         Op::UpsertRecord => &["values"],
         Op::RenameField => &["new_name"],
         Op::ChangeFieldType => &["field_type", "conversion"],
@@ -764,6 +766,32 @@ impl<'a> Fold<'a> {
             .ok_or_else(|| "profile vanished".to_owned())
     }
 
+    /// Q10-T5: the permission set named `name`, from this run or live.
+    fn permission_set(&mut self, name: &str, op: &DocOp) -> Result<&mut PermissionSetDef, String> {
+        if !self.out.permission_sets.iter().any(|s| s.name == name) {
+            let base = self
+                .live
+                .permission_sets
+                .iter()
+                .find(|s| s.name == name)
+                .cloned()
+                .ok_or_else(|| {
+                    format!(
+                        "operation {} ({}): permission set \"{name}\" is neither live nor \
+                         upserted earlier",
+                        op.seq,
+                        op.op.as_str()
+                    )
+                })?;
+            self.out.permission_sets.push(base);
+        }
+        self.out
+            .permission_sets
+            .iter_mut()
+            .find(|s| s.name == name)
+            .ok_or_else(|| "permission set vanished".to_owned())
+    }
+
     fn model(&mut self, entity: &str, op: &DocOp) -> Result<&mut StateModelDef, String> {
         if !self
             .out
@@ -1009,6 +1037,55 @@ impl<'a> Fold<'a> {
             Op::EnsurePrivilege => {
                 let def: PrivilegeDef = op.definition()?;
                 replace_or_push(&mut self.out.privileges, def, |p| p.key.clone());
+            }
+            Op::UpsertPermissionSet => {
+                let mut def: PermissionSetDef = op.definition()?;
+                let base = self
+                    .out
+                    .permission_sets
+                    .iter()
+                    .find(|s| s.name == def.name)
+                    .or_else(|| {
+                        self.live
+                            .permission_sets
+                            .iter()
+                            .find(|s| s.name == def.name)
+                    });
+                if let Some(base) = base {
+                    def.privileges = base.privileges.clone();
+                    def.entity_access = base.entity_access.clone();
+                }
+                replace_or_push(&mut self.out.permission_sets, def, |s| s.name.clone());
+            }
+            Op::GrantPermissionSetPrivilege => {
+                let privilege = op.t("privilege").to_owned();
+                let set = self.permission_set(op.t("permission_set"), op)?;
+                if !set.privileges.contains(&privilege) {
+                    set.privileges.push(privilege);
+                }
+            }
+            Op::RevokePermissionSetPrivilege => {
+                let privilege = op.t("privilege").to_owned();
+                let set = self.permission_set(op.t("permission_set"), op)?;
+                set.privileges.retain(|p| *p != privilege);
+            }
+            Op::SetPermissionSetEntityAccess => {
+                let mut access_json = op
+                    .arg("access")
+                    .cloned()
+                    .ok_or_else(|| format!("operation {}: args.access is required", op.seq))?;
+                if let Some(obj) = access_json.as_object_mut() {
+                    obj.insert("entity".into(), Value::String(op.t("entity").to_owned()));
+                }
+                let access: PermissionSetAccess = serde_json::from_value(access_json)
+                    .map_err(|e| format!("operation {}: args.access: {e}", op.seq))?;
+                let set = self.permission_set(op.t("permission_set"), op)?;
+                replace_or_push(&mut set.entity_access, access, |a| a.entity.clone());
+            }
+            Op::ClearPermissionSetEntityAccess => {
+                let entity = op.t("entity").to_owned();
+                let set = self.permission_set(op.t("permission_set"), op)?;
+                set.entity_access.retain(|a| a.entity != entity);
             }
             Op::UpsertRole => {
                 let mut def: RoleDef = op.definition()?;
@@ -1371,6 +1448,13 @@ fn component_key(op: &DocOp) -> Option<(&'static str, String)> {
         Op::UpsertFieldProfile | Op::SetFieldProfileField => {
             (COMPONENT_FIELD_SECURITY_PROFILE, op.t("profile").to_owned())
         }
+        Op::UpsertPermissionSet
+        | Op::SetPermissionSetEntityAccess
+        | Op::ClearPermissionSetEntityAccess
+        | Op::GrantPermissionSetPrivilege
+        | Op::RevokePermissionSetPrivilege => {
+            (COMPONENT_PERMISSION_SET, op.t("permission_set").to_owned())
+        }
         Op::UpsertRecord => {
             let (key_fields, row) = record_parts(op).ok()?;
             (
@@ -1415,6 +1499,10 @@ fn removal_is_live(live: &Bundle, op: &DocOp) -> bool {
             .state_models
             .iter()
             .any(|m| m.entity_logicalname == op.t("entity")),
+        Op::RetirePermissionSet => live
+            .permission_sets
+            .iter()
+            .any(|s| s.name == op.t("permission_set")),
         Op::RetireSidebarItem => live
             .sidebar
             .iter()
@@ -1550,6 +1638,13 @@ async fn row_layer(conn: &mut PgConnection, op: &DocOp) -> Result<Option<String>
                  AND is_deleted = false LIMIT 1",
             ),
             vec![Some(op.t("profile").into())],
+        ),
+        Op::UpsertPermissionSet | Op::RetirePermissionSet => (
+            one(
+                "SELECT owner_layer FROM permission_set WHERE lower(name) = lower($1) \
+                 AND is_deleted = false LIMIT 1",
+            ),
+            vec![Some(op.t("permission_set").into())],
         ),
         Op::UpsertStateModel | Op::RetireStateModel => (
             one(

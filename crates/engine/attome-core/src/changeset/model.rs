@@ -199,6 +199,13 @@ op_catalogue! {
     UpsertTheme => "upsert_theme", Expand, 1, ["theme_scope"];
     PublishTheme => "publish_theme", Expand, 1, ["theme_scope"];
     RetireTheme => "retire_theme", Contract, 1, ["theme_scope"];
+    // Q10-T5: permission sets (Q10-T4), their entity levels and privileges.
+    UpsertPermissionSet => "upsert_permission_set", Expand, 1, ["permission_set"];
+    RetirePermissionSet => "retire_permission_set", Contract, 1, ["permission_set"];
+    SetPermissionSetEntityAccess => "set_permission_set_entity_access", Expand, 1, ["permission_set", "entity"];
+    ClearPermissionSetEntityAccess => "clear_permission_set_entity_access", Contract, 1, ["permission_set", "entity"];
+    GrantPermissionSetPrivilege => "grant_permission_set_privilege", Expand, 1, ["permission_set", "privilege"];
+    RevokePermissionSetPrivilege => "revoke_permission_set_privilege", Contract, 1, ["permission_set", "privilege"];
 }
 
 /// The highest op stage this binary records and applies (design §4.1): stage 2
@@ -291,8 +298,8 @@ mod tests {
             ours, names,
             "Op::ALL must equal the schema's op enum, in order"
         );
-        assert_eq!(Op::ALL.len(), 69);
-        assert_eq!(Op::ALL.iter().filter(|op| op.stage() == 1).count(), 62);
+        assert_eq!(Op::ALL.len(), 78);
+        assert_eq!(Op::ALL.iter().filter(|op| op.stage() == 1).count(), 71);
         assert_eq!(Op::ALL.iter().filter(|op| op.stage() == 2).count(), 7);
 
         for op in Op::ALL {

@@ -334,12 +334,54 @@ const RECORDED: &[(&str, &[&str])] = &[
     (
         "DELETE /api/v1/admin/security/field-profiles/{id}/assignments/{role_id}",
         &["unassign_field_profile"],
+    ), // Q10-T5: permission sets. Assignments are environment data (excluded).
+    (
+        "POST /api/v1/admin/security/permission-sets",
+        &["upsert_permission_set"],
+    ),
+    (
+        "PATCH /api/v1/admin/security/permission-sets/{id}",
+        &["upsert_permission_set"],
+    ),
+    (
+        "DELETE /api/v1/admin/security/permission-sets/{id}",
+        &["retire_permission_set"],
+    ),
+    (
+        "POST /api/v1/admin/security/permission-sets/{id}/entity-access",
+        &["set_permission_set_entity_access"],
+    ),
+    (
+        "DELETE /api/v1/admin/security/permission-sets/{id}/entity-access/{entity}",
+        &["clear_permission_set_entity_access"],
+    ),
+    (
+        "POST /api/v1/admin/security/permission-sets/{id}/privileges",
+        &[
+            "grant_permission_set_privilege",
+            "revoke_permission_set_privilege",
+        ],
+    ),
+    (
+        "DELETE /api/v1/admin/security/permission-sets/{id}/privileges/{key}",
+        &[
+            "grant_permission_set_privilege",
+            "revoke_permission_set_privilege",
+        ],
     ),
 ];
 
 /// In-scope mutating routes that record nothing, with the reason (design
 /// §1.3 and §7).
 const EXCLUDED: &[(&str, &str)] = &[
+    (
+        "POST /api/v1/admin/security/permission-sets/{id}/assignments",
+        "Q10-T5: assigning a set to a user or team is environment data, like a user's roles",
+    ),
+    (
+        "DELETE /api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}",
+        "Q10-T5: an assignment is environment data, like a user's roles",
+    ),
     (
         "POST /api/v1/admin/themes/preview-check",
         "B13-T5: checks unsaved tokens and writes nothing",

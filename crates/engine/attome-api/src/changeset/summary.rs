@@ -361,6 +361,35 @@ fn sentence(op_name: &str, target: &Map<String, Value>, args: &Map<String, Value
             c.qt("role")
         ),
         Op::UpsertDataDomain => format!("Create or update the data domain {}.", c.qt("domain")),
+        Op::UpsertPermissionSet => format!(
+            "Create or update the permission set {}.",
+            c.qt("permission_set")
+        ),
+        Op::RetirePermissionSet => format!(
+            "Remove the permission set {} and end its assignments.",
+            c.qt("permission_set")
+        ),
+        Op::SetPermissionSetEntityAccess => format!(
+            "In the permission set {}, set the access to {} to {}.",
+            c.qt("permission_set"),
+            e(),
+            c.entries("access")
+        ),
+        Op::ClearPermissionSetEntityAccess => format!(
+            "Remove the access to {} from the permission set {}.",
+            e(),
+            c.qt("permission_set")
+        ),
+        Op::GrantPermissionSetPrivilege => format!(
+            "Add the privilege {} to the permission set {}.",
+            c.qt("privilege"),
+            c.qt("permission_set")
+        ),
+        Op::RevokePermissionSetPrivilege => format!(
+            "Take the privilege {} out of the permission set {}.",
+            c.qt("privilege"),
+            c.qt("permission_set")
+        ),
         Op::UpsertRecord => format!(
             "Create or update the {} record with {}.",
             e(),

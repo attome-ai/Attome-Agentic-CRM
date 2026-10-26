@@ -490,6 +490,8 @@ async fn apply_claimed(
 enum Parent {
     Role(String),
     Profile(String),
+    /// Q10-T5.
+    PermissionSet(String),
     StateModel(String),
     Calendar(String),
 }
@@ -507,6 +509,13 @@ fn parent_of(op: &DocOp) -> Option<Parent> {
         | Op::UnassignFieldProfile => Parent::Role(op.t("role").to_owned()),
         Op::UpsertFieldProfile | Op::SetFieldProfileField => {
             Parent::Profile(op.t("profile").to_owned())
+        }
+        Op::UpsertPermissionSet
+        | Op::SetPermissionSetEntityAccess
+        | Op::ClearPermissionSetEntityAccess
+        | Op::GrantPermissionSetPrivilege
+        | Op::RevokePermissionSetPrivilege => {
+            Parent::PermissionSet(op.t("permission_set").to_owned())
         }
         Op::UpsertStateModel | Op::UpsertStateTransition | Op::RetireStateTransition => {
             Parent::StateModel(op.t("entity").to_owned())
@@ -726,6 +735,41 @@ impl Ctx<'_> {
                 if wrote(outcome) {
                     security::invalidate_profile_holders(db, &self.state.base.security, profile_id)
                         .await?;
+                }
+                outcome
+            }
+            Parent::PermissionSet(name) => {
+                let s = fold
+                    .out
+                    .permission_sets
+                    .iter()
+                    .find(|s| &s.name == name)
+                    .cloned()
+                    .ok_or_else(|| {
+                        AppError::Validation(format!("permission set {name} did not fold"))
+                    })?;
+                let pol = if removal {
+                    Self::removal_policy(s.is_customized)
+                } else {
+                    self.policy(s.is_customized)
+                };
+                let db = self.migrator();
+                let (set_id, outcome) = with_lock_retry!(
+                    attome_security::permission_sets::reconcile_permission_set(
+                        db,
+                        &s.desc(),
+                        pol,
+                        Some(derived_id(COMPONENT_PERMISSION_SET, &s.name))
+                    )
+                    .await
+                )?;
+                if wrote(outcome) {
+                    attome_security::permission_sets::invalidate_set_holders(
+                        db,
+                        &self.state.base.security,
+                        set_id,
+                    )
+                    .await?;
                 }
                 outcome
             }
@@ -1049,6 +1093,26 @@ impl Ctx<'_> {
             Op::RetireStateModel => with_lock_retry!(
                 attome_state::reconcile::retire_state_model(state, op.t("entity")).await
             )?,
+            // Q10-T5: retiring a set ends its assignments too.
+            Op::RetirePermissionSet => {
+                let db = self.migrator();
+                let name = op.t("permission_set");
+                match attome_security::permission_sets::live_set(db, name).await? {
+                    Some((set_id, _, _)) => {
+                        let outcome = with_lock_retry!(
+                            attome_security::permission_sets::retire_permission_set(db, name).await
+                        )?;
+                        attome_security::permission_sets::invalidate_set_holders(
+                            db,
+                            &state.base.security,
+                            set_id,
+                        )
+                        .await?;
+                        outcome
+                    }
+                    None => ReconcileOutcome::Unchanged,
+                }
+            }
             Op::UpsertSidebarItem => {
                 let s: SidebarDef = op.definition().map_err(def_err)?;
                 let pol = self.policy(s.is_customized);
@@ -1639,6 +1703,11 @@ mod tests {
                     | Op::UpsertRole
                     | Op::UpsertFieldProfile
                     | Op::SetFieldProfileField
+                    | Op::UpsertPermissionSet
+                    | Op::SetPermissionSetEntityAccess
+                    | Op::ClearPermissionSetEntityAccess
+                    | Op::GrantPermissionSetPrivilege
+                    | Op::RevokePermissionSetPrivilege
                     | Op::UpsertStateModel
                     | Op::UpsertStateTransition
                     | Op::RetireStateTransition
