@@ -169,7 +169,7 @@ pub fn parse_proposal(
     let mut seen = HashSet::new();
     let mut out = Vec::new();
     for mut entry in proposal.columns {
-        if !columns.iter().any(|c| *c == entry.column) || !seen.insert(entry.column.clone()) {
+        if !columns.contains(&entry.column) || !seen.insert(entry.column.clone()) {
             continue;
         }
         if entry
@@ -241,8 +241,8 @@ pub(crate) fn propose_messages(
         Segment::trusted(propose_system_prompt(attrs)),
         // Headers and cells came from an uploaded file; earlier mappings were
         // typed by people: all untrusted content (I-10).
-        Segment::untrusted("import_columns", &columns_json.to_string()),
-        Segment::untrusted("earlier_mappings", &json!(earlier).to_string()),
+        Segment::untrusted("import_columns", columns_json.to_string()),
+        Segment::untrusted("earlier_mappings", json!(earlier).to_string()),
     ])
 }
 

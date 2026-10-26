@@ -61,6 +61,7 @@ fn ctx(is_admin: bool, orgs: Vec<Uuid>) -> SecurityContext {
         subordinate_user_ids: Vec::new(),
         condition_grants: HashMap::new(),
         role_ids: None,
+        unit_scope: Default::default(),
         service_principal: false,
     }
 }

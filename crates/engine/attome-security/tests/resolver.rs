@@ -1162,3 +1162,293 @@ async fn default_share_entities_is_empty_for_a_caller_with_no_shares() {
          (an unrelated share does exist): {got:?}"
     );
 }
+
+// ── Q10-T2: create, assign, share, export and bulk levels, and child units ──
+
+/// A role's `role_mm_entity_access` row with the level columns these tests
+/// vary spelled out (`None` leaves the assign level NULL).
+#[allow(clippy::too_many_arguments)]
+async fn set_role_entity_ops(
+    db: &DbPool,
+    role_id: Uuid,
+    entity_id: Uuid,
+    read: i16,
+    write: i16,
+    assign: Option<i16>,
+    export: i16,
+    read_bu_children: bool,
+) {
+    sqlx::query(
+        "INSERT INTO role_mm_entity_access \
+         (id, role_ref, entity_ref, read_access_level, write_access_level, delete_access_level, \
+          assign_access_level, export_access_level, read_bu_children, owner_layer) \
+         VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, 'project')",
+    )
+    .bind(Uuid::now_v7())
+    .bind(role_id)
+    .bind(entity_id)
+    .bind(read)
+    .bind(write)
+    .bind(assign)
+    .bind(export)
+    .bind(read_bu_children)
+    .execute(db)
+    .await
+    .expect("insert throwaway role entity-access row");
+}
+
+async fn set_bulk_field_mode(db: &DbPool, role_id: Uuid, mode: i16) {
+    sqlx::query("UPDATE role SET bulk_field_mode = $2 WHERE id = $1")
+        .bind(role_id)
+        .bind(mode)
+        .execute(db)
+        .await
+        .expect("set the role's D-589 bulk field mode");
+}
+
+/// Export is its own level and denied unless granted: a role created
+/// through the admin API (D-589 `listed`) reads the entity everywhere but
+/// exports nothing, with or without an access row. A role still in D-589
+/// legacy mode keeps today's reach, its read level.
+#[tokio::test]
+async fn export_defaults_to_deny() {
+    let db = skip_if_no_db!(test_db().await);
+
+    let (entity_id, logicalname, read_priv) = provision_entity_with_privilege(&db, "read").await;
+
+    // Listed role with an access row: read Global, export left at its default.
+    let user_id = seed_bare_user(&db).await;
+    let role_id = seed_role(&db).await;
+    set_bulk_field_mode(&db, role_id, 1).await;
+    link_user_to_role(&db, user_id, role_id).await;
+    grant_privilege_to_role(&db, role_id, read_priv).await;
+    set_role_entity_ops(&db, role_id, entity_id, 3, 3, None, 0, true).await;
+
+    let read =
+        resolve_entity_access_level(&db, user_id, entity_id, &logicalname, RecordAction::Read)
+            .await
+            .expect("read level");
+    let export =
+        resolve_entity_access_level(&db, user_id, entity_id, &logicalname, RecordAction::Export)
+            .await
+            .expect("export level");
+    assert_eq!(read, AccessLevel::Global);
+    assert_eq!(export, AccessLevel::None, "export must default to deny");
+
+    // Listed role with no access row at all: D-133's Global default still
+    // holds for read, never for export.
+    let bare_user = seed_bare_user(&db).await;
+    let bare_role = seed_role(&db).await;
+    set_bulk_field_mode(&db, bare_role, 1).await;
+    link_user_to_role(&db, bare_user, bare_role).await;
+    grant_privilege_to_role(&db, bare_role, read_priv).await;
+    assert_eq!(
+        resolve_entity_access_level(&db, bare_user, entity_id, &logicalname, RecordAction::Read)
+            .await
+            .expect("read level"),
+        AccessLevel::Global
+    );
+    assert_eq!(
+        resolve_entity_access_level(
+            &db,
+            bare_user,
+            entity_id,
+            &logicalname,
+            RecordAction::Export
+        )
+        .await
+        .expect("export level"),
+        AccessLevel::None,
+        "a role without an access row must not export"
+    );
+
+    // A legacy role (the default for existing roles) exports as far as it reads.
+    let legacy_user = seed_bare_user(&db).await;
+    let legacy_role = seed_role(&db).await;
+    link_user_to_role(&db, legacy_user, legacy_role).await;
+    grant_privilege_to_role(&db, legacy_role, read_priv).await;
+    set_role_entity_ops(&db, legacy_role, entity_id, 1, 1, None, 0, true).await;
+    assert_eq!(
+        resolve_entity_access_level(
+            &db,
+            legacy_user,
+            entity_id,
+            &logicalname,
+            RecordAction::Export
+        )
+        .await
+        .expect("export level"),
+        AccessLevel::Team,
+        "a D-589 legacy role keeps exporting at its read level"
+    );
+}
+
+/// A NULL assign level means the write level; a set one wins. Assign is a
+/// write, so it counts the role's `update` privilege.
+#[tokio::test]
+async fn assign_falls_back_to_write_level() {
+    let db = skip_if_no_db!(test_db().await);
+
+    let (entity_id, logicalname, update_priv) =
+        provision_entity_with_privilege(&db, "update").await;
+
+    let user_id = seed_bare_user(&db).await;
+    let role_id = seed_role(&db).await;
+    link_user_to_role(&db, user_id, role_id).await;
+    grant_privilege_to_role(&db, role_id, update_priv).await;
+    set_role_entity_ops(&db, role_id, entity_id, 3, 1, None, 0, true).await;
+
+    for action in [
+        RecordAction::Assign,
+        RecordAction::Share,
+        RecordAction::Create,
+    ] {
+        let level = resolve_entity_access_level(&db, user_id, entity_id, &logicalname, action)
+            .await
+            .expect("level");
+        if action == RecordAction::Assign {
+            assert_eq!(level, AccessLevel::Team, "assign must fall back to write");
+        } else {
+            // Share and create are gated by their own privileges, which this
+            // role does not hold.
+            assert_eq!(
+                level,
+                AccessLevel::None,
+                "{action:?} needs its own privilege"
+            );
+        }
+    }
+
+    sqlx::query("UPDATE role_mm_entity_access SET assign_access_level = 2 WHERE role_ref = $1")
+        .bind(role_id)
+        .execute(&db)
+        .await
+        .expect("set the assign level");
+    assert_eq!(
+        resolve_entity_access_level(&db, user_id, entity_id, &logicalname, RecordAction::Assign)
+            .await
+            .expect("assign level"),
+        AccessLevel::BusinessUnit,
+        "a set assign level wins over the write level"
+    );
+    assert_eq!(
+        resolve_entity_access_level(&db, user_id, entity_id, &logicalname, RecordAction::Update)
+            .await
+            .expect("update level"),
+        AccessLevel::Team,
+        "the write level itself is unchanged"
+    );
+}
+
+async fn seed_org(db: &DbPool, parent: Option<Uuid>) -> Uuid {
+    let id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO organization (id, name, organization_ref, is_active) VALUES ($1, $2, $3, true)",
+    )
+    .bind(id)
+    .bind(format!("test-org-{id}"))
+    .bind(parent)
+    .execute(db)
+    .await
+    .expect("insert throwaway organization");
+    id
+}
+
+/// Business-unit read with child units off sees its own unit's records and
+/// not the child unit's; update and delete on the same role still reach the
+/// child unit, because their flags are on. The predicate runs against real
+/// rows, in a temporary table on one connection.
+#[tokio::test]
+async fn bu_only_excludes_child_unit_records() {
+    let db = skip_if_no_db!(test_db().await);
+
+    let parent = seed_org(&db, None).await;
+    let child = seed_org(&db, Some(parent)).await;
+    let user_id = seed_bare_user(&db).await;
+    sqlx::query("UPDATE user_account SET organization_ref = $2 WHERE id = $1")
+        .bind(user_id)
+        .bind(parent)
+        .execute(&db)
+        .await
+        .expect("set the home unit");
+
+    let (entity_id, logicalname, read_priv) = provision_entity_with_privilege(&db, "read").await;
+    let role_id = seed_role(&db).await;
+    link_user_to_role(&db, user_id, role_id).await;
+    grant_privilege_to_role(&db, role_id, read_priv).await;
+    for action in ["update", "delete"] {
+        let id: Uuid = sqlx::query_scalar("SELECT id FROM privilege WHERE key = $1")
+            .bind(format!("{logicalname}.{action}"))
+            .fetch_one(&db)
+            .await
+            .expect("the entity's privilege exists");
+        grant_privilege_to_role(&db, role_id, id).await;
+    }
+    set_role_entity_ops(&db, role_id, entity_id, 2, 2, None, 0, false).await;
+
+    let ctx = attome_security::resolve_uncached(&db, user_id)
+        .await
+        .expect("resolve the context");
+    assert!(
+        ctx.accessible_org_ids.contains(&child),
+        "the walk still reaches the child unit: {:?}",
+        ctx.accessible_org_ids
+    );
+    assert_eq!(ctx.unit_scope.own_org_ids, vec![parent]);
+    let level =
+        resolve_entity_access_level(&db, user_id, entity_id, &logicalname, RecordAction::Read)
+            .await
+            .expect("read level");
+    assert_eq!(level, AccessLevel::BusinessUnit);
+
+    let mut conn = db
+        .acquire()
+        .await
+        .expect("one connection for the temp table");
+    sqlx::query(
+        "CREATE TEMP TABLE q10_rows (id uuid, organization_ref uuid, owner_ref uuid, owner_type smallint)",
+    )
+    .execute(&mut *conn)
+    .await
+    .expect("create the temp table");
+    let in_parent = Uuid::now_v7();
+    let in_child = Uuid::now_v7();
+    sqlx::query("INSERT INTO q10_rows (id, organization_ref) VALUES ($1, $2), ($3, $4)")
+        .bind(in_parent)
+        .bind(parent)
+        .bind(in_child)
+        .bind(child)
+        .execute(&mut *conn)
+        .await
+        .expect("insert the rows");
+
+    let visible = |capability| {
+        attome_security::rls_predicate(&ctx, entity_id, "t", level, capability, 1)
+            .expect("a BusinessUnit tier filters")
+    };
+
+    let read = visible(attome_security::rls::Capability::View);
+    let sql = format!("SELECT t.id FROM q10_rows t WHERE true {}", read.sql);
+    let rows: Vec<Uuid> =
+        attome_security::bind_rls_predicate(sqlx::query_scalar(&sql), &read.binds)
+            .fetch_all(&mut *conn)
+            .await
+            .expect("run the read predicate");
+    assert_eq!(rows, vec![in_parent], "read must not reach the child unit");
+
+    let write = visible(attome_security::rls::Capability::Action);
+    let sql = format!(
+        "SELECT t.id FROM q10_rows t WHERE true {} ORDER BY t.id",
+        write.sql
+    );
+    let rows: Vec<Uuid> =
+        attome_security::bind_rls_predicate(sqlx::query_scalar(&sql), &write.binds)
+            .fetch_all(&mut *conn)
+            .await
+            .expect("run the write predicate");
+    assert_eq!(
+        rows,
+        vec![in_parent, in_child],
+        "update and delete keep their child units"
+    );
+}

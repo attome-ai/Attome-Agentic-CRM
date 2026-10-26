@@ -194,8 +194,36 @@ pub fn rls_predicate(
         false,
         access_level,
         required,
+        capability_actions(required),
         first_placeholder,
     )
+}
+
+/// Q10-T2: the operations whose child-unit flag a [`Capability`] stands for
+/// when the caller passes no privilege key. `Action` covers update and
+/// delete alike, so either one excluding child units narrows both: never
+/// wider than a role allows.
+fn capability_actions(required: Capability) -> &'static [&'static str] {
+    match required {
+        Capability::View => &["read"],
+        Capability::Action => &["update", "delete"],
+    }
+}
+
+/// Q10-T2: the level a polymorphic predicate binds for one entity. Its one
+/// organisation array cannot carry a second, own-units-only set per entity,
+/// so an entity whose read depth excludes child units is bound as `Team`:
+/// its rows come through shares only, narrower than the role, never wider.
+pub(crate) fn polymorphic_level(
+    ctx: &SecurityContext,
+    entity_ref: Uuid,
+    level: AccessLevel,
+) -> i16 {
+    if level == AccessLevel::BusinessUnit && ctx.unit_scope.excludes_children(entity_ref, "read") {
+        AccessLevel::Team as i16
+    } else {
+        level as i16
+    }
 }
 
 /// P-stored-query-containment Phase 3 (D-146) — same predicate shape as
@@ -231,6 +259,7 @@ pub fn rls_predicate_by_column(
         false,
         access_level,
         required,
+        capability_actions(required),
         first_placeholder,
     )
 }
@@ -314,6 +343,9 @@ pub fn rls_predicate_with_conditions(
         return None;
     }
 
+    // Q10-T2: the privilege key names the exact operation, so its own
+    // child-unit flag applies.
+    let operation = privilege_key.rsplit_once('.').map(|(_, action)| [action]);
     let tier = build_predicate(
         ctx,
         entity_ref,
@@ -323,6 +355,10 @@ pub fn rls_predicate_with_conditions(
         owner_visible,
         access_level,
         required,
+        match &operation {
+            Some(action) => action,
+            None => capability_actions(required),
+        },
         first_placeholder,
     );
 
@@ -375,6 +411,11 @@ pub fn rls_predicate_with_conditions(
 /// [`rls_predicate_with_conditions`] ever passes a resolved `true`. Reuses
 /// the `$p_caller` placeholder already bound for the share checks; no new
 /// bind parameter.
+///
+/// `operations` (Q10-T2) are the `RecordAction::as_str` names the request
+/// performs: when any of them has `BusinessUnit` depth without child units
+/// ([`attome_server::security::UnitScope`]), the tier compares against the
+/// caller's own units instead of their units and everything under them.
 #[allow(clippy::too_many_arguments)]
 fn build_predicate(
     ctx: &SecurityContext,
@@ -385,6 +426,7 @@ fn build_predicate(
     owner_visible: bool,
     access_level: AccessLevel,
     required: Capability,
+    operations: &[&str],
     first_placeholder: usize,
 ) -> Option<RlsPredicate> {
     if ctx.is_admin || access_level == AccessLevel::Global {
@@ -488,6 +530,16 @@ fn build_predicate(
 
     let sql = format!("AND {allow} AND {deny}");
 
+    let own_units_only = access_level == AccessLevel::BusinessUnit
+        && operations
+            .iter()
+            .any(|op| ctx.unit_scope.excludes_children(entity_ref, op));
+    let org_ids = if own_units_only {
+        &ctx.unit_scope.own_org_ids
+    } else {
+        &ctx.accessible_org_ids
+    };
+
     Some(RlsPredicate {
         sql,
         binds: RlsBinds {
@@ -495,7 +547,7 @@ fn build_predicate(
             caller_id: ctx.user_id,
             team_ids: ctx.team_ids.clone(),
             capability: required.as_i16(),
-            accessible_org_ids: ctx.accessible_org_ids.clone(),
+            accessible_org_ids: org_ids.clone(),
             subordinate_user_ids: ctx.subordinate_user_ids.clone(),
         },
     })
@@ -689,7 +741,7 @@ pub fn polymorphic_audit_predicate(
     for (logicalname, (entity_ref, level)) in access_by_entity {
         logicalnames.push(logicalname.clone());
         entity_refs.push(*entity_ref);
-        access_levels.push(*level as i16);
+        access_levels.push(polymorphic_level(ctx, *entity_ref, *level));
         default_shares.push(default_share_entities.contains(entity_ref));
     }
 
@@ -844,6 +896,7 @@ mod tests {
             subordinate_user_ids: Vec::new(),
             condition_grants: HashMap::new(),
             role_ids: None,
+            unit_scope: Default::default(),
             service_principal: false,
         }
     }
@@ -1250,6 +1303,7 @@ mod tests {
             false,
             AccessLevel::BusinessUnit,
             Capability::View,
+            &["read"],
             2,
         )
         .unwrap();
@@ -1387,6 +1441,7 @@ mod tests {
             false,
             AccessLevel::Team,
             Capability::View,
+            &["read"],
             2,
         )
         .unwrap();

@@ -192,6 +192,7 @@ fn admin() -> SecurityContext {
         subordinate_user_ids: Vec::new(),
         condition_grants: HashMap::new(),
         role_ids: None,
+        unit_scope: Default::default(),
         service_principal: false,
     }
 }

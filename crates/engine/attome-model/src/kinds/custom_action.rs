@@ -135,17 +135,18 @@ impl Kind for CustomActionKind {
                     "description_en tells a person and a model what the action does",
                 )),
                 None => {}
-                Some(d) => {
+                Some(d)
                     if d.as_str().is_none_or(|d| {
                         d.trim().is_empty() || d.chars().count() > MAX_DESCRIPTION_CHARS
-                    }) {
-                        issues.push(Issue::new(
-                            format!("/{key}"),
-                            "invalid",
-                            "a description is text of 1 to 1,000 characters",
-                        ));
-                    }
+                    }) =>
+                {
+                    issues.push(Issue::new(
+                        format!("/{key}"),
+                        "invalid",
+                        "a description is text of 1 to 1,000 characters",
+                    ))
                 }
+                Some(_) => {}
             }
         }
         match doc.get("input_schema") {

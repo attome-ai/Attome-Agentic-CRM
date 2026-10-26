@@ -101,12 +101,12 @@ async fn user_with(app: &TestApp, label: &str, privileges: &[&str]) -> TestUser 
     user
 }
 
-async fn ctx(app: &TestApp, user: Uuid) -> SecurityContext {
+async fn ctx(app: &TestApp, user: Uuid) -> std::sync::Arc<SecurityContext> {
     app.state.base.security.invalidate_sync(user).await.unwrap();
     app.state.base.security.resolve(user).await.unwrap()
 }
 
-async fn admin(app: &TestApp) -> SecurityContext {
+async fn admin(app: &TestApp) -> std::sync::Arc<SecurityContext> {
     ctx(app, app.admin.id).await
 }
 
@@ -175,7 +175,7 @@ async fn add(
     let role = role_ref(app).await;
     let (_, member) = attome_sales::team::add_member(
         &app.state,
-        &admin(app).await,
+        &*admin(app).await,
         deal,
         SalesTeamMemberBody {
             user_ref: Some(user),
@@ -226,7 +226,7 @@ fn removed_member_loses_access() {
         let deal = deal(&app, app.admin.id, "prospecting", 1000).await;
         let row = add(&app, deal, member.id, TeamAccess::Read).await.unwrap();
         assert!(can_read(&app, member.id, deal).await);
-        attome_sales::team::remove_member(&app.state, &admin(&app).await, deal, row)
+        attome_sales::team::remove_member(&app.state, &*admin(&app).await, deal, row)
             .await
             .unwrap();
         assert!(!can_read(&app, member.id, deal).await);
@@ -338,7 +338,7 @@ async fn propose(app: &TestApp, deal: Uuid, member: Uuid) -> (StatusCode, Value)
     let revenue = split_type(app, "Revenue").await;
     let (status, outcome) = attome_sales::split_store::replace_splits(
         &app.state,
-        &admin(app).await,
+        &*admin(app).await,
         deal,
         SalesSplitsBody {
             splits: vec![SplitInput {
@@ -526,7 +526,7 @@ fn split_amount_follows_amount_change() {
         let revenue = split_type(&app, "Revenue").await;
         let (status, _) = attome_sales::split_store::replace_splits(
             &app.state,
-            &admin(&app).await,
+            &*admin(&app).await,
             deal,
             SalesSplitsBody {
                 splits: vec![

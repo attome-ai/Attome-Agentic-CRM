@@ -17,8 +17,10 @@ const TTL_SECS: u64 = 60;
 /// §4.3) retires every entry written before `SecurityContext.role_ids`
 /// existed: such an entry would deserialize with `role_ids: None`, which
 /// reads as a system writer and skips business-rule locks. Bump it again
-/// whenever a new field's `#[serde(default)]` would not fail closed.
-const REDIS_PREFIX: &str = "security:ctx:v2";
+/// whenever a new field's `#[serde(default)]` would not fail closed. `v3`
+/// (Q10-T2): an entry without `unit_scope` would read every business-unit
+/// tier as reaching child units.
+const REDIS_PREFIX: &str = "security:ctx:v3";
 /// Cross-node authz-cache invalidation doorbell (D-051) — mirrors the
 /// `meta_version` pattern (`attome-server/src/admin.rs`/`system.rs`), except the
 /// payload itself has to carry the `user_id` being invalidated: unlike
@@ -171,6 +173,7 @@ impl SecurityCache {
             subordinate_user_ids: rlc.subordinate_user_ids,
             condition_grants,
             role_ids: Some(rlc.role_ids),
+            unit_scope: rlc.unit_scope,
             service_principal: false,
         };
 

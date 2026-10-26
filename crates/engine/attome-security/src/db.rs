@@ -566,12 +566,13 @@ pub async fn users_holding_role(db: &DbPool, role_id: Uuid) -> Result<Vec<Uuid>,
 // user also held a role scoped only Team for Customer, since the bare
 // cross-role MAX had no entity boundary. See D-136 in DECISIONS.md.
 
-/// Which action's depth to resolve — mirrors `role_mm_entity_access`'s
-/// three scoped columns exactly. `create` is deliberately not a variant
-/// here: a create has no existing row for `rls_predicate` to filter
-/// against, so there is nothing for a depth to scope — create stays gated
-/// purely by the boolean `role_mm_privilege` grant via
-/// `SecurityContextExt::require`, same as today. Distinct from
+/// Which action's depth to resolve — one per `role_mm_entity_access`
+/// level column. Q10-T2 added `Create`, `Assign`, `Share`, `Export` and
+/// `Bulk` (migration `0076_role_entity_access_ops.sql`): a NULL create,
+/// assign or share level means the write level; export and bulk are their
+/// own levels, denied by default, except for a role still in D-589 legacy
+/// mode (`role.bulk_field_mode = 0`), where they keep today's reach (the
+/// read and write levels). Distinct from
 /// `rls::Capability` (`View`/`Action`, 2-valued) on purpose: `Capability`
 /// gates only the `record_share`/`entity_default_share`
 /// capability check inside `rls_predicate`, an orthogonal, coarser axis
@@ -581,11 +582,18 @@ pub enum RecordAction {
     Read,
     Update,
     Delete,
+    Create,
+    Assign,
+    Share,
+    Export,
+    Bulk,
 }
 
 impl RecordAction {
-    /// The suffix `SecurityContextExt::require`'s privilege-key convention
-    /// (`"{entity}.{action}"`) already uses at every existing call site.
+    /// The operation's name, which selects its level column. For `Read`,
+    /// `Update` and `Delete` it is also the suffix of the privilege key
+    /// (`"{entity}.{action}"`) `SecurityContextExt::require` checks; the
+    /// other operations are gated by [`Self::privilege_action`]'s key.
     /// `pub` (not `pub(crate)`) so `entity_crud.rs`'s D-369 condition call
     /// sites can build the same `"{entity}.{action}"` privilege key without
     /// a second, duplicated verb table.
@@ -594,6 +602,22 @@ impl RecordAction {
             RecordAction::Read => "read",
             RecordAction::Update => "update",
             RecordAction::Delete => "delete",
+            RecordAction::Create => "create",
+            RecordAction::Assign => "assign",
+            RecordAction::Share => "share",
+            RecordAction::Export => "export",
+            RecordAction::Bulk => "bulk",
+        }
+    }
+
+    /// The suffix of the per-entity privilege a role must hold for its
+    /// level for this operation to count (`entity_privileges`): assigning
+    /// is a write and exporting is a read, so they have no key of their own.
+    pub fn privilege_action(self) -> &'static str {
+        match self {
+            RecordAction::Assign => "update",
+            RecordAction::Export => "read",
+            other => other.as_str(),
         }
     }
 
@@ -605,8 +629,13 @@ impl RecordAction {
     /// think in terms of one action type, not both.
     pub fn share_capability(self) -> crate::rls::Capability {
         match self {
-            RecordAction::Read => crate::rls::Capability::View,
-            RecordAction::Update | RecordAction::Delete => crate::rls::Capability::Action,
+            RecordAction::Read | RecordAction::Export => crate::rls::Capability::View,
+            RecordAction::Update
+            | RecordAction::Delete
+            | RecordAction::Create
+            | RecordAction::Assign
+            | RecordAction::Share
+            | RecordAction::Bulk => crate::rls::Capability::Action,
         }
     }
 }
@@ -641,6 +670,35 @@ pub(crate) const HELD_ROLES_CTE: &str = r#"
         WHERE ut.user_ref = $1 AND ut.is_deleted = false
           AND rt.is_deleted = false AND r.is_deleted = false
     )"#;
+
+/// Q10-T2: one role's depth for the operation bound at `action` (a
+/// `RecordAction::as_str`), over `ea` (its `role_mm_entity_access` row,
+/// LEFT JOINed) and `r` (the `role` row). A role with no row keeps D-133's
+/// default of `Global`, except for export and bulk on a role that is not in
+/// D-589 legacy mode, which default to `None`. The read, update and delete
+/// arms are the columns they always were.
+fn role_depth_sql(action: &str) -> String {
+    format!(
+        r#"COALESCE(
+                CASE {action}::text
+                    WHEN 'read'   THEN ea.read_access_level
+                    WHEN 'update' THEN ea.write_access_level
+                    WHEN 'delete' THEN ea.delete_access_level
+                    WHEN 'create' THEN COALESCE(ea.create_access_level, ea.write_access_level)
+                    WHEN 'assign' THEN COALESCE(ea.assign_access_level, ea.write_access_level)
+                    WHEN 'share'  THEN COALESCE(ea.share_access_level, ea.write_access_level)
+                    WHEN 'export' THEN CASE WHEN r.bulk_field_mode = 0
+                        THEN GREATEST(ea.export_access_level, ea.read_access_level)
+                        ELSE ea.export_access_level END
+                    WHEN 'bulk'   THEN CASE WHEN r.bulk_field_mode = 0
+                        THEN GREATEST(ea.bulk_access_level, ea.write_access_level)
+                        ELSE ea.bulk_access_level END
+                END,
+                CASE WHEN {action}::text IN ('export', 'bulk') AND r.bulk_field_mode <> 0
+                    THEN 0::smallint ELSE 3::smallint END
+            )"#
+    )
+}
 
 /// Resolves the record-level `AccessLevel` for exactly one `(user_id,
 /// entity_ref, action)` key — the fix for the cross-entity leak
@@ -686,7 +744,7 @@ pub async fn resolve_entity_access_level(
         action = action.as_str(),
         "attome-security: resolving entity access level"
     );
-    let privilege_key = format!("{entity_name}.{}", action.as_str());
+    let privilege_key = format!("{entity_name}.{}", action.privilege_action());
 
     // U12-T1: the same statement answers whether the caller is confined to
     // their companies (`crate::company_walls`), so a wall costs no extra
@@ -694,20 +752,15 @@ pub async fn resolve_entity_access_level(
     // the organisation tree; `held_roles` itself does not recurse.
     let held_roles = HELD_ROLES_CTE.replacen("WITH held_roles", "WITH RECURSIVE held_roles", 1);
     let walls = crate::company_walls::confined_ctes("$5", "$6");
+    let depth = role_depth_sql("$4");
     let sql = format!(
         r#"
             {held_roles},
             {walls},
             role_depth AS (
-                SELECT COALESCE(
-                    CASE $4::text
-                        WHEN 'read'   THEN ea.read_access_level
-                        WHEN 'update' THEN ea.write_access_level
-                        WHEN 'delete' THEN ea.delete_access_level
-                    END,
-                    3::smallint
-                ) AS depth
+                SELECT {depth} AS depth
                 FROM held_roles hr
+                JOIN role r ON r.id = hr.role_id
                 JOIN role_mm_privilege rp ON rp.role_ref = hr.role_id AND rp.is_deleted = false
                 JOIN privilege p ON p.id = rp.privilege_ref
                   AND p.is_active = true AND p.key = $3
@@ -783,7 +836,7 @@ pub async fn resolve_owner_visible(
         action = action.as_str(),
         "attome-security: resolving owner visibility"
     );
-    let privilege_key = format!("{entity_name}.{}", action.as_str());
+    let privilege_key = format!("{entity_name}.{}", action.privilege_action());
 
     let sql = format!(
         r#"
@@ -963,22 +1016,16 @@ pub async fn resolve_all_entity_access_levels(
     user_id: Uuid,
     action: RecordAction,
 ) -> Result<HashMap<String, (Uuid, AccessLevel)>, AppError> {
-    let suffix = format!(".{}", action.as_str());
+    let suffix = format!(".{}", action.privilege_action());
+    let depth = role_depth_sql("$3");
 
     let sql = format!(
         r#"
             {HELD_ROLES_CTE},
             role_depth AS (
-                SELECT ei.logicalname, ei.id AS entity_ref,
-                       COALESCE(
-                           CASE $3::text
-                               WHEN 'read'   THEN ea.read_access_level
-                               WHEN 'update' THEN ea.write_access_level
-                               WHEN 'delete' THEN ea.delete_access_level
-                           END,
-                           3::smallint
-                       ) AS depth
+                SELECT ei.logicalname, ei.id AS entity_ref, {depth} AS depth
                 FROM held_roles hr
+                JOIN role r ON r.id = hr.role_id
                 JOIN role_mm_privilege rp ON rp.role_ref = hr.role_id AND rp.is_deleted = false
                 JOIN privilege p ON p.id = rp.privilege_ref AND p.is_active = true
                 JOIN entity_info ei
@@ -1091,9 +1138,9 @@ pub async fn resolve_default_share_entities(
 }
 
 /// True iff any role `user_id` holds (direct or team-mediated) has an
-/// entity-access row anywhere at `BusinessUnit` depth on any of the three
-/// scoped actions — a cheap existence check gating whether
-/// `resolve_accessible_org_ids`'s recursive-CTE walk is worth paying for at
+/// entity-access row anywhere at `BusinessUnit` depth on any operation — a
+/// cheap existence check gating whether `resolve_accessible_org_ids`'s
+/// recursive-CTE walk is worth paying for at
 /// all this resolve cycle. Mirrors the "don't pay for a tier this caller
 /// doesn't use" discipline `resolve_record_level_context` already applies;
 /// unlike the old single-scalar `access_level`, depth is now per-entity, so
@@ -1113,7 +1160,11 @@ pub async fn any_role_uses_business_unit_scope(
                 SELECT 1 FROM role_mm_entity_access ea
                 JOIN held_roles hr ON hr.role_id = ea.role_ref
                 WHERE ea.is_deleted = false
-                  AND 2 IN (ea.read_access_level, ea.write_access_level, ea.delete_access_level)
+                  AND 2 IN (
+                      ea.read_access_level, ea.write_access_level, ea.delete_access_level,
+                      ea.create_access_level, ea.assign_access_level, ea.share_access_level,
+                      ea.export_access_level, ea.bulk_access_level
+                  )
             )
             "#
     );
@@ -1126,6 +1177,86 @@ pub async fn any_role_uses_business_unit_scope(
     .map_err(AppError::internal)?;
 
     Ok(found.unwrap_or(false))
+}
+
+/// Q10-T2: the `"{entity_ref}.{action}"` keys whose `BusinessUnit` depth
+/// stops at the caller's own units, for [`attome_server::security::UnitScope`].
+/// A key is listed when at least one held role grants the operation at
+/// `BusinessUnit` depth and every such role turns child units off. A role
+/// that reaches `Global` for the same key makes the depth `Global`, where
+/// the flag is never read, so it needs no special case here. Create, export
+/// and bulk have no flag and are never listed. Only roles holding the
+/// operation's privilege count, as in [`resolve_entity_access_level`].
+pub async fn resolve_own_units_only(
+    db: &DbPool,
+    user_id: Uuid,
+) -> Result<HashSet<String>, AppError> {
+    let sql = format!(
+        r#"
+            {HELD_ROLES_CTE},
+            depths AS (
+                SELECT ea.entity_ref, a.action, a.children
+                FROM held_roles hr
+                JOIN role_mm_entity_access ea
+                    ON ea.role_ref = hr.role_id AND ea.is_deleted = false
+                JOIN entity_info ei ON ei.id = ea.entity_ref
+                CROSS JOIN LATERAL (VALUES
+                    ('read',   'read',   ea.read_access_level, ea.read_bu_children),
+                    ('update', 'update', ea.write_access_level, ea.write_bu_children),
+                    ('delete', 'delete', ea.delete_access_level, ea.delete_bu_children),
+                    ('assign', 'update',
+                        COALESCE(ea.assign_access_level, ea.write_access_level), ea.assign_bu_children),
+                    ('share',  'share',
+                        COALESCE(ea.share_access_level, ea.write_access_level), ea.share_bu_children)
+                ) AS a(action, privilege_action, depth, children)
+                JOIN role_mm_privilege rp ON rp.role_ref = hr.role_id AND rp.is_deleted = false
+                JOIN privilege p ON p.id = rp.privilege_ref AND p.is_active = true
+                  AND p.key = ei.logicalname || '.' || a.privilege_action
+                WHERE a.depth = 2
+            )
+            SELECT entity_ref::text || '.' || action
+            FROM depths
+            GROUP BY entity_ref, action
+            HAVING NOT bool_or(children)
+            "#
+    );
+    let keys: Vec<String> = tokio::time::timeout(
+        QUERY_TIMEOUT,
+        sqlx::query_scalar(&sql).bind(user_id).fetch_all(db),
+    )
+    .await
+    .map_err(|_| AppError::internal("own-units-only resolution query timed out"))?
+    .map_err(AppError::internal)?;
+    Ok(keys.into_iter().collect())
+}
+
+/// Q10-T2: the caller's own units without the units under them — the two
+/// seeds [`resolve_accessible_org_ids`] walks down from (memberships and the
+/// home unit), not the walk itself.
+pub async fn resolve_own_org_ids(db: &DbPool, user_id: Uuid) -> Result<Vec<Uuid>, AppError> {
+    tokio::time::timeout(
+        QUERY_TIMEOUT,
+        sqlx::query_scalar(
+            r#"
+            SELECT m.organization_ref
+            FROM user_account_mm_organization m
+            JOIN organization o ON o.id = m.organization_ref
+            WHERE m.user_ref = $1 AND m.is_deleted = false
+
+            UNION
+
+            SELECT u.organization_ref
+            FROM user_account u
+            JOIN organization o ON o.id = u.organization_ref
+            WHERE u.id = $1
+            "#,
+        )
+        .bind(user_id)
+        .fetch_all(db),
+    )
+    .await
+    .map_err(|_| AppError::internal("own-org resolution query timed out"))?
+    .map_err(AppError::internal)
 }
 
 /// Every `team.id` `user_id` is a member of, via

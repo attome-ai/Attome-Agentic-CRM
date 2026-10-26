@@ -1799,6 +1799,7 @@ mod tests {
             subordinate_user_ids: Vec::new(),
             condition_grants: Default::default(),
             role_ids: None,
+            unit_scope: Default::default(),
             service_principal: false,
         };
         assert_eq!(audience(&Principal::Staff(&ctx)), RuleAudience::System);

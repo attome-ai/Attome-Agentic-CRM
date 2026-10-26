@@ -24,6 +24,8 @@ pub(crate) struct RecordLevelContext {
     /// D-789 §4.3: the live roles held directly or through a team
     /// (`SecurityContext::role_ids`).
     pub role_ids: Vec<Uuid>,
+    /// Q10-T2: where `BusinessUnit` depth excludes child units.
+    pub unit_scope: attome_server::security::UnitScope,
 }
 
 /// F138 (and, historically, D-133): resolves `accessible_org_ids`/`team_ids`/
@@ -49,21 +51,38 @@ pub(crate) async fn resolve_record_level_context(
 ) -> Result<RecordLevelContext, AppError> {
     let team_ids = crate::db::resolve_team_ids(db, user_id).await?;
     let role_ids = crate::db::resolve_role_ids(db, user_id).await?;
-    let business_units = if crate::db::any_role_uses_business_unit_scope(db, user_id).await? {
+    let uses_business_units = crate::db::any_role_uses_business_unit_scope(db, user_id).await?;
+    let business_units = if uses_business_units {
         Some(crate::db::resolve_accessible_org_ids(db, user_id).await?)
     } else {
         None
     };
+    // Q10-T2: the own units are only needed where some role turns child
+    // units off.
+    let own_units_only = if uses_business_units {
+        crate::db::resolve_own_units_only(db, user_id).await?
+    } else {
+        Default::default()
+    };
+    let own_units = if own_units_only.is_empty() {
+        Vec::new()
+    } else {
+        crate::db::resolve_own_org_ids(db, user_id).await?
+    };
     // U12-T1: a person confined to their companies filters on the
     // companies' organisations (their own business units inside them, when
     // a role already scopes them that way).
-    let accessible_org_ids = match crate::company_walls::confinement(db, user_id).await? {
-        Some(companies) => {
-            let company = crate::company_walls::company_org_ids(db, &companies).await?;
-            crate::company_walls::walled_org_ids(business_units.as_deref(), &company)
-        }
-        None => business_units.unwrap_or_default(),
-    };
+    let (accessible_org_ids, own_org_ids) =
+        match crate::company_walls::confinement(db, user_id).await? {
+            Some(companies) => {
+                let company = crate::company_walls::company_org_ids(db, &companies).await?;
+                (
+                    crate::company_walls::walled_org_ids(business_units.as_deref(), &company),
+                    crate::company_walls::walled_org_ids(Some(&own_units), &company),
+                )
+            }
+            None => (business_units.unwrap_or_default(), own_units),
+        };
     let position_hierarchy_enabled =
         crate::db::resolve_position_hierarchy_enabled(db, user_id).await?;
     let subordinate_user_ids = if position_hierarchy_enabled {
@@ -77,6 +96,10 @@ pub(crate) async fn resolve_record_level_context(
         position_hierarchy_enabled,
         subordinate_user_ids,
         role_ids,
+        unit_scope: attome_server::security::UnitScope {
+            own_org_ids,
+            own_units_only,
+        },
     })
 }
 
@@ -110,6 +133,7 @@ pub async fn resolve_uncached(db: &DbPool, user_id: Uuid) -> Result<SecurityCont
         condition_grants,
         // D-789 §4.3: a resolved user is never a system writer.
         role_ids: Some(rlc.role_ids),
+        unit_scope: rlc.unit_scope,
         service_principal: false,
     })
 }

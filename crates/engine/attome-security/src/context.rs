@@ -203,6 +203,7 @@ mod tests {
             subordinate_user_ids: Vec::new(),
             condition_grants: HashMap::new(),
             role_ids: None,
+            unit_scope: Default::default(),
             service_principal: false,
         }
     }
@@ -308,6 +309,7 @@ mod tests {
             subordinate_user_ids: Vec::new(),
             condition_grants: HashMap::new(),
             role_ids: None,
+            unit_scope: Default::default(),
             service_principal: false,
         };
         assert!(c.has_field_read_grant("employee", "salary"));

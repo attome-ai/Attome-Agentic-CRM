@@ -133,6 +133,38 @@ pub struct GrantCondition {
 /// resolver, its L1 cache, and `AuthorizedContext` all carry the `Arc`, which
 /// is also strictly cheaper than the deep `HashSet`/`Vec` clone this derive
 /// used to perform on every cache hit and every request.
+/// Q10-T2: where a role's `BusinessUnit` depth stops at the caller's own
+/// units instead of reaching their child units too
+/// (`role_mm_entity_access.{action}_bu_children = false`).
+///
+/// Resolved with the rest of the context. An `(entity, action)` is listed
+/// only when every held role that grants it at `BusinessUnit` depth excludes
+/// child units, the same most-permissive-role-wins rule the depth `MAX`
+/// already applies. `xrm_security::rls` reads it when it builds the
+/// `BusinessUnit` tier.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UnitScope {
+    /// The caller's own units (memberships and home unit), without the units
+    /// under them. Empty unless some `(entity, action)` is listed below.
+    pub own_org_ids: Vec<Uuid>,
+    /// `"{entity_ref}.{action}"` keys (`action` as
+    /// `RecordAction::as_str`) whose `BusinessUnit` tier is
+    /// [`Self::own_org_ids`] rather than
+    /// [`SecurityContext::accessible_org_ids`].
+    pub own_units_only: HashSet<String>,
+}
+
+impl UnitScope {
+    /// True when `entity_ref`'s `BusinessUnit` tier for `action` excludes
+    /// child units.
+    pub fn excludes_children(&self, entity_ref: Uuid, action: &str) -> bool {
+        !self.own_units_only.is_empty()
+            && self
+                .own_units_only
+                .contains(&format!("{entity_ref}.{action}"))
+    }
+}
+
 /// D-589: which non-sensitive fields a *bulk* surface (export, query/execute,
 /// reports, document generation, dashboards, AI context and tools, search
 /// aggregates and graph, webhook payloads) may return to this caller.
@@ -270,6 +302,13 @@ pub struct SecurityContext {
     /// entry is ever read.
     #[serde(default)]
     pub role_ids: Option<Vec<Uuid>>,
+    /// Q10-T2: `(entity, action)` pairs whose `BusinessUnit` depth excludes
+    /// child units, and the caller's own units for them. Empty, the default,
+    /// keeps every `BusinessUnit` tier on `accessible_org_ids`; the
+    /// resolver's L2 key version was bumped with this field so no entry
+    /// written before it is read as "children included".
+    #[serde(default)]
+    pub unit_scope: UnitScope,
     /// D-791 rule 3: true when this request authenticated with an API key or
     /// as an S2S client (anything but a cookie session). Such a caller is
     /// exempt from business-rule `hidden`/`disabled` policies; `error` and
@@ -353,6 +392,16 @@ impl SecurityContext {
                 .into_iter()
                 .map(|u| format!("subordinate:{u}")),
         );
+        lines.extend(
+            sorted(&self.unit_scope.own_org_ids)
+                .into_iter()
+                .map(|o| format!("own_org:{o}")),
+        );
+        lines.extend(
+            sorted(&self.unit_scope.own_units_only)
+                .into_iter()
+                .map(|k| format!("own_units_only:{k}")),
+        );
         match &self.role_ids {
             Some(roles) => lines.extend(sorted(roles).into_iter().map(|r| format!("role:{r}"))),
             None => lines.push("role:system".into()),
@@ -383,6 +432,7 @@ impl SecurityContext {
             subordinate_user_ids: self.subordinate_user_ids.clone(),
             condition_grants: self.condition_grants.clone(),
             role_ids: self.role_ids.clone(),
+            unit_scope: self.unit_scope.clone(),
             service_principal: true,
         }
     }
@@ -457,6 +507,7 @@ impl EntityCeiling {
             subordinate_user_ids: ctx.subordinate_user_ids.clone(),
             condition_grants: ctx.condition_grants.clone(),
             role_ids: ctx.role_ids.clone(),
+            unit_scope: ctx.unit_scope.clone(),
             service_principal: ctx.service_principal,
         }
     }
@@ -632,6 +683,7 @@ mod tests {
             subordinate_user_ids: Vec::new(),
             condition_grants: HashMap::new(),
             role_ids: Some(Vec::new()),
+            unit_scope: Default::default(),
             service_principal: false,
         }
     }
@@ -701,6 +753,7 @@ mod tests {
                     subordinate_user_ids: Vec::new(),
                     condition_grants: HashMap::new(),
                     role_ids: None,
+                    unit_scope: Default::default(),
                     service_principal: false,
                 }))
             })
@@ -744,6 +797,7 @@ mod tests {
             subordinate_user_ids: Vec::new(),
             condition_grants: HashMap::new(),
             role_ids: None,
+            unit_scope: Default::default(),
             service_principal: false,
         }
     }

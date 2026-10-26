@@ -1640,7 +1640,7 @@ async fn fetch_child_source(
     let text: Vec<String> = source
         .text_columns
         .iter()
-        .filter(|c| has(**c) && readable(**c))
+        .filter(|c| has(c) && readable(c))
         .map(|c| format!("t.{}", quote_ident(c)))
         .collect();
     let mut filter = filter_sql(&opts.filter, &occ, Some("t.created_by"), &text, &mut binds);

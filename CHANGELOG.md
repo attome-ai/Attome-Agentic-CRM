@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Per-operation access levels in the record-access resolver (Q10-T2): `RecordAction` gains create,
+  assign, share, export and bulk over migration `0076`'s columns, and a business-unit depth whose
+  `{action}_bu_children` is off stops at the person's own units. A NULL create, assign or share level
+  is the write level; export and bulk are denied by default, except for roles still in D-589 legacy
+  mode, which keep their read and write reach. The security-context cache key moves to
+  `security:ctx:v3`, so each node rebuilds its cached contexts once after the upgrade.
 - Opportunity Lines tab (D6-T10): the new `@attome/xrm/sales` entry point's line grid on the
   opportunity form, with totals that follow the typing, saves on blur, products from the price list,
   copy, currency minor units and the quote sync choice. See `docs/opportunity-lines.md`.

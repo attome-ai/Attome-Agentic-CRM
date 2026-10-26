@@ -993,6 +993,7 @@ pub async fn process(
 
 /// Moves an export to `completed` and writes its audit event in one
 /// transaction (D-062): either both commit or neither does.
+#[allow(clippy::too_many_arguments)]
 async fn complete_export(
     state: &EngineState,
     export_id: Uuid,

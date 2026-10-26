@@ -241,7 +241,9 @@ async fn invoke(
         .oneshot(
             builder
                 // AE1-T4: `memory.forget` is consequential; the person confirms it.
-                .body(Body::from(json!({ "args": args, "confirm": true }).to_string()))
+                .body(Body::from(
+                    json!({ "args": args, "confirm": true }).to_string(),
+                ))
                 .unwrap(),
         )
         .await
@@ -312,6 +314,7 @@ async fn recall_ids(db: &attome_db::DbPool, user_id: Uuid) -> Vec<Uuid> {
         subordinate_user_ids: Vec::new(),
         condition_grants: HashMap::new(),
         role_ids: None,
+        unit_scope: Default::default(),
         service_principal: false,
     };
     let access = HashMap::new();

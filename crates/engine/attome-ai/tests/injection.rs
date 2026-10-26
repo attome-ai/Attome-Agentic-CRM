@@ -322,6 +322,7 @@ fn every_payload_degrades_a_real_agent_write_to_confirm_first() {
             subordinate_user_ids: Vec::new(),
             condition_grants: std::collections::HashMap::new(),
             role_ids: None,
+            unit_scope: Default::default(),
             service_principal: false,
         });
         let ctx = ActionContext::agent(security, RiskTier::Reversible).tainted();

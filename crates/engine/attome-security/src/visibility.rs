@@ -73,7 +73,7 @@ impl<'a> PolymorphicVisibility<'a> {
         for (logicalname, (entity_ref, level)) in access_by_entity {
             logicalnames.push(logicalname.clone());
             entity_refs.push(*entity_ref);
-            access_levels.push(*level as i16);
+            access_levels.push(crate::rls::polymorphic_level(ctx, *entity_ref, *level));
             default_shares.push(default_share_entities.contains(entity_ref));
         }
         Self {
@@ -320,6 +320,7 @@ mod tests {
             subordinate_user_ids: Vec::new(),
             condition_grants: HashMap::new(),
             role_ids: None,
+            unit_scope: Default::default(),
             service_principal: false,
         }
     }
@@ -567,6 +568,7 @@ mod balance {
                 subordinate_user_ids: Vec::new(),
                 condition_grants: HashMap::new(),
                 role_ids: None,
+                unit_scope: Default::default(),
                 service_principal: false,
             };
             let mut m = HashMap::new();

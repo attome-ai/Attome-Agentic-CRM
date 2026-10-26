@@ -52,6 +52,7 @@ fn ctx(user_id: Uuid, privileges: Vec<String>, field_grants: Vec<String>) -> Sec
         subordinate_user_ids: Vec::new(),
         condition_grants: Default::default(),
         role_ids: None,
+        unit_scope: Default::default(),
         service_principal: false,
     }
 }
