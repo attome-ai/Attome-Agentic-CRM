@@ -2494,6 +2494,7 @@ dependencies = [
  "attome-ops",
  "attome-records",
  "attome-sales",
+ "attome-search",
  "attome-security",
  "attome-server",
  "attome-service",

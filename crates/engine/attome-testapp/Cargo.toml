@@ -54,6 +54,7 @@ attome-jobs.workspace = true
 attome-ledger.workspace = true
 attome-metadata.workspace = true
 attome-metric.workspace = true
+attome-search.workspace = true
 attome-service.workspace = true
 rust_decimal.workspace = true
 tracing-subscriber.workspace = true
