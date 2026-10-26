@@ -1605,6 +1605,27 @@ fn resolved_placeholder_expands_and_reports_nothing() {
     assert!(out.starts_with("prefix ") && out.ends_with(" suffix"));
 }
 
+/// Z1-T12: a value from the boot-time secret lookup wins over the
+/// environment, and a name the lookup does not know still reads the
+/// environment.
+#[test]
+fn lookup_wins_over_env() {
+    let lookup = |key: &str| (key == "PATH").then(|| "from-the-store".to_owned());
+    let (out, unresolved) = super::helpers::expand_env_vars_with(
+        "${PATH}|${ATTOME_TEST_DEFINITELY_UNSET_9F3B}",
+        &lookup,
+    );
+    assert_eq!(out, "from-the-store|${ATTOME_TEST_DEFINITELY_UNSET_9F3B}");
+    assert_eq!(
+        unresolved,
+        vec!["ATTOME_TEST_DEFINITELY_UNSET_9F3B".to_owned()]
+    );
+    let none = |_: &str| None;
+    let (out, _) = super::helpers::expand_env_vars_with("${PATH}", &none);
+    assert_ne!(out, "from-the-store");
+    assert!(!out.contains("${"));
+}
+
 #[test]
 fn unresolved_placeholder_is_left_literal_and_reported() {
     let (out, unresolved) = expand_env_vars("a ${ATTOME_TEST_DEFINITELY_UNSET_9F3B} b");

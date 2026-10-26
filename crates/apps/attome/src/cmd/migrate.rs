@@ -16,7 +16,6 @@
 //! always was) — it just means the same work also happens again on the next
 //! `server` boot, byte-identical to today's behavior.
 use attome::role_seed_lock;
-use attome_config::AppConfig;
 
 #[tokio::main]
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -27,7 +26,8 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .json()
         .init();
 
-    let config = AppConfig::from_file()?;
+    // Z1-T12: a cloud secret store, when configured, is read once here.
+    let config = crate::secret_sources::load_config().await?;
     config.validate()?;
     // BCF-10 — one WARN per unknown config key, never a boot failure (BCF-D4).
     attome::boot::report_ignored_config_keys(&config, false)?;

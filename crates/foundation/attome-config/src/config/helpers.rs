@@ -123,7 +123,23 @@ pub(crate) fn build_redis_sentinel_url(
 /// unresolved, this also checks whether `VAR_NAME_FILE` is set and, if so,
 /// reads that file's trimmed contents as the value — see
 /// `resolve_placeholder`'s doc comment for the full rationale.
+#[cfg(test)]
 pub(crate) fn expand_env_vars(s: &str) -> (String, Vec<String>) {
+    expand_env_vars_with(s, &no_lookup)
+}
+
+/// Z1-T12: a value for a placeholder name from somewhere other than the
+/// environment (a cloud secret store read once at boot); `None` falls back
+/// to the environment.
+pub type SecretLookup<'a> = &'a dyn Fn(&str) -> Option<String>;
+
+/// The lookup that finds nothing: the environment alone.
+pub(crate) fn no_lookup(_key: &str) -> Option<String> {
+    None
+}
+
+/// [`expand_env_vars`] with `lookup` asked first.
+pub(crate) fn expand_env_vars_with(s: &str, lookup: SecretLookup<'_>) -> (String, Vec<String>) {
     let mut out = String::with_capacity(s.len());
     let mut unresolved = Vec::new();
     let mut rest = s;
@@ -132,7 +148,7 @@ pub(crate) fn expand_env_vars(s: &str) -> (String, Vec<String>) {
         rest = &rest[start + 2..];
         if let Some(end) = rest.find('}') {
             let key = &rest[..end];
-            match resolve_placeholder(key) {
+            match resolve_placeholder_with(key, lookup) {
                 Some(val) => out.push_str(&val),
                 None => {
                     unresolved.push(key.to_string());
@@ -169,12 +185,23 @@ pub(crate) fn expand_env_vars_in_value(
 /// [`expand_env_vars_in_value`], also listing in `literals` the path of every
 /// non-empty string written into the file as is (no `${VAR}` in it), so the
 /// production profile can refuse a secret typed into the file (Z1-T5).
+#[cfg(test)]
 pub(crate) fn expand_env_vars_tracking(
     value: &mut serde_json::Value,
     unresolved: &mut Vec<String>,
     literals: &mut Vec<String>,
 ) {
-    expand_value_at(value, &mut Vec::new(), unresolved, literals);
+    expand_env_vars_tracking_with(value, unresolved, literals, &no_lookup);
+}
+
+/// [`expand_env_vars_tracking`] with `lookup` asked before the environment.
+pub(crate) fn expand_env_vars_tracking_with(
+    value: &mut serde_json::Value,
+    unresolved: &mut Vec<String>,
+    literals: &mut Vec<String>,
+    lookup: SecretLookup<'_>,
+) {
+    expand_value_at(value, &mut Vec::new(), unresolved, literals, lookup);
 }
 
 /// A path as dotted text, list positions glued on: `a.b[0].c`.
@@ -257,6 +284,7 @@ fn expand_value_at(
     path: &mut Vec<String>,
     unresolved: &mut Vec<String>,
     literals: &mut Vec<String>,
+    lookup: SecretLookup<'_>,
 ) {
     match value {
         serde_json::Value::String(text) => {
@@ -266,7 +294,7 @@ fn expand_value_at(
             if !text.is_empty() && !text.contains("${") {
                 literals.push(path_text(path));
             }
-            let (expanded, missing) = expand_env_vars(text);
+            let (expanded, missing) = expand_env_vars_with(text, lookup);
             if !missing.is_empty() {
                 let location = if path.is_empty() {
                     "<root>".to_string()
@@ -282,14 +310,14 @@ fn expand_value_at(
         serde_json::Value::Array(items) => {
             for (index, item) in items.iter_mut().enumerate() {
                 path.push(format!("[{index}]"));
-                expand_value_at(item, path, unresolved, literals);
+                expand_value_at(item, path, unresolved, literals, lookup);
                 path.pop();
             }
         }
         serde_json::Value::Object(map) => {
             for (key, child) in map.iter_mut() {
                 path.push(key.clone());
-                expand_value_at(child, path, unresolved, literals);
+                expand_value_at(child, path, unresolved, literals, lookup);
                 path.pop();
             }
         }
@@ -309,7 +337,13 @@ fn expand_value_at(
 /// `UnresolvedPlaceholders` boot error (`from_file`) covers it too, so a
 /// misconfigured secret mount is a startup failure, never a silent empty
 /// secret.
-fn resolve_placeholder(key: &str) -> Option<String> {
+///
+/// Z1-T12: `lookup` (a cloud secret store read once at boot) is asked
+/// before either.
+fn resolve_placeholder_with(key: &str, lookup: SecretLookup<'_>) -> Option<String> {
+    if let Some(val) = lookup(key) {
+        return Some(val);
+    }
     if let Ok(val) = std::env::var(key) {
         return Some(val);
     }

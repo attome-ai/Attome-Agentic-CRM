@@ -13,6 +13,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Cloud secret stores at start (Z1-T12): with `ATTOME_SECRET_SOURCE=aws` or `azure`, the secrets
+  under `ATTOME_SECRET_SOURCE_PREFIX` in AWS Secrets Manager or Azure Key Vault answer `${NAME}`
+  placeholders ahead of the environment, read once by `serve`, `worker`, `migrate` and `preflight`
+  (10 s limit, no refresh). Unset, nothing changes. See `docs/secrets.md`.
 - Buyer feedback after a close (D25-T7): `POST /api/v1/sales/win-loss-reviews/{id}/buyer-feedback`
   sends the published survey `win_loss_buyer` to the readable contacts who consented to surveys
   (others are listed with the reason), or creates an interview task regarding the review. The

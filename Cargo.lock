@@ -588,6 +588,7 @@ dependencies = [
  "h3",
  "h3-quinn",
  "hex",
+ "hmac 0.12.1",
  "jsonwebtoken",
  "metrics",
  "opentelemetry",

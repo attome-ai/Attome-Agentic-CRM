@@ -96,6 +96,7 @@ chrono.workspace                = true
 fred.workspace                  = true
 futures-util.workspace          = true
 hex.workspace                   = true
+hmac                            = { workspace = true, optional = true }
 opentelemetry.workspace         = true
 opentelemetry-otlp.workspace    = true
 opentelemetry_sdk.workspace     = true
@@ -118,6 +119,10 @@ uuid.workspace                  = true
 url.workspace                   = true
 
 [features]
+# Z1-T12: cloud secret stores read once at boot (`ATTOME_SECRET_SOURCE`).
+default = ["aws-secrets", "azure-keyvault"]
+aws-secrets = ["dep:hmac"]
+azure-keyvault = []
 # Tests against a live Keycloak; run by hand with `--features keycloak-tests`.
 keycloak-tests = []
 # The developer-only fleet console (V2-D472); refused in release builds.

@@ -36,7 +36,6 @@
 //! instead of only whatever `server`'s gauges happen to show.
 use apalis::prelude::{Monitor, WorkerBuilder, WorkerBuilderExt, WorkerFactoryFn};
 use attome::jobs::MigratorDb;
-use attome_config::AppConfig;
 
 #[tokio::main]
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -45,7 +44,8 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // "extract context in workers" to have anything to extract *from* its
     // own exporter's perspective, so this binary gets the same
     // `init_tracing` wiring, not a second copy of the old bare-`fmt()` setup.
-    let config = AppConfig::from_file()?;
+    // Z1-T12: a cloud secret store, when configured, is read once here.
+    let config = crate::secret_sources::load_config().await?;
     config.validate()?;
     if config.cache.backend == attome_config::CacheBackend::Memory {
         return Err("attome worker cannot run with cache.backend = \"memory\": the in-process store is private to the server process. Run the worker inline (jobs.run_worker_inline = true) or configure Redis."

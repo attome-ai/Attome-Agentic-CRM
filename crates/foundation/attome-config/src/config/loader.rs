@@ -15,7 +15,7 @@ use crate::Secret;
 use crate::keyring::KeyRing;
 
 use super::helpers::{
-    expand_env_vars_tracking, is_secret_path, postgres_url, template_secret_marker,
+    expand_env_vars_tracking_with, is_secret_path, postgres_url, template_secret_marker,
 };
 use super::{
     AnchorStoreSection, AppConfig, CacheRole, CacheRoleOverride, CacheSentinelConfig, ConfigError,
@@ -153,10 +153,27 @@ impl AppConfig {
         Self::from_path(Self::config_file_path())
     }
 
+    /// Z1-T12: [`Self::from_file`], with `lookup` asked for each `${NAME}`
+    /// before the environment and `NAME_FILE` (a cloud secret store the
+    /// binary read once at boot; `None` falls through).
+    pub fn from_file_with_lookup(
+        lookup: &dyn Fn(&str) -> Option<String>,
+    ) -> Result<Self, ConfigError> {
+        Self::from_path_with_lookup(Self::config_file_path(), lookup)
+    }
+
     /// Load from the JSON file at `path`, with the same placeholder expansion
     /// and checks as [`Self::from_file`] (Z6-T5: `attome storage migrate`
     /// reads two deployments' files).
     pub fn from_path(path: String) -> Result<Self, ConfigError> {
+        Self::from_path_with_lookup(path, &super::helpers::no_lookup)
+    }
+
+    /// [`Self::from_path`] with `lookup` asked before the environment.
+    pub fn from_path_with_lookup(
+        path: String,
+        lookup: &dyn Fn(&str) -> Option<String>,
+    ) -> Result<Self, ConfigError> {
         dotenvy::dotenv().ok();
 
         // A bind mount whose host-side file is missing makes Docker create a
@@ -197,7 +214,7 @@ impl AppConfig {
 
         let mut unresolved = Vec::new();
         let mut literals = Vec::new();
-        expand_env_vars_tracking(&mut document, &mut unresolved, &mut literals);
+        expand_env_vars_tracking_with(&mut document, &mut unresolved, &mut literals, lookup);
 
         // Fail-closed (D-038): an unresolved ${VAR} anywhere in the config is
         // a boot error — a missing DB password or Redis URL must never boot as

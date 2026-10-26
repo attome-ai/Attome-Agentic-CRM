@@ -179,7 +179,9 @@ pub async fn collect(config_path: String) -> Vec<CheckResult> {
         check_secret_files(&mut results, &text);
     }
 
-    let config = match AppConfig::from_path(config_path.clone()) {
+    // Z1-T12: with a cloud secret store configured, the same read the
+    // server does at boot.
+    let config = match crate::secret_sources::load_config_from(config_path.clone()).await {
         Ok(c) => c,
         Err(e) => {
             results.push(fail("config.load", e.to_string()));

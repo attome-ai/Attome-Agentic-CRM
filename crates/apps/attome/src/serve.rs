@@ -76,7 +76,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // anything, so reading config before installing the subscriber (instead
     // of the previous ordering) is safe and lets `init_tracing` read
     // `config.observability` directly.
-    let config = AppConfig::from_file()?;
+    // Z1-T12: a cloud secret store, when configured, is read once here.
+    let config = crate::secret_sources::load_config().await?;
     config.validate()?;
     // Z5-T3: the per-route policy table, from the same document the API
     // publishes; the body-limit layer reads it by matched route.

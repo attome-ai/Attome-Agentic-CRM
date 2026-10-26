@@ -15,6 +15,7 @@
 ## Reference
 
 - [Architecture](architecture.md)
+- [Secrets in the configuration](secrets.md): placeholders, environment variables, secret files, and AWS Secrets Manager or Azure Key Vault read once at start.
 - [Built-in edge](edge.md): TLS from files or ACME, HTTP/3, what the edge refuses before authentication and the route-policy extensions.
 - [Agents](agents.md): what agents may do, their tools, delegation and safety.
 - [Identity brokers](identity-brokers.md): signing in with a SAML-only identity provider through Entra ID, Okta, AD FS or Keycloak over OpenID Connect.

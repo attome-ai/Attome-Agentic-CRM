@@ -54,6 +54,8 @@ pub mod quote_accept;
 pub mod readonly_role_seed;
 pub mod role_seed_lock;
 pub mod schedulers;
+/// Z1-T12: cloud secret stores read once at boot.
+pub mod secret_sources;
 /// `attome serve`: the HTTP server (and, unless configured otherwise, the
 /// inline job worker and schedulers).
 pub mod serve;
