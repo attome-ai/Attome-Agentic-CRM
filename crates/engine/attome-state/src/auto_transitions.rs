@@ -230,7 +230,7 @@ pub async fn sweep(state: &EngineState) -> Result<u64, AppError> {
     let Some(last) = events.last().cloned() else {
         return Ok(0);
     };
-    let registry: Arc<StateModelRegistry> = Arc::clone(&state.state_models.load());
+    let registry: Arc<StateModelRegistry> = Arc::clone(&*state.state_models.load());
     let mut moved = 0;
     for event in &events {
         if !matches!(
@@ -265,7 +265,7 @@ pub async fn sweep(state: &EngineState) -> Result<u64, AppError> {
 /// Checks every record in the `from_state` of an automatic transition; how
 /// many moved.
 pub async fn daily(state: &EngineState) -> Result<u64, AppError> {
-    let registry: Arc<StateModelRegistry> = Arc::clone(&state.state_models.load());
+    let registry: Arc<StateModelRegistry> = Arc::clone(&*state.state_models.load());
     let mut moved = 0;
     for entity in registry.entities() {
         let Some((state_field, transitions)) = automatic_model(&registry, entity) else {
