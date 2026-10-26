@@ -12,6 +12,8 @@ import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/
 import { WebVitals } from '../services/web-vitals.service';
 import { DEBOUNCE_MS, MIN_QUERY_LENGTH, OmniSearchComponent, SearchService } from '@attome/xrm/search/omni';
 import type { OmniSelection } from '@attome/xrm/search/omni';
+// B18-T10: loaded only by the header's `@defer` block.
+import { SyncStatusComponent } from '@attome/xrm/offline';
 import { AppSwitcherComponent } from '../app-switcher/app-switcher.component';
 import { ChangesetIndicatorComponent } from '../changeset-indicator/changeset-indicator.component';
 import { CopilotLauncherComponent } from '../copilot-launcher/copilot-launcher.component';
@@ -116,6 +118,7 @@ const PALETTE_RECORDS = 8;
     ShellSidebarComponent, NotificationBellComponent, ProfileMenuComponent, AppSwitcherComponent,
     CopilotLauncherComponent, SoftphoneLauncherComponent, OmniSearchComponent, ChangesetIndicatorComponent, FavouritesComponent,
     StatusBannerComponent, FirstRunPromptComponent, TourOverlayComponent, ScanFindComponent,
+    SyncStatusComponent,
   ],
   host: {
     '(window:keydown)': 'onKeydown($event)',
