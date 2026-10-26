@@ -105,3 +105,21 @@ impl EngineModel for MarketingModel {
             .merge(crate::landing::routes())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// E1-T2: the engine mounts as `attome-marketing` under the marketing
+    /// module, so switching the module off in Module Management unmounts
+    /// every marketing route; it declares its manifest (Y4).
+    #[test]
+    fn health_marketing_engine_mounts_under_its_module() {
+        let model = MarketingModel;
+        assert_eq!(model.name(), "attome-marketing");
+        assert_eq!(model.module_id(), MODULE_MARKETING);
+        let manifest = model.manifest().expect("a manifest");
+        assert_eq!(manifest.version, env!("CARGO_PKG_VERSION"));
+        assert!(manifest.depends_on.is_empty());
+    }
+}
