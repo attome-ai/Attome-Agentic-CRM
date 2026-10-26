@@ -190,6 +190,7 @@ async fn model_is_typed(tx: &mut attome_db::Tx<'_>, model_id: Uuid) -> Result<bo
 
 impl From<ModelRow> for StateModelListItem {
     fn from(r: ModelRow) -> Self {
+        let (locked_states, reasons) = (r.locked_states(), r.reasons());
         StateModelListItem {
             id: r.id,
             entity_logicalname: r.entity_logicalname,
@@ -198,8 +199,8 @@ impl From<ModelRow> for StateModelListItem {
             initial_state: r.initial_state,
             is_active: r.is_active,
             row_version: r.row_version,
-            locked_states: r.locked_states(),
-            reasons: r.reasons(),
+            locked_states,
+            reasons,
             record_type: r.record_type,
             reason_field: r.reason_field,
             owner_layer: r.owner_layer,
@@ -588,6 +589,7 @@ async fn fetch_detail(state: &EngineState, id: Uuid) -> Result<StateModelDetail,
     .await
     .map_err(AppError::internal)?;
 
+    let (locked_states, reasons) = (row.locked_states(), row.reasons());
     Ok(StateModelDetail {
         id: row.id,
         entity_logicalname: row.entity_logicalname,
@@ -598,8 +600,8 @@ async fn fetch_detail(state: &EngineState, id: Uuid) -> Result<StateModelDetail,
         row_version: row.row_version,
         created_at: row.created_at,
         updated_at: row.updated_at,
-        locked_states: row.locked_states(),
-        reasons: row.reasons(),
+        locked_states,
+        reasons,
         record_type: row.record_type,
         reason_field: row.reason_field,
         owner_layer: row.owner_layer,
