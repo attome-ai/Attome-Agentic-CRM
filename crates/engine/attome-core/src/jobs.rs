@@ -338,6 +338,10 @@ pub enum EngineJob {
         chunk_no: i32,
         after_id: Option<Uuid>,
     },
+    /// AA10-T5: writes one chunk of a large mass operation back
+    /// (`attome_records::mass::run_undo_chunk`); each enqueues the next lower
+    /// chunk.
+    HeavyOpUndoChunk { operation_id: Uuid, chunk_no: i32 },
     /// D21-T5: applies a call list's outcome rules for one saved attempt,
     /// after the attempt committed.
     SalesCallOutcomeRules { attempt_id: Uuid },
@@ -1057,6 +1061,7 @@ impl EngineJob {
             | Self::RevrecContractFromSource { .. }
             | Self::SalesScheduleShift { .. }
             | Self::HeavyOpChunk { .. }
+            | Self::HeavyOpUndoChunk { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
@@ -1241,6 +1246,7 @@ impl EngineJob {
             EngineJob::RevrecContractFromSource { .. } => "RevrecContractFromSource",
             EngineJob::SalesScheduleShift { .. } => "SalesScheduleShift",
             EngineJob::HeavyOpChunk { .. } => "HeavyOpChunk",
+            EngineJob::HeavyOpUndoChunk { .. } => "HeavyOpUndoChunk",
             EngineJob::SalesCallOutcomeRules { .. } => "SalesCallOutcomeRules",
             EngineJob::AiFollowupRuleRun { .. } => "AiFollowupRuleRun",
             EngineJob::CommissionRun { .. } => "CommissionRun",
@@ -1502,6 +1508,7 @@ impl EngineJob {
             | Self::RevrecContractFromSource { .. }
             | Self::SalesScheduleShift { .. }
             | Self::HeavyOpChunk { .. }
+            | Self::HeavyOpUndoChunk { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
@@ -1686,6 +1693,7 @@ impl EngineJob {
             | Self::RevrecContractFromSource { .. }
             | Self::SalesScheduleShift { .. }
             | Self::HeavyOpChunk { .. }
+            | Self::HeavyOpUndoChunk { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
@@ -2113,6 +2121,10 @@ mod tests {
             operation_id: Uuid::now_v7(),
             chunk_no: 3,
             after_id: Some(Uuid::now_v7()),
+        });
+        assert_round_trips(EngineJob::HeavyOpUndoChunk {
+            operation_id: Uuid::now_v7(),
+            chunk_no: 2,
         });
         assert_round_trips(EngineJob::TimerFire {
             timer_id: Uuid::now_v7(),

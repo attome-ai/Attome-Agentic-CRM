@@ -69,14 +69,14 @@ between chunks. Resume queues the chunk the operation stopped at.
 ## Follow and control
 
 `GET /api/v1/mass/{id}` returns the status (`queued`, `running`, `paused`, `cancelled`, `failed`,
-`done` or `undone`), the rows done, skipped and in conflict, and the seconds left while it works.
+`done`, `undoing` or `undone`), the rows done, skipped and in conflict, and the seconds left while it works.
 
 | Route | Moves |
 |---|---|
 | `POST /api/v1/mass/{id}/pause` | queued or running → paused |
 | `POST /api/v1/mass/{id}/resume` | paused → queued |
 | `POST /api/v1/mass/{id}/cancel` | queued, running or paused → cancelled |
-| `POST /api/v1/mass/{id}/undo` | done or cancelled → undone |
+| `POST /api/v1/mass/{id}/undo` | done or cancelled → undone (or undoing, for a large one) |
 
 Each control:
 
@@ -95,9 +95,15 @@ Undo writes the records back newest first, each only while it is still as the op
 - restored records are deleted again;
 - owners are reassigned back.
 
-The operation is marked `undone` before the replay starts, so two undos cannot both run. An
-operation larger than the inline threshold cannot be undone in one request yet; that is roadmap
-AA10-T5.
+An operation up to the inline threshold is undone in the request. It is marked `undone` before
+the replay starts, so two undos cannot both run.
+
+A larger one becomes `undoing`, and a chain of `HeavyOpUndoChunk` jobs writes its chunks back from
+the last one down, as the person who started it. Each chunk is replayed once and marked `undone`
+with its counts. The operation becomes `undone` after the first chunk.
+
+The values an operation replaced are kept for `limits.heavy_op.undo_retention_days` (30 by
+default) after it finishes. A daily job clears older ones, and undo is then refused with `409`.
 
 The entity name `mass` is reserved, because `/api/v1/mass/...` would otherwise collide with an
 entity's own routes.

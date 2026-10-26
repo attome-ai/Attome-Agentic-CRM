@@ -1399,6 +1399,15 @@ async fn dispatch_platform_job(
                     .await?;
             tracing::info!(%operation_id, chunk_no, changed, "mass operation: chunk done");
         }
+        // AA10-T5: one chunk of a large mass operation written back.
+        EngineJob::HeavyOpUndoChunk {
+            operation_id,
+            chunk_no,
+        } => {
+            let restored =
+                attome_records::mass::run_undo_chunk(&attome_state, operation_id, chunk_no).await?;
+            tracing::info!(%operation_id, chunk_no, restored, "mass operation: chunk undone");
+        }
         EngineJob::SalesDefaultTeamApply { owner_id } => {
             let added = attome_sales::team_defaults::run_apply(&attome_state, owner_id).await?;
             tracing::info!(%owner_id, added, "default team: applied to open deals");
@@ -3105,6 +3114,8 @@ const DEDUP_KEY_PROFILE_EVENT_RETENTION: &str = "profile-event-retention";
 const DEDUP_KEY_SOCIAL_REVIEWS_SYNC: &str = "social-reviews-sync";
 const DEDUP_KEY_SOCIAL_MENTIONS_SYNC: &str = "social-mentions-sync";
 const DEDUP_KEY_SOCIAL_PUBLISH: &str = "social-publish";
+/// AA10-T5: mass-operation undo values past retention (a registered job type).
+const DEDUP_KEY_HEAVY_OP_UNDO_RETENTION: &str = "heavy-op-undo-retention";
 
 /// Z1-T8: reminds administrators of secrets older than
 /// `security.secret_max_age_days`. A registered type (Z7-T1), not an
@@ -3502,6 +3513,11 @@ pub const SOCIAL_MENTIONS_SYNC: attome_jobs::JobType =
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
     attome_jobs::JobType::new("social_reviews_sync", 1);
 
+/// AA10-T5: daily, the values mass operations replaced are cleared once
+/// past `limits.heavy_op.undo_retention_days`.
+pub const HEAVY_OP_UNDO_RETENTION: attome_jobs::JobType =
+    attome_jobs::JobType::new("heavy_op_undo_retention", 1);
+
 /// Z7-T1/Z1-T8: registers this binary's run-time job types, once per
 /// process. The worker calls it before it runs jobs and each scheduler that
 /// builds one calls it first, so a node that only schedules or only works
@@ -3509,6 +3525,20 @@ pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
 pub fn register_job_types() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            HEAVY_OP_UNDO_RETENTION,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let cleared = attome_records::mass::purge_undo_values(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if cleared > 0 {
+                    tracing::info!(cleared, "mass operations: undo values past retention cleared");
+                }
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SECRET_AGE_REMINDER,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
@@ -5170,6 +5200,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == SECRET_AGE_REMINDER.name => {
             DEDUP_KEY_SECRET_AGE_REMINDER
         }
+        EngineJob::Registered(job) if job.name == HEAVY_OP_UNDO_RETENTION.name => {
+            DEDUP_KEY_HEAVY_OP_UNDO_RETENTION
+        }
         EngineJob::Registered(job) if job.name == CALENDAR_SYNC.name => DEDUP_KEY_CALENDAR_SYNC,
         EngineJob::Registered(job) if job.name == OAUTH_REFRESH.name => DEDUP_KEY_OAUTH_REFRESH,
         EngineJob::Registered(job) if job.name == NOTIFICATION_QUEUE_SWEEP.name => {
@@ -5835,6 +5868,25 @@ pub fn spawn_perf_regression_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::PerfRegressionCheck,
         DEDUP_KEY_PERF_REGRESSION_CHECK,
         "perf regression check",
+    );
+}
+
+/// AA10-T5: daily, mass-operation undo values past retention cleared.
+pub fn spawn_heavy_op_undo_retention_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(HEAVY_OP_UNDO_RETENTION.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "mass undo retention: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_HEAVY_OP_UNDO_RETENTION,
+        "mass undo retention",
     );
 }
 

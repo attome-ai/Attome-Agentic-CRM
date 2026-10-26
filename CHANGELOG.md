@@ -26,6 +26,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   order, each planned (ids, row versions, values replaced) before it changes anything, applied at
   the planned versions so a concurrent edit is kept and counted as a conflict, and finished in one
   short transaction that queues the next chunk; a retried chunk reuses its plan.
+- Large mass operations are undone in the background (AA10-T5): status `undoing`, then a chain of
+  `HeavyOpUndoChunk` jobs from the last chunk down, each record written back only while it is as
+  the operation left it (migration 0280 adds the status). New setting
+  `limits.heavy_op.undo_retention_days` (30); a daily job clears older undo values, after which undo
+  is refused.
 - Competitor tracking documentation (D25-T11): `docs/competitors.md` covers the records, each part's
   switch and what is off by default (win/loss reviews need a stage threshold per pipeline;
   competitor news is not built), and the routes `POST /api/v1/sales/competitor-mentions/{id}/confirm`

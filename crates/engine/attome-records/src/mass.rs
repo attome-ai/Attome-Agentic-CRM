@@ -35,10 +35,14 @@
 //! starts only while the operation is `queued` or `running`, so pause and
 //! cancel take effect between chunks; resume enqueues the next one.
 //!
-//! **Undo.** Claims the operation (`undone`) before it replays, so two undos
-//! cannot both replay; writes each record back only while the record is
-//! still at the version the operation left; is refused for an operation
-//! larger than the inline threshold (background undo is AA10-T5).
+//! **Undo.** Writes each record back only while the record is still at the
+//! version the operation left. Up to the inline threshold it runs in the
+//! request after claiming the operation (`undone`), so two undos cannot
+//! both replay. Past it (AA10-T5) the operation becomes `undoing` and a
+//! chain of `EngineJob::HeavyOpUndoChunk` jobs replays the chunks from the
+//! last one down, each chunk once, then marks it `undone`. Undo is refused
+//! once the replaced values are past `limits.heavy_op.undo_retention_days`
+//! ([`purge_undo_values`]).
 //! A retried start is caught by the durable idempotency tier.
 
 use attome_audit::{
@@ -251,8 +255,8 @@ pub struct MassOperation {
     pub id: Uuid,
     pub kind: String,
     pub entity: String,
-    /// `queued`, `running`, `paused`, `cancelled`, `failed`, `done` or
-    /// `undone`.
+    /// `queued`, `running`, `paused`, `cancelled`, `failed`, `done`,
+    /// `undoing` or `undone`.
     pub status: String,
     pub estimated_rows: Option<i64>,
     pub rows_done: i64,
@@ -1171,11 +1175,25 @@ pub async fn control(
     let next = next_status(&row.status, control).ok_or(AppError::Conflict(
         "the operation is not in a state this control applies to",
     ))?;
-    if control == Control::Undo && row.rows_done > inline_threshold(state) {
-        return Err(AppError::Conflict(
-            "this operation is too large to undo in one request",
-        ));
+    // AA10-T5: a large operation is undone in the background, chunk by
+    // chunk from the last; a small one in this request.
+    let background_undo = control == Control::Undo && row.rows_done > inline_threshold(state);
+    if control == Control::Undo {
+        let purged: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM heavy_operation_chunk \
+              WHERE operation_id = $1 AND status = 'done' AND before_values IS NULL)",
+        )
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        if purged {
+            return Err(AppError::Conflict(
+                "the operation is past its undo retention",
+            ));
+        }
     }
+    let next = if background_undo { "undoing" } else { next };
     let terminal = matches!(next, "cancelled" | "undone");
     sqlx::query(
         "UPDATE heavy_operation SET status = $2, row_version = row_version + 1, \
@@ -1201,6 +1219,25 @@ pub async fn control(
         .await
         .map_err(AppError::internal)?;
     }
+    if background_undo {
+        let last: Option<i32> = sqlx::query_scalar(
+            "SELECT max(chunk_no) FROM heavy_operation_chunk \
+              WHERE operation_id = $1 AND status = 'done'",
+        )
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        attome_jobs::enqueue_in_tx(
+            &mut tx,
+            EngineJob::HeavyOpUndoChunk {
+                operation_id: id,
+                chunk_no: last.unwrap_or(0),
+            },
+        )
+        .await
+        .map_err(AppError::internal)?;
+    }
     let operation = match control {
         Control::Cancel => AuditOperation::Cancelled,
         _ => AuditOperation::Update,
@@ -1221,7 +1258,7 @@ pub async fn control(
     .await?;
     let entity = row.entity_logicalname.clone();
     let kind = MassKind::parse(&row.kind);
-    let chunks: Vec<Value> = if control == Control::Undo {
+    let chunks: Vec<Value> = if control == Control::Undo && !background_undo {
         sqlx::query_scalar(
             "SELECT before_values FROM heavy_operation_chunk \
               WHERE operation_id = $1 AND status = 'done' AND before_values IS NOT NULL \
@@ -1258,6 +1295,180 @@ pub async fn control(
         estimate: None,
         items,
     })
+}
+
+/// AA10-T5: the `EngineJob::HeavyOpUndoChunk` worker. Writes chunk
+/// `chunk_no` back, newest record first, as the person who started the
+/// operation (each record only while it is as the operation left it), then
+/// in one short transaction marks the chunk `undone` with its counts and
+/// enqueues the next lower chunk, or marks the operation `undone`. A chunk
+/// already undone is not replayed again. Answers the records written back.
+pub async fn run_undo_chunk(
+    state: &EngineState,
+    operation: Uuid,
+    chunk_no: i32,
+) -> Result<i64, AppError> {
+    let Some(work) = work_row(state, operation).await? else {
+        return Ok(0);
+    };
+    if work.status != "undoing" {
+        return Ok(0);
+    }
+    let kind = MassKind::parse(&work.kind)
+        .ok_or_else(|| AppError::internal("mass: an operation of an unknown kind"))?;
+    let chunk: Option<(String, Option<Value>)> = sqlx::query_as(
+        "SELECT status, before_values FROM heavy_operation_chunk \
+          WHERE operation_id = $1 AND chunk_no = $2",
+    )
+    .bind(operation)
+    .bind(chunk_no)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut items = Vec::new();
+    if let Some((status, Some(values))) = &chunk
+        && status == "done"
+    {
+        let ctx = state.base.security.resolve(work.started_by).await?;
+        let entries = values["items"].as_array().cloned().unwrap_or_default();
+        for entry in entries.iter().rev() {
+            let Some(record) = entry["id"].as_str().and_then(|s| Uuid::parse_str(s).ok()) else {
+                continue;
+            };
+            let mut ignored = Vec::new();
+            let undone = undo_one(
+                state,
+                &ctx,
+                &work.entity_logicalname,
+                operation,
+                kind,
+                record,
+                entry,
+            )
+            .await
+            .map(|()| Value::Null);
+            items.push(record_outcome(record, undone, &mut ignored));
+        }
+    }
+    let (done, conflict, skipped, failed) = tally(&items);
+
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let status: Option<String> =
+        sqlx::query_scalar("SELECT status FROM heavy_operation WHERE id = $1 FOR UPDATE")
+            .bind(operation)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    if status.as_deref() != Some("undoing") {
+        return Ok(0);
+    }
+    let marked = sqlx::query(
+        "UPDATE heavy_operation_chunk \
+            SET status = 'undone', before_values = before_values || jsonb_build_object('undo', $3::jsonb) \
+          WHERE operation_id = $1 AND chunk_no = $2 AND status = 'done'",
+    )
+    .bind(operation)
+    .bind(chunk_no)
+    .bind(json!({ "done": done, "conflict": conflict, "skipped": skipped, "failed": failed }))
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if marked == 0 && chunk.is_some() {
+        // Another attempt undid this chunk first and chained the next.
+        return Ok(0);
+    }
+    let lower: Option<i32> = sqlx::query_scalar(
+        "SELECT max(chunk_no) FROM heavy_operation_chunk \
+          WHERE operation_id = $1 AND chunk_no < $2 AND status = 'done'",
+    )
+    .bind(operation)
+    .bind(chunk_no)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    match lower {
+        Some(lower) => {
+            attome_jobs::enqueue_in_tx(
+                &mut tx,
+                EngineJob::HeavyOpUndoChunk {
+                    operation_id: operation,
+                    chunk_no: lower,
+                },
+            )
+            .await
+            .map_err(AppError::internal)?;
+        }
+        None => {
+            let version: i64 = sqlx::query_scalar(
+                "UPDATE heavy_operation SET status = 'undone', finished_at = now(), \
+                     row_version = row_version + 1 \
+                  WHERE id = $1 RETURNING row_version",
+            )
+            .bind(operation)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+            write_business_event_in_tx(
+                &mut tx,
+                &attome_audit::audit_service(state),
+                BusinessEvent::new(
+                    "heavy_operation",
+                    operation,
+                    AuditOperation::Update,
+                    "mass.undone",
+                    work.started_by,
+                )
+                .versions(Some(version - 1), Some(version))
+                .comment("undoing -> undone"),
+            )
+            .await?;
+        }
+    }
+    attome_db::tx::commit(tx).await?;
+    Ok(done)
+}
+
+/// The setting's key under `limits.`: how long undo values are kept.
+pub const UNDO_RETENTION_LIMIT: &str = "heavy_op.undo_retention_days";
+/// The retention when the deployment sets none.
+pub const DEFAULT_UNDO_RETENTION_DAYS: i64 = 30;
+/// Chunks cleared per statement.
+const PURGE_BATCH: i64 = 1000;
+
+/// AA10-T5: clears the replaced values of operations that finished more
+/// than `limits.heavy_op.undo_retention_days` ago, in batches (the daily
+/// retention job). Such an operation can no longer be undone. Answers the
+/// chunks cleared.
+pub async fn purge_undo_values(state: &EngineState) -> Result<u64, AppError> {
+    let days = state
+        .runtime_limit(UNDO_RETENTION_LIMIT)
+        .unwrap_or(DEFAULT_UNDO_RETENTION_DAYS)
+        .clamp(1, 3_650);
+    let mut cleared = 0;
+    loop {
+        let n = sqlx::query(
+            "UPDATE heavy_operation_chunk c SET before_values = NULL \
+              WHERE (c.operation_id, c.chunk_no) IN ( \
+                    SELECT k.operation_id, k.chunk_no FROM heavy_operation_chunk k \
+                      JOIN heavy_operation o ON o.id = k.operation_id \
+                     WHERE k.before_values IS NOT NULL \
+                       AND o.status IN ('done', 'cancelled', 'undone', 'failed') \
+                       AND o.finished_at < now() - make_interval(days => $1) \
+                     LIMIT $2)",
+        )
+        .bind(days as i32)
+        .bind(PURGE_BATCH)
+        .execute(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .rows_affected();
+        cleared += n;
+        if (n as i64) < PURGE_BATCH {
+            break;
+        }
+    }
+    Ok(cleared)
 }
 
 /// Writes one record back to what it was before the operation.
@@ -1573,8 +1784,9 @@ async fn post_mass_cancel(
 /// Writes back what a done or cancelled operation changed, newest first,
 /// each record through its single-record path and only while it is still as
 /// the operation left it (a record changed since is reported as a
-/// conflict). Deleted records are restored, restored ones deleted again.
-/// Send the operation's `row_version` in `If-Match`.
+/// conflict). Deleted records are restored, restored ones deleted again. A
+/// large operation is undone in the background (status `undoing`). Send the
+/// operation's `row_version` in `If-Match`.
 #[utoipa::path(
     post,
     path = "/api/v1/mass/{id}/undo",
@@ -1588,7 +1800,7 @@ async fn post_mass_cancel(
         (status = 200, description = "Undone, with each record's outcome", body = MassRun),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 404, description = "No such operation the caller started", body = ErrorResponse),
-        (status = 409, description = "The operation changed, is not finished, or is too large to undo in one request", body = ErrorResponse),
+        (status = 409, description = "The operation changed, is not finished, or is past its undo retention", body = ErrorResponse),
         (status = 422, description = "A missing or malformed If-Match", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),

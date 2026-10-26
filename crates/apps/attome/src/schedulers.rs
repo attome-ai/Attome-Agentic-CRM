@@ -83,6 +83,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_tag_expiry_scheduler(db.clone(), std::time::Duration::from_secs(3600));
     // E9-T7: marketing hand-offs past their SLA, every five minutes.
     crate::jobs::spawn_marketing_sweep_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    // AA10-T5: mass-operation undo values past retention, daily.
+    crate::jobs::spawn_heavy_op_undo_retention_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // Y2-T8: the table-health sample, daily.
     crate::jobs::spawn_table_health_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // Q16-T2: the whole audit chain verified once a week.

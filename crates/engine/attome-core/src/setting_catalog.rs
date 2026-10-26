@@ -238,6 +238,16 @@ fn limit_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(500),
         ),
+        // AA10-T5: how long a finished mass operation can still be undone.
+        SettingDescriptor::new(
+            "limits.heavy_op.undo_retention_days",
+            "Days a finished mass operation keeps the values it replaced, so it can be undone; \
+             a daily job clears older ones. 1 to 3,650.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 3_650 }),
+            DEPLOYMENT,
+            false,
+            || json!(30),
+        ),
         SettingDescriptor::new(
             "limits.query.timeout_ms.interactive",
             "Milliseconds an ordinary list or view query may run before it is \

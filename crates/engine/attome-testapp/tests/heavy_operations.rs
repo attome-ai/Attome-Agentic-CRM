@@ -1,7 +1,8 @@
 //! AA10-T2: the size check counts the rows the caller may change, bounded
 //! by the inline threshold, and says inline or background. AA10-T3: the
 //! mass-operation routes estimate, run, follow and control an operation.
-//! AA10-T4: background operations run in resumable chunks.
+//! AA10-T4: background operations run in resumable chunks. AA10-T5: a large
+//! operation is undone chunk by chunk; undo values expire.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -527,5 +528,151 @@ fn mass_job_keeps_concurrent_user_edit() {
                 .await
                 .unwrap();
         assert_eq!(title.as_deref(), Some("mine"), "the user's edit stays");
+    });
+}
+
+/// The operation's `If-Match` value.
+async fn op_tag(app: &TestApp, operation: Uuid) -> String {
+    let version: i64 = sqlx::query_scalar("SELECT row_version FROM heavy_operation WHERE id = $1")
+        .bind(operation)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+    format!("\"{version}\"")
+}
+
+// feature: AA10
+#[test]
+fn mass_undo_restores_values() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = many_records(&app, 495).await;
+        let operation = start_background_update(&app, &entity, 505).await;
+        attome_records::mass::run_chunk(&app.state, operation, 0, None)
+            .await
+            .unwrap();
+        let after = chunk_last_id(&app, operation, 0).await;
+        attome_records::mass::run_chunk(&app.state, operation, 1, after)
+            .await
+            .unwrap();
+        assert_eq!(op_counts(&app, operation).await.0, "done");
+        assert_eq!(titled(&app, &entity, "x").await, 505);
+
+        // Someone edits one record after the operation.
+        let (record, version): (Uuid, i64) = sqlx::query_as(&format!(
+            "SELECT id, row_version FROM \"{entity}\" ORDER BY id LIMIT 1"
+        ))
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        let tag = format!("\"{version}\"");
+        let (status, body) = app
+            .request_with(
+                Method::PATCH,
+                &format!("/api/v1/{entity}/{record}"),
+                &[("if-match", tag.as_str())],
+                Some(json!({ "title": "mine" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        // Larger than the inline threshold: undone in the background.
+        let tag = op_tag(&app, operation).await;
+        let (status, body) = app
+            .request_with(
+                Method::POST,
+                &format!("/api/v1/mass/{operation}/undo"),
+                &[("if-match", tag.as_str())],
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["operation"]["status"], "undoing", "{body}");
+        let restored = attome_records::mass::run_undo_chunk(&app.state, operation, 1)
+            .await
+            .unwrap();
+        assert_eq!(restored, 5);
+        let restored = attome_records::mass::run_undo_chunk(&app.state, operation, 0)
+            .await
+            .unwrap();
+        assert_eq!(restored, 499, "the edited record is left alone");
+        let again = attome_records::mass::run_undo_chunk(&app.state, operation, 0)
+            .await
+            .unwrap();
+        assert_eq!(again, 0, "an undone chunk is not replayed");
+        assert_eq!(op_counts(&app, operation).await.0, "undone");
+
+        assert_eq!(titled(&app, &entity, "x").await, 0);
+        assert_eq!(titled(&app, &entity, "mine").await, 1);
+        assert_eq!(
+            titled(&app, &entity, "big").await
+                + titled(&app, &entity, "small").await
+                + titled(&app, &entity, "bulk").await,
+            504,
+            "every untouched record has its old title"
+        );
+    });
+}
+
+// feature: AA10
+#[test]
+fn mass_undo_refused_past_retention() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = ten_records(&app).await;
+        let (status, run) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}/mass"),
+                Some(json!({ "filter": title_is("big"), "kind": "update", "payload": { "title": "huge" } })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{run}");
+        let operation = Uuid::parse_str(run["operation"]["id"].as_str().unwrap()).unwrap();
+
+        // Recent: kept.
+        attome_records::mass::purge_undo_values(&app.state)
+            .await
+            .unwrap();
+        let kept: bool = sqlx::query_scalar(
+            "SELECT before_values IS NOT NULL FROM heavy_operation_chunk WHERE operation_id = $1",
+        )
+        .bind(operation)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert!(kept);
+
+        // Finished 40 days ago: cleared, and undo is refused.
+        sqlx::query(
+            "UPDATE heavy_operation SET finished_at = now() - interval '40 days' WHERE id = $1",
+        )
+        .bind(operation)
+        .execute(app.db())
+        .await
+        .unwrap();
+        let cleared = attome_records::mass::purge_undo_values(&app.state)
+            .await
+            .unwrap();
+        assert!(cleared >= 1);
+        let tag = op_tag(&app, operation).await;
+        let (status, body) = app
+            .request_with(
+                Method::POST,
+                &format!("/api/v1/mass/{operation}/undo"),
+                &[("if-match", tag.as_str())],
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert_eq!(
+            titled(&app, &entity, "huge").await,
+            4,
+            "nothing written back"
+        );
     });
 }
