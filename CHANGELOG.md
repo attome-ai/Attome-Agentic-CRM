@@ -13,6 +13,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Warehouse load scripts (P13-T2): `GET /api/v1/admin/integrations/warehouse/{entity}/load-script`
+  writes a Snowflake or BigQuery script that stages the export's new Parquet files and merges them
+  by `id` (tombstones delete, older changes are ignored), to schedule on the warehouse side.
 - Parquet archive tier (L11-T1): `attome_compliance::archive_tier` writes the archived, deleted
   records of one entity and month to one Parquet file (each row's exact JSON), indexes them
   (migration 0279: `archive_tier_file`, `archive_tier_record`), clears the live rows and restores

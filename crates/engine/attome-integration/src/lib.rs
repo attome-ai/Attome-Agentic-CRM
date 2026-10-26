@@ -40,6 +40,8 @@ pub mod sms;
 pub mod system;
 /// P13-T1: incremental Parquet export of record changes for a warehouse.
 pub mod warehouse_export;
+/// P13-T2: load scripts for Snowflake and BigQuery over the export.
+pub mod warehouse_load;
 pub mod webhook;
 
 /// D-351 — this crate's advisory-lock namespace (registry:
@@ -58,5 +60,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(sms::openapi_fragment());
     doc.merge(connector::adapters::user_mail_sync::openapi_fragment());
     doc.merge(connector::adapters::video::openapi_fragment());
+    doc.merge(warehouse_load::openapi_fragment());
     doc
 }

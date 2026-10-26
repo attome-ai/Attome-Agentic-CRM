@@ -122,3 +122,21 @@ entity and hour of change, `warehouse/{entity}/{yyyy}/{mm}/{dd}/{HH}/{first}-{la
 The manifest is the table `warehouse_export_file` and its copy `warehouse/{entity}/manifest.json`.
 The cursor moves only after the files are stored, and a repeated run writes the same object keys,
 so a loader never sees an event twice under two names.
+
+### Loading the export into Snowflake or BigQuery
+
+`GET /api/v1/admin/integrations/warehouse/{entity}/load-script` writes the script that loads one
+entity's files into a warehouse; schedule it there (a Snowflake task, a BigQuery scheduled query).
+Attome holds no warehouse credentials.
+
+- `warehouse=snowflake&stage=DB.SCHEMA.STAGE`: an external stage you created over the export's
+  bucket. Each run copies the files not loaded yet into `"{entity}__stage"` (Snowflake skips files
+  it already loaded), merges into `"{entity}"` and empties the stage.
+- `warehouse=bigquery&dataset=project.dataset&bucket=gs://bucket`: an external table over
+  `gs://bucket/warehouse/{entity}/*`; `{entity}__loaded` keeps the newest change merged, and each
+  run merges the changes after it.
+
+Both keep each record's newest change and merge by `id`: an upsert inserts or updates, a
+tombstone deletes, and a change older than the row already loaded is ignored, so running the
+script again changes nothing. Every column is text. When the export's `schema_version` changes
+(an attribute was added), fetch the script again: it adds the new columns.
