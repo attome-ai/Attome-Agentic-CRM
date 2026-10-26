@@ -10,6 +10,8 @@ pub mod operators;
 pub mod routes;
 /// S4-T9: saved QuerySpecs with typed parameters.
 pub mod saved;
+/// A14-T2: saved queries shared with roles and teams.
+pub mod share;
 pub mod text;
 
 pub use compile::{Access, Compiled, Env, compile, next_cursor};

@@ -530,12 +530,21 @@ const ADMIN_ONLY_ROUTES: &[(&str, &str, &str)] = &[
     ),
 ];
 
-const ADMIN_PATH_EXCEPTIONS: &[(&str, &str, &str)] = &[(
-    "GET",
-    "/api/v1/admin/security/whoami",
-    "Reads only the caller's own resolved context; gating it on admin would \
-     make it useless to exactly the non-admin callers it exists for.",
-)];
+const ADMIN_PATH_EXCEPTIONS: &[(&str, &str, &str)] = &[
+    (
+        "GET",
+        "/api/v1/admin/security/whoami",
+        "Reads only the caller's own resolved context; gating it on admin would \
+         make it useless to exactly the non-admin callers it exists for.",
+    ),
+    (
+        "PATCH",
+        "/api/v1/admin/queries/{id}/spec",
+        "A14-T2: an administrator or the holder of an edit share of the query; \
+         the handler checks the share. It changes the QuerySpec only, never SQL, \
+         and a spec compiles with each caller's own security.",
+    ),
+];
 
 /// A parser break that silently matched nothing would make this file pass
 /// vacuously, which is worse than not having it. Floors sit comfortably below

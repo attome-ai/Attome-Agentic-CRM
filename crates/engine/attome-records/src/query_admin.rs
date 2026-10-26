@@ -5,7 +5,7 @@ use attome_db::DbPool;
 use attome_metadata::provision::{
     ReconcileOutcome, ReconcilePolicy, reject_unsafe_default_query_sql,
 };
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Admin, Authorized, SelfService};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -1645,6 +1645,119 @@ async fn update_query(
     Ok(Json(detail).into_response())
 }
 
+/// A14-T2: the part of a stored query a shared editor may change.
+#[derive(Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EditQuerySpecBody {
+    /// Replaces the saved QuerySpec; absent keeps it.
+    #[serde(default)]
+    #[schema(value_type = Option<Object>)]
+    query_spec: Option<Value>,
+    /// Replaces the declared parameters; absent keeps them.
+    #[serde(default)]
+    parameters: Option<Vec<ParamDecl>>,
+}
+
+impl std::fmt::Debug for EditQuerySpecBody {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EditQuerySpecBody").finish_non_exhaustive()
+    }
+}
+
+/// Edit a stored query's QuerySpec
+///
+/// A14-T2: changes a stored query's QuerySpec and parameters, never its SQL,
+/// privilege or mappings. An administrator, or a holder of an `edit` share
+/// (one of their roles or teams); the change republishes the query like
+/// `PATCH /api/v1/admin/queries/{id}`, through the same approval gate, and is
+/// audited. A spec runs with each caller's own security, so editing one
+/// grants no data access.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/queries/{id}/spec",
+    tag = "admin",
+    operation_id = "edit_query_spec",
+    params(("id" = Uuid, Path, description = "The stored query")),
+    request_body = EditQuerySpecBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The query as republished"),
+        (status = 202, description = "Waiting for approval"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Neither an administrator nor holding an edit share", body = ErrorResponse),
+        (status = 404, description = "No such stored query", body = ErrorResponse),
+        (status = 409, description = "row_version mismatch, no open changeset to record into, or the query is owned by another layer", body = ErrorResponse),
+        (status = 422, description = "Neither field given, or a spec or parameter that fails validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn edit_query_spec(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    recording: RecordingCtx,
+    Path(query_id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(body): Json<EditQuerySpecBody>,
+) -> Result<Response, AppError> {
+    if !ctx.is_admin
+        && crate::query_spec::share::access_for(&state.base.db, query_id, &ctx).await?
+            != Some(crate::query_spec::share::ShareAccess::Edit)
+    {
+        return Err(AppError::Forbidden);
+    }
+    if body.query_spec.is_none() && body.parameters.is_none() {
+        return Err(AppError::Validation(
+            "send query_spec, parameters or both".into(),
+        ));
+    }
+    let expected_row_version = optional_expected_row_version(&headers)?;
+    recording.preflight(&state.base.db).await?;
+
+    let raw_body = serde_json::json!({
+        "query_spec": body.query_spec,
+        "parameters": body.parameters,
+    });
+    if let Some(request) = attome_audit::approval::gate(
+        &state,
+        ACTION_QUERY_PUBLISH,
+        serde_json::json!({ "op": "update", "query_id": query_id, "body": raw_body }),
+        ctx.user_id,
+    )
+    .await?
+    {
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(QueryPublishPending {
+                approval_pending: true,
+                approval_request_id: request.id,
+            }),
+        )
+            .into_response());
+    }
+
+    let update = UpdateQueryBody {
+        name: None,
+        sql_query: None,
+        table_definition: None,
+        entity_logical_name: None,
+        required_privilege: None,
+        is_report: None,
+        entity_mappings: None,
+        query_spec: body.query_spec,
+        parameters: body.parameters,
+    };
+    let detail = do_update_query_recorded(
+        &state,
+        query_id,
+        ctx.user_id,
+        update,
+        expected_row_version,
+        Some(&*recording),
+    )
+    .await?;
+    Ok(Json(detail).into_response())
+}
+
 /// Parses `If-Match` into an expected `row_version`, when present (C-19).
 /// Additive, unlike `entity_crud`'s mandatory `expected_row_version` (D-079
 /// is scoped to the generic entity PATCH path, not this table): a caller
@@ -2523,6 +2636,12 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/queries/{id}",
             get(get_query).patch(update_query).delete(delete_query),
         )
+        // A14-T2: a shared editor changes the QuerySpec and parameters only.
+        .route(
+            "/api/v1/admin/queries/{id}/spec",
+            axum::routing::patch(edit_query_spec),
+        )
+        .merge(crate::query_spec::share::routes())
 }
 
 // ── Tests (pure functions only — everything else in this module needs a
@@ -2741,7 +2860,11 @@ mod tests {
     create_query,
     get_query,
     update_query,
-    delete_query
+    edit_query_spec,
+    delete_query,
+    crate::query_spec::share::list_query_shares,
+    crate::query_spec::share::put_query_shares,
+    crate::query_spec::share::list_shared_queries
 ))]
 struct ApiDocFragment;
 

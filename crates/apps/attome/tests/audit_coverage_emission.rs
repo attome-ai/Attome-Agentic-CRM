@@ -4486,6 +4486,33 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             let id = stored_query(fx).await;
             request("DELETE", &format!("/api/v1/admin/queries/{id}"), t, None)
         }
+        // A14-T2: a shared editor's spec change, and the share list.
+        "PATCH /api/v1/admin/queries/{id}/spec" => {
+            let id = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    "/api/v1/admin/queries",
+                    Some(json!({"query_spec": {"entity": fx.entity}, "parameters": []})),
+                )
+                .await,
+            );
+            request(
+                "PATCH",
+                &format!("/api/v1/admin/queries/{id}/spec"),
+                t,
+                Some(json!({"parameters": []})),
+            )
+        }
+        "PUT /api/v1/admin/query-shares/{id}" => {
+            let id = stored_query(fx).await;
+            request(
+                "PUT",
+                &format!("/api/v1/admin/query-shares/{id}"),
+                t,
+                Some(json!({"shares": []})),
+            )
+        }
         // ── Hijri sighting correction (AG1-T3) ──────────────────────────────
         // 1447: Safar has 29 days and Rabi al-Awwal 30, so Rabi al-Awwal may
         // start a day after its published 2025-08-24. Idempotent on reruns.

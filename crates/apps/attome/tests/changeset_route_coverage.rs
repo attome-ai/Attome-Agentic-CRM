@@ -212,6 +212,8 @@ const RECORDED: &[(&str, &[&str])] = &[
     // Engines (lane L5).
     ("POST /api/v1/admin/queries", &["upsert_query"]),
     ("PATCH /api/v1/admin/queries/{id}", &["upsert_query"]),
+    // A14-T2: a shared editor's spec change republishes the query.
+    ("PATCH /api/v1/admin/queries/{id}/spec", &["upsert_query"]),
     ("DELETE /api/v1/admin/queries/{id}", &["retire_query"]),
     ("POST /api/v1/admin/state-models", &["upsert_state_model"]),
     (

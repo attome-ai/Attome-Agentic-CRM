@@ -158,6 +158,9 @@ pub(crate) async fn run_query(
 /// S4-T9: the stored query `id`'s spec with the run's values: its
 /// `required_privilege` (the admin default otherwise) gates it as it gates
 /// `query/execute`, and each value is checked against its declaration.
+/// A14-T2: a share with one of the caller's roles or teams admits a caller
+/// without the privilege; the spec still compiles with the caller's own
+/// record and field security, so a share never widens what it returns.
 async fn saved_spec(
     state: &EngineState,
     ctx: &SecurityContext,
@@ -170,9 +173,16 @@ async fn saved_spec(
         ));
     }
     let saved = super::saved::load(&state.base.db, id).await?;
-    match &saved.required_privilege {
-        Some(key) => ctx.require_key(key)?,
-        None => ctx.require_admin()?,
+    let privileged = match &saved.required_privilege {
+        Some(key) => ctx.require_key(key),
+        None => ctx.require_admin(),
+    };
+    if let Err(refused) = privileged
+        && super::share::access_for(&state.base.db, id, ctx)
+            .await?
+            .is_none()
+    {
+        return Err(refused);
     }
     let mut spec = saved.spec;
     spec.params = super::saved::coerce(&saved.params, &body.params)?;

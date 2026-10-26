@@ -13,6 +13,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Saved-query sharing and parameter defaults (A14-T2): a saved query's parameters take an optional
+  `default` of their type, used when a run leaves them out. `PUT /api/v1/admin/query-shares/{id}`
+  shares a stored query with roles and teams to `read` (run it by id through `query/run` without
+  its `required_privilege`) or `edit` (also `PATCH /api/v1/admin/queries/{id}/spec`, which changes
+  the QuerySpec and parameters only). `GET /api/v1/queries/shared` lists what is shared with the
+  caller. A spec still runs with the caller's own record and field security. Migration 0275.
 - Switching a module off stops its background work (Y4-T2): a module's schedules (87 of them,
   mapped by schedule) do not tick while Module Management has it off, alongside its routes
   (`403 feature_hidden`), agent tools and menu items; turning it back on resumes them within a

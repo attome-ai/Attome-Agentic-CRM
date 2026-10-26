@@ -4,7 +4,10 @@
 //! `type` one of `text`, `number`, `date`, `uuid`, `bool`. Both are versioned
 //! with the query's `sql_query_version` row. A caller runs it by id through
 //! `POST /api/v1/query/run` with `query_id` and values only; the query's
-//! `required_privilege` gates the run as it gates `query/execute`.
+//! `required_privilege` gates the run as it gates `query/execute`, and a
+//! share with one of the caller's roles or teams admits it too (A14-T2,
+//! [`super::share`]). A parameter may carry a `default` of its type, used
+//! when a run leaves it out (A14-T2).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -42,6 +45,12 @@ pub struct ParamDecl {
     pub ty: ParamType,
     #[serde(default)]
     pub required: bool,
+    /// A14-T2: the value a run that leaves the parameter out gets; of the
+    /// parameter's type. A required parameter with a default never fails
+    /// for being left out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<Object>)]
+    pub default: Option<Value>,
 }
 
 fn valid_name(name: &str) -> bool {
@@ -91,6 +100,9 @@ pub fn validate(spec: &QuerySpec, params: &[ParamDecl]) -> Result<(), AppError> 
                 "parameter {} is declared twice",
                 p.name
             )));
+        }
+        if let Some(default) = &p.default {
+            coerce_one(&p.name, p.ty, default)?;
         }
     }
     if !spec.params.is_empty() || spec.cursor.is_some() || spec.explain {
@@ -162,6 +174,9 @@ pub fn coerce(
             Some(raw) => {
                 out.insert(p.name.clone(), coerce_one(&p.name, p.ty, raw)?);
             }
+            None if p.default.is_some() => {
+                out.insert(p.name.clone(), p.default.clone().unwrap_or(Value::Null));
+            }
             None if p.required => {
                 return Err(AppError::Validation(format!(
                     "parameter {} is required",
@@ -232,7 +247,28 @@ mod tests {
             name: name.into(),
             ty,
             required,
+            default: None,
         }
+    }
+
+    #[test]
+    fn a_left_out_parameter_takes_its_default() {
+        let mut status = decl("status", ParamType::Number, true);
+        status.default = Some(json!(1));
+        let params = [status.clone()];
+        let ran = coerce(&params, &BTreeMap::new()).unwrap();
+        assert_eq!(ran.get("status"), Some(&json!(1)));
+        let sent = coerce(&params, &BTreeMap::from([("status".into(), json!(2))])).unwrap();
+        assert_eq!(sent.get("status"), Some(&json!(2)));
+
+        let s = spec(json!({"entity": "account", "where":
+            {"kind": "param", "field": "statecode", "op": "eq", "param": "status"}}));
+        assert!(validate(&s, &params).is_ok());
+        status.default = Some(json!("open"));
+        assert!(
+            validate(&s, &[status]).is_err(),
+            "a default must be of its parameter's type"
+        );
     }
 
     #[test]
