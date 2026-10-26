@@ -19,7 +19,10 @@ describe('DataCatalogComponent', () => {
     lineage: [
       { from_kind: 'query', from_ref: 'q1', from_label: 'Active contacts', to_attribute: null, created_at: '2026-09-01T00:00:00Z' },
     ],
-    usage: { record_count: 42, last_write_at: null, search_impressions_30d: 7, computed_at: '2026-09-22T00:00:00Z' },
+    usage: {
+      record_count: 42, last_write_at: null, search_impressions_30d: 7, readers: {}, unused: false,
+      computed_at: '2026-09-22T00:00:00Z',
+    },
     glossary_terms: [{ id: 'g1', term: 'Customer contact', definition: 'A person we talk to.', status: 'approved' }],
   };
 
