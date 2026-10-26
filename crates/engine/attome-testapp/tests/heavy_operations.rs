@@ -1,6 +1,7 @@
 //! AA10-T2: the size check counts the rows the caller may change, bounded
 //! by the inline threshold, and says inline or background. AA10-T3: the
 //! mass-operation routes estimate, run, follow and control an operation.
+//! AA10-T4: background operations run in resumable chunks.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -385,5 +386,146 @@ fn mass_control_requires_if_match() {
             )
             .await;
         assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    });
+}
+
+/// AA10-T4: starts a background update of every record to `title = x` and
+/// answers the operation's id.
+async fn start_background_update(app: &TestApp, entity: &str, rows: i64) -> Uuid {
+    let (status, run) = app
+        .request(
+            Method::POST,
+            &format!("/api/v1/{entity}/mass"),
+            Some(json!({
+                "kind": "update",
+                "payload": { "title": "x" },
+                "confirm_estimate_rows": rows
+            })),
+        )
+        .await;
+    assert_eq!(status, StatusCode::ACCEPTED, "{run}");
+    Uuid::parse_str(run["operation"]["id"].as_str().unwrap()).unwrap()
+}
+
+/// The chunk's keyset position.
+async fn chunk_last_id(app: &TestApp, operation: Uuid, chunk_no: i32) -> Option<Uuid> {
+    sqlx::query_scalar(
+        "SELECT last_id FROM heavy_operation_chunk WHERE operation_id = $1 AND chunk_no = $2",
+    )
+    .bind(operation)
+    .bind(chunk_no)
+    .fetch_one(app.db())
+    .await
+    .unwrap()
+}
+
+/// (status, rows_done, rows_conflict) of the operation.
+async fn op_counts(app: &TestApp, operation: Uuid) -> (String, i64, i64) {
+    sqlx::query_as("SELECT status, rows_done, rows_conflict FROM heavy_operation WHERE id = $1")
+        .bind(operation)
+        .fetch_one(app.db())
+        .await
+        .unwrap()
+}
+
+// feature: AA10
+#[test]
+fn mass_job_resumes_after_restart() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = many_records(&app, 995).await;
+        let operation = start_background_update(&app, &entity, 1005).await;
+
+        // The worker planned chunk 0 and stopped before changing anything.
+        let planned = attome_records::mass::plan_chunk(&app.state, operation, 0, None)
+            .await
+            .unwrap()
+            .expect("the operation is working");
+        assert_eq!(planned.len(), 500);
+        assert_eq!(titled(&app, &entity, "x").await, 0);
+
+        // The retried job works from the saved plan; a second retry of the
+        // finished chunk changes nothing.
+        let changed = attome_records::mass::run_chunk(&app.state, operation, 0, None)
+            .await
+            .unwrap();
+        assert_eq!(changed, 500);
+        let again = attome_records::mass::run_chunk(&app.state, operation, 0, None)
+            .await
+            .unwrap();
+        assert_eq!(again, 0, "a done chunk is not repeated");
+        assert_eq!(op_counts(&app, operation).await.1, 500);
+
+        // The chain continues after chunk 0's last id and ends on the short
+        // chunk.
+        let after = chunk_last_id(&app, operation, 0).await;
+        let changed = attome_records::mass::run_chunk(&app.state, operation, 1, after)
+            .await
+            .unwrap();
+        assert_eq!(changed, 500);
+        let after = chunk_last_id(&app, operation, 1).await;
+        let changed = attome_records::mass::run_chunk(&app.state, operation, 2, after)
+            .await
+            .unwrap();
+        assert_eq!(changed, 5);
+        let (status, done, conflicts) = op_counts(&app, operation).await;
+        assert_eq!(
+            (status.as_str(), done, conflicts),
+            ("done", 1005, 0),
+            "every record once"
+        );
+        assert_eq!(titled(&app, &entity, "x").await, 1005);
+    });
+}
+
+// feature: AA10
+#[test]
+fn mass_job_keeps_concurrent_user_edit() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = many_records(&app, 495).await;
+        let operation = start_background_update(&app, &entity, 505).await;
+        let planned = attome_records::mass::plan_chunk(&app.state, operation, 0, None)
+            .await
+            .unwrap()
+            .expect("the operation is working");
+        let record = planned[0]["id"].as_str().unwrap().to_owned();
+
+        // Someone edits a planned record before the chunk applies.
+        let version: i64 = sqlx::query_scalar(&format!(
+            "SELECT row_version FROM \"{entity}\" WHERE id = $1"
+        ))
+        .bind(Uuid::parse_str(&record).unwrap())
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        let tag = format!("\"{version}\"");
+        let (status, body) = app
+            .request_with(
+                Method::PATCH,
+                &format!("/api/v1/{entity}/{record}"),
+                &[("if-match", tag.as_str())],
+                Some(json!({ "title": "mine" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        let changed = attome_records::mass::run_chunk(&app.state, operation, 0, None)
+            .await
+            .unwrap();
+        assert_eq!(changed, 499);
+        let (_, done, conflicts) = op_counts(&app, operation).await;
+        assert_eq!((done, conflicts), (499, 1));
+        let title: Option<String> =
+            sqlx::query_scalar(&format!("SELECT title FROM \"{entity}\" WHERE id = $1"))
+                .bind(Uuid::parse_str(&record).unwrap())
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(title.as_deref(), Some("mine"), "the user's edit stays");
     });
 }

@@ -22,6 +22,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `confirm_estimate_rows` is sent), `GET /api/v1/mass/{id}`, and `POST /api/v1/mass/{id}/pause`,
   `/resume`, `/cancel` and `/undo` (each with `If-Match`; only the starter or an administrator).
   The entity name `mass` is now reserved. See `docs/mass-operations.md`.
+- Background mass operations run (AA10-T4): a chain of `HeavyOpChunk` jobs, 500 records each in id
+  order, each planned (ids, row versions, values replaced) before it changes anything, applied at
+  the planned versions so a concurrent edit is kept and counted as a conflict, and finished in one
+  short transaction that queues the next chunk; a retried chunk reuses its plan.
 - Competitor tracking documentation (D25-T11): `docs/competitors.md` covers the records, each part's
   switch and what is off by default (win/loss reviews need a stage threshold per pipeline;
   competitor news is not built), and the routes `POST /api/v1/sales/competitor-mentions/{id}/confirm`

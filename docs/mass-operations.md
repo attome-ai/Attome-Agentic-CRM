@@ -37,12 +37,34 @@ the other three kinds.
 - **Up to the threshold**, the operation runs in the request. It answers `200` with the operation
   and each record's outcome (`done`, `conflict`, `skipped` or `failed`).
 - **Past the threshold**, the caller must send `confirm_estimate_rows`, at least the number of rows
-  counted. Without it the answer is `422`. With it, the operation is recorded as `queued` and the
-  answer is `202`. The chunked background runner that works queued operations is roadmap AA10-T4.
-  Until it lands, a queued operation stays queued.
+  counted. Without it the answer is `422`. With it, the operation is recorded as `queued`, its first
+  chunk job is queued in the same transaction, and the answer is `202`. With no background worker
+  available, the answer is `503` and nothing is recorded.
 
 A start sent with an `Idempotency-Key` takes the durable idempotency tier, so a retry does not
 start a second operation.
+
+## Background chunks
+
+A background operation runs as a chain of `HeavyOpChunk` jobs, 500 records each, in id order. Each
+chunk continues after the last id of the chunk before it, and runs as the person who started the
+operation.
+
+1. **Plan.** The chunk's ids, each record's row version and the values it will replace are saved
+   on the chunk (`heavy_operation_chunk`, status `running`) before anything changes.
+2. **Apply.** Each record is changed through its single-record path at the planned row version. A
+   record someone edited in between is counted as a conflict and keeps their value.
+3. **Finish.** One short transaction marks the chunk `done`, adds its counts to the operation and
+   queues the next chunk. The last, short chunk marks the operation `done` instead.
+
+No transaction is held across chunks.
+
+A retried chunk works from its saved plan, so nothing is planned twice. A record the first attempt
+already changed is recognised by being in the target state, and counted once. A chunk that is
+already `done` is not repeated.
+
+A chunk starts only while the operation is `queued` or `running`, so pause and cancel take effect
+between chunks. Resume queues the chunk the operation stopped at.
 
 ## Follow and control
 

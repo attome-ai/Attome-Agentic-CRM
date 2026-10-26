@@ -185,8 +185,10 @@ pub async fn size_check_rows(
     Ok(estimate(counted, threshold, plan_rows))
 }
 
-/// AA10-T3: the ids of at most `limit` rows the size check counts, in id
-/// order, for an operation small enough to run inline.
+/// AA10-T3, AA10-T4: the ids of at most `limit` rows the size check counts,
+/// in id order, after `after` when given (the keyset a background chunk
+/// continues from).
+#[allow(clippy::too_many_arguments)]
 pub async fn matching_ids(
     state: &EngineState,
     security: &SecurityContext,
@@ -194,14 +196,22 @@ pub async fn matching_ids(
     filter: Option<&Condition>,
     action: RecordAction,
     rows: Rows,
+    after: Option<Uuid>,
     limit: i64,
 ) -> Result<Vec<Uuid>, AppError> {
-    let (sql, binds) = scope_sql(state, security, entity, filter, action, rows).await?;
+    let (sql, mut binds) = scope_sql(state, security, entity, filter, action, rows).await?;
+    let after_sql = match after {
+        Some(after) => {
+            binds.push(after.to_string());
+            format!(" WHERE s.id > ${}::uuid", binds.len())
+        }
+        None => String::new(),
+    };
     let mut tx = scoped_tx(state).await?;
     let ids_sql = attome_db::tag_dynamic(
         "heavy_op.matching_ids",
         &format!(
-            "SELECT s.id FROM ({sql}) AS s ORDER BY s.id LIMIT {}",
+            "SELECT s.id FROM ({sql}) AS s{after_sql} ORDER BY s.id LIMIT {}",
             limit.max(0)
         ),
     );

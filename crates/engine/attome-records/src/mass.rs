@@ -1,5 +1,5 @@
-//! Mass operations (roadmap AA10-T3): one change over every record a filter
-//! selects, sized first by [`crate::heavy_op::size_check_rows`].
+//! Mass operations (roadmap AA10-T3, AA10-T4): one change over every record
+//! a filter selects, sized first by [`crate::heavy_op::size_check_rows`].
 //!
 //! - `POST /api/v1/{entity}/mass/estimate` answers the size check and writes
 //!   nothing.
@@ -7,31 +7,46 @@
 //!   every record), a `delete`, a `reassign` (a new owner, administrators
 //!   only, through `attome_security::admin::reassign_owner_for`) or a
 //!   `restore` (of deleted records). Up to the inline threshold it runs in
-//!   the request, each record through the normal single-record path (record
-//!   access, validation, rules, audit), and answers `200` with every
-//!   record's outcome. Past it the caller must send `confirm_estimate_rows`
-//!   (at least the rows counted) and the operation is recorded `queued`
-//!   with `202`; the chunked runner that works it is AA10-T4.
+//!   the request and answers `200` with every record's outcome. Past it the
+//!   caller must send `confirm_estimate_rows` (at least the rows counted);
+//!   the operation is recorded `queued`, its first chunk job is enqueued in
+//!   the same transaction, and the answer is `202`.
 //! - `GET /api/v1/mass/{id}` is its progress; `pause`, `resume`, `cancel`
 //!   and `undo` control it, each with the operation's `row_version` in
 //!   `If-Match`. Only the person who started it, or an administrator, sees
 //!   or controls it; anyone else gets `404`.
 //!
-//! **Concurrency.** Each record is written with the row version read just
-//! before, so a record changed meanwhile is counted as a conflict, not
-//! overwritten. A control locks the operation row and checks its version.
-//! Undo claims the operation (`undone`) before it replays, so two undos
-//! cannot both replay; it writes each record back only when the record is
-//! still at the version the operation left, and is refused for an operation
+//! Every record goes through its normal single-record path (record access,
+//! validation, rules, audit, the change feed), as the person who started the
+//! operation.
+//!
+//! **Chunks (AA10-T4).** A background operation runs as a chain of
+//! `EngineJob::HeavyOpChunk` jobs, [`CHUNK_ROWS`] records each in id order
+//! (keyset: the ids after the previous chunk's last one). A chunk is planned
+//! first: its ids, each record's row version and the values it will
+//! replace are saved in its `heavy_operation_chunk` row (`running`) before
+//! anything changes. It is then applied record by record, each with the row
+//! version planned, so a record someone changed in between is counted as a
+//! conflict and keeps their value. The last short transaction marks the
+//! chunk `done`, adds its counts to the operation and enqueues the next
+//! chunk (or finishes the operation). A retried chunk reuses its saved plan,
+//! so nothing is planned twice; a record the first attempt already changed
+//! is recognised (it is in the target state) and counted once. A chunk
+//! starts only while the operation is `queued` or `running`, so pause and
+//! cancel take effect between chunks; resume enqueues the next one.
+//!
+//! **Undo.** Claims the operation (`undone`) before it replays, so two undos
+//! cannot both replay; writes each record back only while the record is
+//! still at the version the operation left; is refused for an operation
 //! larger than the inline threshold (background undo is AA10-T5).
-//! A retried start is caught by the durable idempotency tier
-//! (`POST /api/v1/{entity}/mass` is in `MANDATORY_TIER_OPERATIONS`).
+//! A retried start is caught by the durable idempotency tier.
 
 use attome_audit::{
     Attribution, AuditCategory, AuditEvent, AuditOperation, AuditOutcome, AuditRequestContext,
     AuditSource, BusinessEvent, write_bulk_accepted, write_bulk_completed_once,
     write_business_event_in_tx,
 };
+use attome_core::jobs::EngineJob;
 use attome_core::{EngineState, quote_ident};
 use attome_security::record_action::Bulk;
 use attome_security::{RecordAction, SecurityContextExt};
@@ -57,6 +72,9 @@ use crate::heavy_op::{
     self, ROWS_PER_SECOND, Rows, SizeEstimate, inline_threshold, matching_ids, size_check_rows,
 };
 use crate::query_spec::Condition;
+
+/// Records one background chunk changes.
+pub const CHUNK_ROWS: i64 = 500;
 
 /// What a mass operation does to each record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -139,6 +157,16 @@ pub fn validate_payload(kind: MassKind, payload: &Value) -> Result<(), AppError>
             ))),
         },
     }
+}
+
+/// Whether `data` already holds every value of `payload`, as an update
+/// that went through leaves it. Pure.
+pub fn holds_values(data: &Value, payload: &Value) -> bool {
+    payload.as_object().is_some_and(|values| {
+        values
+            .iter()
+            .all(|(k, v)| data.get(k).unwrap_or(&Value::Null) == v)
+    })
 }
 
 /// A control on a running operation.
@@ -330,6 +358,17 @@ fn outcome_of(error: &AppError) -> (MassItemStatus, Option<String>) {
     }
 }
 
+/// The counts of `items` by status: done, conflict, skipped, failed. Pure.
+fn tally(items: &[MassItem]) -> (i64, i64, i64, i64) {
+    let count = |s: MassItemStatus| items.iter().filter(|i| i.status == s).count() as i64;
+    (
+        count(MassItemStatus::Done),
+        count(MassItemStatus::Conflict),
+        count(MassItemStatus::Skipped),
+        count(MassItemStatus::Failed),
+    )
+}
+
 /// The size check for `body` as `ctx`.
 pub async fn estimate(
     state: &EngineState,
@@ -384,16 +423,22 @@ pub async fn start(
         .filter(|r| !r.is_empty())
         .map(|r| r.chars().take(500).collect::<String>());
     let background = size.path == heavy_op::Path::Background;
-    if background
-        && body
+    if background {
+        if body
             .confirm_estimate_rows
             .is_none_or(|n| n < size.exact_upto)
-    {
-        return Err(AppError::Validation(format!(
-            "this operation changes about {} records and runs in the background: \
-             send confirm_estimate_rows of at least {}",
-            size.estimated_rows, size.exact_upto
-        )));
+        {
+            return Err(AppError::Validation(format!(
+                "this operation changes about {} records and runs in the background: \
+                 send confirm_estimate_rows of at least {}",
+                size.estimated_rows, size.exact_upto
+            )));
+        }
+        // D-344: no batch worker means a queued operation nobody runs.
+        state
+            .base
+            .capabilities
+            .ensure_available(attome_server::capability::Capability::BatchJobs)?;
     }
 
     let id = Uuid::now_v7();
@@ -426,6 +471,16 @@ pub async fn start(
     .await?;
 
     if background {
+        attome_jobs::enqueue_in_tx(
+            &mut tx,
+            EngineJob::HeavyOpChunk {
+                operation_id: id,
+                chunk_no: 0,
+                after_id: None,
+            },
+        )
+        .await
+        .map_err(AppError::internal)?;
         let run = MassRun {
             operation: read_op_in(&mut tx, id).await?.into(),
             estimate: Some(size),
@@ -437,7 +492,7 @@ pub async fn start(
     }
     attome_db::tx::commit(tx).await?;
 
-    // Inline: every record through its own single-record path.
+    // Inline: plan and apply each record.
     let ids = matching_ids(
         state,
         ctx,
@@ -445,39 +500,32 @@ pub async fn start(
         body.filter.as_ref(),
         body.kind.action(),
         body.kind.rows(),
+        None,
         size.exact_upto,
     )
     .await?;
     let mut items = Vec::with_capacity(ids.len());
     let mut undo = Vec::new();
     for record in ids {
-        let applied = apply_one(state, ctx, &entity, id, record, &body, reason.as_deref()).await;
-        match applied {
-            Ok(before) => {
-                undo.push(before);
-                items.push(MassItem {
-                    id: record,
-                    status: MassItemStatus::Done,
-                    error: None,
-                });
+        let applied = match plan_one(state, ctx, &entity, body.kind, record).await {
+            Ok(entry) => {
+                apply_planned(
+                    state,
+                    ctx,
+                    &entity,
+                    id,
+                    body.kind,
+                    entry,
+                    &body.payload,
+                    reason.as_deref(),
+                )
+                .await
             }
-            Err(error) => {
-                let (status, message) = outcome_of(&error);
-                items.push(MassItem {
-                    id: record,
-                    status,
-                    error: message,
-                });
-            }
-        }
+            Err(error) => Err(error),
+        };
+        items.push(record_outcome(record, applied, &mut undo));
     }
-    let count = |s: MassItemStatus| items.iter().filter(|i| i.status == s).count() as i64;
-    let (done, conflict, skipped, failed) = (
-        count(MassItemStatus::Done),
-        count(MassItemStatus::Conflict),
-        count(MassItemStatus::Skipped),
-        count(MassItemStatus::Failed),
-    );
+    let (done, conflict, skipped, failed) = tally(&items);
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     sqlx::query(
@@ -486,7 +534,7 @@ pub async fn start(
     )
     .bind(id)
     .bind(items.last().map(|i| i.id))
-    .bind(json!({ "kind": body.kind.as_str(), "items": undo }))
+    .bind(json!({ "kind": body.kind.as_str(), "items": undo, "failed": failed }))
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -502,19 +550,12 @@ pub async fn start(
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    let outcome = if done == items.len() as i64 {
-        AuditOutcome::Succeeded
-    } else if done == 0 && !items.is_empty() {
-        AuditOutcome::Failed
-    } else {
-        AuditOutcome::PartiallyFailed
-    };
     write_bulk_completed_once(
         &audit,
         &mut tx,
         mass_event(state, ctx.user_id, &entity, id, body.kind).await,
         Attribution::user(ctx.user_id),
-        outcome,
+        completed_outcome(done, conflict + skipped + failed),
         i32::try_from(done).unwrap_or(i32::MAX),
         i32::try_from(conflict + skipped + failed).unwrap_or(i32::MAX),
     )
@@ -529,72 +570,193 @@ pub async fn start(
     Ok((run, true))
 }
 
-/// Changes one record and answers what undo writes back.
-async fn apply_one(
+/// The bulk outcome for `done` records changed and `missed` not. Pure.
+fn completed_outcome(done: i64, missed: i64) -> AuditOutcome {
+    if missed == 0 {
+        AuditOutcome::Succeeded
+    } else if done == 0 {
+        AuditOutcome::Failed
+    } else {
+        AuditOutcome::PartiallyFailed
+    }
+}
+
+/// One record's [`MassItem`]; a done record's undo entry goes to `undo`.
+fn record_outcome(
+    record: Uuid,
+    applied: Result<Value, AppError>,
+    undo: &mut Vec<Value>,
+) -> MassItem {
+    match applied {
+        Ok(entry) => {
+            undo.push(entry);
+            MassItem {
+                id: record,
+                status: MassItemStatus::Done,
+                error: None,
+            }
+        }
+        Err(error) => {
+            let (status, message) = outcome_of(&error);
+            MassItem {
+                id: record,
+                status,
+                error: message,
+            }
+        }
+    }
+}
+
+/// What applying `kind` to `record` needs saved first: its row version and
+/// the values it will replace.
+async fn plan_one(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity: &str,
+    kind: MassKind,
+    record: Uuid,
+) -> Result<Value, AppError> {
+    match kind {
+        MassKind::Update => {
+            let current = entity_crud::read_record(state, ctx, entity, record).await?;
+            Ok(json!({
+                "id": record,
+                "row_version": current.row_version(),
+                "data": current.data(),
+            }))
+        }
+        MassKind::Reassign => {
+            let (email, team) = owner_of(state, entity, record).await?;
+            Ok(json!({ "id": record, "user_email": email, "team_name": team }))
+        }
+        MassKind::Delete | MassKind::Restore => Ok(json!({ "id": record })),
+    }
+}
+
+/// Applies `kind` to the record `entry` plans, at its planned row version,
+/// and answers the entry undo writes back.
+#[allow(clippy::too_many_arguments)]
+async fn apply_planned(
     state: &EngineState,
     ctx: &SecurityContext,
     entity: &str,
     operation: Uuid,
-    record: Uuid,
-    body: &MassStartBody,
+    kind: MassKind,
+    entry: Value,
+    payload: &Value,
     reason: Option<&str>,
 ) -> Result<Value, AppError> {
-    match body.kind {
+    let record = entry["id"]
+        .as_str()
+        .and_then(|s| Uuid::parse_str(s).ok())
+        .ok_or_else(|| AppError::internal("mass: a planned record has no id"))?;
+    match kind {
         MassKind::Update => {
-            let current = entity_crud::read_record(state, ctx, entity, record).await?;
-            let values = body.payload.as_object().cloned().unwrap_or_default();
+            let values = payload.as_object().cloned().unwrap_or_default();
             let before: Map<String, Value> = values
                 .keys()
                 .map(|k| {
                     (
                         k.clone(),
-                        current.data().get(k).cloned().unwrap_or(Value::Null),
+                        entry["data"].get(k).cloned().unwrap_or(Value::Null),
                     )
                 })
                 .collect();
-            let updated = entity_crud::update_record_for(
+            let expected = entry["row_version"]
+                .as_i64()
+                .ok_or_else(|| AppError::internal("mass: a planned record has no version"))?;
+            let after = match entity_crud::update_record_for(
                 state,
                 ctx,
                 ctx.user_id,
                 entity,
                 record,
-                current.row_version(),
+                expected,
                 Value::Object(values),
             )
-            .await?;
-            Ok(
-                json!({ "id": record, "before": before, "row_version_after": updated.row_version() }),
-            )
+            .await
+            {
+                Ok(updated) => updated.row_version(),
+                Err(AppError::VersionConflict | AppError::VersionConflictAt { .. }) => {
+                    // A retried chunk: the first attempt may have changed it.
+                    let current = entity_crud::read_record(state, ctx, entity, record).await?;
+                    if current.row_version() == expected + 1
+                        && holds_values(current.data(), payload)
+                    {
+                        current.row_version()
+                    } else {
+                        return Err(AppError::VersionConflict);
+                    }
+                }
+                Err(error) => return Err(error),
+            };
+            Ok(json!({ "id": record, "before": before, "row_version_after": after }))
         }
         MassKind::Delete => {
             let origin =
                 DeleteOrigin::with_id(DeleteKind::Bulk, operation.to_string()).reason(reason);
-            entity_crud::delete_record_for(state, ctx, ctx.user_id, entity, record, None, &origin)
-                .await?;
+            match entity_crud::delete_record_for(
+                state,
+                ctx,
+                ctx.user_id,
+                entity,
+                record,
+                None,
+                &origin,
+            )
+            .await
+            {
+                Ok(()) => {}
+                // A retried chunk: already in the bin from the first attempt.
+                Err(AppError::NotFound)
+                    if is_active(state, entity, record).await? == Some(false) => {}
+                Err(error) => return Err(error),
+            }
             Ok(json!({ "id": record }))
         }
         MassKind::Restore => {
-            entity_crud::restore_record_for(state, ctx, ctx.user_id, entity, record, None).await?;
+            match entity_crud::restore_record_for(state, ctx, ctx.user_id, entity, record, None)
+                .await
+            {
+                Ok(_) => {}
+                Err(AppError::NotFound)
+                    if is_active(state, entity, record).await? == Some(true) => {}
+                Err(error) => return Err(error),
+            }
             Ok(json!({ "id": record }))
         }
         MassKind::Reassign => {
-            let previous = owner_of(state, entity, record).await?;
             attome_security::admin::reassign_owner_for(
                 state,
                 ctx.user_id,
                 entity,
                 record,
-                body.payload.get("user_email").and_then(Value::as_str),
-                body.payload.get("team_name").and_then(Value::as_str),
+                payload.get("user_email").and_then(Value::as_str),
+                payload.get("team_name").and_then(Value::as_str),
             )
             .await?;
-            Ok(json!({
-                "id": record,
-                "user_email": previous.0,
-                "team_name": previous.1,
-            }))
+            Ok(entry)
         }
     }
+}
+
+/// The record's `is_active`, or `None` when there is no such row.
+async fn is_active(
+    state: &EngineState,
+    entity: &str,
+    record: Uuid,
+) -> Result<Option<bool>, AppError> {
+    let sql = format!(
+        "SELECT is_active FROM {} WHERE id = $1",
+        quote_ident(entity)
+    );
+    let found: Option<Option<bool>> =
+        sqlx::query_scalar(&attome_db::tag_dynamic("mass.is_active", &sql))
+            .bind(record)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(found.map(|a| a.unwrap_or(true)))
 }
 
 /// The record's owner as `reassign_owner_for` names one: a user's email or
@@ -700,6 +862,273 @@ async fn read_op_in(tx: &mut attome_db::Tx<'_>, id: Uuid) -> Result<OpRow, AppEr
     .ok_or(AppError::NotFound)
 }
 
+/// What a chunk works from.
+#[derive(sqlx::FromRow)]
+struct WorkRow {
+    kind: String,
+    entity_logicalname: String,
+    filter: Value,
+    payload: Value,
+    status: String,
+    started_by: Uuid,
+    reason: Option<String>,
+}
+
+/// AA10-T4: plans chunk `chunk_no` of a background operation (the ids
+/// after `after`, each with what it will replace) and saves the plan as the
+/// chunk's `running` row, unless the chunk already has one. Answers the
+/// planned entries, or `None` when the operation is not working (paused,
+/// cancelled, finished) or the chunk is already done.
+pub async fn plan_chunk(
+    state: &EngineState,
+    operation: Uuid,
+    chunk_no: i32,
+    after: Option<Uuid>,
+) -> Result<Option<Vec<Value>>, AppError> {
+    let Some(work) = work_row(state, operation).await? else {
+        return Ok(None);
+    };
+    if !matches!(work.status.as_str(), "queued" | "running") {
+        return Ok(None);
+    }
+    let existing: Option<(String, Option<Value>)> = sqlx::query_as(
+        "SELECT status, before_values FROM heavy_operation_chunk \
+          WHERE operation_id = $1 AND chunk_no = $2",
+    )
+    .bind(operation)
+    .bind(chunk_no)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    match existing {
+        Some((status, _)) if status == "done" => return Ok(None),
+        Some((_, plan)) => {
+            return Ok(Some(
+                plan.and_then(|p| p["items"].as_array().cloned())
+                    .unwrap_or_default(),
+            ));
+        }
+        None => {}
+    }
+    let kind = MassKind::parse(&work.kind)
+        .ok_or_else(|| AppError::internal("mass: an operation of an unknown kind"))?;
+    let ctx = state.base.security.resolve(work.started_by).await?;
+    let filter: Option<Condition> =
+        serde_json::from_value(work.filter.clone()).map_err(AppError::internal)?;
+    let ids = matching_ids(
+        state,
+        &ctx,
+        &work.entity_logicalname,
+        filter.as_ref(),
+        kind.action(),
+        kind.rows(),
+        after,
+        CHUNK_ROWS,
+    )
+    .await?;
+    let mut entries = Vec::with_capacity(ids.len());
+    for record in &ids {
+        match plan_one(state, &ctx, &work.entity_logicalname, kind, *record).await {
+            Ok(entry) => entries.push(entry),
+            // Unreadable now: the apply step reports it as skipped.
+            Err(_) => entries.push(json!({ "id": record })),
+        }
+    }
+    sqlx::query(
+        "INSERT INTO heavy_operation_chunk (operation_id, chunk_no, last_id, status, \
+             before_values) VALUES ($1, $2, $3, 'running', $4) \
+         ON CONFLICT (operation_id, chunk_no) DO NOTHING",
+    )
+    .bind(operation)
+    .bind(chunk_no)
+    .bind(ids.last())
+    .bind(json!({ "kind": kind.as_str(), "items": entries }))
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    sqlx::query(
+        "UPDATE heavy_operation SET status = 'running', row_version = row_version + 1 \
+          WHERE id = $1 AND status = 'queued'",
+    )
+    .bind(operation)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    // Another attempt may have planned it first: work from the saved plan.
+    let saved: Option<Value> = sqlx::query_scalar(
+        "SELECT before_values FROM heavy_operation_chunk WHERE operation_id = $1 AND chunk_no = $2",
+    )
+    .bind(operation)
+    .bind(chunk_no)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Some(
+        saved
+            .and_then(|p| p["items"].as_array().cloned())
+            .unwrap_or_default(),
+    ))
+}
+
+async fn work_row(state: &EngineState, operation: Uuid) -> Result<Option<WorkRow>, AppError> {
+    sqlx::query_as::<_, WorkRow>(
+        "SELECT kind, entity_logicalname, filter, payload, status, started_by, reason \
+           FROM heavy_operation WHERE id = $1",
+    )
+    .bind(operation)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// AA10-T4: the `EngineJob::HeavyOpChunk` worker. Plans the chunk (or
+/// reuses its saved plan), applies it record by record as the starter, then
+/// in one short transaction marks it done, adds its counts and enqueues the
+/// next chunk or finishes the operation. Answers the records changed.
+pub async fn run_chunk(
+    state: &EngineState,
+    operation: Uuid,
+    chunk_no: i32,
+    after: Option<Uuid>,
+) -> Result<i64, AppError> {
+    let Some(entries) = plan_chunk(state, operation, chunk_no, after).await? else {
+        return Ok(0);
+    };
+    let Some(work) = work_row(state, operation).await? else {
+        return Ok(0);
+    };
+    let kind = MassKind::parse(&work.kind)
+        .ok_or_else(|| AppError::internal("mass: an operation of an unknown kind"))?;
+    let ctx = state.base.security.resolve(work.started_by).await?;
+    let entity = work.entity_logicalname.clone();
+
+    let mut items = Vec::with_capacity(entries.len());
+    let mut undo = Vec::new();
+    for entry in entries.iter().cloned() {
+        let Some(record) = entry["id"].as_str().and_then(|s| Uuid::parse_str(s).ok()) else {
+            continue;
+        };
+        let applied = if kind == MassKind::Update && entry.get("row_version").is_none() {
+            // Not readable when planned.
+            Err(AppError::NotFound)
+        } else {
+            apply_planned(
+                state,
+                &ctx,
+                &entity,
+                operation,
+                kind,
+                entry,
+                &work.payload,
+                work.reason.as_deref(),
+            )
+            .await
+        };
+        items.push(record_outcome(record, applied, &mut undo));
+    }
+    let (done, conflict, skipped, failed) = tally(&items);
+    let last = items.last().map(|i| i.id);
+    let finished = (entries.len() as i64) < CHUNK_ROWS;
+
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let status: Option<String> =
+        sqlx::query_scalar("SELECT status FROM heavy_operation WHERE id = $1 FOR UPDATE")
+            .bind(operation)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    let Some(status) = status else {
+        return Ok(0);
+    };
+    let marked = sqlx::query(
+        "UPDATE heavy_operation_chunk SET status = 'done', before_values = $3 \
+          WHERE operation_id = $1 AND chunk_no = $2 AND status <> 'done'",
+    )
+    .bind(operation)
+    .bind(chunk_no)
+    .bind(json!({ "kind": kind.as_str(), "items": undo, "failed": failed }))
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if marked == 0 {
+        // Another attempt finished this chunk first; it counted it.
+        return Ok(0);
+    }
+    sqlx::query(
+        "UPDATE heavy_operation SET rows_done = rows_done + $2, \
+             rows_conflict = rows_conflict + $3, \
+             rows_skipped_permission = rows_skipped_permission + $4, \
+             row_version = row_version + 1 \
+          WHERE id = $1",
+    )
+    .bind(operation)
+    .bind(done)
+    .bind(conflict)
+    .bind(skipped)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if finished {
+        if status == "running" {
+            let totals: (i64, i64, i64) = sqlx::query_as(
+                "UPDATE heavy_operation SET status = 'done', finished_at = now() \
+                  WHERE id = $1 RETURNING rows_done, rows_conflict, rows_skipped_permission",
+            )
+            .bind(operation)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+            let missed = totals.1 + totals.2;
+            write_bulk_completed_once(
+                &attome_audit::audit_service(state),
+                &mut tx,
+                mass_event(state, work.started_by, &entity, operation, kind).await,
+                Attribution::user(work.started_by),
+                completed_outcome(totals.0, missed),
+                i32::try_from(totals.0).unwrap_or(i32::MAX),
+                i32::try_from(missed).unwrap_or(i32::MAX),
+            )
+            .await?;
+        }
+    } else if status == "running" {
+        attome_jobs::enqueue_in_tx(
+            &mut tx,
+            EngineJob::HeavyOpChunk {
+                operation_id: operation,
+                chunk_no: chunk_no + 1,
+                after_id: last,
+            },
+        )
+        .await
+        .map_err(AppError::internal)?;
+    }
+    attome_db::tx::commit(tx).await?;
+    Ok(done)
+}
+
+/// Where a resumed operation picks up: the unfinished chunk, or the one
+/// after the last done chunk.
+async fn next_chunk(
+    tx: &mut attome_db::Tx<'_>,
+    operation: Uuid,
+) -> Result<(i32, Option<Uuid>), AppError> {
+    let latest: Option<(i32, Option<Uuid>, String)> = sqlx::query_as(
+        "SELECT chunk_no, last_id, status FROM heavy_operation_chunk \
+          WHERE operation_id = $1 ORDER BY chunk_no DESC LIMIT 1",
+    )
+    .bind(operation)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(match latest {
+        None => (0, None),
+        // Its saved plan names its records.
+        Some((chunk_no, _, status)) if status != "done" => (chunk_no, None),
+        Some((chunk_no, last_id, _)) => (chunk_no + 1, last_id),
+    })
+}
+
 /// The operation, when `ctx` started it or is an administrator.
 pub async fn get_operation(
     state: &EngineState,
@@ -759,6 +1188,19 @@ pub async fn control(
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    if control == Control::Resume {
+        let (chunk_no, after_id) = next_chunk(&mut tx, id).await?;
+        attome_jobs::enqueue_in_tx(
+            &mut tx,
+            EngineJob::HeavyOpChunk {
+                operation_id: id,
+                chunk_no,
+                after_id,
+            },
+        )
+        .await
+        .map_err(AppError::internal)?;
+    }
     let operation = match control {
         Control::Cancel => AuditOperation::Cancelled,
         _ => AuditOperation::Update,
@@ -782,7 +1224,8 @@ pub async fn control(
     let chunks: Vec<Value> = if control == Control::Undo {
         sqlx::query_scalar(
             "SELECT before_values FROM heavy_operation_chunk \
-              WHERE operation_id = $1 AND before_values IS NOT NULL ORDER BY chunk_no DESC",
+              WHERE operation_id = $1 AND status = 'done' AND before_values IS NOT NULL \
+              ORDER BY chunk_no DESC",
         )
         .bind(id)
         .fetch_all(&mut *tx)
@@ -802,22 +1245,11 @@ pub async fn control(
                 else {
                     continue;
                 };
-                let item = match undo_one(state, ctx, &entity, id, kind, record, entry).await {
-                    Ok(()) => MassItem {
-                        id: record,
-                        status: MassItemStatus::Done,
-                        error: None,
-                    },
-                    Err(error) => {
-                        let (status, message) = outcome_of(&error);
-                        MassItem {
-                            id: record,
-                            status,
-                            error: message,
-                        }
-                    }
-                };
-                items.push(item);
+                let mut ignored = Vec::new();
+                let undone = undo_one(state, ctx, &entity, id, kind, record, entry)
+                    .await
+                    .map(|()| Value::Null);
+                items.push(record_outcome(record, undone, &mut ignored));
             }
         }
     }
@@ -955,8 +1387,8 @@ async fn post_mass_estimate(
 /// Updates, deletes, reassigns or restores every record the filter selects
 /// that the caller may change. Up to the inline threshold it runs now and
 /// answers 200 with each record's outcome; past it, with
-/// `confirm_estimate_rows`, it is queued for the background and answers 202
-/// with the operation to follow at `GET /api/v1/mass/{id}`.
+/// `confirm_estimate_rows`, it runs in the background in chunks and answers
+/// 202 with the operation to follow at `GET /api/v1/mass/{id}`.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/mass",
@@ -971,6 +1403,7 @@ async fn post_mass_estimate(
         (status = 403, description = "Caller may not make this change in bulk", body = ErrorResponse),
         (status = 404, description = "No such entity", body = ErrorResponse),
         (status = 422, description = "An invalid filter, kind or payload, or a background operation without confirm_estimate_rows", body = ErrorResponse),
+        (status = 503, description = "No background worker can run a large operation now", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
@@ -1072,8 +1505,8 @@ async fn post_mass_pause(
 
 /// Resume a mass operation
 ///
-/// Queues a paused operation again. Send the operation's `row_version` in
-/// `If-Match`.
+/// Queues a paused operation again; it continues from the chunk it stopped
+/// at. Send the operation's `row_version` in `If-Match`.
 #[utoipa::path(
     post,
     path = "/api/v1/mass/{id}/resume",
@@ -1239,5 +1672,22 @@ mod tests {
         assert_eq!(seconds_left("queued", Some(10), 50), Some(0));
         assert_eq!(seconds_left("done", Some(10), 0), None);
         assert_eq!(seconds_left("running", None, 0), None);
+    }
+
+    #[test]
+    fn a_record_in_the_target_state_holds_the_values() {
+        let data = json!({"title": "x", "size": 3});
+        assert!(holds_values(&data, &json!({"title": "x"})));
+        assert!(!holds_values(&data, &json!({"title": "y"})));
+        assert!(holds_values(&json!({}), &json!({"gone": null})));
+        assert!(!holds_values(&data, &Value::Null));
+    }
+
+    #[test]
+    fn outcomes_count_misses() {
+        assert_eq!(completed_outcome(5, 0), AuditOutcome::Succeeded);
+        assert_eq!(completed_outcome(0, 2), AuditOutcome::Failed);
+        assert_eq!(completed_outcome(3, 1), AuditOutcome::PartiallyFailed);
+        assert_eq!(completed_outcome(0, 0), AuditOutcome::Succeeded);
     }
 }

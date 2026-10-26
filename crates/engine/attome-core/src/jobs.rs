@@ -329,6 +329,15 @@ pub enum EngineJob {
     /// D6-T6: moves a large deal's schedule rows by whole months, after the
     /// user agreed to it.
     SalesScheduleShift { opportunity_id: Uuid, months: i32 },
+    /// AA10-T4: one chunk of a background mass operation
+    /// (`attome_records::mass::run_chunk`): the records after `after_id`, or
+    /// the chunk's saved plan when it was planned already. Each chunk
+    /// enqueues the next.
+    HeavyOpChunk {
+        operation_id: Uuid,
+        chunk_no: i32,
+        after_id: Option<Uuid>,
+    },
     /// D21-T5: applies a call list's outcome rules for one saved attempt,
     /// after the attempt committed.
     SalesCallOutcomeRules { attempt_id: Uuid },
@@ -1047,6 +1056,7 @@ impl EngineJob {
             | Self::MasterRebuild { .. }
             | Self::RevrecContractFromSource { .. }
             | Self::SalesScheduleShift { .. }
+            | Self::HeavyOpChunk { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
@@ -1230,6 +1240,7 @@ impl EngineJob {
             EngineJob::MasterRebuild { .. } => "MasterRebuild",
             EngineJob::RevrecContractFromSource { .. } => "RevrecContractFromSource",
             EngineJob::SalesScheduleShift { .. } => "SalesScheduleShift",
+            EngineJob::HeavyOpChunk { .. } => "HeavyOpChunk",
             EngineJob::SalesCallOutcomeRules { .. } => "SalesCallOutcomeRules",
             EngineJob::AiFollowupRuleRun { .. } => "AiFollowupRuleRun",
             EngineJob::CommissionRun { .. } => "CommissionRun",
@@ -1490,6 +1501,7 @@ impl EngineJob {
             | Self::MasterRebuild { .. }
             | Self::RevrecContractFromSource { .. }
             | Self::SalesScheduleShift { .. }
+            | Self::HeavyOpChunk { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
@@ -1673,6 +1685,7 @@ impl EngineJob {
             | Self::MasterRebuild { .. }
             | Self::RevrecContractFromSource { .. }
             | Self::SalesScheduleShift { .. }
+            | Self::HeavyOpChunk { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
@@ -2095,6 +2108,11 @@ mod tests {
         assert_round_trips(EngineJob::SalesScheduleShift {
             opportunity_id: Uuid::now_v7(),
             months: -2,
+        });
+        assert_round_trips(EngineJob::HeavyOpChunk {
+            operation_id: Uuid::now_v7(),
+            chunk_no: 3,
+            after_id: Some(Uuid::now_v7()),
         });
         assert_round_trips(EngineJob::TimerFire {
             timer_id: Uuid::now_v7(),

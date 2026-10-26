@@ -1388,6 +1388,17 @@ async fn dispatch_platform_job(
                 attome_sales::schedules::run_shift(&attome_state, opportunity_id, months).await?;
             tracing::info!(%opportunity_id, months, moved, "sales schedule shift: complete");
         }
+        // AA10-T4: one chunk of a background mass operation.
+        EngineJob::HeavyOpChunk {
+            operation_id,
+            chunk_no,
+            after_id,
+        } => {
+            let changed =
+                attome_records::mass::run_chunk(&attome_state, operation_id, chunk_no, after_id)
+                    .await?;
+            tracing::info!(%operation_id, chunk_no, changed, "mass operation: chunk done");
+        }
         EngineJob::SalesDefaultTeamApply { owner_id } => {
             let added = attome_sales::team_defaults::run_apply(&attome_state, owner_id).await?;
             tracing::info!(%owner_id, added, "default team: applied to open deals");
