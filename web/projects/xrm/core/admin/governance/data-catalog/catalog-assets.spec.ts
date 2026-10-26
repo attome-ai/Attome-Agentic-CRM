@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { LangService, UserPreferencesService } from '@attome/base';
 import { DataCatalogService } from '@attome/xrm/core/admin/data';
 import { CatalogSearchComponent } from './catalog-search.component';
