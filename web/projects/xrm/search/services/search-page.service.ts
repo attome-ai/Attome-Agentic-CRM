@@ -39,7 +39,9 @@ export interface AskResult {
   answer?: { answer: string | null; citations?: AskCitation[]; reason?: string } | null;
 }
 
-export type AskingSearchResponse = SearchResponse & { ask?: AskResult | null };
+// The generated `ask` is free-form JSON (`Record<string, never>`); this
+// shape replaces it rather than intersecting with it.
+export type AskingSearchResponse = Omit<SearchResponse, 'ask'> & { ask?: AskResult | null };
 
 /** The admin lists are short; one page of 100 holds them. */
 const ADMIN_PAGE: Record<string, string> = { page: '1', page_size: '100' };
