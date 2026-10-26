@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Z10 (approvals): plan steps with conditions, parallel groups, step-up, signatures, reminders and
+  business hours; versioned policies; approver resolvers by prefix; `POST /api/v1/approvals/{id}/recall`
+  and `/resubmit`, `/api/v1/approvals/bulk-decide`, `/api/v1/approvals/email-link` (`/decide`),
+  `/api/v1/approvals/{id}/recommendations` and `/api/v1/approvals/out-of-office`.
 - E13: page search settings, structured data, sitemaps, robots, hreflang, SEO audit, topics, search console and IndexNow (content module).
 - Secrets runbook (Z1-T16): `docs/secrets.md` now covers key rings (`ring:`), the rotation steps
   (`attome secrets rotate`, restart, `rewrap`), the inventory and the production rule against a
