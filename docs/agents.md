@@ -134,6 +134,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   the header `X-Confirm: true` (`/api/v1/actions/{name}`); until then the answer is
   `confirmation_required`. Accepting a suggestion and confirming meeting notes are confirmations
   themselves. A flow or job acting as a user is not asked: its author decided when it was published.
+- Action buttons (AE1-T5): a record form's header has an Actions menu listing the custom actions
+  whose input schema requires exactly `entity` and `record_id`; a list with selected records lists
+  those requiring exactly `entity` and `record_ids`, and sends the whole selection in one call. An
+  `enum` or `const` on the schema's `entity` limits which entities show the action. A consequential
+  action asks the person to confirm first; one that goes to approval says so.
 - Macros (G6-T2): a `macro` metadata object lists actions (such as `record.update` and
   `record.transition`) to run on records of one entity, with `{{entity}}` and `{{record_id}}` filled
   in per record. Preview it with `POST /api/v1/macros/{name}/preview`, run it on up to 200 records

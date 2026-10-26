@@ -46,6 +46,8 @@
           <xrm-remind-me [entity]="f.name()" [recordId]="recordId" />
           <!-- C2-T2 — follow the record's changes. -->
           <xrm-follow-button [entity]="f.name()" [recordId]="recordId" />
+          <!-- AE1-T5 — the custom actions this record can run. -->
+          <xrm-action-bar [entity]="f.name()" [recordId]="recordId" data-advanced />
           <!-- B16-T11 — a QR code of the record's link, or a barcode of a value. -->
           <xrm-record-code [entity]="f.name()" [recordId]="recordId" [fields]="schema.fields" [values]="f.recordValue()"
                            data-advanced />

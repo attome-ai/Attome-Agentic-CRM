@@ -3303,6 +3303,21 @@ export const xrmEn = {
     loadFailed: 'The feed could not be loaded.',
     more: 'Show older',
   },
+  // ── AE1-T5: custom actions on forms and lists ──
+  actionBar: {
+    button: 'Actions',
+    onSelected: 'Actions on {{count}} selected',
+    loading: 'Loading…',
+    none: 'No actions for these records.',
+    consequential: 'Asks first',
+    confirm: 'This action has lasting effects. Run it?',
+    confirmButton: 'Run it',
+    cancel: 'Cancel',
+    done: 'Done.',
+    approval: 'Sent for approval.',
+    waiting: 'Waiting to run.',
+    error: 'The action could not run.',
+  },
   // ── C2-T2: following a record ──
   follow: {
     follow: 'Follow',

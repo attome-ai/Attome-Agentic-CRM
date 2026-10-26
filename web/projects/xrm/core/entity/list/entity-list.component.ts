@@ -28,6 +28,7 @@ import {
   serializeColumnFilters,
 } from './column-filters';
 import { BulkTagComponent } from '../record-tags/bulk-tag.component';
+import { ActionBarComponent } from '../action-bar/action-bar.component';
 
 import { BulkJobRunner, isBulkTerminal } from './bulk-job-runner.service';
 import { liveRows } from './live-rows';
@@ -175,7 +176,7 @@ export function richTextToPlainText(html: string): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports:     [
     FormsModule, NgComponentOutlet, RouterLink, TranslatePipe, ChoicePillComponent, BulkEditDialogComponent,
-    AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent, BulkTagComponent,
+    AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent, BulkTagComponent, ActionBarComponent,
     ListCardsComponent, RecordTypePickerComponent, RecordTemplatePickerComponent, EmptyStateComponent,
   ],
   host: { '(document:click)': 'handleDocumentClick($event)' },

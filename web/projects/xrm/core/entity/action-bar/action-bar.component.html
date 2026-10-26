@@ -1,0 +1,43 @@
+<div class="ab-wrap">
+  <button type="button" class="ab-btn" [disabled]="disabled() || busy()" [attr.aria-expanded]="open()"
+          (click)="toggle()" data-testid="action-bar-open">
+    <i class="las la-play-circle" aria-hidden="true"></i>
+    {{ (bulk() ? 'actionBar.onSelected' : 'actionBar.button') | translate: { count: recordIds().length } }}
+  </button>
+  @if (open()) {
+    <div class="ab-menu" role="menu" data-testid="action-bar-menu">
+      @if (catalog() === null) {
+        <p class="ab-note">{{ 'actionBar.loading' | translate }}</p>
+      } @else if (available().length === 0) {
+        <p class="ab-note" data-testid="action-bar-none">{{ 'actionBar.none' | translate }}</p>
+      } @else {
+        @for (action of available(); track action.id) {
+          <button type="button" role="menuitem" class="ab-item" [disabled]="busy()" [attr.title]="action.description"
+                  (click)="run(action)" [attr.data-action]="action.id">
+            <span class="ab-name">{{ label(action) }}</span>
+            @if (action.risk === 'Consequential') {
+              <span class="ab-risk">{{ 'actionBar.consequential' | translate }}</span>
+            }
+          </button>
+        }
+      }
+    </div>
+  }
+  @if (notice(); as n) {
+    <div class="ab-notice" [class.ab-error]="n.kind === 'error'" role="status" data-testid="action-bar-notice"
+         [attr.data-kind]="n.kind">
+      @switch (n.kind) {
+        @case ('confirm') {
+          <span>{{ 'actionBar.confirm' | translate }} {{ n.text }}</span>
+          <button type="button" class="ab-item" (click)="confirm()" [disabled]="busy()"
+                  data-testid="action-bar-confirm">{{ 'actionBar.confirmButton' | translate }}</button>
+          <button type="button" class="ab-item" (click)="dismiss()">{{ 'actionBar.cancel' | translate }}</button>
+        }
+        @case ('done') { <span>{{ 'actionBar.done' | translate }}</span> }
+        @case ('approval') { <span>{{ 'actionBar.approval' | translate }}</span> }
+        @case ('waiting') { <span>{{ 'actionBar.waiting' | translate }}</span> }
+        @default { <span>{{ n.text || ('actionBar.error' | translate) }}</span> }
+      }
+    </div>
+  }
+</div>

@@ -33,6 +33,8 @@ export { NotesPanelComponent }          from './notes/notes-panel.component';
 // U4 (D-602) — "Remind me" on the record form header.
 export { RemindMeComponent, REMINDER_ENTITY } from './reminders/remind-me.component';
 export { FollowButtonComponent, FOLLOW_ENTITY } from './follow-button/follow-button.component';
+export { ActionBarComponent, appliesTo, actionLabel } from './action-bar/action-bar.component';
+export type { CatalogAction } from './action-bar/action-bar.component';
 // B16-T11 — record codes; the `/r/{entity}/{id}` route is the host app's.
 export { RecordCodeComponent, recordLink } from './record-code/record-code.component';
 export { FollowingListComponent } from './follow-button/following-list.component';
