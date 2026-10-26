@@ -5747,6 +5747,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/integrations/warehouse/{entity}/load-script": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Warehouse load script
+         * @description P13-T2: the script that loads one entity's warehouse export into
+         *     Snowflake or BigQuery, to schedule on the warehouse side (a Snowflake
+         *     task, a BigQuery scheduled query). It stages the new files, keeps each
+         *     record's newest change and merges by `id`, deleting tombstones.
+         *     Administrators only; Attome holds no warehouse credentials.
+         */
+        get: operations["get_load_script"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/jobs/dead-letter": {
         parameters: {
             query?: never;
@@ -8683,6 +8707,121 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/search/entities/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An entity's search settings
+         * @description A25-T9: whether an entity is searched, how far back, its boost and
+         *     embedding switches, and each attribute's mode and weight. Defaults (and
+         *     `row_version` 0) for an entity never set.
+         */
+        get: operations["get_entity_settings"];
+        /**
+         * Set an entity's search settings
+         * @description A25-T9: replaces an entity's search settings and attribute modes.
+         *     `If-Match: "<row_version>"` is required (`"0"` the first time).
+         */
+        put: operations["put_entity_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/search/pins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pinned results
+         * @description A25-T9: records placed at a position for a query. A pin shows only to
+         *     people who may read its record.
+         */
+        get: operations["list_pins"];
+        put?: never;
+        /**
+         * Pin a result
+         * @description A25-T9: places a record at a position for a query. Pinning the same
+         *     record for the same query again moves it.
+         */
+        post: operations["create_pin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/search/pins/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a pin
+         * @description A25-T9: removes one pinned result.
+         */
+        delete: operations["delete_pin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/search/quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search quality
+         * @description A25-T8: the zero-result and refinement rates of searches over the last
+         *     `days` (30 by default), overall and per entity shown in results, from the
+         *     impression log. Administrators only.
+         */
+        get: operations["get_quality"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/search/size": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search index size
+         * @description A25-T9: the index's rows per entity and its size on disk.
+         */
+        get: operations["get_size"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/search/status": {
         parameters: {
             query?: never;
@@ -8700,6 +8839,95 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/search/stopwords": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stop words
+         * @description A25-T9: the words a search drops (unless the whole query is stop words).
+         */
+        get: operations["list_stopwords"];
+        put?: never;
+        /**
+         * Add a stop word
+         * @description A25-T9: a word a search drops; adding one already there changes nothing.
+         */
+        post: operations["create_stopword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/search/stopwords/{word}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a stop word
+         * @description A25-T9: a removed word takes part in searches again.
+         */
+        delete: operations["delete_stopword"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/search/synonyms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Synonym groups
+         * @description A25-T9: the synonym groups, newest first.
+         */
+        get: operations["list_synonyms"];
+        put?: never;
+        /**
+         * Add a synonym group
+         * @description A25-T9: a group of terms that mean the same; a search for one also runs
+         *     with the others.
+         */
+        post: operations["create_synonym"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/search/synonyms/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a synonym group
+         * @description A25-T9: removes one synonym group.
+         */
+        delete: operations["delete_synonym"];
         options?: never;
         head?: never;
         patch?: never;
@@ -14199,7 +14427,7 @@ export interface paths {
         };
         /**
          * Entity catalogue
-         * @description Entity catalogue. Administrators only.
+         * @description Entity catalogue: the entities the caller may read. Needs `metadata.read`.
          */
         get: operations["catalog_list_entities"];
         put?: never;
@@ -14219,7 +14447,8 @@ export interface paths {
         };
         /**
          * One entity in the catalogue
-         * @description One entity in the catalogue. Administrators only.
+         * @description One entity in the catalogue, with the attributes the caller may read.
+         *     Needs `metadata.read` and read access to the entity.
          */
         get: operations["catalog_get_entity"];
         put?: never;
@@ -17279,6 +17508,116 @@ export interface paths {
          *     credential, and an unknown one answers the same page.
          */
         post: operations["email_unsubscribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mass/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A mass operation's progress
+         * @description The operation's status, the rows done, skipped and in conflict, and the
+         *     seconds left while it works. Only the person who started it or an
+         *     administrator sees it.
+         */
+        get: operations["get_mass_operation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mass/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a mass operation
+         * @description Stops a queued, running or paused operation for good; what it changed so
+         *     far stays changed (undo reverses it). Send the operation's `row_version`
+         *     in `If-Match`.
+         */
+        post: operations["post_mass_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mass/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause a mass operation
+         * @description Stops a queued or running operation after its current chunk. Send the
+         *     operation's `row_version` in `If-Match`.
+         */
+        post: operations["post_mass_pause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mass/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume a mass operation
+         * @description Queues a paused operation again; it continues from the chunk it stopped
+         *     at. Send the operation's `row_version` in `If-Match`.
+         */
+        post: operations["post_mass_resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mass/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a mass operation
+         * @description Writes back what a done or cancelled operation changed, newest first,
+         *     each record through its single-record path and only while it is still as
+         *     the operation left it (a record changed since is reported as a
+         *     conflict). Deleted records are restored, restored ones deleted again.
+         *     Send the operation's `row_version` in `If-Match`.
+         */
+        post: operations["post_mass_undo"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20902,6 +21241,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/win-loss-reviews/{id}/buyer-feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask a buyer for feedback
+         * @description D25-T7: sends the buyer survey to the consented contacts the caller may
+         *     read (`survey`), or creates a task to interview them (`interview`), about
+         *     a win-loss review. Contacts not reached are listed with the reason.
+         */
+        post: operations["post_sales_buyer_feedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/scan/act": {
         parameters: {
             query?: never;
@@ -24083,6 +24444,53 @@ export interface paths {
         patch: operations["update_record_by_key"];
         trace?: never;
     };
+    "/api/v1/{entity}/mass": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a mass operation
+         * @description Updates, deletes, reassigns or restores every record the filter selects
+         *     that the caller may change. Up to the inline threshold it runs now and
+         *     answers 200 with each record's outcome; past it, with
+         *     `confirm_estimate_rows`, it runs in the background in chunks and answers
+         *     202 with the operation to follow at `GET /api/v1/mass/{id}`.
+         */
+        post: operations["post_mass_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/mass/estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Estimate a mass operation
+         * @description Counts the records the filter selects that the caller may change, up to
+         *     the inline threshold, and says whether the operation would run in the
+         *     request or in the background, with the estimated rows and seconds.
+         *     Writes nothing.
+         */
+        post: operations["post_mass_estimate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/merges/{merge_id}/undo": {
         parameters: {
             query?: never;
@@ -27190,10 +27598,20 @@ export interface components {
             expires_at: string;
             /** Format: uuid */
             id: string;
+            /**
+             * Format: uuid
+             * @description Z10-T10: the recalled request this one resubmits.
+             */
+            parent_request_id?: string | null;
             payload: unknown;
             plan?: null | components["schemas"]["ApprovalPlan"];
             /** Format: uuid */
             policy_id?: string | null;
+            /**
+             * Format: int32
+             * @description Z10-T5: the version of the policy whose plan this request runs.
+             */
+            policy_version?: number | null;
             /** Format: date-time */
             requested_at: string;
             /** Format: uuid */
@@ -29477,6 +29895,11 @@ export interface components {
             data_classification: string;
             display_name: string;
             field_type: string;
+            /**
+             * @description L4-T3: listed by name only because the caller may not read it (only
+             *     when the deployment shows hidden attributes; ask for access).
+             */
+            hidden: boolean;
             is_required: boolean;
             logicalname: string;
         };
@@ -34212,6 +34635,16 @@ export interface components {
             plural_name: string;
             relationships: components["schemas"]["RelationshipSchemaEntry"][];
         };
+        EntitySearchQuality: {
+            entity: string;
+            /** Format: double */
+            refinement_rate: number;
+            /**
+             * Format: int64
+             * @description Searches whose results showed this entity.
+             */
+            searches: number;
+        };
         /** @description One entity's validity score, as the last nightly sweep computed it. */
         EntityValidity: {
             /**
@@ -35013,6 +35446,12 @@ export interface components {
             expr: string;
             value: Record<string, never>;
         };
+        /** @description One facet value and how many results have it. */
+        FacetCount: {
+            /** Format: int64 */
+            count: number;
+            value: string;
+        };
         /** @description One recorded failover. */
         FailoverEvent: {
             cause?: string | null;
@@ -35178,6 +35617,11 @@ export interface components {
          * @enum {string}
          */
         FeedItemKind: "post" | "record_event";
+        /**
+         * @description How to ask.
+         * @enum {string}
+         */
+        FeedbackMode: "survey" | "interview";
         /** @description Body of `PUT …/messages/{message_id}/feedback`. */
         FeedbackRequest: {
             /** @description `"up"` | `"down"`. */
@@ -36088,6 +36532,11 @@ export interface components {
             /** @description Phase 3.5 — what is reported but never blocks. */
             warnings: components["schemas"]["GateIssue"][];
         };
+        /**
+         * @description Where a heavy operation runs.
+         * @enum {string}
+         */
+        HeavyOpPath: "inline" | "background";
         /**
          * @description A colour as `#RRGGBB`.
          * @example #6d28d9
@@ -37664,6 +38113,93 @@ export interface components {
             /** @description `form`, `portal`, `import` or `staff` (default). */
             source?: string | null;
         };
+        /** @description What to estimate. */
+        MassEstimateBody: {
+            /**
+             * @description The query engine's filter (`query/run`'s `where`); none selects every
+             *     record.
+             */
+            filter?: Record<string, never> | null;
+            kind: components["schemas"]["MassKind"];
+            /**
+             * @description The change: the values for `update`, `user_email` or `team_name` for
+             *     `reassign`, nothing for `delete` and `restore`.
+             */
+            payload?: Record<string, never>;
+        };
+        /** @description One record's outcome. */
+        MassItem: {
+            /** @description Why it failed, when the reason is the caller's to fix. */
+            error?: string | null;
+            /** Format: uuid */
+            id: string;
+            status: components["schemas"]["MassItemStatus"];
+        };
+        /**
+         * @description How one record went.
+         * @enum {string}
+         */
+        MassItemStatus: "done" | "conflict" | "skipped" | "failed";
+        /**
+         * @description What a mass operation does to each record.
+         * @enum {string}
+         */
+        MassKind: "update" | "delete" | "reassign" | "restore";
+        /** @description A mass operation and its progress. */
+        MassOperation: {
+            /** Format: date-time */
+            created_at: string;
+            entity: string;
+            /** Format: int64 */
+            estimated_rows?: number | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            reason?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: int64 */
+            rows_conflict: number;
+            /** Format: int64 */
+            rows_done: number;
+            /** Format: int64 */
+            rows_skipped_permission: number;
+            /**
+             * Format: int64
+             * @description While working: the seconds left at the estimated speed.
+             */
+            seconds_left?: number | null;
+            /** Format: uuid */
+            started_by: string;
+            /**
+             * @description `queued`, `running`, `paused`, `cancelled`, `failed`, `done` or
+             *     `undone`.
+             */
+            status: string;
+        };
+        /** @description An operation with what this request did. */
+        MassRun: {
+            estimate?: null | components["schemas"]["SizeEstimate"];
+            /** @description Each record changed in this request (inline, or undo). */
+            items: components["schemas"]["MassItem"][];
+            operation: components["schemas"]["MassOperation"];
+        };
+        /** @description What to start. */
+        MassStartBody: {
+            /**
+             * Format: int64
+             * @description The rows the caller saw in the estimate. Required when the operation
+             *     runs in the background, and at least the rows counted.
+             */
+            confirm_estimate_rows?: number | null;
+            filter?: Record<string, never> | null;
+            kind: components["schemas"]["MassKind"];
+            payload?: Record<string, never>;
+            /** @description Why, kept on the operation and on deleted records. */
+            reason?: string | null;
+        };
         /** @description A golden record's values at a moment. */
         MasterAsOf: {
             /** Format: date-time */
@@ -38467,6 +39003,11 @@ export interface components {
         ModelValidateResponse: {
             issues: components["schemas"]["IssueView"][];
             valid: boolean;
+            /**
+             * @description B22-T2: accessibility findings with their fixes (a form's or a page's
+             *     labels, order and contrast). They do not stop a publish.
+             */
+            warnings: string[];
         };
         ModuleConfigurationResponse: {
             enabled: boolean;
@@ -40475,10 +41016,20 @@ export interface components {
                 expires_at: string;
                 /** Format: uuid */
                 id: string;
+                /**
+                 * Format: uuid
+                 * @description Z10-T10: the recalled request this one resubmits.
+                 */
+                parent_request_id?: string | null;
                 payload: unknown;
                 plan?: null | components["schemas"]["ApprovalPlan"];
                 /** Format: uuid */
                 policy_id?: string | null;
+                /**
+                 * Format: int32
+                 * @description Z10-T5: the version of the policy whose plan this request runs.
+                 */
+                policy_version?: number | null;
                 /** Format: date-time */
                 requested_at: string;
                 /** Format: uuid */
@@ -46027,6 +46578,70 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SearchPin: {
+            items: {
+                entity_logicalname: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: int32 */
+                position: number;
+                /** @description The normalised query the pin answers. */
+                query_norm: string;
+                /** Format: uuid */
+                record_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SearchStopword: {
+            items: {
+                /** @description `en` or `ar`. */
+                lang: string;
+                word: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SearchSynonym: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                lang?: string | null;
+                terms: string[];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SecretInventoryRow: {
             items: {
                 /** @description A key ring's active key id. */
@@ -51428,6 +52043,21 @@ export interface components {
             /** Format: int64 */
             without_phone: number;
         };
+        SalesBuyerFeedback: {
+            /** @description The contacts a survey went to. */
+            sent: string[];
+            skipped: components["schemas"]["SalesFeedbackSkip"][];
+            /**
+             * Format: uuid
+             * @description The interview task, in `interview` mode.
+             */
+            task_id?: string | null;
+        };
+        SalesBuyerFeedbackBody: {
+            /** @description The buyer's contacts, 1 to 50. */
+            contact_ids: string[];
+            mode: components["schemas"]["FeedbackMode"];
+        };
         SalesCallOutcomeBody: {
             activity_id?: string | null;
             /** Format: int32 */
@@ -51535,6 +52165,13 @@ export interface components {
         SalesDefaultTeamPreview: {
             /** @description The caller's open deals that miss at least one default member. */
             opportunity_ids: string[];
+        };
+        /** @description A contact the request did not reach, and why. */
+        SalesFeedbackSkip: {
+            /** Format: uuid */
+            contact_id: string;
+            /** @description `not_readable`, `no_consent`, `no_address` or `already_sent`. */
+            reason: string;
         };
         SalesHeadToHead: {
             /** Format: uuid */
@@ -52134,6 +52771,51 @@ export interface components {
             scope_key: string;
             scope_kind: string;
         };
+        /** @description How one result came to its score. */
+        ScoreParts: {
+            /**
+             * Format: double
+             * @description The entity's boost (1 changes nothing).
+             */
+            boost: number;
+            /**
+             * Format: double
+             * @description What the boost added: `fused * (boost - 1)`.
+             */
+            boost_added: number;
+            /**
+             * Format: double
+             * @description The fused rank score from the legs, before any tuning.
+             */
+            fused: number;
+            leg_values: Record<string, never>;
+            /** @description The legs that matched, with the fused statement's per-leg values. */
+            legs: string[];
+            /**
+             * Format: double
+             * @description Added because the caller opened it from a search lately.
+             */
+            opened: number;
+            /**
+             * Format: double
+             * @description Added because the caller owns the record.
+             */
+            owner: number;
+            /** @description Placed by a pin for this query. */
+            pinned: boolean;
+            /**
+             * Format: double
+             * @description The score shown: `fused + boost_added + owner + opened + team`.
+             */
+            score: number;
+            /** @description The synonyms the query also ran with. */
+            synonyms: string[];
+            /**
+             * Format: double
+             * @description Added because a team of the caller's owns it.
+             */
+            team: number;
+        };
         /** @description A screen pop: the record a caller's number belongs to. */
         ScreenPop: {
             entity: string;
@@ -52141,8 +52823,61 @@ export interface components {
             id: string;
             name?: string | null;
         };
+        SearchAttributeSetting: {
+            attribute: string;
+            /** @description `key`, `text` or `off`. */
+            mode: string;
+            /**
+             * Format: float
+             * @description 0 to 10.
+             */
+            weight: number;
+        };
+        SearchEntitySettings: {
+            attributes: components["schemas"]["SearchAttributeSetting"][];
+            /** Format: float */
+            boost: number;
+            document_embedding: boolean;
+            enabled: boolean;
+            entity: string;
+            image_embedding: boolean;
+            /** Format: int32 */
+            max_age_days?: number | null;
+            /**
+             * Format: int64
+             * @description 0 while the entity has never been set.
+             */
+            row_version: number;
+        };
+        SearchEntitySettingsBody: {
+            /** @description Replaces every attribute setting of the entity. */
+            attributes?: components["schemas"]["SearchAttributeSetting"][];
+            /** Format: float */
+            boost?: number;
+            document_embedding?: boolean;
+            enabled?: boolean;
+            image_embedding?: boolean;
+            /** Format: int32 */
+            max_age_days?: number | null;
+        };
+        SearchEntitySize: {
+            entity: string;
+            /** Format: int64 */
+            rows: number;
+        };
+        /**
+         * @description A25-T9: the results counted by entity, owner (user id) and the month
+         *     they last changed (`YYYY-MM`), over every result the caller may see, not
+         *     only the page; the most common 20 of each.
+         */
+        SearchFacets: {
+            entity: components["schemas"]["FacetCount"][];
+            modified_month: components["schemas"]["FacetCount"][];
+            owner: components["schemas"]["FacetCount"][];
+        };
         SearchHit: {
             entity_logicalname: string;
+            explain?: null | components["schemas"]["ScoreParts"];
             /**
              * @description Which legs matched this row. Useful to a human debugging relevance and
              *     to the impression log's feature vector.
@@ -52155,6 +52890,50 @@ export interface components {
             subtitle?: string | null;
             title?: string | null;
         };
+        SearchIndexSize: {
+            /**
+             * Format: int64
+             * @description The index table with its indexes, in bytes.
+             */
+            bytes: number;
+            entities: components["schemas"]["SearchEntitySize"][];
+            /** Format: int64 */
+            rows: number;
+        };
+        SearchPin: {
+            entity_logicalname: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            position: number;
+            /** @description The normalised query the pin answers. */
+            query_norm: string;
+            /** Format: uuid */
+            record_id: string;
+        };
+        SearchPinBody: {
+            entity: string;
+            /**
+             * Format: int32
+             * @description 1 to 50; 1 when absent.
+             */
+            position?: number | null;
+            /** @description The query, as people type it; it is normalised. */
+            query: string;
+            /** Format: uuid */
+            record_id: string;
+        };
+        SearchQuality: {
+            by_entity: components["schemas"]["EntitySearchQuality"][];
+            /** Format: int64 */
+            days: number;
+            /** Format: double */
+            refinement_rate: number;
+            /** Format: int64 */
+            searches: number;
+            /** Format: double */
+            zero_result_rate: number;
+        };
         SearchResponse: {
             /**
              * @description Legs that did not run to completion. **Reported, never swallowed** — a
@@ -52162,6 +52941,7 @@ export interface components {
              *     is indistinguishable from a correct empty answer.
              */
             degraded: string[];
+            facets?: null | components["schemas"]["SearchFacets"];
             has_more: boolean;
             /**
              * Format: uuid
@@ -52196,6 +52976,11 @@ export interface components {
             /** @description Per entity, largest first, from the daily upkeep. */
             sizes: components["schemas"]["IndexSize"][];
         };
+        SearchStopword: {
+            /** @description `en` or `ar`. */
+            lang: string;
+            word: string;
+        };
         SearchSuggestion: {
             /**
              * @description For `"entity"`: the entity to route to. For `"saved_search"`: always
@@ -52207,6 +52992,18 @@ export interface components {
             /** Format: uuid */
             record_id?: string | null;
             text: string;
+        };
+        SearchSynonym: {
+            /** Format: uuid */
+            id: string;
+            lang?: string | null;
+            terms: string[];
+        };
+        SearchSynonymBody: {
+            /** @description `en`, `ar`, or none for both. */
+            lang?: string | null;
+            /** @description 2 to 20 terms that mean the same. */
+            terms: string[];
         };
         /**
          * @description One `calendar_season` row (Z12-T6), identified by `name` within its
@@ -53051,6 +53848,24 @@ export interface components {
              * @description Records whose condition could not be decided (an evaluation error).
              */
             unknown: number;
+        };
+        /** @description What the size check found. */
+        SizeEstimate: {
+            /**
+             * Format: int64
+             * @description The exact count, or the planner's estimate when it passed.
+             */
+            estimated_rows: number;
+            /** Format: int64 */
+            estimated_seconds: number;
+            /**
+             * Format: int64
+             * @description The rows counted, exact up to the threshold plus one.
+             */
+            exact_upto: number;
+            /** @description Whether the count passed the threshold. */
+            exceeds: boolean;
+            path: components["schemas"]["HeavyOpPath"];
         };
         /**
          * @description Why a member was passed over.
@@ -56241,6 +57056,18 @@ export interface components {
         VoteBody: {
             url_path: string;
             useful: boolean;
+        };
+        /**
+         * @description The warehouse a script is for.
+         * @enum {string}
+         */
+        Warehouse: "snowflake" | "bigquery";
+        WarehouseLoadScript: {
+            columns: string[];
+            entity: string;
+            /** @description The export's schema version the script was written for. */
+            schema_version: string;
+            script: string;
         };
         /**
          * @description Something the server did that the caller should know about though the
@@ -75479,6 +76306,74 @@ export interface operations {
             };
         };
     };
+    get_load_script: {
+        parameters: {
+            query: {
+                /** @description `snowflake` or `bigquery`. */
+                warehouse: components["schemas"]["Warehouse"];
+                /** @description Snowflake: the external stage over the export's bucket. */
+                stage?: string;
+                /** @description BigQuery: the dataset (`project.dataset` or `dataset`). */
+                dataset?: string;
+                /** @description BigQuery: the bucket the export writes to, `gs://bucket[/prefix]`. */
+                bucket?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The exported entity */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The load script */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseLoadScript"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing or unusable stage, dataset or bucket */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_dead_letter: {
         parameters: {
             query?: {
@@ -84061,6 +84956,367 @@ export interface operations {
             };
         };
     };
+    get_entity_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchEntitySettings"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_entity_settings: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The settings' row_version, quoted; "0" the first time */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchEntitySettingsBody"];
+            };
+        };
+        responses: {
+            /** @description The settings now */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchEntitySettings"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing If-Match, an unknown attribute or a value out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_pins: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of pins */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SearchPin"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_pin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchPinBody"];
+            };
+        };
+        responses: {
+            /** @description The pin */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchPin"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An empty query or a position out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_pin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The pin */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such pin */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_quality: {
+        parameters: {
+            query?: {
+                /** @description Days back from now, 1 to 365; 30 when absent. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchQuality"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_size: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The index size */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchIndexSize"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     search_status: {
         parameters: {
             query?: never;
@@ -84090,6 +85346,302 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege, or Search is not licensed */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_stopwords: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of stop words */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SearchStopword"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_stopword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchStopword"];
+            };
+        };
+        responses: {
+            /** @description The stop word */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchStopword"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An empty word or an unknown lang */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_stopword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The stop word */
+                word: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such stop word */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_synonyms: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of synonym groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SearchSynonym"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_synonym: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchSynonymBody"];
+            };
+        };
+        responses: {
+            /** @description The group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchSynonym"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fewer than two terms, too many, or an unknown lang */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_synonym: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The synonym group */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such group */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -109685,6 +111237,295 @@ export interface operations {
             };
         };
     };
+    get_mass_operation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The operation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MassOperation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such operation the caller started */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_mass_cancel: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The operation's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The operation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MassRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such operation the caller started */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The operation changed, or has already finished */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing or malformed If-Match */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_mass_pause: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The operation's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The operation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MassRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such operation the caller started */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The operation changed, or cannot be paused now */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing or malformed If-Match */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_mass_resume: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The operation's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The operation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued again */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MassRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such operation the caller started */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The operation changed, or is not paused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing or malformed If-Match */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_mass_undo: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The operation's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The operation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Undone, with each record's outcome */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MassRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such operation the caller started */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The operation changed, is not finished, or is too large to undo in one request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing or malformed If-Match */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     master_held_list: {
         parameters: {
             query?: {
@@ -120509,6 +122350,69 @@ export interface operations {
             };
         };
     };
+    post_sales_buyer_feedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The win-loss review */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesBuyerFeedbackBody"];
+            };
+        };
+        responses: {
+            /** @description Who was asked and who was skipped */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesBuyerFeedback"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this review */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such review */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No contacts or too many, no published buyer survey, or no readable contact to interview */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     scan_act: {
         parameters: {
             query?: never;
@@ -120999,6 +122903,13 @@ export interface operations {
                  *     enforcement path — see `router`.
                  */
                 audience?: string;
+                /**
+                 * @description A25-T4: explain each result's score. Only administrators and holders
+                 *     of `metadata.read` get explanations; for anyone else this is ignored.
+                 */
+                explain?: boolean;
+                /** @description A25-T9: also count the results by entity, owner and month changed. */
+                facets?: boolean;
             };
             header?: never;
             path?: never;
@@ -129779,6 +131690,150 @@ export interface operations {
                 };
             };
             /** @description The attributes are not a unique key, or If-Match is missing */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_mass_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MassStartBody"];
+            };
+        };
+        responses: {
+            /** @description Ran in the request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MassRun"];
+                };
+            };
+            /** @description Queued for the background */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MassRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not make this change in bulk */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An invalid filter, kind or payload, or a background operation without confirm_estimate_rows */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No background worker can run a large operation now */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_mass_estimate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MassEstimateBody"];
+            };
+        };
+        responses: {
+            /** @description The size check */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizeEstimate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change this entity's records in bulk */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An invalid filter, kind or payload */
             422: {
                 headers: {
                     [name: string]: unknown;

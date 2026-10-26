@@ -31070,6 +31070,129 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/integrations/warehouse/{entity}/load-script": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Warehouse load script",
+        "description": "P13-T2: the script that loads one entity's warehouse export into\nSnowflake or BigQuery, to schedule on the warehouse side (a Snowflake\ntask, a BigQuery scheduled query). It stages the new files, keeps each\nrecord's newest change and merges by `id`, deleting tombstones.\nAdministrators only; Attome holds no warehouse credentials.",
+        "operationId": "get_load_script",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The exported entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "warehouse",
+            "in": "query",
+            "description": "`snowflake` or `bigquery`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Warehouse"
+            }
+          },
+          {
+            "name": "stage",
+            "in": "query",
+            "description": "Snowflake: the external stage over the export's bucket.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dataset",
+            "in": "query",
+            "description": "BigQuery: the dataset (`project.dataset` or `dataset`).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "description": "BigQuery: the bucket the export writes to, `gs://bucket[/prefix]`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The load script",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WarehouseLoadScript"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or unusable stage, dataset or bucket",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/jobs/dead-letter": {
       "get": {
         "tags": [
@@ -45012,6 +45135,582 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/search/entities/{entity}": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "An entity's search settings",
+        "description": "A25-T9: whether an entity is searched, how far back, its boost and\nembedding switches, and each attribute's mode and weight. Defaults (and\n`row_version` 0) for an entity never set.",
+        "operationId": "get_entity_settings",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchEntitySettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Set an entity's search settings",
+        "description": "A25-T9: replaces an entity's search settings and attribute modes.\n`If-Match: \"<row_version>\"` is required (`\"0\"` the first time).",
+        "operationId": "put_entity_settings",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The settings' row_version, quoted; \"0\" the first time",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchEntitySettingsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The settings now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchEntitySettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing If-Match, an unknown attribute or a value out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/search/pins": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Pinned results",
+        "description": "A25-T9: records placed at a position for a query. A pin shows only to\npeople who may read its record.",
+        "operationId": "list_pins",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of pins",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SearchPin"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Pin a result",
+        "description": "A25-T9: places a record at a position for a query. Pinning the same\nrecord for the same query again moves it.",
+        "operationId": "create_pin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchPinBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The pin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchPin"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An empty query or a position out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/search/pins/{id}": {
+      "delete": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Remove a pin",
+        "description": "A25-T9: removes one pinned result.",
+        "operationId": "delete_pin",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The pin",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such pin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/search/quality": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search quality",
+        "description": "A25-T8: the zero-result and refinement rates of searches over the last\n`days` (30 by default), overall and per entity shown in results, from the\nimpression log. Administrators only.",
+        "operationId": "get_quality",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Days back from now, 1 to 365; 30 when absent.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The rates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchQuality"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/search/size": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search index size",
+        "description": "A25-T9: the index's rows per entity and its size on disk.",
+        "operationId": "get_size",
+        "responses": {
+          "200": {
+            "description": "The index size",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchIndexSize"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/search/status": {
       "get": {
         "tags": [
@@ -45066,6 +45765,489 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/search/stopwords": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Stop words",
+        "description": "A25-T9: the words a search drops (unless the whole query is stop words).",
+        "operationId": "list_stopwords",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of stop words",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SearchStopword"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Add a stop word",
+        "description": "A25-T9: a word a search drops; adding one already there changes nothing.",
+        "operationId": "create_stopword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchStopword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stop word",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchStopword"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An empty word or an unknown lang",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/search/stopwords/{word}": {
+      "delete": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Remove a stop word",
+        "description": "A25-T9: a removed word takes part in searches again.",
+        "operationId": "delete_stopword",
+        "parameters": [
+          {
+            "name": "word",
+            "in": "path",
+            "description": "The stop word",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such stop word",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/search/synonyms": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Synonym groups",
+        "description": "A25-T9: the synonym groups, newest first.",
+        "operationId": "list_synonyms",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of synonym groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SearchSynonym"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Add a synonym group",
+        "description": "A25-T9: a group of terms that mean the same; a search for one also runs\nwith the others.",
+        "operationId": "create_synonym",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchSynonymBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchSynonym"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Fewer than two terms, too many, or an unknown lang",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/search/synonyms/{id}": {
+      "delete": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Remove a synonym group",
+        "description": "A25-T9: removes one synonym group.",
+        "operationId": "delete_synonym",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The synonym group",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
       }
     },
     "/api/v1/admin/secrets": {
@@ -72539,7 +73721,7 @@
           "catalog"
         ],
         "summary": "Entity catalogue",
-        "description": "Entity catalogue. Administrators only.",
+        "description": "Entity catalogue: the entities the caller may read. Needs `metadata.read`.",
         "operationId": "catalog_list_entities",
         "parameters": [
           {
@@ -72656,7 +73838,7 @@
           "catalog"
         ],
         "summary": "One entity in the catalogue",
-        "description": "One entity in the catalogue. Administrators only.",
+        "description": "One entity in the catalogue, with the attributes the caller may read.\nNeeds `metadata.read` and read access to the entity.",
         "operationId": "catalog_get_entity",
         "parameters": [
           {
@@ -86947,6 +88129,498 @@
         "x-idempotent": "key",
         "x-module": "marketing",
         "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/mass/{id}": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A mass operation's progress",
+        "description": "The operation's status, the rows done, skipped and in conflict, and the\nseconds left while it works. Only the person who started it or an\nadministrator sees it.",
+        "operationId": "get_mass_operation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The operation",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MassOperation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such operation the caller started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/mass/{id}/cancel": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Cancel a mass operation",
+        "description": "Stops a queued, running or paused operation for good; what it changed so\nfar stays changed (undo reverses it). Send the operation's `row_version`\nin `If-Match`.",
+        "operationId": "post_mass_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The operation",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The operation's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MassRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such operation the caller started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The operation changed, or has already finished",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or malformed If-Match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "cancelled"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/mass/{id}/pause": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Pause a mass operation",
+        "description": "Stops a queued or running operation after its current chunk. Send the\noperation's `row_version` in `If-Match`.",
+        "operationId": "post_mass_pause",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The operation",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The operation's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MassRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such operation the caller started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The operation changed, or cannot be paused now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or malformed If-Match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/mass/{id}/resume": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Resume a mass operation",
+        "description": "Queues a paused operation again; it continues from the chunk it stopped\nat. Send the operation's `row_version` in `If-Match`.",
+        "operationId": "post_mass_resume",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The operation",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The operation's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Queued again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MassRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such operation the caller started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The operation changed, or is not paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or malformed If-Match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/mass/{id}/undo": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Undo a mass operation",
+        "description": "Writes back what a done or cancelled operation changed, newest first,\neach record through its single-record path and only while it is still as\nthe operation left it (a record changed since is reported as a\nconflict). Deleted records are restored, restored ones deleted again.\nSend the operation's `row_version` in `If-Match`.",
+        "operationId": "post_mass_undo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The operation",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The operation's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Undone, with each record's outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MassRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such operation the caller started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The operation changed, is not finished, or is too large to undo in one request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or malformed If-Match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -104602,6 +106276,113 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/sales/win-loss-reviews/{id}/buyer-feedback": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Ask a buyer for feedback",
+        "description": "D25-T7: sends the buyer survey to the consented contacts the caller may\nread (`survey`), or creates a task to interview them (`interview`), about\na win-loss review. Contacts not reached are listed with the reason.",
+        "operationId": "post_sales_buyer_feedback",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The win-loss review",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesBuyerFeedbackBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Who was asked and who was skipped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesBuyerFeedback"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No contacts or too many, no published buyer survey, or no readable contact to interview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/scan/act": {
       "post": {
         "tags": [
@@ -105407,6 +107188,24 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "explain",
+            "in": "query",
+            "description": "A25-T4: explain each result's score. Only administrators and holders\nof `metadata.read` get explanations; for anyone else this is ignored.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "facets",
+            "in": "query",
+            "description": "A25-T9: also count the results by entity, owner and month changed.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -120008,6 +121807,238 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/{entity}/mass": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Start a mass operation",
+        "description": "Updates, deletes, reassigns or restores every record the filter selects\nthat the caller may change. Up to the inline threshold it runs now and\nanswers 200 with each record's outcome; past it, with\n`confirm_estimate_rows`, it runs in the background in chunks and answers\n202 with the operation to follow at `GET /api/v1/mass/{id}`.",
+        "operationId": "post_mass_start",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MassStartBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Ran in the request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MassRun"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Queued for the background",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MassRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not make this change in bulk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An invalid filter, kind or payload, or a background operation without confirm_estimate_rows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No background worker can run a large operation now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "bulk_accepted"
+            },
+            {
+              "category": "entity",
+              "operation": "bulk_completed"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/{entity}/mass/estimate": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Estimate a mass operation",
+        "description": "Counts the records the filter selects that the caller may change, up to\nthe inline threshold, and says whether the operation would run in the\nrequest or in the background, with the estimated rows and seconds.\nWrites nothing.",
+        "operationId": "post_mass_estimate",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MassEstimateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The size check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizeEstimate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not change this entity's records in bulk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An invalid filter, kind or payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "estimate only: counts the records a mass operation would change and writes nothing",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/{entity}/merges/{merge_id}/undo": {
       "post": {
         "tags": [
@@ -133493,6 +135524,14 @@
             "type": "string",
             "format": "uuid"
           },
+          "parent_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Z10-T10: the recalled request this one resubmits."
+          },
           "payload": {},
           "plan": {
             "oneOf": [
@@ -133511,6 +135550,14 @@
               "null"
             ],
             "format": "uuid"
+          },
+          "policy_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Z10-T5: the version of the policy whose plan this request runs."
           },
           "requested_at": {
             "type": "string",
@@ -139246,7 +141293,8 @@
           "display_name",
           "field_type",
           "data_classification",
-          "is_required"
+          "is_required",
+          "hidden"
         ],
         "properties": {
           "data_classification": {
@@ -139257,6 +141305,10 @@
           },
           "field_type": {
             "type": "string"
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "L4-T3: listed by name only because the caller may not read it (only\nwhen the deployment shows hidden attributes; ask for access)."
           },
           "is_required": {
             "type": "boolean"
@@ -151356,6 +153408,28 @@
           }
         }
       },
+      "EntitySearchQuality": {
+        "type": "object",
+        "required": [
+          "entity",
+          "searches",
+          "refinement_rate"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "refinement_rate": {
+            "type": "number",
+            "format": "double"
+          },
+          "searches": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Searches whose results showed this entity."
+          }
+        }
+      },
       "EntityValidity": {
         "type": "object",
         "description": "One entity's validity score, as the last nightly sweep computed it.",
@@ -153247,6 +155321,23 @@
           }
         }
       },
+      "FacetCount": {
+        "type": "object",
+        "description": "One facet value and how many results have it.",
+        "required": [
+          "value",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
       "FailoverEvent": {
         "type": "object",
         "description": "One recorded failover.",
@@ -153641,6 +155732,14 @@
         "enum": [
           "post",
           "record_event"
+        ]
+      },
+      "FeedbackMode": {
+        "type": "string",
+        "description": "How to ask.",
+        "enum": [
+          "survey",
+          "interview"
         ]
       },
       "FeedbackRequest": {
@@ -155883,6 +157982,14 @@
             "description": "Phase 3.5 — what is reported but never blocks."
           }
         }
+      },
+      "HeavyOpPath": {
+        "type": "string",
+        "description": "Where a heavy operation runs.",
+        "enum": [
+          "inline",
+          "background"
+        ]
       },
       "HexColor": {
         "type": "string",
@@ -159946,6 +162053,224 @@
           }
         }
       },
+      "MassEstimateBody": {
+        "type": "object",
+        "description": "What to estimate.",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "filter": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The query engine's filter (`query/run`'s `where`); none selects every\nrecord."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MassKind"
+          },
+          "payload": {
+            "type": "object",
+            "description": "The change: the values for `update`, `user_email` or `team_name` for\n`reassign`, nothing for `delete` and `restore`."
+          }
+        }
+      },
+      "MassItem": {
+        "type": "object",
+        "description": "One record's outcome.",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why it failed, when the reason is the caller's to fix."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MassItemStatus"
+          }
+        }
+      },
+      "MassItemStatus": {
+        "type": "string",
+        "description": "How one record went.",
+        "enum": [
+          "done",
+          "conflict",
+          "skipped",
+          "failed"
+        ]
+      },
+      "MassKind": {
+        "type": "string",
+        "description": "What a mass operation does to each record.",
+        "enum": [
+          "update",
+          "delete",
+          "reassign",
+          "restore"
+        ]
+      },
+      "MassOperation": {
+        "type": "object",
+        "description": "A mass operation and its progress.",
+        "required": [
+          "id",
+          "kind",
+          "entity",
+          "status",
+          "rows_done",
+          "rows_skipped_permission",
+          "rows_conflict",
+          "started_by",
+          "created_at",
+          "row_version"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "estimated_rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rows_conflict": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rows_done": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rows_skipped_permission": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "seconds_left": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "While working: the seconds left at the estimated speed."
+          },
+          "started_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`queued`, `running`, `paused`, `cancelled`, `failed`, `done` or\n`undone`."
+          }
+        }
+      },
+      "MassRun": {
+        "type": "object",
+        "description": "An operation with what this request did.",
+        "required": [
+          "operation",
+          "items"
+        ],
+        "properties": {
+          "estimate": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SizeEstimate",
+                "description": "The size check the start was decided on."
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MassItem"
+            },
+            "description": "Each record changed in this request (inline, or undo)."
+          },
+          "operation": {
+            "$ref": "#/components/schemas/MassOperation"
+          }
+        }
+      },
+      "MassStartBody": {
+        "type": "object",
+        "description": "What to start.",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "confirm_estimate_rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The rows the caller saw in the estimate. Required when the operation\nruns in the background, and at least the rows counted."
+          },
+          "filter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MassKind"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why, kept on the operation and on deleted records."
+          }
+        }
+      },
       "MasterAsOf": {
         "type": "object",
         "description": "A golden record's values at a moment.",
@@ -162148,7 +164473,8 @@
         "type": "object",
         "required": [
           "valid",
-          "issues"
+          "issues",
+          "warnings"
         ],
         "properties": {
           "issues": {
@@ -162159,6 +164485,13 @@
           },
           "valid": {
             "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "B22-T2: accessibility findings with their fixes (a form's or a page's\nlabels, order and contrast). They do not stop a publish."
           }
         }
       },
@@ -167611,6 +169944,14 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "parent_request_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Z10-T10: the recalled request this one resubmits."
+                },
                 "payload": {},
                 "plan": {
                   "oneOf": [
@@ -167629,6 +169970,14 @@
                     "null"
                   ],
                   "format": "uuid"
+                },
+                "policy_version": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "Z10-T5: the version of the policy whose plan this request runs."
                 },
                 "requested_at": {
                   "type": "string",
@@ -182202,6 +184551,180 @@
           }
         }
       },
+      "PaginatedResponse_SearchPin": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "query_norm",
+                "entity_logicalname",
+                "record_id",
+                "position"
+              ],
+              "properties": {
+                "entity_logicalname": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "position": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "query_norm": {
+                  "type": "string",
+                  "description": "The normalised query the pin answers."
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_SearchStopword": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "word",
+                "lang"
+              ],
+              "properties": {
+                "lang": {
+                  "type": "string",
+                  "description": "`en` or `ar`."
+                },
+                "word": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_SearchSynonym": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "terms"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "lang": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_SecretInventoryRow": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -195893,6 +198416,58 @@
           }
         }
       },
+      "SalesBuyerFeedback": {
+        "type": "object",
+        "required": [
+          "sent",
+          "skipped"
+        ],
+        "properties": {
+          "sent": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The contacts a survey went to."
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesFeedbackSkip"
+            }
+          },
+          "task_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The interview task, in `interview` mode."
+          }
+        }
+      },
+      "SalesBuyerFeedbackBody": {
+        "type": "object",
+        "required": [
+          "mode",
+          "contact_ids"
+        ],
+        "properties": {
+          "contact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The buyer's contacts, 1 to 50."
+          },
+          "mode": {
+            "$ref": "#/components/schemas/FeedbackMode"
+          }
+        },
+        "additionalProperties": false
+      },
       "SalesCallOutcomeBody": {
         "type": "object",
         "required": [
@@ -196213,6 +198788,24 @@
               "format": "uuid"
             },
             "description": "The caller's open deals that miss at least one default member."
+          }
+        }
+      },
+      "SalesFeedbackSkip": {
+        "type": "object",
+        "description": "A contact the request did not reach, and why.",
+        "required": [
+          "contact_id",
+          "reason"
+        ],
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "description": "`not_readable`, `no_consent`, `no_address` or `already_sent`."
           }
         }
       },
@@ -197960,6 +200553,81 @@
           }
         }
       },
+      "ScoreParts": {
+        "type": "object",
+        "description": "How one result came to its score.",
+        "required": [
+          "fused",
+          "boost",
+          "boost_added",
+          "owner",
+          "opened",
+          "team",
+          "pinned",
+          "legs",
+          "leg_values",
+          "synonyms",
+          "score"
+        ],
+        "properties": {
+          "boost": {
+            "type": "number",
+            "format": "double",
+            "description": "The entity's boost (1 changes nothing)."
+          },
+          "boost_added": {
+            "type": "number",
+            "format": "double",
+            "description": "What the boost added: `fused * (boost - 1)`."
+          },
+          "fused": {
+            "type": "number",
+            "format": "double",
+            "description": "The fused rank score from the legs, before any tuning."
+          },
+          "leg_values": {
+            "type": "object"
+          },
+          "legs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The legs that matched, with the fused statement's per-leg values."
+          },
+          "opened": {
+            "type": "number",
+            "format": "double",
+            "description": "Added because the caller opened it from a search lately."
+          },
+          "owner": {
+            "type": "number",
+            "format": "double",
+            "description": "Added because the caller owns the record."
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "Placed by a pin for this query."
+          },
+          "score": {
+            "type": "number",
+            "format": "double",
+            "description": "The score shown: `fused + boost_added + owner + opened + team`."
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The synonyms the query also ran with."
+          },
+          "team": {
+            "type": "number",
+            "format": "double",
+            "description": "Added because a team of the caller's owns it."
+          }
+        }
+      },
       "ScreenPop": {
         "type": "object",
         "description": "A screen pop: the record a caller's number belongs to.",
@@ -197983,6 +200651,154 @@
           }
         }
       },
+      "SearchAttributeSetting": {
+        "type": "object",
+        "required": [
+          "attribute",
+          "mode",
+          "weight"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "description": "`key`, `text` or `off`."
+          },
+          "weight": {
+            "type": "number",
+            "format": "float",
+            "description": "0 to 10."
+          }
+        }
+      },
+      "SearchEntitySettings": {
+        "type": "object",
+        "required": [
+          "entity",
+          "enabled",
+          "image_embedding",
+          "document_embedding",
+          "boost",
+          "attributes",
+          "row_version"
+        ],
+        "properties": {
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchAttributeSetting"
+            }
+          },
+          "boost": {
+            "type": "number",
+            "format": "float"
+          },
+          "document_embedding": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "image_embedding": {
+            "type": "boolean"
+          },
+          "max_age_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "0 while the entity has never been set."
+          }
+        }
+      },
+      "SearchEntitySettingsBody": {
+        "type": "object",
+        "properties": {
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchAttributeSetting"
+            },
+            "description": "Replaces every attribute setting of the entity."
+          },
+          "boost": {
+            "type": "number",
+            "format": "float"
+          },
+          "document_embedding": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "image_embedding": {
+            "type": "boolean"
+          },
+          "max_age_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SearchEntitySize": {
+        "type": "object",
+        "required": [
+          "entity",
+          "rows"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "SearchFacets": {
+        "type": "object",
+        "description": "A25-T9: the results counted by entity, owner (user id) and the month\nthey last changed (`YYYY-MM`), over every result the caller may see, not\nonly the page; the most common 20 of each.",
+        "required": [
+          "entity",
+          "owner",
+          "modified_month"
+        ],
+        "properties": {
+          "entity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacetCount"
+            }
+          },
+          "modified_month": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacetCount"
+            }
+          },
+          "owner": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacetCount"
+            }
+          }
+        }
+      },
       "SearchHit": {
         "type": "object",
         "required": [
@@ -197994,6 +200810,17 @@
         "properties": {
           "entity_logicalname": {
             "type": "string"
+          },
+          "explain": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ScoreParts",
+                "description": "A25-T4: how the score came about, when asked for and allowed."
+              }
+            ]
           },
           "matched_legs": {
             "type": "array",
@@ -198024,6 +200851,126 @@
           }
         }
       },
+      "SearchIndexSize": {
+        "type": "object",
+        "required": [
+          "rows",
+          "bytes",
+          "entities"
+        ],
+        "properties": {
+          "bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The index table with its indexes, in bytes."
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchEntitySize"
+            }
+          },
+          "rows": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "SearchPin": {
+        "type": "object",
+        "required": [
+          "id",
+          "query_norm",
+          "entity_logicalname",
+          "record_id",
+          "position"
+        ],
+        "properties": {
+          "entity_logicalname": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "query_norm": {
+            "type": "string",
+            "description": "The normalised query the pin answers."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SearchPinBody": {
+        "type": "object",
+        "required": [
+          "query",
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "position": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "1 to 50; 1 when absent."
+          },
+          "query": {
+            "type": "string",
+            "description": "The query, as people type it; it is normalised."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SearchQuality": {
+        "type": "object",
+        "required": [
+          "days",
+          "searches",
+          "zero_result_rate",
+          "refinement_rate",
+          "by_entity"
+        ],
+        "properties": {
+          "by_entity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntitySearchQuality"
+            }
+          },
+          "days": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "refinement_rate": {
+            "type": "number",
+            "format": "double"
+          },
+          "searches": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "zero_result_rate": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "SearchResponse": {
         "type": "object",
         "required": [
@@ -198042,6 +200989,17 @@
               "type": "string"
             },
             "description": "Legs that did not run to completion. **Reported, never swallowed** — a\nresult set silently missing a leg looks like \"no more matches\", which\nis indistinguishable from a correct empty answer."
+          },
+          "facets": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SearchFacets",
+                "description": "A25-T9: the facets, when asked for."
+              }
+            ]
           },
           "has_more": {
             "type": "boolean"
@@ -198112,6 +201070,22 @@
           }
         }
       },
+      "SearchStopword": {
+        "type": "object",
+        "required": [
+          "word",
+          "lang"
+        ],
+        "properties": {
+          "lang": {
+            "type": "string",
+            "description": "`en` or `ar`."
+          },
+          "word": {
+            "type": "string"
+          }
+        }
+      },
       "SearchSuggestion": {
         "type": "object",
         "required": [
@@ -198139,6 +201113,54 @@
             "type": "string"
           }
         }
+      },
+      "SearchSynonym": {
+        "type": "object",
+        "required": [
+          "id",
+          "terms"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lang": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SearchSynonymBody": {
+        "type": "object",
+        "required": [
+          "terms"
+        ],
+        "properties": {
+          "lang": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`en`, `ar`, or none for both."
+          },
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "2 to 20 terms that mean the same."
+          }
+        },
+        "additionalProperties": false
       },
       "SeasonDef": {
         "type": "object",
@@ -200223,6 +203245,40 @@
             "format": "int64",
             "description": "Records whose condition could not be decided (an evaluation error).",
             "minimum": 0
+          }
+        }
+      },
+      "SizeEstimate": {
+        "type": "object",
+        "description": "What the size check found.",
+        "required": [
+          "exact_upto",
+          "exceeds",
+          "estimated_rows",
+          "estimated_seconds",
+          "path"
+        ],
+        "properties": {
+          "estimated_rows": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The exact count, or the planner's estimate when it passed."
+          },
+          "estimated_seconds": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "exact_upto": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The rows counted, exact up to the threshold plus one."
+          },
+          "exceeds": {
+            "type": "boolean",
+            "description": "Whether the count passed the threshold."
+          },
+          "path": {
+            "$ref": "#/components/schemas/HeavyOpPath"
           }
         }
       },
@@ -208726,6 +211782,41 @@
           }
         }
       },
+      "Warehouse": {
+        "type": "string",
+        "description": "The warehouse a script is for.",
+        "enum": [
+          "snowflake",
+          "bigquery"
+        ]
+      },
+      "WarehouseLoadScript": {
+        "type": "object",
+        "required": [
+          "entity",
+          "schema_version",
+          "columns",
+          "script"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "entity": {
+            "type": "string"
+          },
+          "schema_version": {
+            "type": "string",
+            "description": "The export's schema version the script was written for."
+          },
+          "script": {
+            "type": "string"
+          }
+        }
+      },
       "Warning": {
         "type": "object",
         "description": "Something the server did that the caller should know about though the\nrequest succeeded (a value truncated, a default applied, a page clamped):\na stable `code` and English `message`. Sent only when there is one.",
@@ -209928,7 +213019,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -209981,5 +213071,6 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10"
 }
