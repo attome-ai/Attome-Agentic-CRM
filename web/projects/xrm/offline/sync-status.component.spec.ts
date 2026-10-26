@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService } from '@attome/base';
+import { ApiService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend, OfflineStore, uuidv7 } from './offline-store';
@@ -15,8 +15,10 @@ describe('B18-T10 sync status and offline files', () => {
   beforeEach(() => {
     backend = new MemoryBackend();
     api = {
-      post: vi.fn((_path: string, body: { ops: { client_op_id: string; id: string }[] }) =>
-        of({ results: body.ops.map(op => ({ client_op_id: op.client_op_id, status: 'applied', id: op.id })) })),
+      post: vi.fn((path: string, body: { ops?: { client_op_id: string; id: string }[] }) =>
+        path === '/api/v1/offline/pull'
+          ? of({ upserts: [], removals: [], done: true })
+          : of({ results: (body.ops ?? []).map(op => ({ client_op_id: op.client_op_id, status: 'applied', id: op.id })) })),
       get: vi.fn(() => of({ bundle_version: 'v1', max_days_offline: 30, entities: [] })),
     };
     upload = vi.fn(async () => ({ kind: 'clean', finalKey: 'files/clean/photo.jpg' }) as OfflineUploadResult);
@@ -26,6 +28,9 @@ describe('B18-T10 sync status and offline files', () => {
         { provide: OFFLINE_STORE, useFactory: () => new OfflineStore(backend) },
         { provide: ApiService, useValue: api },
         { provide: OFFLINE_FILE_UPLOADER, useValue: { upload } },
+        { provide: LangService, useValue: {
+          translate: (key: string, params?: Record<string, unknown>) => params ? `${key} ${JSON.stringify(params)}` : key,
+        } },
       ],
     });
   });
@@ -64,7 +69,9 @@ describe('B18-T10 sync status and offline files', () => {
     upload.mockResolvedValueOnce({ kind: 'error', message: 'network' });
     sync.setDevice('device-1');
     expect(await sync.sync()).toBe(false);
-    const pushed = api.post.mock.calls.flatMap(c => (c[1] as { ops: { kind: string }[] }).ops);
+    const pushed = api.post.mock.calls
+      .filter(c => c[0] === '/api/v1/offline/push')
+      .flatMap(c => (c[1] as { ops: { kind: string }[] }).ops);
     expect(pushed.map(op => op.kind)).toEqual([]);
     expect(await queue.size()).toBe(2);
     expect(await backend.keys('files')).toHaveLength(1);
@@ -73,7 +80,9 @@ describe('B18-T10 sync status and offline files', () => {
     api.post.mockClear();
     expect(await sync.sync()).toBe(true);
     expect(upload).toHaveBeenLastCalledWith({ entityName: 'visit', recordId: id, fieldName: 'photo' }, expect.any(File));
-    const ops = api.post.mock.calls.flatMap(c => (c[1] as { ops: Record<string, unknown>[] }).ops);
+    const ops = api.post.mock.calls
+      .filter(c => c[0] === '/api/v1/offline/push')
+      .flatMap(c => (c[1] as { ops: Record<string, unknown>[] }).ops);
     expect(ops.map(op => op['kind'])).toEqual(['create', 'update']);
     expect(ops[1]['changed']).toEqual({ photo: 'files/clean/photo.jpg' });
     expect(ops[1]['files']).toBeUndefined();

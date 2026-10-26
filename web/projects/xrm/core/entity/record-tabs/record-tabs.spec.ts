@@ -130,7 +130,12 @@ describe('RecordTabPanelsComponent record activity', () => {
       providers: [
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => null, calendar: () => null, digits: () => null } },
-        { provide: RecordTimelineService, useValue: { timeline, history: vi.fn() } },
+        { provide: RecordTimelineService, useValue: {
+          timeline, history: vi.fn(),
+          // B1-T2/B1-T3: the panel also reads pins and the summary on open.
+          pinned: vi.fn().mockReturnValue(of({ items: [] })),
+          summary: vi.fn().mockReturnValue(of(null)),
+        } },
       ],
     });
     const fixture = TestBed.createComponent(SavedHostComponent);

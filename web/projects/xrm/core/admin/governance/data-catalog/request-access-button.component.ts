@@ -30,7 +30,7 @@ const NOT_FOUND: ApiError = { kind: 'not_found', message: '', status: 404 };
         {{ 'governance.catalog.assets.accessRequested' | translate }}
       </span>
     } @else if (state() === 'open' || state() === 'sending') {
-      <form class="ca-request" (ngSubmit)="send()" data-testid="access-form">
+      <form class="ca-request" (ngSubmit)="send()" data-testid="access-form" novalidate>
         <label>
           <span>{{ 'governance.catalog.assets.accessReason' | translate }}</span>
           <textarea name="reason" maxlength="1000" [ngModel]="reason()" (ngModelChange)="reason.set($event)"
@@ -38,8 +38,8 @@ const NOT_FOUND: ApiError = { kind: 'not_found', message: '', status: 404 };
         </label>
         @if (error()) { <p class="error-msg" role="alert">{{ error() }}</p> }
         <div class="ca-actions">
-          <button type="submit" class="btn-primary" [disabled]="state() === 'sending' || !reason().trim()"
-                  data-testid="access-send">
+          <button type="button" class="btn-primary" [disabled]="state() === 'sending' || !reason().trim()"
+                  (click)="send()" data-testid="access-send">
             {{ 'governance.catalog.assets.accessSend' | translate }}
           </button>
           <button type="button" class="btn-ghost" (click)="state.set('closed')">
