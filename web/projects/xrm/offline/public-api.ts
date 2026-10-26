@@ -3,7 +3,10 @@
 // B18-T13: state models followed offline; B18-T9: conflicts and failures.
 export { IndexedDbBackend, MemoryBackend, OfflineStore, uuidv7 } from './offline-store';
 export type { KvBackend, StoreName } from './offline-store';
-export { OFFLINE_STORE, OfflineQueueService } from './offline-queue.service';
+export { OFFLINE_FILE_UPLOADER, OFFLINE_STORE, OfflineQueueService } from './offline-queue.service';
+export type { OfflineFileUploader, OfflineUploadResult } from './offline-queue.service';
+// B18-T10: online state, the waiting changes and Sync now, for the header.
+export { SyncStatusComponent } from './sync-status.component';
 // B18-T8 — entity reads and writes served on the device while offline.
 export {
   answerOffline, keepSchema, offlineDataInterceptor, offlineRoute, ruleErrors, schemaKey,

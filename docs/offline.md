@@ -107,6 +107,23 @@ guard again, and any emails, integrations or workflows the move triggers run
 after the change is saved, exactly as for a move made online. Until the
 on-device rule evaluator ships, guards are checked by the server on push.
 
+## Files captured offline
+
+Photos, signatures and voice notes taken offline stay on the device with the change they belong
+to. When the device syncs, each file is uploaded first, through the same upload as on a record
+form: large files go in parts, so an interrupted upload continues from the next missing part, and
+every file is virus-scanned. Only then is the change sent, with the uploaded file in its field.
+
+- If an upload fails, the change and every change after it wait for the next sync, so their order
+  is kept.
+- If the scan rejects a file, the change is listed with the other changes that could not be saved.
+- A record created offline gets its files right after it reaches the server.
+
+## Sync status
+
+On a device that syncs, the header shows whether the device is online, how many changes wait, when
+the last sync finished, and a Sync now button.
+
 ## Not in this release: the on-device helper
 
 An optional assistant that runs on the device is planned but not part of this

@@ -948,6 +948,11 @@ export const xrmEn = {
       title: 'Changes that could not be saved',
       open: 'Open', dismiss: 'Dismiss',
     },
+    status: {
+      online: 'Online', offline: 'Offline', syncing: 'Syncing…',
+      waiting: '{{count}} waiting', lastSync: 'Last sync {{time}}', never: 'Not synced yet',
+      syncNow: 'Sync now', failed: 'The last sync failed. It is tried again shortly.',
+    },
   },
   activitiesPanel: {
     type: 'Activity type', task: 'Task', phoneCall: 'Phone call',

@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '@attome/base';
-import { OFFLINE_STORE, OfflineQueueService, QueuedOp } from './offline-queue.service';
+import { OFFLINE_FILE_UPLOADER, OFFLINE_STORE, OfflineQueueService, QueuedOp } from './offline-queue.service';
 import { OfflineProfileBundle, PROFILE_KEY } from './state-machine';
 import { OfflineSearch } from './offline-search';
 
@@ -39,10 +39,11 @@ interface PullAnswer {
   done: boolean;
 }
 
-/** An operation as the server takes it: everything but the local sequence. */
-function withoutSeq(op: QueuedOp): Omit<QueuedOp, 'seq'> {
-  const { seq, ...rest } = op;
+/** An operation as the server takes it: everything but the local sequence and files. */
+function withoutSeq(op: QueuedOp): Omit<QueuedOp, 'seq' | 'files'> {
+  const { seq, files, ...rest } = op;
   void seq;
+  void files;
   return rest;
 }
 
@@ -75,10 +76,16 @@ export class SyncService {
   private readonly queue = inject(OfflineQueueService);
   /** B18-T11: the device search, indexed again after each pull. */
   private readonly search = inject(OfflineSearch);
+  /** B18-T10: uploads files captured offline; without it a change with files waits. */
+  private readonly uploader = inject(OFFLINE_FILE_UPLOADER, { optional: true });
 
   readonly syncing = signal(false);
+  /** B18-T10: syncing has started for a registered device. */
+  readonly active = signal(false);
   /** Changes the server refused or that clashed, for the person to see. */
   readonly problems = signal<SyncProblem[]>([]);
+  /** B18-T10: when the last full sync finished (epoch ms), for the header. */
+  readonly lastSyncAt = signal<number | null>(null);
   readonly lastError = signal<string | null>(null);
 
   private deviceId: string | null = null;
@@ -98,13 +105,17 @@ export class SyncService {
   /** Starts syncing for the registered device. */
   start(deviceId: string): void {
     this.setDevice(deviceId);
+    this.active.set(true);
     globalThis.addEventListener?.('online', this.onOnline);
     globalThis.document?.addEventListener('visibilitychange', this.onVisible);
     this.periodTimer = setInterval(() => void this.sync(), PERIOD_MS);
+    void this.store.get<number>('meta', 'lastSyncAt').then(at => this.lastSyncAt.set(at ?? null)).catch(() => undefined);
+    void this.queue.recount().catch(() => undefined);
     void this.sync();
   }
 
   stop(): void {
+    this.active.set(false);
     globalThis.removeEventListener?.('online', this.onOnline);
     globalThis.document?.removeEventListener('visibilitychange', this.onVisible);
     if (this.periodTimer) clearInterval(this.periodTimer);
@@ -122,6 +133,7 @@ export class SyncService {
       const maxDays = await this.store.get<number>('meta', 'maxDaysOffline');
       if (expired(last, maxDays, now)) {
         await this.store.wipe();
+        await this.queue.recount();
         this.lastError.set('expired');
         return false;
       }
@@ -130,6 +142,7 @@ export class SyncService {
       await this.search.rebuild();
       await this.refreshProfile();
       await this.store.put('meta', 'lastSyncAt', now);
+      this.lastSyncAt.set(now);
       this.backoff = 0;
       this.lastError.set(null);
       return true;
@@ -147,8 +160,16 @@ export class SyncService {
 
   private async pushAll(): Promise<void> {
     for (;;) {
-      const batch = (await this.queue.pending()).slice(0, PUSH_BATCH);
-      if (!batch.length) return;
+      const pending = (await this.queue.pending()).slice(0, PUSH_BATCH);
+      if (!pending.length) return;
+      // B18-T10: files first, in order; a failed upload stops the push here
+      // (nothing is reordered) and the next sync tries again.
+      const batch: QueuedOp[] = [];
+      for (const op of pending) {
+        const ready = op.files && Object.keys(op.files).length ? await this.uploadFiles(op) : op;
+        if (ready) batch.push(ready);
+      }
+      if (!batch.length) continue;
       const answer = await firstValueFrom(this.api.post<{ results: PushResult[] }>('/api/v1/offline/push', {
         device_id: this.deviceId,
         ops: batch.map(withoutSeq),
@@ -164,6 +185,45 @@ export class SyncService {
         await this.queue.remove(op.seq);
       }
     }
+  }
+
+  /**
+   * B18-T10: uploads a change's files and puts each uploaded key in its
+   * `changed`; the change is saved after each file, so a retry never uploads
+   * one twice. A file the scan rejects is a problem for the person and drops
+   * the change; any other failure throws, keeping the change queued.
+   */
+  private async uploadFiles(op: QueuedOp): Promise<QueuedOp | null> {
+    let current = op;
+    for (const [field, key] of Object.entries(op.files ?? {})) {
+      const file = await this.queue.file(key);
+      if (file) {
+        if (!this.uploader) throw new Error('offline files cannot be uploaded on this device');
+        const result = await this.uploader.upload(
+          { entityName: op.entity, recordId: op.id, fieldName: field }, file,
+        );
+        if (result.kind === 'error') throw new Error(result.message);
+        if (result.kind === 'rejected') {
+          this.problems.update(p => [...p, {
+            op: current,
+            result: {
+              client_op_id: current.client_op_id, status: 'rejected', id: current.id,
+              code: 'file_rejected', message: result.message,
+            },
+          }]);
+          for (const other of Object.values(op.files ?? {})) await this.queue.removeFile(other);
+          await this.queue.remove(current.seq);
+          return null;
+        }
+        current = { ...current, changed: { ...(current.changed ?? {}), [field]: result.finalKey } };
+      }
+      const rest = { ...(current.files ?? {}) };
+      delete rest[field];
+      current = { ...current, files: rest };
+      await this.queue.update(current);
+      await this.queue.removeFile(key);
+    }
+    return current;
   }
 
   /** Clears a problem the person dealt with. */

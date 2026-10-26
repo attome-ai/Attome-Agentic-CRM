@@ -915,6 +915,11 @@ export const xrmAr = {
       title: 'تغييرات تعذّر حفظها',
       open: 'فتح', dismiss: 'إخفاء',
     },
+    status: {
+      online: 'متصل', offline: 'غير متصل', syncing: 'جارٍ المزامنة…',
+      waiting: '{{count}} بانتظار المزامنة', lastSync: 'آخر مزامنة {{time}}', never: 'لم تتم المزامنة بعد',
+      syncNow: 'مزامنة الآن', failed: 'تعذّرت آخر مزامنة. ستُعاد المحاولة قريبًا.',
+    },
   },
   activitiesPanel: {
     type: 'نوع النشاط', task: 'مهمة', phoneCall: 'مكالمة هاتفية',

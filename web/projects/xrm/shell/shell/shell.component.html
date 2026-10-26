@@ -32,6 +32,7 @@
 
           <!-- Solution 7 (D-785): dev-only, admin-only open-changeset picker -->
           <xrm-changeset-indicator data-advanced />
+          @defer (on idle) { <xrm-sync-status /> }
           <xrm-app-switcher (appChanged)="onAppChanged($event)" />
           <xrm-copilot-launcher />
           <xrm-softphone-launcher />
