@@ -153,6 +153,9 @@ export const NODE_TYPES: NodeTypeSpec[] = [
     outputs: [{ name: 'result', portType: 'json' }] },
   { type: 'map', label: 'Map Fields', inputs: [{ name: 'in', portType: 'any', required: true }],
     outputs: [{ name: 'out', portType: 'json' }] },
+  // AE1-T3: run a published custom action.
+  { type: 'custom_action', label: 'Custom Action', inputs: [{ name: 'args', portType: 'json' }],
+    outputs: [{ name: 'result', portType: 'json' }] },
 ];
 
 // M10-T3: read by `scheduler::wait_until` and `scheduler::wait_base` for
@@ -387,6 +390,13 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
       hint: 'The name of an active integration system with a connector definition (config.sdk).' },
     { key: 'operation', label: 'Operation', kind: 'text', required: true,
       hint: 'An endpoint of its definition. A GET reads every record; any other method sends the body.' },
+  ],
+  // scheduler::custom_action_id and execute_custom_action (AE1-T3)
+  custom_action: [
+    { key: 'action', label: 'Custom action', kind: 'text', required: true,
+      hint: 'A published custom action, such as custom.site_survey.' },
+    { key: 'args', label: 'Arguments', kind: 'json',
+      hint: 'Used when nothing is wired to the args input.' },
   ],
   // scheduler::map_output (S14-T1)
   map: [

@@ -127,6 +127,13 @@ pub enum NodeType {
     /// S14-T1: reshapes JSON by a mapping definition (`crate::map`), the
     /// step between two connectors of a system-to-system flow. Pure.
     Map,
+    /// AE1-T3: runs a published custom action (`config.action`, an id
+    /// `custom.<name>`) with the wired `args` (an object; else
+    /// `config.args`), through the AI action gate like any action. Its
+    /// effect is the action's, unknown here, so it is classified like
+    /// `ModuleStep`: the most conservative step, behind the fired marker,
+    /// with the effect key as the action's idempotency key.
+    CustomAction,
 }
 
 /// M1-T4: the output port every node except a trigger may wire. When the
@@ -136,7 +143,7 @@ pub enum NodeType {
 pub const ON_ERROR_PORT: &str = "on_error";
 
 impl NodeType {
-    pub const ALL: [Self; 21] = [
+    pub const ALL: [Self; 22] = [
         Self::Trigger,
         Self::Condition,
         Self::CreateRecord,
@@ -158,6 +165,7 @@ impl NodeType {
         Self::ForEach,
         Self::Connector,
         Self::Map,
+        Self::CustomAction,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -183,6 +191,7 @@ impl NodeType {
             Self::ForEach => "for_each",
             Self::Connector => "connector",
             Self::Map => "map",
+            Self::CustomAction => "custom_action",
         }
     }
 
@@ -229,7 +238,8 @@ impl NodeType {
             | Self::Webhook
             | Self::AgentStep
             | Self::ModuleStep
-            | Self::Connector => SideEffect::FiredSideEffectsMarker,
+            | Self::Connector
+            | Self::CustomAction => SideEffect::FiredSideEffectsMarker,
             // `Route` reads and classifies only — `route.classify` is
             // Read-tier/Read-effect (`node_capabilities_agree_with_side_effect_classification`
             // pins this against `capability()` below), so a crash-replay
@@ -309,6 +319,7 @@ impl NodeType {
             Self::DuplicateCheck => &[("record_id", PortType::RecordId, true)],
             Self::Assign => &[("record_id", PortType::RecordId, true)],
             Self::ModuleStep => &[("input", PortType::Json, false)],
+            Self::CustomAction => &[("args", PortType::Json, false)],
             Self::ForEach => &[("items", PortType::Json, true)],
             Self::Connector => &[
                 ("params", PortType::Json, false),
@@ -368,6 +379,7 @@ impl NodeType {
             Self::DuplicateCheck => &[("found", PortType::Json), ("none", PortType::Json)],
             Self::Assign => &[("record", PortType::RecordId)],
             Self::ModuleStep => &[("output", PortType::Json)],
+            Self::CustomAction => &[("result", PortType::Json)],
             Self::ForEach => &[("out", PortType::Json)],
             Self::Connector => &[("result", PortType::Json)],
             Self::Map => &[("out", PortType::Json)],
@@ -470,7 +482,7 @@ impl NodeType {
             // deterministically does — the same reasoning I-7's air-gap gate
             // uses for anything that leaves a bounded, reviewable path.
             // `RequiresKey`: never blindly replay starting a session.
-            Self::AgentStep | Self::ModuleStep => NodeCapability {
+            Self::AgentStep | Self::ModuleStep | Self::CustomAction => NodeCapability {
                 risk: RiskTier::Consequential,
                 effect: Effect::External,
                 retry: RetryClass::RequiresKey,
@@ -812,6 +824,7 @@ mod tests {
             NodeType::AgentStep,
             NodeType::ModuleStep,
             NodeType::Connector,
+            NodeType::CustomAction,
         ] {
             assert_ne!(t.side_effect(), SideEffect::None, "{t}");
         }

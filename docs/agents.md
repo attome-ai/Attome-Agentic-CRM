@@ -120,6 +120,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   it runs). It then appears as the tool `custom.<name>` beside the built-in actions, under the same
   gate, confirmations and approvals; a consequential one needs approval when an agent proposes it.
   Running it starts the flow as the person, with the arguments as the flow's context.
+  MCP clients see it in `tools/list` with its schema and description, and a flow runs it with the
+  `custom_action` node (`config.action`, the wired `args`), once per run, through the same gate; a
+  custom action that needs a person's confirmation or approval fails the node instead of waiting.
 - Branding (B13-T11): `brand.draft_from_document` reads a theme's brand guidelines PDF and saves the
   colours, fonts and density it finds as a new draft theme; it never publishes, and only an
   administrator may run it.

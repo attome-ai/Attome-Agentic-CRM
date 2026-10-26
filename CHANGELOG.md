@@ -16,6 +16,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Custom actions in MCP and flows (AE1-T3): published custom actions appear in MCP `tools/list`
+  from their definition, and the new flow node `custom_action` runs one with the wired `args` through
+  the action gate (the run and node key it once); publishing a flow checks that the action exists.
 - Custom actions (AE1-T1): a new metadata kind, `custom_action`, defines an action backed by a
   published flow; on publish it is loaded into the AI action registry as a second source, with the
   same descriptor (risk tier, retry class, required privileges, input schema), as `custom.<name>`.

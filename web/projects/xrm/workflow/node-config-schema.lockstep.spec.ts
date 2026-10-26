@@ -40,6 +40,8 @@ const EXECUTOR_TO_NODE_TYPE: Record<string, string[]> = {
   step_node_outcome:         ['module_step'],
   connector_target:          ['connector'],
   map_output:                ['map'],
+  custom_action_id:          ['custom_action'],
+  execute_custom_action:     ['custom_action'],
   join_mode_and_threshold:   ['join'],
   rebuild_entry_rows:        ['trigger'],
   entry_condition:           ['trigger'],

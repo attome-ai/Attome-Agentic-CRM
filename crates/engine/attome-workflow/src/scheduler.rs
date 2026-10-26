@@ -1580,6 +1580,89 @@ async fn execute_node(
         }
         NodeType::Connector => execute_connector(state, instance, node, input, fired, round).await,
         NodeType::Map => execute_map(node, input),
+        NodeType::CustomAction => {
+            execute_custom_action(state, ctx, instance, node, input, fired, round).await
+        }
+    }
+}
+
+/// AE1-T3: the custom action a node runs (`config.action`).
+pub(crate) fn custom_action_id(node: &GraphNode) -> Result<&str, AppError> {
+    node.config
+        .get("action")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|a| a.starts_with("custom.") && a.len() > "custom.".len())
+        .ok_or_else(|| {
+            AppError::Validation(format!(
+                "custom action node {:?} names no custom.<name> action",
+                node.id
+            ))
+        })
+}
+
+/// AE1-T3: runs a published custom action through the action gate, as the
+/// flow's identity, once per node round (the fired marker; the effect key is
+/// the action's idempotency key). An action that needs a person's
+/// confirmation or approval fails the node with that reason: a flow cannot
+/// wait on a gate decision.
+async fn execute_custom_action(
+    state: &EngineState,
+    ctx: &std::sync::Arc<SecurityContext>,
+    instance: &InstanceRow,
+    node: &GraphNode,
+    input: &Value,
+    fired: &mut HashSet<String>,
+    round: i32,
+) -> Result<NodeOutcome, AppError> {
+    if fired.contains(&fired_key(&node.id, round)) {
+        return Ok(NodeOutcome::Succeeded {
+            output: serde_json::json!({ "skipped_replay": true }),
+        });
+    }
+    let action = custom_action_id(node)?;
+    let args = match input.get("args") {
+        Some(Value::Object(map)) => Value::Object(map.clone()),
+        _ => node
+            .config
+            .get("args")
+            .filter(|a| a.is_object())
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({})),
+    };
+    let mut action_ctx = attome_ai::ActionContext::user(std::sync::Arc::clone(ctx));
+    action_ctx.idempotency_key = Some(effect_key(instance.id, &node.id, round));
+    let registry = attome_ai::ActionRegistry::new();
+    let executors = attome_ai::Executors::new();
+    let gate_inputs = attome_ai::GateInputs {
+        licensed: state.modules.load().has(attome_modules::MODULE_AI),
+        ai: &state.base.config.inference.ai,
+        surface: Some(attome_config::AiSurface::WorkflowNodes),
+        external_effects_enabled: state.base.config.security.external_effects_enabled,
+    };
+    let outcome = attome_ai::dispatch(
+        state,
+        &registry,
+        &executors,
+        action,
+        &action_ctx,
+        &gate_inputs,
+        &args,
+    )
+    .await?;
+    match outcome {
+        attome_ai::ActionOutcome::Completed { result, .. } => {
+            fired.insert(fired_key(&node.id, round));
+            Ok(NodeOutcome::Succeeded { output: result })
+        }
+        attome_ai::ActionOutcome::ConfirmationRequired { .. }
+        | attome_ai::ActionOutcome::ApprovalRequired { .. }
+        | attome_ai::ActionOutcome::Scheduled { .. }
+        | attome_ai::ActionOutcome::AwaitingReview { .. } => Err(AppError::Validation(format!(
+            "custom action {action} needs a person's confirmation or approval; a flow cannot wait \
+             on it (node {:?})",
+            node.id
+        ))),
     }
 }
 

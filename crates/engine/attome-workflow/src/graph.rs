@@ -145,6 +145,20 @@ pub fn validate_module_steps(
     graph: &Graph,
 ) -> Result<(), attome_types::AppError> {
     for node in &graph.nodes {
+        // AE1-T3: a custom action node names a published custom action.
+        if NodeType::parse(&node.node_type) == Some(NodeType::CustomAction) {
+            let action = crate::scheduler::custom_action_id(node).map_err(|e| {
+                attome_types::AppError::Validation(format!("graph validation failed: {e}"))
+            })?;
+            if attome_ai::custom_action::descriptor(action).is_none() {
+                return Err(attome_types::AppError::Validation(format!(
+                    "graph validation failed: node {:?} runs {action}, which is not a published \
+                     custom action",
+                    node.id
+                )));
+            }
+            continue;
+        }
         if NodeType::parse(&node.node_type) != Some(NodeType::ModuleStep) {
             continue;
         }

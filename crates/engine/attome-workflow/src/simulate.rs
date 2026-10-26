@@ -638,6 +638,17 @@ fn simulate_node(
             output: scheduler::map_output(node, input)?,
             would_have: None,
         }),
+        // AE1-T3: a dry run runs nothing.
+        NodeType::CustomAction => {
+            let action = scheduler::custom_action_id(node)?;
+            Ok(SimOutcome::Succeeded {
+                output: serde_json::json!({
+                    "would_run": action,
+                    "args": input.get("args").cloned().unwrap_or(Value::Null),
+                }),
+                would_have: Some(format!("would run the custom action {action}")),
+            })
+        }
     }
 }
 
