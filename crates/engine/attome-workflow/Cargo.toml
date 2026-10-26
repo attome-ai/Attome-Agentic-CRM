@@ -19,6 +19,8 @@ attome-core.workspace         = true
 attome-db.workspace           = true
 attome-integration.workspace  = true
 attome-jobs.workspace         = true
+# D17-T2: a sequence enrols a marketing list's contacts.
+attome-marketing.workspace    = true
 attome-metadata.workspace     = true
 attome-modules.workspace      = true
 attome-notification.workspace = true
@@ -43,9 +45,6 @@ uuid.workspace                = true
 
 [dev-dependencies]
 attome-cache.workspace    = true
-# E8-T4: the journey enrolment tests (no cycle: attome-workflow already
-# reaches attome-marketing through attome-ai).
-attome-marketing.workspace = true
 attome-metadata.workspace = true
 attome-testkit  = { workspace = true, features = ["app-config"] }
 tokio                     = { workspace = true, features = ["macros", "rt-multi-thread"] }

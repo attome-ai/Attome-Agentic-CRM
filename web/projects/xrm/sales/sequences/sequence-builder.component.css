@@ -1,0 +1,109 @@
+:host { display: block; }
+
+.sq-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-block: 16px;
+  padding-inline: 16px;
+}
+
+.sq-head h1 { margin: 0; font-size: 20px; }
+.sq-lead,
+.sq-note { margin: 0; font-size: 13px; color: var(--color-text-secondary); }
+
+.sq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.sq-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-alt);
+}
+.sq-card h2 { margin: 0; font-size: 15px; }
+
+.sq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sq-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  inline-size: 100%;
+  padding-block: 8px;
+  padding-inline: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  text-align: start;
+  cursor: pointer;
+}
+.sq-on { border-color: var(--color-accent); }
+.sq-name { font-weight: 600; font-size: 14px; }
+.sq-meta { font-size: 12px; color: var(--color-text-secondary); }
+
+.sq-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.sq-field input,
+.sq-field select {
+  padding-block: 6px;
+  padding-inline: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.sq-exits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding-block: 6px;
+  padding-inline: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.sq-btn {
+  align-self: flex-start;
+  padding-block: 8px;
+  padding-inline: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+.sq-btn:disabled { opacity: .4; cursor: not-allowed; }
+.sq-btn:focus-visible,
+.sq-item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.sq-primary { border-color: var(--color-accent); }
+
+.sq-done { margin: 0; font-size: 13px; }
+.sq-error { margin: 0; color: var(--color-danger, #b91c1c); font-size: 13px; }

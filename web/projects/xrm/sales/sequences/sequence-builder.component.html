@@ -1,0 +1,84 @@
+<section class="sq-page">
+  <header class="sq-head">
+    <h1>{{ 'sequences.title' | translate }}</h1>
+    <p class="sq-lead">{{ 'sequences.lead' | translate }}</p>
+  </header>
+
+  @if (error(); as message) {
+    <p class="sq-error" role="alert" data-testid="sequence-error">{{ message }}</p>
+  }
+
+  <div class="sq-grid">
+    <section class="sq-card" aria-labelledby="sq-list-title">
+      <h2 id="sq-list-title">{{ 'sequences.listTitle' | translate }}</h2>
+      @if (sequences() === null) {
+        <p class="sq-note">{{ 'sequences.loading' | translate }}</p>
+      } @else if (sequences()!.length === 0) {
+        <p class="sq-note" data-testid="sequence-none">{{ 'sequences.none' | translate }}</p>
+      } @else {
+        <ul class="sq-list">
+          @for (s of sequences(); track s.logicalname) {
+            <li>
+              <button type="button" class="sq-item" [class.sq-on]="s.logicalname === selected()"
+                      [attr.aria-pressed]="s.logicalname === selected()" (click)="select(s.logicalname)"
+                      [attr.data-sequence]="s.logicalname">
+                <span class="sq-name">{{ s.name }}</span>
+                <span class="sq-meta">
+                  {{ 'sequences.active' | translate: { count: s.active } }}
+                  @for (e of s.exit_on; track e) { · {{ 'sequences.exit.' + e | translate }} }
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="sq-card" aria-labelledby="sq-enrol-title">
+      <h2 id="sq-enrol-title">{{ 'sequences.enrolTitle' | translate }}</h2>
+      @if (current(); as s) {
+        <p class="sq-note">{{ 'sequences.enrolInto' | translate: { name: s.name } }}</p>
+        <label class="sq-field">
+          <span>{{ 'sequences.list' | translate }}</span>
+          <select [value]="listId()" (change)="listId.set($any($event.target).value)" data-testid="sequence-list">
+            <option value="">{{ 'sequences.chooseList' | translate }}</option>
+            @for (l of lists(); track l.id) {
+              <option [value]="l.id">{{ l.name }}</option>
+            }
+          </select>
+        </label>
+        <button type="button" class="sq-btn sq-primary" [disabled]="!canEnrol()" (click)="enrol()"
+                data-testid="sequence-enrol">{{ 'sequences.enrol' | translate }}</button>
+        @if (outcome(); as o) {
+          <p class="sq-done" role="status" data-testid="sequence-outcome">
+            {{ 'sequences.outcome' | translate: { enrolled: o.enrolled, active: o.skipped_active, missing: o.skipped_missing } }}
+          </p>
+        }
+      } @else {
+        <p class="sq-note">{{ 'sequences.pick' | translate }}</p>
+      }
+    </section>
+
+    <section class="sq-card" aria-labelledby="sq-new-title">
+      <h2 id="sq-new-title">{{ 'sequences.newTitle' | translate }}</h2>
+      <p class="sq-note">{{ 'sequences.newHelp' | translate }}</p>
+      <label class="sq-field">
+        <span>{{ 'sequences.name' | translate }}</span>
+        <input type="text" maxlength="100" [value]="newName()" (input)="newName.set($any($event.target).value)"
+               data-testid="sequence-name" />
+      </label>
+      <fieldset class="sq-exits">
+        <legend>{{ 'sequences.exitsLegend' | translate }}</legend>
+        @for (e of exits; track e) {
+          <label>
+            <input type="checkbox" [checked]="newExits().includes(e)" (change)="toggleExit(e)"
+                   [attr.data-exit]="e" />
+            {{ 'sequences.exit.' + e | translate }}
+          </label>
+        }
+      </fieldset>
+      <button type="button" class="sq-btn" [disabled]="!canCreate()" (click)="create()"
+              data-testid="sequence-create">{{ 'sequences.create' | translate }}</button>
+    </section>
+  </div>
+</section>

@@ -3303,6 +3303,28 @@ export const xrmEn = {
     loadFailed: 'The feed could not be loaded.',
     more: 'Show older',
   },
+  // ── D17-T2: sales sequences ──
+  sequences: {
+    title: 'Sequences',
+    lead: 'Enrol contacts in a sequence of outreach steps; a contact leaves as soon as they answer.',
+    listTitle: 'Published sequences',
+    loading: 'Loading…',
+    none: 'No sequence is published yet.',
+    active: '{{count}} active',
+    exit: { reply: 'ends on a reply', meeting: 'ends on a meeting', stage_change: 'ends on a deal stage change' },
+    enrolTitle: 'Enrol contacts',
+    pick: 'Pick a sequence first.',
+    enrolInto: 'Enrol the contacts of a list in {{name}}.',
+    list: 'Marketing list',
+    chooseList: 'Choose a list',
+    enrol: 'Enrol',
+    outcome: '{{enrolled}} enrolled, {{active}} already in it, {{missing}} not found.',
+    newTitle: 'New sequence',
+    newHelp: 'Name it and choose what ends it; you add its steps in the workflow editor and publish it there.',
+    name: 'Name',
+    exitsLegend: 'A contact leaves when',
+    create: 'Create and add steps',
+  },
   // ── AE1-T5: custom actions on forms and lists ──
   actionBar: {
     button: 'Actions',

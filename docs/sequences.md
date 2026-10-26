@@ -42,13 +42,26 @@ Put a `sequence.send_window` step before each step that reaches the contact. It 
 contact's sending window opens, in the contact's own time zone:
 
 ```json
-{ "id": "window", "type": "sequence.send_window", "config": { "start": "09:00", "end": "17:00", "days": [7, 1, 2, 3, 4] } }
+{ "id": "window", "type": "module_step",
+  "config": { "handler": "sequence.send_window",
+              "config": { "start": "09:00", "end": "17:00", "days": [7, 1, 2, 3, 4] } } }
 ```
 
 `days` are weekdays from 1 (Monday) to 7 (Sunday). Every part is optional; the default is 09:00 to
 17:00, Sunday to Thursday. The contact's time zone is their `time_zone` field when the contact entity
 has one, else the zone of their `country_code` from the regions pack, else the deployment's
 `app.time_zone`.
+
+## The Sequences screen
+
+`/xrm/sales/sequences` lists the published sequences with how many contacts are in each and what
+ends them. A rep picks one and a marketing list of contacts and enrols the list. An administrator
+starts a new sequence there: its name and what ends it create the workflow (kind `sequence`) with a
+first version holding the trigger and a sending window, and open it in the workflow editor to add
+the steps and publish it.
+
+`GET /api/v1/workflow/sequences` is that list (published, active sequences, one page at a time),
+for anyone with `contact.update`.
 
 ## Enrolling contacts
 
@@ -58,8 +71,9 @@ POST /api/v1/workflow/sequences/intro-sequence/enrolments
 ```
 
 The caller needs `contact.update`. Up to 1,000 contacts at a time; each one gets one run of the
-published version. The answer counts the contacts enrolled, those skipped because they are already
-active in this sequence, and those that are not live contacts.
+published version. Instead of `contact_ids`, send `{"list_id": "…"}` to enrol a marketing list of
+contacts as the caller sees it (up to 10,000 people). The answer counts the contacts enrolled, those
+skipped because they are already active in this sequence, and those that are not live contacts.
 
 ## Leaving
 

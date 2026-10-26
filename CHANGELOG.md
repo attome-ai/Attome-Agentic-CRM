@@ -16,6 +16,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Sequences screen (D17-T2): `/xrm/sales/sequences` enrols a marketing list's contacts in a published
+  sequence (the enrol route now takes `list_id`) and starts a new sequence for the workflow editor;
+  `GET /api/v1/workflow/sequences` lists the published ones. See `docs/sequences.md`.
 - Automatic transitions (M8-T3): a state transition's new `auto_condition` (an attome-rules condition)
   moves a record by itself when it holds, checked after each write and daily (an invoice past its
   due date becomes overdue). Migration `0291_state_auto_transition` adds the column. See

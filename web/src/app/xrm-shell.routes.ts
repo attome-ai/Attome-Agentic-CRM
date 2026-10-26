@@ -895,6 +895,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
           },
           {
+            // D17-T2: sales sequences — enrol a list, start a new sequence.
+            path: 'sales/sequences',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/sales/sequences').then(m => m.SequenceBuilderComponent),
+          },
+          {
             // E10-T2: build a marketing form and copy its embed snippet.
             path: 'marketing/forms/:id',
             canActivate: [authGuard],

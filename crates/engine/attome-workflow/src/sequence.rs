@@ -37,12 +37,12 @@ use attome_core::workflow_step::{
 };
 use attome_modules::{MODULE_WORKFLOW, ModuleId};
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
-use attome_types::{AppError, ErrorResponse};
+use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
-    routing::post,
+    routing::{get, post},
 };
 use chrono::{DateTime, Datelike, Duration, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
@@ -379,11 +379,123 @@ impl PrivilegeKey for Enrol {
     const KEY: &'static str = "contact.update";
 }
 
-/// The contacts to enrol.
+/// The contacts to enrol: named, or a marketing list's (D17-T2).
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct EnrolBody {
     /// At most 1,000 contacts.
+    #[serde(default)]
     pub contact_ids: Vec<Uuid>,
+    /// A marketing list of contacts, as the caller sees it (at most
+    /// [`MAX_LIST`] people), instead of `contact_ids`.
+    #[serde(default)]
+    pub list_id: Option<Uuid>,
+}
+
+/// The most people a list enrolment takes.
+pub const MAX_LIST: usize = 10_000;
+
+/// A published sequence, as a rep picks it (D17-T2).
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct SequenceSummary {
+    pub logicalname: String,
+    pub name: String,
+    pub published_version: i32,
+    /// What ends a contact's sequence.
+    pub exit_on: Vec<ExitOn>,
+    /// Contacts active in it now.
+    pub active: i64,
+}
+
+/// The published, active sequences, newest first; a page of them.
+pub async fn list_sequences(
+    state: &EngineState,
+    page: &OnePageQuery,
+) -> Result<PaginatedResponse<SequenceSummary>, AppError> {
+    let window = page.window();
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM workflow_definition d \
+          WHERE d.kind = 'sequence' AND d.is_active = TRUE AND d.is_deleted = FALSE \
+            AND EXISTS (SELECT 1 FROM workflow_definition_version v \
+                         WHERE v.definition_id = d.id AND v.status = 'published')",
+    )
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let rows: Vec<SequenceRow> = sqlx::query_as(
+        "SELECT d.logicalname, d.name, v.version_number, v.graph, \
+                (SELECT COUNT(*) FROM workflow_sequence_enrolment e \
+                  WHERE e.definition_id = d.id AND e.status = 'active') \
+           FROM workflow_definition d \
+           JOIN workflow_definition_version v ON v.definition_id = d.id AND v.status = 'published' \
+          WHERE d.kind = 'sequence' AND d.is_active = TRUE AND d.is_deleted = FALSE \
+          ORDER BY d.created_at DESC, d.id \
+          LIMIT $1 OFFSET $2",
+    )
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let items = rows
+        .into_iter()
+        .map(
+            |(logicalname, name, published_version, graph, active)| SequenceSummary {
+                logicalname,
+                name,
+                published_version,
+                exit_on: exit_on(&graph).unwrap_or_default(),
+                active,
+            },
+        )
+        .collect();
+    Ok(PaginatedResponse::new(
+        items,
+        total,
+        window.page,
+        window.page_size,
+    ))
+}
+
+type SequenceRow = (String, String, i32, Value, i64);
+
+/// The contacts of the marketing list `list` as `ctx` sees them, sorted;
+/// refused unless the list holds contacts and has at most [`MAX_LIST`].
+async fn list_contacts(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    list: Uuid,
+) -> Result<Vec<Uuid>, AppError> {
+    if !attome_records::entity_crud::referenced_record_visible(state, ctx, "marketing_list", list)
+        .await?
+    {
+        return Err(AppError::NotFound);
+    }
+    let target: String = sqlx::query_scalar(
+        "SELECT COALESCE(target_entity, 'contact')::text FROM marketing_list \
+          WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(list)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    if target != "contact" {
+        return Err(AppError::Validation(
+            "a sequence enrols contacts; this list holds other records".into(),
+        ));
+    }
+    let mut people: Vec<Uuid> = attome_marketing::segment::evaluate(state, ctx, list, Vec::new())
+        .await?
+        .into_iter()
+        .collect();
+    if people.len() > MAX_LIST {
+        return Err(AppError::Validation(format!(
+            "the list has {} people; a sequence takes at most {MAX_LIST} at a time",
+            people.len()
+        )));
+    }
+    people.sort();
+    Ok(people)
 }
 
 /// What an enrolment did.
@@ -676,13 +788,14 @@ pub async fn sweep(state: &EngineState) -> Result<SweepOutcome, AppError> {
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks contact.update", body = ErrorResponse),
         (status = 404, description = "No published, active sequence with this name", body = ErrorResponse),
-        (status = 422, description = "No contacts, more than 1,000, or the sequence's exits are invalid", body = ErrorResponse),
+        (status = 422, description = "No contacts, more than 1,000 named or 10,000 in a list, a list of other records, or the sequence's exits are invalid", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
 )]
 /// Enrol contacts in a sequence.
 ///
+/// Name the contacts, or give a marketing list of contacts (as you see it).
 /// Each contact gets one run of the sequence; a contact already active in it
 /// is skipped. The contact leaves the sequence when they reply, a meeting
 /// with them is booked, or a deal at their account changes stage (as the
@@ -693,19 +806,69 @@ async fn post_enrol(
     Path(logicalname): Path<String>,
     Json(body): Json<EnrolBody>,
 ) -> Result<(StatusCode, Json<EnrolOutcome>), AppError> {
-    let outcome = enrol(&state, logicalname.trim(), &body.contact_ids, ctx.user_id).await?;
-    Ok((StatusCode::OK, Json(outcome)))
+    let logicalname = logicalname.trim();
+    let Some(list) = body.list_id else {
+        let outcome = enrol(&state, logicalname, &body.contact_ids, ctx.user_id).await?;
+        return Ok((StatusCode::OK, Json(outcome)));
+    };
+    if !body.contact_ids.is_empty() {
+        return Err(AppError::Validation(
+            "name contacts or a list, not both".into(),
+        ));
+    }
+    let people = list_contacts(&state, &ctx, list).await?;
+    let mut total = EnrolOutcome::default();
+    if people.is_empty() {
+        return Ok((StatusCode::OK, Json(total)));
+    }
+    for chunk in people.chunks(attome_core::workflow_start::MAX_BATCH_START) {
+        let outcome = enrol(&state, logicalname, chunk, ctx.user_id).await?;
+        total.enrolled += outcome.enrolled;
+        total.skipped_active += outcome.skipped_active;
+        total.skipped_missing += outcome.skipped_missing;
+    }
+    Ok((StatusCode::OK, Json(total)))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/workflow/sequences",
+    operation_id = "list_sequences",
+    tag = "workflow",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "The published sequences", body = PaginatedResponse<SequenceSummary>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks contact.update", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// List sequences
+///
+/// D17-T2: the published, active sequences a rep can enrol contacts in,
+/// with what ends them and how many contacts are in each now.
+async fn get_sequences(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<Enrol>>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<SequenceSummary>>, AppError> {
+    list_sequences(&state, &page).await.map(Json)
 }
 
 pub fn routes() -> Router<EngineState> {
-    Router::new().route(
-        "/api/v1/workflow/sequences/{logicalname}/enrolments",
-        post(post_enrol),
-    )
+    Router::new()
+        .route("/api/v1/workflow/sequences", get(get_sequences))
+        .route(
+            "/api/v1/workflow/sequences/{logicalname}/enrolments",
+            post(post_enrol),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(post_enrol), components(schemas(EnrolBody, EnrolOutcome)))]
+#[openapi(
+    paths(post_enrol, get_sequences),
+    components(schemas(EnrolBody, EnrolOutcome, SequenceSummary, ExitOn))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
