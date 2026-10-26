@@ -8448,6 +8448,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/s2s/clients/{client_db_id}/trusts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_trusts"];
+        put?: never;
+        post: operations["create_trust"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/s2s/clients/{client_db_id}/trusts/{trust_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_trust"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/sbom": {
         parameters: {
             query?: never;
@@ -31302,6 +31334,20 @@ export interface components {
             /** @description The translation's own URL path. */
             url_path: string;
         };
+        /** @description A trust to register. */
+        CreateTrustBody: {
+            /** @description The audience its tokens must carry for this deployment. */
+            audience: string;
+            /**
+             * @description The identity provider's exact `iss`, e.g.
+             *     `https://login.microsoftonline.com/{tenant}/v2.0`.
+             */
+            issuer: string;
+            /** @description The provider's JWKS URL (`https://`). */
+            jwks_uri: string;
+            /** @description The workload's exact `sub`. */
+            subject: string;
+        };
         CreateVersionBody: {
             graph?: unknown;
         };
@@ -38640,7 +38686,7 @@ export interface components {
         OAuthErrorBody: {
             /**
              * @description `invalid_request`, `invalid_client`, `unsupported_grant_type`,
-             *     `invalid_scope` or `server_error`.
+             *     `invalid_scope`, `invalid_grant` or `server_error`.
              */
             error: string;
         };
@@ -46404,6 +46450,30 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_TrustItem: {
+            items: {
+                audience: string;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                issuer: string;
+                jwks_uri: string;
+                subject: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_UndoItemView: {
             items: {
                 changed_attributes: string[];
@@ -54066,12 +54136,17 @@ export interface components {
         };
         /** @description A token request (RFC 6749 §4.4.2, RFC 7523 §2.2), form-encoded. */
         TokenForm: {
+            /** @description S11-T2: the identity provider's token (jwt-bearer grant). */
+            assertion?: string | null;
             /** @description The client's signed JWT. */
             client_assertion?: string | null;
             /** @description `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`. */
             client_assertion_type?: string | null;
             client_id?: string | null;
-            /** @description Always `client_credentials`. */
+            /**
+             * @description `client_credentials`, or `urn:ietf:params:oauth:grant-type:jwt-bearer`
+             *     with a token from a trusted identity provider in `assertion`.
+             */
             grant_type: string;
             /** @description Space-separated scopes; omit for every scope the client holds. */
             scope?: string | null;
@@ -54469,6 +54544,17 @@ export interface components {
             at: string;
             /** @description The departure, e.g. `automatic: volume: observed 200, expected 5`. */
             reason?: string | null;
+        };
+        /** @description A registered trust. */
+        TrustItem: {
+            audience: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            issuer: string;
+            jwks_uri: string;
+            subject: string;
         };
         TrustedAccountInfo: {
             /**
@@ -82565,6 +82651,174 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_trusts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_db_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every trust of the client */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TrustItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such client */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_trust: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_db_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTrustBody"];
+            };
+        };
+        responses: {
+            /** @description The trust */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrustItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such client */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description That issuer, audience and subject is already trusted */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_trust: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_db_id: string;
+                trust_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The trust is removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such trust on this client */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

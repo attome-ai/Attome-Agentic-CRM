@@ -43731,6 +43731,279 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/s2s/clients/{client_db_id}/trusts": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "operationId": "list_trusts",
+        "parameters": [
+          {
+            "name": "client_db_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every trust of the client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TrustItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "operationId": "create_trust",
+        "parameters": [
+          {
+            "name": "client_db_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTrustBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The trust",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "That issuer, audience and subject is already trusted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/s2s/clients/{client_db_id}/trusts/{trust_id}": {
+      "delete": {
+        "tags": [
+          "admin-security"
+        ],
+        "operationId": "delete_trust",
+        "parameters": [
+          {
+            "name": "client_db_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "trust_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The trust is removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such trust on this client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "revoke"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/sbom": {
       "get": {
         "tags": [
@@ -143011,6 +143284,34 @@
           }
         }
       },
+      "CreateTrustBody": {
+        "type": "object",
+        "description": "A trust to register.",
+        "required": [
+          "issuer",
+          "audience",
+          "subject",
+          "jwks_uri"
+        ],
+        "properties": {
+          "audience": {
+            "type": "string",
+            "description": "The audience its tokens must carry for this deployment."
+          },
+          "issuer": {
+            "type": "string",
+            "description": "The identity provider's exact `iss`, e.g.\n`https://login.microsoftonline.com/{tenant}/v2.0`."
+          },
+          "jwks_uri": {
+            "type": "string",
+            "description": "The provider's JWKS URL (`https://`)."
+          },
+          "subject": {
+            "type": "string",
+            "description": "The workload's exact `sub`."
+          }
+        }
+      },
       "CreateVersionBody": {
         "type": "object",
         "properties": {
@@ -161456,7 +161757,7 @@
         "properties": {
           "error": {
             "type": "string",
-            "description": "`invalid_request`, `invalid_client`, `unsupported_grant_type`,\n`invalid_scope` or `server_error`."
+            "description": "`invalid_request`, `invalid_client`, `unsupported_grant_type`,\n`invalid_scope`, `invalid_grant` or `server_error`."
           }
         }
       },
@@ -182076,6 +182377,74 @@
           }
         }
       },
+      "PaginatedResponse_TrustItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A registered trust.",
+              "required": [
+                "id",
+                "issuer",
+                "audience",
+                "subject",
+                "jwks_uri",
+                "created_at"
+              ],
+              "properties": {
+                "audience": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "issuer": {
+                  "type": "string"
+                },
+                "jwks_uri": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_UndoItemView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -201991,6 +202360,13 @@
           "grant_type"
         ],
         "properties": {
+          "assertion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "S11-T2: the identity provider's token (jwt-bearer grant)."
+          },
           "client_assertion": {
             "type": [
               "string",
@@ -202013,7 +202389,7 @@
           },
           "grant_type": {
             "type": "string",
-            "description": "Always `client_credentials`."
+            "description": "`client_credentials`, or `urn:ietf:params:oauth:grant-type:jwt-bearer`\nwith a token from a trusted identity provider in `assertion`."
           },
           "scope": {
             "type": [
@@ -202994,6 +203370,40 @@
               "null"
             ],
             "description": "The departure, e.g. `automatic: volume: observed 200, expected 5`."
+          }
+        }
+      },
+      "TrustItem": {
+        "type": "object",
+        "description": "A registered trust.",
+        "required": [
+          "id",
+          "issuer",
+          "audience",
+          "subject",
+          "jwks_uri",
+          "created_at"
+        ],
+        "properties": {
+          "audience": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "jwks_uri": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
           }
         }
       },
@@ -207021,8 +207431,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -207074,5 +207482,7 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": [],
+  "x-api-version": "2026-10"
 }
