@@ -173,6 +173,7 @@ mod tests {
                 entity: "contact".into(),
                 id: uuid::Uuid::nil(),
             },
+            pinned: false,
         }
     }
 

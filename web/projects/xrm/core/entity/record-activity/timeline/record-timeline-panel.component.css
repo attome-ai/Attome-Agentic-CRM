@@ -94,3 +94,59 @@
   font-size: 12px;
   cursor: pointer;
 }
+
+/* B1-T2: inline actions, the pinned entries, gap markers and pin buttons. */
+.rt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.rt-fresh {
+  margin-inline-start: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--color-accent, #14b8a6);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 14%, transparent);
+  color: var(--color-text-primary, #e5eefc);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rt-form { display: flex; flex-direction: column; gap: 8px; }
+.rt-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.rt-form textarea { min-block-size: 64px; font: inherit; }
+.rt-form-actions { display: flex; gap: 8px; }
+
+.rt-pinned {
+  padding-block: 4px;
+  padding-inline: 10px;
+  border: 1px dashed var(--color-border, #24324d);
+  border-radius: 8px;
+}
+
+.rt-pinned-title { margin-block: 4px; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+
+.rt-gap {
+  padding-block: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-secondary, #94a3b8);
+  border-block-end: 1px dashed var(--color-border, #24324d);
+}
+
+.rt-item-actions { margin-inline-start: auto; display: flex; gap: 4px; align-items: flex-start; }
+
+.rt-icon-btn {
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary, #94a3b8);
+  cursor: pointer;
+}
+
+.rt-icon-btn-on { color: var(--color-accent, #14b8a6); border-color: var(--color-accent, #14b8a6); }
+
+.rt-icon-btn:focus-visible,
+.rt-fresh:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #14b8a6) 40%, transparent);
+}

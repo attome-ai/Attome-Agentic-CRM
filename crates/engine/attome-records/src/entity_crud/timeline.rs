@@ -42,6 +42,13 @@
 //! record's entries are read exactly as its own timeline would read them.
 //! Decisions are the record's own only. `related=false` turns roll-in off.
 //!
+//! **Pins** (B1-T2). An entry can be pinned on the record
+//! (`timeline_pin`, migration 0284; `PUT`/`DELETE
+//! /api/v1/{entity}/{id}/timeline/pins/{kind}/{source_id}`). Each entry says
+//! whether it is pinned, and `pinned_only=true` reads only the pinned
+//! entries, through the same sources and permissions, so a pin never shows
+//! an entry its reader may not see.
+//!
 //! **Filters.** `kinds`, `actor`, `channel` (communications only: any other
 //! kind is left out while it is set), `from`/`to` (half-open, on the entry's
 //! time) and `q`: words matched (case-insensitively, as a substring) against
@@ -140,6 +147,8 @@ pub struct TimelineEntry {
     /// B1-T1: the record the underlying row belongs to: this record, or a
     /// related record rolled in.
     pub source_record: SourceRecord,
+    /// B1-T2: pinned on this record, shown above the rest.
+    pub pinned: bool,
 }
 
 /// B1-T1: who made a timeline entry.
@@ -236,6 +245,8 @@ pub struct TimelineQuery {
     /// Whether related records roll in (`records.timeline_roll_in`); default
     /// true.
     pub related: Option<bool>,
+    /// B1-T2: only the entries pinned on this record.
+    pub pinned_only: Option<bool>,
 }
 
 /// A position in the timeline's global order: the last entry of a page.
@@ -254,6 +265,9 @@ pub struct TimelineFilter {
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
     pub q: Option<String>,
+    /// B1-T2: the pinned entries' ids by kind, when only those are wanted
+    /// (set by [`record_timeline`], never by a client).
+    pub pinned: Option<std::collections::HashMap<TimelineEntryKind, Vec<Uuid>>>,
 }
 
 /// Validated timeline options, for non-HTTP callers (the ticket route).
@@ -266,6 +280,8 @@ pub struct TimelineOptions {
     pub filter: TimelineFilter,
     /// Whether the configured related records roll in.
     pub related: bool,
+    /// B1-T2: only the entries pinned on this record.
+    pub pinned_only: bool,
 }
 
 impl Default for TimelineOptions {
@@ -276,6 +292,7 @@ impl Default for TimelineOptions {
             kinds: None,
             filter: TimelineFilter::default(),
             related: true,
+            pinned_only: false,
         }
     }
 }
@@ -332,8 +349,10 @@ impl TimelineOptions {
                 from: q.from,
                 to: q.to,
                 q: words,
+                pinned: None,
             },
             related: q.related.unwrap_or(true),
+            pinned_only: q.pinned_only.unwrap_or(false),
         })
     }
 
@@ -509,6 +528,53 @@ fn record_match(col: &str, ids: &[Uuid], as_text: bool, binds: &mut Vec<SourceBi
     }
 }
 
+/// B1-T2: with only pinned entries wanted, a source keeps its pinned ids
+/// (none pinned: nothing). Empty otherwise.
+fn pin_sql(
+    filter: &TimelineFilter,
+    kind: TimelineEntryKind,
+    id: &str,
+    binds: &mut Vec<SourceBind>,
+) -> String {
+    let Some(pinned) = &filter.pinned else {
+        return String::new();
+    };
+    match pinned.get(&kind) {
+        Some(ids) if !ids.is_empty() => {
+            format!(
+                " AND {id} = ANY({})",
+                ph(binds, SourceBind::IdList(ids.clone()))
+            )
+        }
+        _ => " AND false".to_owned(),
+    }
+}
+
+/// B1-T2: the most entries one record holds pinned.
+pub const MAX_PINS: i64 = 50;
+
+/// B1-T2: the entries pinned on a record, as `(kind, source id)`.
+pub async fn read_pins(
+    state: &EngineState,
+    entity_name: &str,
+    record_id: Uuid,
+) -> Result<HashSet<(TimelineEntryKind, Uuid)>, AppError> {
+    let rows: Vec<(String, Uuid)> = sqlx::query_as(
+        "SELECT kind, source_id FROM timeline_pin WHERE entity_name = $1 AND record_id = $2 \
+          ORDER BY pinned_at DESC LIMIT $3",
+    )
+    .bind(entity_name)
+    .bind(record_id)
+    .bind(MAX_PINS)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(kind, id)| TimelineEntryKind::parse(&kind).map(|k| (k, id)))
+        .collect())
+}
+
 /// The epoch-microseconds expression the sources sort and page by.
 fn micros_sql(occ: &str) -> String {
     format!("(EXTRACT(EPOCH FROM {occ}) * 1000000)::bigint")
@@ -587,6 +653,27 @@ pub async fn record_timeline(
         targets.extend(related_targets(state, ctx, entity_id, &entity_name, record_id).await?);
     }
 
+    // B1-T2: what is pinned on the record; with `pinned_only`, every source
+    // reads only those entries (under its own permissions, as always).
+    let pins = read_pins(state, &entity_name, record_id).await?;
+    let pinned_opts;
+    let opts = if opts.pinned_only {
+        if pins.is_empty() {
+            return Ok(CursorPage::new(Vec::new(), None));
+        }
+        let mut by_kind: std::collections::HashMap<TimelineEntryKind, Vec<Uuid>> =
+            std::collections::HashMap::new();
+        for (kind, id) in &pins {
+            by_kind.entry(*kind).or_default().push(*id);
+        }
+        let mut narrowed = opts.clone();
+        narrowed.filter.pinned = Some(by_kind);
+        pinned_opts = narrowed;
+        &pinned_opts
+    } else {
+        opts
+    };
+
     let limit = opts.page_size + 1;
     let mut rows: Vec<(i64, TimelineEntry)> = Vec::new();
     for target in &targets {
@@ -622,6 +709,9 @@ pub async fn record_timeline(
     rows.dedup_by(|b, a| a.1.kind == b.1.kind && a.1.source_id == b.1.source_id && a.0 == b.0);
     let has_more = rows.len() as i64 > opts.page_size;
     rows.truncate(opts.page_size as usize);
+    for (_, entry) in &mut rows {
+        entry.pinned = pins.contains(&(entry.kind, entry.source_id));
+    }
     let next_cursor = if has_more {
         rows.last()
             .map(|(micros, e)| encode_cursor(*micros, e.kind.as_str(), e.source_id))
@@ -862,6 +952,7 @@ fn entries(
                 run_id: row.run,
                 source_record,
                 detail: row.detail,
+                pinned: false,
             };
             Some((row.micros, entry))
         })
@@ -966,6 +1057,7 @@ async fn fetch_audit_events(
         &text,
         &mut binds,
     );
+    let pins = pin_sql(&opts.filter, kind, "h.id", &mut binds);
     let sql = format!(
         "SELECT jsonb_build_object('id', h.id, 'micros', {micros}, 'record', h.record_id, \
                 'actor', h.user_id, 'initiator', h.initiator, 'source', h.source, \
@@ -978,7 +1070,7 @@ async fn fetch_audit_events(
                         WHERE d.audit_ref = h.id AND d.field_name IS NOT NULL \
                         ORDER BY d.field_name))) \
          FROM audit_header h \
-         WHERE h.entity_name = {entity} AND {record} AND h.changed_on IS NOT NULL {keyset} {filter} \
+         WHERE h.entity_name = {entity} AND {record} AND h.changed_on IS NOT NULL {keyset} {filter}{pins} \
          ORDER BY h.changed_on DESC, h.id DESC LIMIT {lim}",
         micros = micros_sql("h.changed_on"),
     );
@@ -1083,6 +1175,7 @@ async fn fetch_state_transitions(
         &text,
         &mut binds,
     );
+    let pins = pin_sql(&opts.filter, kind, "d.id", &mut binds);
     let sql = format!(
         "SELECT jsonb_build_object('id', d.id, 'micros', {micros}, 'record', h.record_id, \
                 'actor', h.user_id, 'initiator', h.initiator, 'source', h.source, \
@@ -1093,7 +1186,7 @@ async fn fetch_state_transitions(
          FROM audit_detail d \
          JOIN audit_header h ON h.id = d.audit_ref \
          WHERE h.entity_name = {entity} AND {record} AND d.field_name = {field} \
-           AND h.changed_on IS NOT NULL {keyset} {filter} \
+           AND h.changed_on IS NOT NULL {keyset} {filter}{pins} \
          ORDER BY h.changed_on DESC, d.id DESC LIMIT {lim}",
         micros = micros_sql("h.changed_on"),
     );
@@ -1164,6 +1257,7 @@ async fn fetch_agent_runs(
         &text,
         &mut binds,
     );
+    let pins = pin_sql(&opts.filter, kind, "r.session", &mut binds);
     let sql = format!(
         "SELECT jsonb_build_object('id', r.session, 'micros', {micros}, 'record', r.record_id, \
                 'actor', s.owner_user_id, 'run', r.session, \
@@ -1178,7 +1272,7 @@ async fn fetch_agent_runs(
                   AND h.agent_session_id IS NOT NULL AND h.changed_on IS NOT NULL \
                 GROUP BY h.agent_session_id) r \
          LEFT JOIN agent_session s ON s.id = r.session \
-         WHERE true {keyset} {filter} \
+         WHERE true {keyset} {filter}{pins} \
          ORDER BY r.occ DESC, r.session DESC LIMIT {lim}",
         micros = micros_sql("r.occ"),
     );
@@ -1235,13 +1329,14 @@ async fn fetch_approvals(
         &text,
         &mut binds,
     );
+    let pins = pin_sql(&opts.filter, kind, "a.id", &mut binds);
     let sql = format!(
         "SELECT jsonb_build_object('id', a.id, 'micros', {micros}, 'record', a.regarding_id, \
                 'actor', a.requested_by, \
                 'detail', jsonb_build_object('action_type', a.action_type, 'status', a.status, \
                     'step', a.step, 'required_approvals', a.required_approvals)) \
          FROM approval_request a \
-         WHERE a.regarding_entity = {entity} AND {record} {keyset} {filter} \
+         WHERE a.regarding_entity = {entity} AND {record} {keyset} {filter}{pins} \
          ORDER BY a.requested_at DESC, a.id DESC LIMIT {lim}",
         micros = micros_sql("a.requested_at"),
     );
@@ -1292,6 +1387,7 @@ async fn fetch_flow_runs(
         &text,
         &mut binds,
     );
+    let pins = pin_sql(&opts.filter, kind, "w.id", &mut binds);
     let sql = format!(
         "SELECT jsonb_build_object('id', w.id, 'micros', {micros}, \
                 'record', w.correlation_entity_id, 'actor', w.started_by, 'run', w.id, \
@@ -1300,7 +1396,7 @@ async fn fetch_flow_runs(
          FROM workflow_instance w \
          LEFT JOIN workflow_definition_version v ON v.id = w.definition_version_id \
          LEFT JOIN workflow_definition d ON d.id = v.definition_id \
-         WHERE {record} {keyset} {filter} \
+         WHERE {record} {keyset} {filter}{pins} \
          ORDER BY w.started_at DESC, w.id DESC LIMIT {lim}",
         micros = micros_sql("w.started_at"),
     );
@@ -1548,6 +1644,7 @@ async fn fetch_child_source(
         .map(|c| format!("t.{}", quote_ident(c)))
         .collect();
     let mut filter = filter_sql(&opts.filter, &occ, Some("t.created_by"), &text, &mut binds);
+    let pins = pin_sql(&opts.filter, source.kind, "t.id", &mut binds);
     if let Some(channel) = &opts.filter.channel {
         if has("channel") && readable("channel") {
             let p = ph(&mut binds, SourceBind::Text(channel.clone()));
@@ -1562,7 +1659,7 @@ async fn fetch_child_source(
                 'record_entity', t.entity_name, 'record', t.record_id, \
                 'actor', t.created_by, 'created_by', t.created_by, 'detail', {detail}) \
          FROM {table} t \
-         WHERE {placed} AND {occ} IS NOT NULL {live} {keyset} {filter} {{rls}} \
+         WHERE {placed} AND {occ} IS NOT NULL {live} {keyset} {filter}{pins} {{rls}} \
          ORDER BY {occ} DESC, t.id DESC LIMIT {lim}",
         micros = micros_sql(&occ),
     );
@@ -1646,6 +1743,7 @@ async fn fetch_linked_decisions(
         &text,
         &mut binds,
     );
+    let pins = pin_sql(&opts.filter, kind, "t.id", &mut binds);
     let table = quote_ident(DECISION_ENTITY);
     let sql = format!(
         "SELECT jsonb_build_object('id', t.id, 'micros', {micros}, \
@@ -1659,7 +1757,7 @@ async fn fetch_linked_decisions(
                 SELECT lower(r.from_record_id) FROM record_relationship r \
                  WHERE r.is_active IS NOT FALSE AND r.to_entity_name = {entity} \
                    AND r.to_record_id = {record} AND r.from_entity_name = '{DECISION_ENTITY}') \
-           AND t.created_at IS NOT NULL {live} {keyset} {filter} {{rls}} \
+           AND t.created_at IS NOT NULL {live} {keyset} {filter}{pins} {{rls}} \
          ORDER BY t.created_at DESC, t.id DESC LIMIT {lim}",
         micros = micros_sql("t.created_at"),
     );
@@ -1872,6 +1970,7 @@ mod tests {
                 entity: "contact".into(),
                 id: Uuid::nil(),
             },
+            pinned: false,
         };
         let csv = timeline_csv(&[entry]);
         let lines: Vec<&str> = csv.split("\r\n").collect();
@@ -1976,6 +2075,7 @@ mod tests {
             from: Some("2026-10-01T00:00:00Z".parse().unwrap()),
             to: Some("2026-11-01T00:00:00Z".parse().unwrap()),
             q: Some("50%_off".into()),
+            pinned: None,
         };
         let mut binds = vec![SourceBind::Int(1)];
         let sql = filter_sql(

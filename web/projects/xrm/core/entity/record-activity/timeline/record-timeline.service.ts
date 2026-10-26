@@ -47,6 +47,26 @@ export function timelineSummary(outcome: SummaryOutcome | null | undefined): Tim
   return { answer, citations: outcome.result?.citations ?? [] };
 }
 
+/**
+ * B1-T2: whether an entry is pinned on the record. Read through this so it
+ * works whether or not the API types list `pinned` yet. Pure.
+ */
+export function isPinned(entry: TimelineEntry): boolean {
+  return (entry as TimelineEntry & { pinned?: boolean }).pinned === true;
+}
+
+/** B1-T2: the most pinned entries the panel shows. */
+export const MAX_PINNED = 50;
+
+/** B1-T2: what an inline action records on the record. */
+export interface InlineActivity {
+  /** `call` or `task`. */
+  type: 'call' | 'task';
+  subject: string;
+  /** A task's due date (`YYYY-MM-DD`). */
+  due?: string | null;
+}
+
 export interface TimelineRequest {
   cursor?: string | null;
   pageSize?: number;
@@ -66,6 +86,47 @@ export class RecordTimelineService {
     return this.api.get<TimelinePage>(
       `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(recordId)}/timeline`, params,
     );
+  }
+
+  /** B1-T2: the entries pinned on the record, newest first. */
+  pinned(entityName: string, recordId: string): Observable<TimelinePage> {
+    return this.api.get<TimelinePage>(
+      `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(recordId)}/timeline`,
+      { pinned_only: 'true', page_size: String(MAX_PINNED) },
+    );
+  }
+
+  /** B1-T2: pins one entry on the record, for everyone who opens it. */
+  pin(entityName: string, recordId: string, entry: TimelineEntry): Observable<void> {
+    return this.api.put<void>(this.pinPath(entityName, recordId, entry), {});
+  }
+
+  unpin(entityName: string, recordId: string, entry: TimelineEntry): Observable<void> {
+    return this.api.delete(this.pinPath(entityName, recordId, entry));
+  }
+
+  /** B1-T2: adds a note on the record, through the generic record API. */
+  addNote(entityName: string, recordId: string, text: string): Observable<unknown> {
+    return this.api.post('/api/v1/note', {
+      entity_name: entityName, record_id: recordId,
+      title: text.split('\n')[0].slice(0, 120), note_text: text,
+    });
+  }
+
+  /** B1-T2: logs a call or creates a task on the record. */
+  logActivity(entityName: string, recordId: string, activity: InlineActivity): Observable<unknown> {
+    const body: Record<string, unknown> = {
+      entity_name: entityName, record_id: recordId,
+      activity_type: activity.type, subject: activity.subject,
+    };
+    if (activity.type === 'call') body['completed_at'] = new Date().toISOString();
+    if (activity.type === 'task' && activity.due) body['due_at'] = activity.due;
+    return this.api.post('/api/v1/activity', body);
+  }
+
+  private pinPath(entityName: string, recordId: string, entry: TimelineEntry): string {
+    return `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(recordId)}/timeline/pins/`
+      + `${encodeURIComponent(entry.kind)}/${encodeURIComponent(entry.source_id)}`;
   }
 
   /**

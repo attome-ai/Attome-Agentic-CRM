@@ -53,6 +53,8 @@ pub mod tags;
 /// entity-generic record timeline. `pub` so `attome-service`'s ticket route is a
 /// thin caller of it.
 pub mod timeline;
+/// B1-T2: pinning timeline entries.
+mod timeline_pins;
 /// M10-T4: a record's pending timers.
 mod timers;
 mod upsert;
@@ -174,6 +176,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(timers::openapi_fragment());
     doc.merge(related::openapi_fragment());
     doc.merge(timeline::openapi_fragment());
+    doc.merge(timeline_pins::openapi_fragment());
     doc.merge(feed::openapi_fragment());
     doc.merge(record_shares::openapi_fragment());
     doc.merge(history::openapi_fragment());
@@ -332,6 +335,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/{entity}/{id}/timeline/export",
             get(timeline::export_record_timeline),
+        )
+        .route(
+            "/api/v1/{entity}/{id}/timeline/pins/{kind}/{source_id}",
+            axum::routing::put(timeline_pins::pin_entry).delete(timeline_pins::unpin_entry),
         )
         .route("/api/v1/history/search", get(history::search_history_route))
         .route(

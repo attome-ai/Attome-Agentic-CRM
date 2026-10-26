@@ -462,6 +462,7 @@ mod tests {
                 entity: "account".into(),
                 id: Uuid::nil(),
             },
+            pinned: false,
         }
     }
 

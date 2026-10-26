@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Timeline pins, gaps, inline actions and live updates (B1-T2): `PUT`/`DELETE
+  /api/v1/{entity}/{id}/timeline/pins/{kind}/{source_id}` pin an entry for everyone who opens the record
+  (record update access, at most 50, migration 0284); timeline entries carry `pinned` and
+  `pinned_only=true` lists only them through the same permissions. The timeline panel shows pinned
+  entries on top, "no contact for N days" markers, inline note, call and task forms, Reply on a
+  communication, and an "N new" button fed by the live channel.
 - Help answers (B14-T2): the AI action `help.answer` answers how-to questions from the user and
   builder documentation built into the binary (ranked by section) and this deployment's configuration
   from the data catalogue, citing document sections and objects; no evidence means no model call.

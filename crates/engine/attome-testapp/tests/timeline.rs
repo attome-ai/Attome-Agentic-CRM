@@ -425,3 +425,61 @@ fn first_page_is_fast_on_a_record_with_50000_events() {
         );
     });
 }
+
+// feature: B1
+#[test]
+fn pinned_entries_are_marked_and_listed_alone() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let token = Uuid::now_v7().simple().to_string();
+        let entity = format!("tl_pin_{}", &token[..12]);
+        let entity_id = create_entity(&app, &entity).await;
+        add_field(
+            &app,
+            entity_id,
+            json!({ "logicalname": "code", "name": "code", "field_type": "text" }),
+        )
+        .await;
+        let registry = attome_core::build_registry(app.db()).await.unwrap();
+        app.state.entities.swap(registry);
+        let record = create_record(&app, &entity, json!({ "code": "P" })).await;
+        let me = app.admin.id;
+        let older = audit(&app, &entity, record, 30, me, "older", 0, None).await;
+        let newer = audit(&app, &entity, record, 10, me, "newer", 0, None).await;
+
+        let pin = format!("/api/v1/{entity}/{record}/timeline/pins/audit_event/{older}");
+        let (status, body) = app.request(Method::PUT, &pin, None).await;
+        assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+        let (status, _) = app.request(Method::PUT, &pin, None).await;
+        assert_eq!(status, StatusCode::NO_CONTENT, "pinning twice is fine");
+
+        let all = items(&timeline(&app, &entity, record, "").await);
+        let flag = |id: Uuid| {
+            all.iter()
+                .find(|e| e["source_id"] == json!(id))
+                .map(|e| e["pinned"].clone())
+                .unwrap()
+        };
+        assert_eq!(flag(older), json!(true));
+        assert_eq!(flag(newer), json!(false));
+        let only = items(&timeline(&app, &entity, record, "&pinned_only=true").await);
+        assert_eq!(only.len(), 1, "{only:?}");
+        assert_eq!(only[0]["source_id"], json!(older));
+
+        let (status, _) = app.request(Method::DELETE, &pin, None).await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        let none = items(&timeline(&app, &entity, record, "&pinned_only=true").await);
+        assert!(none.is_empty(), "{none:?}");
+
+        let (status, _) = app
+            .request(
+                Method::PUT,
+                &format!("/api/v1/{entity}/{record}/timeline/pins/bogus/{older}"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    });
+}

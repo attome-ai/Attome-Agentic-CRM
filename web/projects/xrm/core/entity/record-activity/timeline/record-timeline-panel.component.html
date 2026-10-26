@@ -19,6 +19,81 @@
     </div>
   }
 
+  <div class="rt-actions" role="group" [attr.aria-label]="'recordTimeline.actionsLabel' | translate">
+    <button type="button" class="rt-chip" [class.rt-chip-on]="form() === 'note'"
+            [attr.aria-pressed]="form() === 'note'" (click)="openForm('note')" data-testid="timeline-add-note">
+      <i class="las la-sticky-note" aria-hidden="true"></i> {{ 'recordTimeline.addNote' | translate }}
+    </button>
+    <button type="button" class="rt-chip" [class.rt-chip-on]="form() === 'call'"
+            [attr.aria-pressed]="form() === 'call'" (click)="openForm('call')" data-testid="timeline-log-call">
+      <i class="las la-phone" aria-hidden="true"></i> {{ 'recordTimeline.logCall' | translate }}
+    </button>
+    <button type="button" class="rt-chip" [class.rt-chip-on]="form() === 'task'"
+            [attr.aria-pressed]="form() === 'task'" (click)="openForm('task')" data-testid="timeline-add-task">
+      <i class="las la-tasks" aria-hidden="true"></i> {{ 'recordTimeline.addTask' | translate }}
+    </button>
+    @if (fresh() > 0) {
+      <button type="button" class="rt-fresh" (click)="showFresh()" data-testid="timeline-fresh"
+              aria-live="polite">
+        {{ 'recordTimeline.fresh' | translate: { count: fresh() } }}
+      </button>
+    }
+  </div>
+
+  @if (form(); as f) {
+    <form class="rt-form" (ngSubmit)="saveForm()" data-testid="timeline-form">
+      <label>
+        <span>{{ 'recordTimeline.forms.' + f | translate }}</span>
+        <textarea name="text" [ngModel]="formText()" (ngModelChange)="formText.set($event)"
+                  data-testid="timeline-form-text"></textarea>
+      </label>
+      @if (f === 'task') {
+        <label>
+          <span>{{ 'recordTimeline.due' | translate }}</span>
+          <input type="date" name="due" [ngModel]="formDue()" (ngModelChange)="formDue.set($event)"
+                 data-testid="timeline-form-due" />
+        </label>
+      }
+      <div class="rt-form-actions">
+        <button type="submit" class="rt-more" [disabled]="saving() || !formText().trim()"
+                data-testid="timeline-form-save">
+          {{ 'recordTimeline.save' | translate }}
+        </button>
+        <button type="button" class="rt-more" (click)="openForm(null)">
+          {{ 'recordTimeline.cancel' | translate }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (actionError()) {
+    <p class="rt-error" role="alert" data-testid="timeline-action-error">{{ 'recordTimeline.actionError' | translate }}</p>
+  }
+
+  @if (pinnedEntries().length) {
+    <div class="rt-pinned" data-testid="timeline-pinned">
+      <h4 class="rt-pinned-title">
+        <i class="las la-thumbtack" aria-hidden="true"></i> {{ 'recordTimeline.pinned' | translate }}
+      </h4>
+      <ol class="rt-list">
+        @for (entry of pinnedEntries(); track entry.kind + ':' + entry.source_id) {
+          <li class="rt-item" [attr.data-kind]="entry.kind" data-testid="timeline-pinned-entry">
+            <span class="rt-icon" aria-hidden="true"><i [class]="icon(entry.kind)"></i></span>
+            <div class="rt-body">
+              <div class="rt-summary">{{ entry.summary }}</div>
+              <div class="rt-meta">
+                <span class="rt-kind">{{ 'recordTimeline.kinds.' + entry.kind | translate }}</span>
+                <time [attr.datetime]="entry.occurred_at">
+                  {{ entry.occurred_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}
+                </time>
+              </div>
+            </div>
+          </li>
+        }
+      </ol>
+    </div>
+  }
+
   <div class="rt-chips" role="group" [attr.aria-label]="'recordTimeline.filterLabel' | translate">
     <button type="button" class="rt-chip" [class.rt-chip-on]="selected().size === 0"
             [attr.aria-pressed]="selected().size === 0" (click)="clearFilter()"
@@ -44,7 +119,12 @@
   }
 
   <ol class="rt-list">
-    @for (entry of entries(); track entry.kind + ':' + entry.source_id) {
+    @for (entry of entries(); track entry.kind + ':' + entry.source_id; let i = $index) {
+      @if (gaps().get(i); as days) {
+        <li class="rt-gap" role="separator" data-testid="timeline-gap">
+          {{ 'recordTimeline.gap' | translate: { days: days } }}
+        </li>
+      }
       <li class="rt-item" [attr.data-kind]="entry.kind" [attr.id]="'tl-' + entry.source_id"
           [class.rt-item-cited]="highlighted() === entry.source_id" data-testid="timeline-entry">
         <span class="rt-icon" aria-hidden="true"><i [class]="icon(entry.kind)"></i></span>
@@ -56,6 +136,20 @@
               {{ entry.occurred_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}
             </time>
           </div>
+        </div>
+        <div class="rt-item-actions">
+          @if (entry.kind === 'communication') {
+            <button type="button" class="rt-icon-btn" (click)="reply.emit(entry)"
+                    [attr.aria-label]="'recordTimeline.reply' | translate" data-testid="timeline-reply">
+              <i class="las la-paper-plane" aria-hidden="true"></i>
+            </button>
+          }
+          <button type="button" class="rt-icon-btn" [class.rt-icon-btn-on]="pinned(entry)"
+                  [attr.aria-pressed]="pinned(entry)" [disabled]="pinning() === entry.kind + ':' + entry.source_id"
+                  [attr.aria-label]="(pinned(entry) ? 'recordTimeline.unpin' : 'recordTimeline.pin') | translate"
+                  (click)="togglePin(entry)" [attr.data-testid]="'timeline-pin-' + entry.source_id">
+            <i class="las la-thumbtack" aria-hidden="true"></i>
+          </button>
         </div>
       </li>
     }
