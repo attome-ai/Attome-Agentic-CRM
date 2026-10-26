@@ -52,7 +52,9 @@ use attome_core::EngineState;
 use axum::Router;
 
 pub use mfa::{ACTION_MFA_RESET_ADMIN, do_reset_user_mfa};
-pub use user_roles::{ACTION_ROLE_GRANT, do_assign_user_role, role_grant_event};
+pub use user_roles::{
+    ACTION_ROLE_GRANT, RoleGrantOutcome, do_assign_user_role, grant_role_as, role_grant_event,
+};
 
 /// M03 gap 1 / D-434 — re-exported so `crates/server/src/jobs.rs` can call
 /// the sweep without a `pub(crate)` visibility widening on the submodule

@@ -507,6 +507,15 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        SettingDescriptor::new(
+            "catalog.export_enabled",
+            "Whether GET /api/v1/catalog/export answers: the catalogue's metadata (no record values) \
+         as JSON for a harvester such as Purview or Collibra (L4-T4). Off by default.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         // P13-T1: the entities the warehouse export writes; none by default.
         SettingDescriptor::new(
             "integration.warehouse_entities",

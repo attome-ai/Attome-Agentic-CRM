@@ -34,12 +34,17 @@ use attome_security::SecurityContextExt;
 use attome_server::authz::{Admin, Authorized, SelfService};
 use attome_server::security::SecurityContext;
 use attome_types::ErrorResponse;
-use attome_types::{AppError, DEFAULT_PAGE_SIZE, PageBase, PageWindow, PaginatedResponse};
+use attome_types::{
+    AppError, DEFAULT_PAGE_SIZE, OnePageQuery, PageBase, PageWindow, PaginatedResponse,
+};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    routing::get,
+    http::{HeaderMap, header::IF_MATCH},
+    routing::{get, patch, post},
 };
+
+use crate::catalog_index;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -530,18 +535,352 @@ async fn lineage_impact(
     Ok(Json(report))
 }
 
+// ── L4-T4: the asset catalogue ──────────────────────────────────────────────
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct AssetSearchQuery {
+    /// Words matched against names and descriptions in English and Arabic.
+    q: Option<String>,
+    /// One asset kind (`entity`, `attribute`, `view`, …).
+    kind: Option<String>,
+    /// One data domain.
+    domain: Option<Uuid>,
+    /// One label.
+    label: Option<String>,
+    /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
+    page: Option<i64>,
+    /// Rows per page.
+    page_size: Option<i64>,
+}
+
+/// A page of assets with the facet counts.
+#[derive(Serialize, ToSchema)]
+struct CatalogAssetSearch {
+    #[serde(flatten)]
+    page: PaginatedResponse<catalog_index::CatalogAssetSummary>,
+    facets: catalog_index::CatalogFacets,
+}
+
+/// `If-Match`'s row version, required.
+fn if_match(headers: &HeaderMap) -> Result<i64, AppError> {
+    let raw = headers
+        .get(IF_MATCH)
+        .ok_or_else(|| AppError::Validation("If-Match is required".into()))?;
+    raw.to_str()
+        .ok()
+        .map(|s| s.trim().trim_matches('"'))
+        .and_then(|s| s.parse::<i64>().ok())
+        .ok_or_else(|| AppError::Validation("If-Match must be the asset's row_version".into()))
+}
+
+/// Search the catalogue
+///
+/// The assets the caller may see (entities and attributes they may read,
+/// and every other kind), best match first, with counts by kind, domain and
+/// label. Needs `metadata.read`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/catalog/assets",
+    operation_id = "catalog_search_assets",
+    tag = "catalog",
+    params(AssetSearchQuery),
+    responses(
+        (status = 200, description = "A page of assets and the facet counts", body = CatalogAssetSearch),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks metadata.read", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn search_assets(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Query(query): Query<AssetSearchQuery>,
+) -> Result<Json<CatalogAssetSearch>, AppError> {
+    ctx.require_key(METADATA_READ)?;
+    let window = PageWindow::resolve(
+        query.page,
+        query.page_size,
+        PageBase::One,
+        DEFAULT_PAGE_SIZE,
+    );
+    let scope = catalog_index::asset_scope(&state, &ctx);
+    let filter = catalog_index::AssetFilter {
+        q: query.q,
+        kind: query.kind,
+        domain: query.domain,
+        label: query.label,
+    };
+    let (items, total, facets) =
+        catalog_index::search_assets(&state, &scope, &filter, window.page_size, window.offset)
+            .await?;
+    Ok(Json(CatalogAssetSearch {
+        page: PaginatedResponse::new(items, total, window.page, window.page_size),
+        facets,
+    }))
+}
+
+/// One asset's page
+///
+/// The asset with its domain, label, glossary terms, quality, profile,
+/// lineage, usage, certification and history; a fact whose feature this
+/// deployment lacks is null. Needs `metadata.read` and sight of the asset.
+#[utoipa::path(
+    get,
+    path = "/api/v1/catalog/assets/{id}",
+    operation_id = "catalog_get_asset",
+    tag = "catalog",
+    params(("id" = Uuid, Path, description = "The asset")),
+    responses(
+        (status = 200, description = "The asset page", body = catalog_index::CatalogAssetPage),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks metadata.read", body = ErrorResponse),
+        (status = 404, description = "No such asset the caller may see", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_asset(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<catalog_index::CatalogAssetPage>, AppError> {
+    ctx.require_key(METADATA_READ)?;
+    let scope = catalog_index::asset_scope(&state, &ctx);
+    Ok(Json(catalog_index::asset_page(&state, &scope, id).await?))
+}
+
+/// Propose an asset's description
+///
+/// Sets the English and/or Arabic description of an asset the caller may
+/// see; it is a draft until a builder approves it. Send the asset's
+/// `row_version` in `If-Match`. Needs `metadata.read`.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/catalog/assets/{id}/description",
+    operation_id = "catalog_set_description",
+    tag = "catalog",
+    params(
+        ("id" = Uuid, Path, description = "The asset"),
+        ("If-Match" = String, Header, description = "The asset's row_version"),
+    ),
+    request_body = catalog_index::CatalogDescriptionBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The drafted description", body = catalog_index::CatalogAssetSummary),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks metadata.read", body = ErrorResponse),
+        (status = 404, description = "No such asset the caller may see", body = ErrorResponse),
+        (status = 409, description = "The asset changed since it was read", body = ErrorResponse),
+        (status = 422, description = "A missing If-Match, no description, or one too long", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn patch_description(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(body): Json<catalog_index::CatalogDescriptionBody>,
+) -> Result<Json<catalog_index::CatalogAssetSummary>, AppError> {
+    ctx.require_key(METADATA_READ)?;
+    let expected = if_match(&headers)?;
+    let scope = catalog_index::asset_scope(&state, &ctx);
+    Ok(Json(
+        catalog_index::set_description(&state, &ctx, &scope, id, expected, &body).await?,
+    ))
+}
+
+/// Approve an asset's description
+///
+/// Marks a drafted description reviewed. Builders (administrators) only.
+/// Send the asset's `row_version` in `If-Match`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/catalog/assets/{id}/description/approve",
+    operation_id = "catalog_approve_description",
+    tag = "catalog",
+    params(
+        ("id" = Uuid, Path, description = "The asset"),
+        ("If-Match" = String, Header, description = "The asset's row_version"),
+    ),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The approved description", body = catalog_index::CatalogAssetSummary),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such asset", body = ErrorResponse),
+        (status = 409, description = "The asset changed, or its description is not a draft", body = ErrorResponse),
+        (status = 422, description = "A missing or malformed If-Match", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn approve_description(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+) -> Result<Json<catalog_index::CatalogAssetSummary>, AppError> {
+    let expected = if_match(&headers)?;
+    Ok(Json(
+        catalog_index::approve_description(&state, &ctx, id, expected).await?,
+    ))
+}
+
+/// Ask for access to an asset
+///
+/// Records why the caller needs access (and the role, when they know it)
+/// for the asset's owner to decide. One pending request per person and
+/// asset. Needs `metadata.read`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/catalog/assets/{id}/access-requests",
+    operation_id = "catalog_request_access",
+    tag = "catalog",
+    params(("id" = Uuid, Path, description = "The asset")),
+    request_body = catalog_index::CatalogAccessRequestBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Submitted)])))),
+    responses(
+        (status = 200, description = "The request", body = catalog_index::CatalogAccessRequest),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks metadata.read", body = ErrorResponse),
+        (status = 404, description = "No such asset", body = ErrorResponse),
+        (status = 409, description = "The caller already has a pending request for it", body = ErrorResponse),
+        (status = 422, description = "No reason, or one too long", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn post_access_request(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<catalog_index::CatalogAccessRequestBody>,
+) -> Result<Json<catalog_index::CatalogAccessRequest>, AppError> {
+    ctx.require_key(METADATA_READ)?;
+    Ok(Json(
+        catalog_index::request_access(&state, &ctx, id, &body).await?,
+    ))
+}
+
+/// Decide an access request
+///
+/// The asset's owner (an administrator, or the steward or deputy of its data
+/// domain) grants a role or refuses. A grant takes the same path as the
+/// admin role assignment: step-up, the grant ceiling and the approval gate,
+/// so a gated grant waits for a second administrator.
+#[utoipa::path(
+    post,
+    path = "/api/v1/catalog/access-requests/{id}/decide",
+    operation_id = "catalog_decide_access",
+    tag = "catalog",
+    params(("id" = Uuid, Path, description = "The access request")),
+    request_body = catalog_index::CatalogAccessDecisionBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
+        (attome_audit::AuditCategory::Access, attome_audit::AuditOperation::Grant),
+        (attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Rejected),
+    ])))),
+    responses(
+        (status = 200, description = "The decided request", body = catalog_index::CatalogAccessRequest),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The role carries privileges the owner lacks, or step-up is needed", body = ErrorResponse),
+        (status = 404, description = "No such request the caller owns", body = ErrorResponse),
+        (status = 409, description = "The request is already decided", body = ErrorResponse),
+        (status = 422, description = "A grant without a role", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn decide_access_request(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
+    Path(id): Path<Uuid>,
+    Json(body): Json<catalog_index::CatalogAccessDecisionBody>,
+) -> Result<Json<catalog_index::CatalogAccessRequest>, AppError> {
+    Ok(Json(
+        catalog_index::decide_access(&state, caller, &ctx, id, &body).await?,
+    ))
+}
+
+/// Export the catalogue
+///
+/// Every asset's metadata (names, descriptions, domain, label,
+/// certification; never record values) for a harvester such as Purview or
+/// Collibra. Administrators only, and only while `catalog.export_enabled`
+/// is on (404 otherwise).
+#[utoipa::path(
+    get,
+    path = "/api/v1/catalog/export",
+    operation_id = "catalog_export",
+    tag = "catalog",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "A page of the catalogue", body = PaginatedResponse<catalog_index::CatalogExportAsset>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "The export is turned off", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn export_catalog(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(query): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<catalog_index::CatalogExportAsset>>, AppError> {
+    let window = query.window();
+    let (items, total) =
+        catalog_index::export_assets(&state, window.page_size, window.offset).await?;
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        window.page,
+        window.page_size,
+    )))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/catalog/entities", get(list_entities))
         .route("/api/v1/catalog/entities/{logicalname}", get(get_entity))
         .route("/api/v1/admin/lineage/impact", get(lineage_impact))
+        // L4-T4: the asset catalogue.
+        .route("/api/v1/catalog/assets", get(search_assets))
+        .route("/api/v1/catalog/assets/{id}", get(get_asset))
+        .route(
+            "/api/v1/catalog/assets/{id}/description",
+            patch(patch_description),
+        )
+        .route(
+            "/api/v1/catalog/assets/{id}/description/approve",
+            post(approve_description),
+        )
+        .route(
+            "/api/v1/catalog/assets/{id}/access-requests",
+            post(post_access_request),
+        )
+        .route(
+            "/api/v1/catalog/access-requests/{id}/decide",
+            post(decide_access_request),
+        )
+        .route("/api/v1/catalog/export", get(export_catalog))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document (see `schema.rs`'s identical fragment for why this is split per
 /// file).
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_entities, get_entity, lineage_impact))]
+#[openapi(paths(
+    list_entities,
+    get_entity,
+    lineage_impact,
+    search_assets,
+    get_asset,
+    patch_description,
+    approve_description,
+    post_access_request,
+    decide_access_request,
+    export_catalog
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

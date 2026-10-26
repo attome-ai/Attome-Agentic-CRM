@@ -4533,6 +4533,73 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             ),
             0,
         ),
+        // ── L4-T4: the asset catalogue ───────────────────────────────────────
+        "PATCH /api/v1/catalog/assets/{id}/description" => {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO catalog_asset (kind, ref, name_en) VALUES ('view', $1, 'Emission view') \
+                 RETURNING id",
+            )
+            .bind(uniq("catalog-view"))
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("seed a catalog asset");
+            with_if_match(
+                request(
+                    "PATCH",
+                    &format!("/api/v1/catalog/assets/{id}/description"),
+                    t,
+                    Some(json!({"description_en": "What this view shows."})),
+                ),
+                0,
+            )
+        }
+        "POST /api/v1/catalog/assets/{id}/description/approve" => {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO catalog_asset (kind, ref, name_en, description_en, description_status) \
+                 VALUES ('view', $1, 'Emission view', 'Drafted.', 'draft') RETURNING id",
+            )
+            .bind(uniq("catalog-draft"))
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("seed a drafted catalog asset");
+            with_if_match(
+                request(
+                    "POST",
+                    &format!("/api/v1/catalog/assets/{id}/description/approve"),
+                    t,
+                    None,
+                ),
+                0,
+            )
+        }
+        "POST /api/v1/catalog/access-requests/{id}/decide" => {
+            let asset: Uuid = sqlx::query_scalar(
+                "INSERT INTO catalog_asset (kind, ref, name_en) VALUES ('view', $1, 'Emission view') \
+                 RETURNING id",
+            )
+            .bind(uniq("catalog-access"))
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("seed a catalog asset");
+            let (requester, _) = seed_user(&fx.base, "catalog-requester").await;
+            let rid = role(fx).await;
+            let request_id: Uuid = sqlx::query_scalar(
+                "INSERT INTO catalog_access_request (asset_id, requester_id, reason, role_ref) \
+                 VALUES ($1, $2, 'Monthly report', $3) RETURNING id",
+            )
+            .bind(asset)
+            .bind(requester)
+            .bind(rid)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("seed an access request");
+            request(
+                "POST",
+                &format!("/api/v1/catalog/access-requests/{request_id}/decide"),
+                t,
+                Some(json!({"grant": true})),
+            )
+        }
         "POST /api/v1/admin/search/synonyms" => request(
             "POST",
             "/api/v1/admin/search/synonyms",

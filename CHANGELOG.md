@@ -16,6 +16,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Data catalogue routes (L4-T4): `GET /api/v1/catalog/assets` (words, kind, domain, label; a
+  `PaginatedResponse` plus `facets` by kind, domain and label over the visible assets the words
+  match), `GET /api/v1/catalog/assets/{id}` (domain, label, terms, quality, profile, lineage, usage,
+  certification and history; null where the feature is absent), `PATCH .../description` (If-Match;
+  a draft) and `POST .../description/approve` (administrators), `POST .../access-requests` and
+  `POST /api/v1/catalog/access-requests/{id}/decide` (the asset's owner: an administrator or its
+  domain's steward or deputy; a grant goes through the role-grant path with step-up, the ceiling and
+  the approval gate), and `GET /api/v1/catalog/export` (administrators, metadata only, behind the new
+  setting `catalog.export_enabled`). Migration 0281. `attome_security::admin::grant_role_as` is now
+  the one role-grant path the admin route also uses.
 - Search page and search settings (A25-T11): `/xrm/search` groups results by entity with counts over
   every result, filters by the entity facet (owner and month counts beside it), asks in words with
   the parsed filter and a cited direct answer, explains each result's score for builders, keeps

@@ -219,6 +219,56 @@ pub fn role_grant_event(actor_user_id: Uuid) -> SecurityEvent {
     )
 }
 
+/// What [`grant_role_as`] did.
+#[derive(Debug)]
+pub enum RoleGrantOutcome {
+    /// The role is the user's now.
+    Assigned(UserRoleItem),
+    /// Waiting for a second administrator (D-195), as this approval request.
+    Pending(Uuid),
+}
+
+/// L4-T4: the one way to give a user a role on a granter's say: the
+/// role-change step-up for a session caller, the grant ceiling (no role
+/// carrying privileges the granter lacks, Q12-T3), the D-195 approval gate,
+/// then [`do_assign_user_role`] with its `Access` + `Grant` event. The admin
+/// route and the data catalog's access decision both grant through it, so
+/// neither skips a check.
+pub async fn grant_role_as(
+    state: &EngineState,
+    caller: attome_auth::step_up::Caller,
+    granter: &attome_server::security::SecurityContext,
+    user_id: Uuid,
+    role_id: Uuid,
+    valid_until: Option<chrono::DateTime<chrono::Utc>>,
+    reason: Option<&str>,
+) -> Result<RoleGrantOutcome, AppError> {
+    role_change_step_up(state, caller, granter.user_id).await?;
+    crate::grant_expiry::valid_end(valid_until, chrono::Utc::now())?;
+    crate::grants::require_role_within_ceiling(&state.base.db, granter, role_id).await?;
+    let payload = serde_json::json!({
+        "user_id": user_id,
+        "role_id": role_id,
+        "valid_until": valid_until,
+        "reason": reason,
+    });
+    if let Some(request) =
+        attome_audit::approval::gate(state, ACTION_ROLE_GRANT, payload, granter.user_id).await?
+    {
+        return Ok(RoleGrantOutcome::Pending(request.id));
+    }
+    let item = do_assign_user_role(
+        state,
+        user_id,
+        role_id,
+        valid_until,
+        reason,
+        role_grant_event(granter.user_id),
+    )
+    .await?;
+    Ok(RoleGrantOutcome::Assigned(item))
+}
+
 /// Assigns `role_id` directly to `user_id` — the single-user counterpart to
 /// `teams::add_team_role` (role → every current/future team member).
 /// Idempotent via `user_account_mm_role`'s `(user_ref, role_ref)` unique
@@ -253,41 +303,33 @@ pub(super) async fn assign_user_role(
     Path(user_id): Path<Uuid>,
     Json(body): Json<AssignUserRoleBody>,
 ) -> Result<(StatusCode, Json<AssignUserRoleResponse>), AppError> {
-    role_change_step_up(&state, caller, ctx.user_id).await?;
-    crate::grant_expiry::valid_end(body.valid_until, chrono::Utc::now())?;
-    // Q12-T3: never a role carrying privileges the granter lacks.
-    crate::grants::require_role_within_ceiling(&state.base.db, &ctx, body.role_id).await?;
-    let payload = serde_json::json!({
-        "user_id": user_id,
-        "role_id": body.role_id,
-        "valid_until": body.valid_until,
-        "reason": body.reason,
-    });
-    if let Some(request) =
-        attome_audit::approval::gate(&state, ACTION_ROLE_GRANT, payload, ctx.user_id).await?
-    {
-        return Ok((
-            StatusCode::ACCEPTED,
-            Json(AssignUserRoleResponse {
-                id: None,
-                user_id,
-                role_id: body.role_id,
-                role_name: None,
-                approval_pending: true,
-                approval_request_id: Some(request.id),
-            }),
-        ));
-    }
-
-    let item = do_assign_user_role(
+    // Step-up, the Q12-T3 ceiling and the D-195 gate, in one shared path.
+    let item = match grant_role_as(
         &state,
+        caller,
+        &ctx,
         user_id,
         body.role_id,
         body.valid_until,
         body.reason.as_deref(),
-        role_grant_event(ctx.user_id),
     )
-    .await?;
+    .await?
+    {
+        RoleGrantOutcome::Pending(request) => {
+            return Ok((
+                StatusCode::ACCEPTED,
+                Json(AssignUserRoleResponse {
+                    id: None,
+                    user_id,
+                    role_id: body.role_id,
+                    role_name: None,
+                    approval_pending: true,
+                    approval_request_id: Some(request),
+                }),
+            ));
+        }
+        RoleGrantOutcome::Assigned(item) => item,
+    };
     Ok((
         StatusCode::CREATED,
         Json(AssignUserRoleResponse {

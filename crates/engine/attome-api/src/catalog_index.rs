@@ -28,10 +28,18 @@
 
 use std::collections::BTreeMap;
 
+use attome_audit::AuditOperation;
+use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
 use attome_core::quote_ident;
+use attome_security::SecurityContextExt;
+use attome_server::security::SecurityContext;
 use attome_types::AppError;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use utoipa::ToSchema;
+use uuid::Uuid;
 
 /// The registered job.
 pub const JOB: &str = "catalog_asset_rebuild";
@@ -290,6 +298,881 @@ pub async fn rebuild_assets(state: &EngineState) -> Result<RebuildCounts, AppErr
         upserted: assets.len(),
         removed,
     })
+}
+
+// ── L4-T4: search, the asset page, descriptions and access ─────────────────
+
+/// What a caller may see of the index (L4-T3's rule over every asset): an
+/// entity they may read, an attribute or option set of such an entity
+/// unless it is sensitive without their field grant, and every other kind
+/// (views, queries, reports, dashboards, metrics, flows, agent tools) to any
+/// holder of `metadata.read`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AssetScope {
+    /// `None` for an administrator: every asset.
+    pub entities: Option<Vec<String>>,
+    /// `entity.field` of each sensitive attribute the caller holds no grant for.
+    pub hidden_attributes: Vec<String>,
+}
+
+/// The scope of `ctx`.
+pub fn asset_scope(state: &EngineState, ctx: &SecurityContext) -> AssetScope {
+    if ctx.is_admin {
+        return AssetScope::default();
+    }
+    let registry = state.entities.load();
+    let mut entities = Vec::new();
+    let mut hidden_attributes = Vec::new();
+    for meta in registry.iter() {
+        if ctx.require(&meta.logicalname, "read").is_err() {
+            continue;
+        }
+        for a in &meta.attrs {
+            if a.is_sensitive && !ctx.has_field_read_grant(&meta.logicalname, &a.logicalname) {
+                hidden_attributes.push(format!("{}.{}", meta.logicalname, a.logicalname));
+            }
+        }
+        entities.push(meta.logicalname.clone());
+    }
+    AssetScope {
+        entities: Some(entities),
+        hidden_attributes,
+    }
+}
+
+/// The visibility predicate over `catalog_asset a`, binding `$1` (the
+/// readable entities, or NULL for all) and `$2` (the hidden attributes).
+const VISIBLE: &str = "($1::text[] IS NULL \
+     OR (a.kind = 'entity' AND a.ref = ANY($1)) \
+     OR (a.kind IN ('attribute', 'option_set') AND a.parent_ref = ANY($1) \
+         AND NOT (a.ref = ANY($2))) \
+     OR a.kind NOT IN ('entity', 'attribute', 'option_set'))";
+
+const ASSET_COLUMNS: &str = "a.id, a.kind, a.ref AS asset_ref, a.parent_ref, a.name_en, a.name_ar, \
+     a.description_en, a.description_ar, a.description_status, a.domain_ref, a.label, \
+     a.row_version, a.updated_at";
+
+/// One asset as the catalogue lists it.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct CatalogAssetSummary {
+    pub id: Uuid,
+    /// `entity`, `attribute`, `option_set`, `view`, `saved_query`, `report`,
+    /// `dashboard`, `metric`, `flow` or `agent_tool`.
+    pub kind: String,
+    /// The asset's own reference: a logical name, `entity.field` or an id.
+    #[serde(rename = "ref")]
+    pub asset_ref: String,
+    pub parent_ref: Option<String>,
+    pub name_en: Option<String>,
+    pub name_ar: Option<String>,
+    pub description_en: Option<String>,
+    pub description_ar: Option<String>,
+    /// `missing`, `draft` (proposed, by a person or an agent) or `reviewed`
+    /// (approved by a builder).
+    pub description_status: String,
+    pub domain_ref: Option<Uuid>,
+    pub label: Option<String>,
+    pub row_version: i64,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// One facet value and its count.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct CatalogFacet {
+    pub value: String,
+    pub count: i64,
+}
+
+/// Counts by kind, domain and label over the visible assets the query matches.
+#[derive(Debug, Clone, Default, Serialize, ToSchema)]
+pub struct CatalogFacets {
+    pub kind: Vec<CatalogFacet>,
+    pub domain: Vec<CatalogFacet>,
+    pub label: Vec<CatalogFacet>,
+}
+
+/// What a catalogue search narrows to.
+#[derive(Debug, Clone, Default)]
+pub struct AssetFilter {
+    pub q: Option<String>,
+    pub kind: Option<String>,
+    pub domain: Option<Uuid>,
+    pub label: Option<String>,
+}
+
+fn normalized_query(q: Option<&str>) -> Option<String> {
+    q.map(str::trim)
+        .filter(|q| !q.is_empty())
+        .map(attome_core::match_normalize::normalize_ar)
+}
+
+/// A page of the visible assets `filter` selects, best match first, their
+/// total and the facet counts (over the visible assets the words match,
+/// before the kind, domain and label filters, so each facet shows what
+/// choosing it would give).
+pub async fn search_assets(
+    state: &EngineState,
+    scope: &AssetScope,
+    filter: &AssetFilter,
+    page_size: i64,
+    offset: i64,
+) -> Result<(Vec<CatalogAssetSummary>, i64, CatalogFacets), AppError> {
+    let db = &state.base.db;
+    let q = normalized_query(filter.q.as_deref());
+    let matched =
+        format!("{VISIBLE} AND ($3::text IS NULL OR a.search @@ plainto_tsquery('simple', $3))");
+    let selected = format!(
+        "{matched} AND ($4::text IS NULL OR a.kind = $4) \
+         AND ($5::uuid IS NULL OR a.domain_ref = $5) \
+         AND ($6::text IS NULL OR a.label = $6)"
+    );
+    let items: Vec<CatalogAssetSummary> = sqlx::query_as(&format!(
+        "SELECT {ASSET_COLUMNS} FROM catalog_asset a WHERE {selected} \
+          ORDER BY ts_rank(a.search, plainto_tsquery('simple', COALESCE($3, ''))) DESC, \
+                   a.kind, a.ref \
+          LIMIT $7 OFFSET $8"
+    ))
+    .bind(scope.entities.as_deref())
+    .bind(&scope.hidden_attributes)
+    .bind(q.as_deref())
+    .bind(filter.kind.as_deref())
+    .bind(filter.domain)
+    .bind(filter.label.as_deref())
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM catalog_asset a WHERE {selected}"
+    ))
+    .bind(scope.entities.as_deref())
+    .bind(&scope.hidden_attributes)
+    .bind(q.as_deref())
+    .bind(filter.kind.as_deref())
+    .bind(filter.domain)
+    .bind(filter.label.as_deref())
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut facets = CatalogFacets::default();
+    for (column, out) in [
+        ("a.kind", &mut facets.kind),
+        ("a.domain_ref::text", &mut facets.domain),
+        ("a.label", &mut facets.label),
+    ] {
+        *out = sqlx::query_as(&format!(
+            "SELECT {column} AS value, count(*) AS count FROM catalog_asset a \
+              WHERE {matched} AND {column} IS NOT NULL \
+              GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 50"
+        ))
+        .bind(scope.entities.as_deref())
+        .bind(&scope.hidden_attributes)
+        .bind(q.as_deref())
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    Ok((items, total, facets))
+}
+
+/// The asset `id`, when `scope` sees it.
+pub async fn visible_asset(
+    state: &EngineState,
+    scope: &AssetScope,
+    id: Uuid,
+) -> Result<CatalogAssetSummary, AppError> {
+    sqlx::query_as(&format!(
+        "SELECT {ASSET_COLUMNS} FROM catalog_asset a WHERE a.id = $3 AND {VISIBLE}"
+    ))
+    .bind(scope.entities.as_deref())
+    .bind(&scope.hidden_attributes)
+    .bind(id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)
+}
+
+/// Everything known about one asset, each fact from the feature that owns
+/// it; a fact whose feature this deployment lacks (its table is absent) is
+/// `null`, not an error.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct CatalogAssetPage {
+    pub asset: CatalogAssetSummary,
+    /// The data domain (M15): id, name, description, steward.
+    #[schema(value_type = Option<Object>)]
+    pub domain: Option<Value>,
+    pub label: Option<String>,
+    /// Glossary terms of the asset's entity.
+    #[schema(value_type = Option<Vec<Object>>)]
+    pub terms: Option<Vec<Value>>,
+    /// The latest quality score per dimension of the asset's entity.
+    #[schema(value_type = Option<Vec<Object>>)]
+    pub quality: Option<Vec<Value>>,
+    /// The latest completed profile of the entity (an attribute's own
+    /// column only, for an attribute).
+    #[schema(value_type = Option<Object>)]
+    pub profile: Option<Value>,
+    /// What reads the entity (or the attribute): queries, flows, dashboards, rules.
+    #[schema(value_type = Option<Vec<Object>>)]
+    pub lineage: Option<Vec<Value>>,
+    /// The entity's nightly usage numbers.
+    #[schema(value_type = Option<Object>)]
+    pub usage: Option<Value>,
+    /// Its certification, when certified.
+    #[schema(value_type = Option<Object>)]
+    pub certification: Option<Value>,
+    /// The entity's latest metadata changes.
+    #[schema(value_type = Option<Vec<Object>>)]
+    pub history: Option<Vec<Value>>,
+}
+
+async fn table_exists(db: &attome_db::DbPool, table: &str) -> Result<bool, AppError> {
+    let found: Option<String> = sqlx::query_scalar("SELECT to_regclass($1)::text")
+        .bind(table)
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(found.is_some())
+}
+
+/// One JSON value from `sql` binding `arg`, or `None` when `table` is absent.
+async fn fact(
+    db: &attome_db::DbPool,
+    table: &str,
+    sql: &str,
+    args: &[&str],
+) -> Result<Option<Value>, AppError> {
+    if !table_exists(db, table).await? {
+        return Ok(None);
+    }
+    let mut query = sqlx::query_scalar::<_, Option<Value>>(sql);
+    for arg in args {
+        query = query.bind(*arg);
+    }
+    let found = query.fetch_optional(db).await.map_err(AppError::internal)?;
+    Ok(Some(found.flatten().unwrap_or(Value::Null)))
+}
+
+fn as_list(value: Option<Value>) -> Option<Vec<Value>> {
+    value.map(|v| match v {
+        Value::Array(items) => items,
+        _ => Vec::new(),
+    })
+}
+
+/// The entity an asset belongs to, and its attribute when it is one.
+fn asset_entity(asset: &CatalogAssetSummary) -> (Option<String>, Option<String>) {
+    match asset.kind.as_str() {
+        "entity" => (Some(asset.asset_ref.clone()), None),
+        "attribute" | "option_set" => {
+            let field = asset.asset_ref.split_once('.').map(|(_, f)| f.to_owned());
+            (asset.parent_ref.clone(), field)
+        }
+        _ => (None, None),
+    }
+}
+
+/// The asset page for `id` as `scope` sees it.
+pub async fn asset_page(
+    state: &EngineState,
+    scope: &AssetScope,
+    id: Uuid,
+) -> Result<CatalogAssetPage, AppError> {
+    let asset = visible_asset(state, scope, id).await?;
+    let db = &state.base.db;
+    let (entity, field) = asset_entity(&asset);
+    let domain_id = match asset.domain_ref {
+        Some(d) => Some(d),
+        None => match &entity {
+            Some(e) => sqlx::query_scalar::<_, Option<Uuid>>(
+                "SELECT domain_ref FROM entity_info WHERE logicalname = $1",
+            )
+            .bind(e)
+            .fetch_optional(&state.base.db_migrator)
+            .await
+            .map_err(AppError::internal)?
+            .flatten(),
+            None => None,
+        },
+    };
+    let domain = match domain_id {
+        Some(d) => fact(
+            db,
+            "data_domain",
+            "SELECT row_to_json(d) FROM (SELECT id, name, description, steward_ref FROM data_domain \
+              WHERE id = $1::uuid AND is_deleted = false) d",
+            &[&d.to_string()],
+        )
+        .await?
+        .filter(|v| !v.is_null()),
+        None => None,
+    };
+    let (mut terms, mut quality, mut profile, mut lineage, mut usage, mut history) =
+        (None, None, None, None, None, None);
+    if let Some(entity) = &entity {
+        terms = as_list(
+            fact(
+                db,
+                "glossary_term",
+                "SELECT COALESCE(json_agg(t), '[]'::json) FROM (SELECT id, term, definition, status \
+                   FROM glossary_term WHERE primary_entity_logicalname = $1 \
+                    AND is_active IS NOT FALSE ORDER BY term LIMIT 50) t",
+                &[entity],
+            )
+            .await?,
+        );
+        quality = as_list(
+            fact(
+                db,
+                "quality_score",
+                "SELECT COALESCE(json_agg(q), '[]'::json) FROM (SELECT DISTINCT ON (dimension) \
+                        dimension, score, period, computed_at FROM quality_score \
+                  WHERE entity_logicalname = $1 ORDER BY dimension, computed_at DESC) q",
+                &[entity],
+            )
+            .await?,
+        );
+        profile = fact(
+            db,
+            "data_profile",
+            "SELECT row_to_json(p) FROM (SELECT row_count, completed_at, fields FROM data_profile \
+              WHERE entity_logicalname = $1 AND status = 'completed' AND is_deleted = false \
+              ORDER BY completed_at DESC NULLS LAST LIMIT 1) p",
+            &[entity],
+        )
+        .await?
+        .map(|p| profile_of(p, field.as_deref()));
+        usage = fact(
+            db,
+            "catalog_usage_rollup",
+            "SELECT row_to_json(u) FROM (SELECT record_count, last_write_at, search_impressions_30d, \
+                    computed_at FROM catalog_usage_rollup WHERE entity_logicalname = $1) u",
+            &[entity],
+        )
+        .await?;
+        history = as_list(
+            fact(
+                db,
+                "metadata_change_log",
+                "SELECT COALESCE(json_agg(h), '[]'::json) FROM (SELECT change_kind, created_at \
+                   FROM metadata_change_log WHERE logicalname = $1 \
+                  ORDER BY created_at DESC LIMIT 20) h",
+                &[entity],
+            )
+            .await?,
+        );
+        let references = attome_core::references_to_entity(db, entity, 200).await?;
+        lineage = Some(
+            references
+                .into_iter()
+                .filter(|r| field.as_deref().is_none_or(|f| r.to_attribute == f))
+                .filter(|r| {
+                    r.to_attribute.is_empty()
+                        || !scope
+                            .hidden_attributes
+                            .contains(&format!("{entity}.{}", r.to_attribute))
+                })
+                .map(|r| {
+                    serde_json::json!({
+                        "from_kind": r.from_kind,
+                        "from_ref": r.from_ref,
+                        "from_label": r.from_label,
+                        "to_attribute": (!r.to_attribute.is_empty()).then_some(r.to_attribute),
+                        "created_at": r.created_at,
+                    })
+                })
+                .collect(),
+        );
+    }
+    let certification = fact(
+        db,
+        "governance_certification",
+        "SELECT row_to_json(c) FROM (SELECT status, certified_by, certified_at \
+           FROM governance_certification WHERE asset_kind = $1 AND asset_ref = $2) c",
+        &[&asset.kind, &asset.asset_ref],
+    )
+    .await?
+    .filter(|v| !v.is_null());
+    Ok(CatalogAssetPage {
+        label: asset.label.clone(),
+        asset,
+        domain,
+        terms,
+        quality,
+        profile: profile.filter(|v| !v.is_null()),
+        lineage,
+        usage: usage.filter(|v| !v.is_null()),
+        certification,
+        history,
+    })
+}
+
+/// A profile narrowed to `field`'s own entry when there is one. Pure.
+fn profile_of(profile: Value, field: Option<&str>) -> Value {
+    let Some(field) = field else {
+        return profile;
+    };
+    let mut profile = profile;
+    if let Some(fields) = profile.get_mut("fields").and_then(Value::as_array_mut) {
+        fields.retain(|f| {
+            f.get("field")
+                .or_else(|| f.get("name"))
+                .and_then(Value::as_str)
+                == Some(field)
+        });
+    }
+    profile
+}
+
+/// A description edit.
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct CatalogDescriptionBody {
+    #[serde(default)]
+    pub description_en: Option<String>,
+    #[serde(default)]
+    pub description_ar: Option<String>,
+}
+
+const MAX_DESCRIPTION_CHARS: usize = 4_000;
+
+fn clean_description(text: Option<&str>) -> Result<Option<String>, AppError> {
+    let Some(text) = text.map(str::trim) else {
+        return Ok(None);
+    };
+    if text.chars().count() > MAX_DESCRIPTION_CHARS {
+        return Err(AppError::Validation(format!(
+            "a description is at most {MAX_DESCRIPTION_CHARS} characters"
+        )));
+    }
+    Ok(Some(text.to_owned()))
+}
+
+/// Proposes a description for a visible asset at `expected` row version: it
+/// becomes a `draft` until a builder approves it. Audited as a
+/// configuration change.
+pub async fn set_description(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    scope: &AssetScope,
+    id: Uuid,
+    expected: i64,
+    body: &CatalogDescriptionBody,
+) -> Result<CatalogAssetSummary, AppError> {
+    visible_asset(state, scope, id).await?;
+    let en = clean_description(body.description_en.as_deref())?;
+    let ar = clean_description(body.description_ar.as_deref())?;
+    if en.is_none() && ar.is_none() {
+        return Err(AppError::Validation(
+            "give description_en, description_ar or both".into(),
+        ));
+    }
+    let mut tx = SecurityTx::begin(
+        state,
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "catalog_asset",
+            Some(id),
+        )
+        .comment("catalog description drafted"),
+    )
+    .await?;
+    let updated: Option<CatalogAssetSummary> = sqlx::query_as(&format!(
+        "UPDATE catalog_asset a SET description_en = COALESCE($3, a.description_en), \
+                description_ar = COALESCE($4, a.description_ar), description_status = 'draft', \
+                description_by = $5, description_reviewed_by = NULL, \
+                row_version = a.row_version + 1, updated_at = now() \
+          WHERE a.id = $1 AND a.row_version = $2 RETURNING {ASSET_COLUMNS}"
+    ))
+    .bind(id)
+    .bind(expected)
+    .bind(&en)
+    .bind(&ar)
+    .bind(ctx.user_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(updated) = updated else {
+        return Err(AppError::VersionConflict);
+    };
+    tx.commit().await?;
+    Ok(updated)
+}
+
+/// Approves a drafted description at `expected` row version (a builder:
+/// the caller is an administrator). Audited as a configuration change.
+pub async fn approve_description(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    id: Uuid,
+    expected: i64,
+) -> Result<CatalogAssetSummary, AppError> {
+    ctx.require_admin()?;
+    let mut tx = SecurityTx::begin(
+        state,
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "catalog_asset",
+            Some(id),
+        )
+        .comment("catalog description approved"),
+    )
+    .await?;
+    let current: Option<(i64, String)> = sqlx::query_as(
+        "SELECT row_version, description_status FROM catalog_asset WHERE id = $1 FOR UPDATE",
+    )
+    .bind(id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let (version, status) = current.ok_or(AppError::NotFound)?;
+    if version != expected {
+        return Err(AppError::VersionConflict);
+    }
+    if status != "draft" {
+        return Err(AppError::Conflict("only a drafted description is approved"));
+    }
+    let updated: CatalogAssetSummary = sqlx::query_as(&format!(
+        "UPDATE catalog_asset a SET description_status = 'reviewed', description_reviewed_by = $2, \
+                row_version = a.row_version + 1, updated_at = now() \
+          WHERE a.id = $1 RETURNING {ASSET_COLUMNS}"
+    ))
+    .bind(id)
+    .bind(ctx.user_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    tx.commit().await?;
+    Ok(updated)
+}
+
+/// A request for access to an asset.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct CatalogAccessRequest {
+    pub id: Uuid,
+    pub asset_id: Uuid,
+    pub requester_id: Uuid,
+    pub reason: String,
+    /// `pending`, `granted`, `refused` or `withdrawn`.
+    pub status: String,
+    /// The role asked for or granted.
+    pub role_ref: Option<Uuid>,
+    pub decided_by: Option<Uuid>,
+    pub decided_at: Option<DateTime<Utc>>,
+    /// When the grant waits for a second administrator (D-195).
+    pub approval_request_id: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+}
+
+const REQUEST_COLUMNS: &str = "id, asset_id, requester_id, reason, status, role_ref, decided_by, \
+     decided_at, approval_request_id, created_at";
+
+/// Asks for access.
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct CatalogAccessRequestBody {
+    pub reason: String,
+    /// The role that would give the access, when the requester knows it.
+    #[serde(default)]
+    pub role_id: Option<Uuid>,
+}
+
+/// Records `ctx`'s request for access to an asset they can see in the
+/// catalogue (a hidden attribute shows by name when the deployment says so,
+/// L4-T3). One pending request per person and asset.
+pub async fn request_access(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    id: Uuid,
+    body: &CatalogAccessRequestBody,
+) -> Result<CatalogAccessRequest, AppError> {
+    let reason = body.reason.trim();
+    if reason.is_empty() || reason.chars().count() > 1_000 {
+        return Err(AppError::Validation(
+            "give a reason of 1 to 1,000 characters".into(),
+        ));
+    }
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM catalog_asset WHERE id = $1)")
+            .bind(id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let pending: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM catalog_access_request \
+           WHERE asset_id = $1 AND requester_id = $2 AND status = 'pending')",
+    )
+    .bind(id)
+    .bind(ctx.user_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if pending {
+        return Err(AppError::Conflict(
+            "you already asked for access to this asset",
+        ));
+    }
+    let request: CatalogAccessRequest = sqlx::query_as(&format!(
+        "INSERT INTO catalog_access_request (asset_id, requester_id, reason, role_ref) \
+         VALUES ($1, $2, $3, $4) RETURNING {REQUEST_COLUMNS}"
+    ))
+    .bind(id)
+    .bind(ctx.user_id)
+    .bind(reason)
+    .bind(body.role_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_audit::write_business_event_in_tx(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        attome_audit::BusinessEvent::new(
+            "catalog_access_request",
+            request.id,
+            AuditOperation::Submitted,
+            "catalog.access_requested",
+            ctx.user_id,
+        ),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(request)
+}
+
+/// Whether `ctx` owns `asset` for access decisions: an administrator, or
+/// the steward or deputy of the asset's data domain (its entity's, for an
+/// entity or attribute asset).
+pub async fn owns_asset(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    asset: &CatalogAssetSummary,
+) -> Result<bool, AppError> {
+    if ctx.is_admin {
+        return Ok(true);
+    }
+    let (entity, _) = asset_entity(asset);
+    let domain: Option<Uuid> = match (asset.domain_ref, entity) {
+        (Some(d), _) => Some(d),
+        (None, Some(e)) => sqlx::query_scalar::<_, Option<Uuid>>(
+            "SELECT domain_ref FROM entity_info WHERE logicalname = $1",
+        )
+        .bind(e)
+        .fetch_optional(&state.base.db_migrator)
+        .await
+        .map_err(AppError::internal)?
+        .flatten(),
+        (None, None) => None,
+    };
+    let Some(domain) = domain else {
+        return Ok(false);
+    };
+    if !table_exists(&state.base.db, "data_domain").await? {
+        return Ok(false);
+    }
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM data_domain WHERE id = $1 AND is_deleted = false \
+           AND (steward_ref = $2 OR deputy_ref = $2))",
+    )
+    .bind(domain)
+    .bind(ctx.user_id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Decides an access request.
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct CatalogAccessDecisionBody {
+    /// `true` grants the role; `false` refuses.
+    pub grant: bool,
+    /// The role to grant; the one asked for when omitted.
+    #[serde(default)]
+    pub role_id: Option<Uuid>,
+    /// When the granted role ends (Q10).
+    #[serde(default)]
+    pub valid_until: Option<DateTime<Utc>>,
+}
+
+/// Decides a pending request as the asset's owner. A grant goes through
+/// `attome_security::admin::grant_role_as`, the admin route's own path:
+/// step-up, the grant ceiling and the D-195 approval gate, so a gated grant
+/// waits (`approval_request_id`) and nothing is skipped. The request is
+/// claimed first, so two decisions cannot both act; a grant that is then
+/// refused leaves it pending again.
+pub async fn decide_access(
+    state: &EngineState,
+    caller: attome_auth::step_up::Caller,
+    ctx: &SecurityContext,
+    request_id: Uuid,
+    body: &CatalogAccessDecisionBody,
+) -> Result<CatalogAccessRequest, AppError> {
+    let request: CatalogAccessRequest = sqlx::query_as(&format!(
+        "SELECT {REQUEST_COLUMNS} FROM catalog_access_request WHERE id = $1"
+    ))
+    .bind(request_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let asset: CatalogAssetSummary = sqlx::query_as(&format!(
+        "SELECT {ASSET_COLUMNS} FROM catalog_asset a WHERE a.id = $1"
+    ))
+    .bind(request.asset_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    if !owns_asset(state, ctx, &asset).await? {
+        return Err(AppError::NotFound);
+    }
+    let role = body.role_id.or(request.role_ref);
+    if body.grant && role.is_none() {
+        return Err(AppError::Validation(
+            "a grant names role_id (the request asked for none)".into(),
+        ));
+    }
+    let claimed: Option<CatalogAccessRequest> = sqlx::query_as(&format!(
+        "UPDATE catalog_access_request SET status = $2, decided_by = $3, decided_at = now(), \
+                role_ref = COALESCE($4, role_ref), row_version = row_version + 1 \
+          WHERE id = $1 AND status = 'pending' RETURNING {REQUEST_COLUMNS}"
+    ))
+    .bind(request_id)
+    .bind(if body.grant { "granted" } else { "refused" })
+    .bind(ctx.user_id)
+    .bind(role)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(claimed) = claimed else {
+        return Err(AppError::Conflict("the request is already decided"));
+    };
+    if !body.grant {
+        attome_audit::write_business_event(
+            state,
+            "catalog_access_request",
+            request_id,
+            AuditOperation::Rejected,
+            "catalog.access_refused",
+            ctx.user_id,
+            None,
+            None,
+            String::new(),
+        )
+        .await;
+        return Ok(claimed);
+    }
+    let reason = format!("catalog access: {}", request.reason);
+    let outcome = attome_security::admin::grant_role_as(
+        state,
+        caller,
+        ctx,
+        request.requester_id,
+        role.unwrap_or_default(),
+        body.valid_until,
+        Some(&reason),
+    )
+    .await;
+    match outcome {
+        Ok(attome_security::admin::RoleGrantOutcome::Assigned(_)) => Ok(claimed),
+        Ok(attome_security::admin::RoleGrantOutcome::Pending(approval)) => {
+            sqlx::query_as(&format!(
+                "UPDATE catalog_access_request SET approval_request_id = $2 \
+              WHERE id = $1 RETURNING {REQUEST_COLUMNS}"
+            ))
+            .bind(request_id)
+            .bind(approval)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)
+        }
+        Err(error) => {
+            // Back to pending: the grant was refused, nothing was given.
+            let _ = sqlx::query(
+                "UPDATE catalog_access_request SET status = 'pending', decided_by = NULL, \
+                        decided_at = NULL WHERE id = $1",
+            )
+            .bind(request_id)
+            .execute(&state.base.db)
+            .await
+            .inspect_err(
+                |e| tracing::warn!(error = %e, "catalog access: could not reopen a request"),
+            );
+            Err(error)
+        }
+    }
+}
+
+/// One asset as the export lists it: metadata only, never record values.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct CatalogExportAsset {
+    pub kind: String,
+    #[serde(rename = "ref")]
+    pub asset_ref: String,
+    pub parent_ref: Option<String>,
+    pub name_en: Option<String>,
+    pub name_ar: Option<String>,
+    pub description_en: Option<String>,
+    pub description_ar: Option<String>,
+    pub description_status: String,
+    pub domain: Option<String>,
+    pub label: Option<String>,
+    pub certified: bool,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// The setting the export answers behind.
+pub const EXPORT_SETTING: &str = "catalog.export_enabled";
+
+/// A page of the whole catalogue for a harvester, when the deployment turned
+/// the export on (`catalog.export_enabled`); `NotFound` otherwise.
+pub async fn export_assets(
+    state: &EngineState,
+    page_size: i64,
+    offset: i64,
+) -> Result<(Vec<CatalogExportAsset>, i64), AppError> {
+    let on = attome_core::setting_registry()
+        .get(EXPORT_SETTING)
+        .map(|d| state.settings.load().resolve(d, None, None).0)
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if !on {
+        return Err(AppError::NotFound);
+    }
+    let certified = if table_exists(&state.base.db, "governance_certification").await? {
+        "EXISTS (SELECT 1 FROM governance_certification c WHERE c.asset_kind = a.kind \
+            AND c.asset_ref = a.ref AND c.status = 'certified')"
+    } else {
+        "false"
+    };
+    let domain = if table_exists(&state.base.db, "data_domain").await? {
+        "(SELECT d.name FROM data_domain d WHERE d.id = a.domain_ref)"
+    } else {
+        "NULL::text"
+    };
+    let items: Vec<CatalogExportAsset> = sqlx::query_as(&format!(
+        "SELECT a.kind, a.ref AS asset_ref, a.parent_ref, a.name_en, a.name_ar, a.description_en, \
+                a.description_ar, a.description_status, {domain} AS domain, a.label, \
+                {certified} AS certified, a.updated_at \
+           FROM catalog_asset a ORDER BY a.kind, a.ref LIMIT $1 OFFSET $2"
+    ))
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM catalog_asset")
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok((items, total))
 }
 
 #[cfg(test)]
