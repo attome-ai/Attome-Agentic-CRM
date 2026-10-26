@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Search administration (A25-T9): `GET`/`PUT /api/v1/admin/search/entities/{entity}` (entity
+  switches, boost and attribute modes and weights, `If-Match`), list, add and remove synonyms, stop
+  words and pins (`/api/v1/admin/search/synonyms`, `/stopwords`, `/pins`), and the index size
+  (`/api/v1/admin/search/size`). Each change is audited and takes effect at once on its node.
 - Search quality (A25-T8): `GET /api/v1/admin/search/quality?days=30` answers the zero-result and
   refinement rates (a second search by the same person within 30 s) overall and per entity, from
   the impression log; a DB test confirms a saved-search alert tells its owner once per new match.

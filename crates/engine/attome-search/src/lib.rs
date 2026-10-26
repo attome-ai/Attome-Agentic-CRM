@@ -23,6 +23,8 @@
 //! silently and progressively, with no error to notice.
 
 pub mod access_cache;
+/// A25-T9: search administration routes.
+pub mod admin;
 pub mod aggregate;
 pub mod backfill;
 /// A25-T3: synonyms, stop words, boosts, pins and personal ranking.

@@ -4523,6 +4523,88 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"shares": []})),
             )
         }
+        // ── search administration (A25-T9) ─────────────────────────────────
+        "PUT /api/v1/admin/search/entities/{entity}" => with_if_match(
+            request(
+                "PUT",
+                &format!("/api/v1/admin/search/entities/{}", fx.entity),
+                t,
+                Some(json!({"boost": 2.0})),
+            ),
+            0,
+        ),
+        "POST /api/v1/admin/search/synonyms" => request(
+            "POST",
+            "/api/v1/admin/search/synonyms",
+            t,
+            Some(json!({"terms": [uniq("syn-a"), uniq("syn-b")]})),
+        ),
+        "DELETE /api/v1/admin/search/synonyms/{id}" => {
+            let id = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    "/api/v1/admin/search/synonyms",
+                    Some(json!({"terms": [uniq("syn-c"), uniq("syn-d")]})),
+                )
+                .await,
+            );
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/search/synonyms/{id}"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/search/stopwords" => request(
+            "POST",
+            "/api/v1/admin/search/stopwords",
+            t,
+            Some(json!({"word": uniq("stop"), "lang": "en"})),
+        ),
+        "DELETE /api/v1/admin/search/stopwords/{word}" => {
+            let created = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/search/stopwords",
+                Some(json!({"word": uniq("stopgone"), "lang": "en"})),
+            )
+            .await;
+            let word = created["word"].as_str().expect("word").to_owned();
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/search/stopwords/{word}"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/search/pins" => {
+            let record = entity_record(fx, "pinned").await;
+            request(
+                "POST",
+                "/api/v1/admin/search/pins",
+                t,
+                Some(json!({"query": uniq("pin"), "entity": fx.entity, "record_id": record})),
+            )
+        }
+        "DELETE /api/v1/admin/search/pins/{id}" => {
+            let record = entity_record(fx, "unpinned").await;
+            let id = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    "/api/v1/admin/search/pins",
+                    Some(json!({"query": uniq("unpin"), "entity": fx.entity, "record_id": record})),
+                )
+                .await,
+            );
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/search/pins/{id}"),
+                t,
+                None,
+            )
+        }
         // ── Hijri sighting correction (AG1-T3) ──────────────────────────────
         // 1447: Safar has 29 days and Rabi al-Awwal 30, so Rabi al-Awwal may
         // start a day after its published 2025-08-24. Idempotent on reruns.

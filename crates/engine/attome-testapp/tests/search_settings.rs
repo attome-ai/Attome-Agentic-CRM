@@ -218,3 +218,39 @@ fn alert_sends_once_for_new_match() {
         assert_eq!(alerts_for(&app, app.admin.id, &name).await, 2);
     });
 }
+
+/// A25-T9: the search administration routes answer administrators only.
+// feature: A25
+// negative: list_synonyms
+#[test]
+fn admin_search_routes_forbid_non_admin() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let outsider = seed_user(app.db(), "search-admin-outsider").await;
+        for (method, path) in [
+            (Method::GET, "/api/v1/admin/search/synonyms"),
+            (Method::GET, "/api/v1/admin/search/stopwords"),
+            (Method::GET, "/api/v1/admin/search/pins"),
+            (Method::GET, "/api/v1/admin/search/size"),
+            (Method::GET, "/api/v1/admin/search/quality"),
+        ] {
+            let (status, _) = app
+                .request_as(&outsider.cookie, method.clone(), path, None)
+                .await;
+            assert_eq!(status, StatusCode::FORBIDDEN, "{path}");
+            let (status, body) = app.request(method, path, None).await;
+            assert_eq!(status, StatusCode::OK, "{path}: {body}");
+        }
+        let (status, _) = app
+            .request_as(
+                &outsider.cookie,
+                Method::POST,
+                "/api/v1/admin/search/synonyms",
+                Some(json!({ "terms": ["a1", "b1"] })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+    });
+}
