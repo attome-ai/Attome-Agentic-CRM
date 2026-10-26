@@ -102,6 +102,7 @@ pub fn server_config(tls: &TlsSection) -> Result<Arc<ServerConfig>, TlsError> {
 pub struct TlsListener {
     ready: mpsc::Receiver<(TlsStream<tokio::net::TcpStream>, SocketAddr)>,
     local_addr: SocketAddr,
+    current: Arc<ArcSwap<ServerConfig>>,
 }
 
 impl std::fmt::Debug for TlsListener {
@@ -128,6 +129,7 @@ impl TlsListener {
             .local_addr()
             .map_err(|e| TlsError::Config(e.to_string()))?;
         let (tx, ready) = mpsc::channel(READY_QUEUE);
+        let accepting = current.clone();
         // Process-lifetime supervision: it ends when the server stops taking
         // streams (guidelines §10).
         tokio::spawn(async move {
@@ -140,7 +142,7 @@ impl TlsListener {
                         continue;
                     }
                 };
-                let acceptor = TlsAcceptor::from(current.load_full());
+                let acceptor = TlsAcceptor::from(accepting.load_full());
                 let sender = tx.clone();
                 tokio::spawn(async move {
                     match tokio::time::timeout(HANDSHAKE_TIMEOUT, acceptor.accept(stream)).await {
@@ -162,8 +164,30 @@ impl TlsListener {
                 }
             }
         });
-        Ok(Self { ready, local_addr })
+        Ok(Self {
+            ready,
+            local_addr,
+            current,
+        })
     }
+
+    /// The rustls configuration in use now (Z5-T8 serves HTTP/3 with it).
+    pub fn server_config(&self) -> Arc<ServerConfig> {
+        self.current.load_full()
+    }
+}
+
+/// Z5-T8: `app.tls.http3` needs a server built with the `http3` feature;
+/// asking for it without one fails at boot with this message rather than
+/// serving TCP only and advertising nothing.
+pub fn check_http3(tls: &TlsSection) -> Result<(), TlsError> {
+    if tls.http3 && !cfg!(feature = "http3") {
+        return Err(TlsError::Config(
+            "app.tls.http3 is on, but this server was built without the `http3` feature              (cargo build --features http3)"
+                .into(),
+        ));
+    }
+    Ok(())
 }
 
 impl axum::serve::Listener for TlsListener {

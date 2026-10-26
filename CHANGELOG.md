@@ -8,6 +8,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- HTTP/3 (Z5-T8): a server built with `--features http3` and run with `app.tls.http3 = true`
+  also serves HTTP/3 over QUIC on its HTTPS port (UDP), through the same routes and middleware,
+  and advertises it with `Alt-Svc: h3=":<port>"; ma=86400`. The switch without the feature
+  fails at boot; the default build carries no QUIC code.
 - Automatic certificates (Z5-T7): with `app.tls.enabled` and `app.tls.acme.enabled` (off by
   default) the server obtains and renews its own certificate over ACME (TLS-ALPN-01 on its HTTPS
   port; Let's Encrypt production unless `directory_url` says otherwise) for `domains`, keeping the

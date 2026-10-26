@@ -2606,6 +2606,12 @@ pub(crate) fn validate_tls(tls: &super::TlsSection) -> Result<(), ConfigError> {
             "needs app.tls.enabled = true: the certificate is served by the built-in TLS edge",
         ));
     }
+    if tls.http3 && !tls.enabled {
+        return Err(invalid(
+            "app.tls.http3",
+            "needs app.tls.enabled = true: HTTP/3 always runs over TLS 1.3",
+        ));
+    }
     if !tls.enabled {
         return Ok(());
     }

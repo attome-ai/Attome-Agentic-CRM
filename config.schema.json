@@ -3472,6 +3472,11 @@
           "description": "Serve HTTPS on `app.port` from the certificate and key below.",
           "type": "boolean"
         },
+        "http3": {
+          "default": false,
+          "description": "Z5-T8: also serve HTTP/3 over QUIC on the same port (UDP), and\nadvertise it with `Alt-Svc`. Needs a server built with the `http3`\nfeature; off by default.",
+          "type": "boolean"
+        },
         "key_path": {
           "default": "",
           "description": "The PEM private key (PKCS#8, PKCS#1 or SEC1).",

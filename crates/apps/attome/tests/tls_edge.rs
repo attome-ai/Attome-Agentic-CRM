@@ -33,6 +33,7 @@ fn section() -> TlsSection {
         key_path: fixture("key.pem"),
         min_version: None,
         acme: Default::default(),
+        http3: false,
     }
 }
 
@@ -96,4 +97,19 @@ fn tls_config_names_the_file_that_is_wrong() {
     let mut strict = section();
     strict.min_version = Some("1.3".into());
     assert!(server_config(&strict).is_ok());
+}
+
+/// Z5-T8: without the `http3` feature, `app.tls.http3 = true` fails at boot
+/// with a message naming the feature, instead of serving TCP alone.
+#[cfg(not(feature = "http3"))]
+#[test]
+fn http3_feature_off_rejects_config() {
+    let mut tls = section();
+    assert!(attome::tls::check_http3(&tls).is_ok(), "off by default");
+    tls.http3 = true;
+    let err = attome::tls::check_http3(&tls).unwrap_err().to_string();
+    assert!(
+        err.contains("app.tls.http3") && err.contains("--features http3"),
+        "{err}"
+    );
 }

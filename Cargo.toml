@@ -237,6 +237,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 url           = "2"
 utoipa        = { version = "5", features = ["macros", "uuid", "chrono"] }
 uuid          = { version = "1", features = ["v4", "v5", "v7", "serde"] }
+# Z5-T8: HTTP/3 behind the attome crate's `http3` feature (quinn on rustls/ring).
+quinn         = { version = "0.11", default-features = false, features = ["rustls-ring", "runtime-tokio"] }
+h3            = "0.0.8"
+h3-quinn      = "0.0.10"
 # Z5-T7: ACME certificates over TLS-ALPN-01 on the ring provider (no aws-lc-rs).
 rustls-acme   = { version = "0.15", default-features = false, features = ["ring", "tokio", "tls12", "webpki-roots"] }
 x509-parser   = "0.18"

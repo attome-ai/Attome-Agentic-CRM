@@ -34,6 +34,8 @@ pub mod db_role_seed;
 pub mod dev_access_seed;
 /// J2-T2: shared mailboxes routed into cases, leads and contacts.
 pub mod inbound_mail;
+#[cfg(feature = "http3")]
+pub mod http3;
 pub mod jobs;
 /// AB7-T3: the listening socket, inherited from a supervisor or bound.
 pub mod listener;

@@ -18,6 +18,12 @@ name = "attome"
 path = "src/main.rs"
 
 [dependencies]
+# Z5-T8: only with the `http3` feature.
+quinn = { workspace = true, optional = true }
+h3 = { workspace = true, optional = true }
+h3-quinn = { workspace = true, optional = true }
+bytes = { workspace = true, optional = true }
+tower = { workspace = true, optional = true }
 # Z5-T7: ACME certificates, and certificate expiry for logs and the gauge.
 async-trait.workspace = true
 rustls-acme.workspace = true
@@ -115,6 +121,8 @@ url.workspace                   = true
 keycloak-tests = []
 # The developer-only fleet console (V2-D472); refused in release builds.
 fleet-console = ["dep:attome-fleet"]
+# Z5-T8: HTTP/3 over QUIC from the built-in edge (`app.tls.http3`).
+http3 = ["dep:quinn", "dep:h3", "dep:h3-quinn", "dep:bytes", "dep:tower"]
 
 [target.'cfg(windows)'.dependencies]
 # AB7-T3: the inherited socket's protocol information arrives as base64.

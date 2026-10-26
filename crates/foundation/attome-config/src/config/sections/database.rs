@@ -146,6 +146,11 @@ pub struct TlsSection {
     /// `cert_path` and `key_path`. Off by default.
     #[serde(default)]
     pub acme: AcmeSection,
+    /// Z5-T8: also serve HTTP/3 over QUIC on the same port (UDP), and
+    /// advertise it with `Alt-Svc`. Needs a server built with the `http3`
+    /// feature; off by default.
+    #[serde(default)]
+    pub http3: bool,
 }
 
 /// Z5-T7: `app.tls.acme`. The server answers the ACME server's TLS-ALPN-01

@@ -423,6 +423,12 @@ fn acme_config_requires_domains() {
     config.app.tls.acme.directory_url = "http://acme.example/directory".into();
     let err = config.validate().unwrap_err().to_string();
     assert!(err.contains("app.tls.acme.directory_url"), "{err}");
+
+    // Z5-T8: HTTP/3 needs the TLS edge too.
+    let mut plain = minimal_valid_config();
+    plain.app.tls.http3 = true;
+    let err = plain.validate().unwrap_err().to_string();
+    assert!(err.contains("app.tls.http3"), "{err}");
 }
 
 #[test]

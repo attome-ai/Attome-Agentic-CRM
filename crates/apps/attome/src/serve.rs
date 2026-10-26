@@ -536,8 +536,43 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let server_fut: std::pin::Pin<
         Box<dyn std::future::Future<Output = std::io::Result<()>> + Send>,
     > = if config.app.tls.enabled {
+        attome::tls::check_http3(&config.app.tls)
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
         let listener = attome::tls::TlsListener::start(listener, &config.app.tls)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
+        // Z5-T8: HTTP/3 on the same port over UDP, advertised on every
+        // TCP response with `Alt-Svc`.
+        #[cfg(feature = "http3")]
+        let app = if config.app.tls.http3 {
+            let local = axum::serve::Listener::local_addr(&listener)?;
+            let alt_svc =
+                axum::http::HeaderValue::from_str(&format!("h3=\":{}\"; ma=86400", local.port()))
+                    .map_err(std::io::Error::other)?;
+            let app = app.layer(axum::middleware::map_response(
+                move |mut response: axum::response::Response| {
+                    let alt_svc = alt_svc.clone();
+                    async move {
+                        response
+                            .headers_mut()
+                            .entry(axum::http::header::ALT_SVC)
+                            .or_insert(alt_svc);
+                        response
+                    }
+                },
+            ));
+            let h3_app = app.clone();
+            let tls = listener.server_config();
+            let max_body = config.app.max_body_size_bytes;
+            // Process-lifetime supervision (guidelines §10).
+            tokio::spawn(async move {
+                if let Err(e) = attome::http3::serve(h3_app, local, tls, max_body).await {
+                    tracing::error!(error = %e, "http3: the QUIC endpoint stopped");
+                }
+            });
+            app
+        } else {
+            app
+        };
         // `TapIo` carries the peer address through to `ConnectInfo`; the
         // tap itself does nothing.
         let listener = axum::serve::ListenerExt::tap_io(listener, |_| {});

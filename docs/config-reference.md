@@ -40,6 +40,7 @@ Required.
 | `app.tls.acme.enabled` | boolean | `false` |  |  |
 | `app.tls.cert_path` | string | `""` |  | The PEM certificate chain, leaf first. |
 | `app.tls.enabled` | boolean | `false` |  | Serve HTTPS on `app.port` from the certificate and key below. |
+| `app.tls.http3` | boolean | `false` |  | Z5-T8: also serve HTTP/3 over QUIC on the same port (UDP), and advertise it with `Alt-Svc`. Needs a server built with the `http3` feature; off by default. |
 | `app.tls.key_path` | string | `""` |  | The PEM private key (PKCS#8, PKCS#1 or SEC1). |
 | `app.tls.min_version` | string, optional | `null` |  | The oldest TLS version accepted: `"1.2"` (the default) or `"1.3"`. |
 | `app.web_root` | string, optional | `null` |  | The built web app's directory, served by `attome serve` for every GET outside the API (`attome_server::web`). Unset: a `web` directory next to the executable when one exists; otherwise the server serves the API only and the web app is hosted separately. |
