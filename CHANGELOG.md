@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Competitor tracking documentation (D25-T11): `docs/competitors.md` covers the records, each part's
+  switch and what is off by default (win/loss reviews need a stage threshold per pipeline;
+  competitor news is not built), and the routes `POST /api/v1/sales/competitor-mentions/{id}/confirm`
+  and `/reject`, `GET /api/v1/sales/opportunities/{id}/battlecards`,
+  `GET /api/v1/sales/competitors/{id}/card`, `GET /api/v1/sales/competitors/{id}/head-to-head` and
+  `POST /api/v1/sales/win-loss-reviews/{id}/buyer-feedback`.
 - Search facets (A25-T9): `GET /api/v1/search?...&facets=true` adds `facets` to the answer, the
   results counted by entity, owner and month changed over every result the caller may see (not
   only the page), the 20 most common of each.
