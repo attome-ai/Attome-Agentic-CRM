@@ -139096,6 +139096,19 @@
               "null"
             ]
           },
+          "environment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -139135,11 +139148,25 @@
             },
             "description": "S11-T1: the scopes an access token may carry."
           },
+          "owner_user_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "S11-T4: the person answerable for the client."
+          },
           "permissions": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PermissionItem"
             }
+          },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "rate_limit_rpm": {
             "type": "integer",
@@ -139174,7 +139201,8 @@
           "status",
           "rate_limit_rpm",
           "created_at",
-          "key_slots"
+          "key_slots",
+          "methods"
         ],
         "properties": {
           "client_id": {
@@ -139182,6 +139210,19 @@
           },
           "created_at": {
             "type": "string",
+            "format": "date-time"
+          },
+          "environment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "id": {
@@ -139201,8 +139242,35 @@
             ],
             "format": "date-time"
           },
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "S11-T6: how the client can authenticate: `key` (an active HMAC key,\nwhose secret also serves `client_secret_basic`), `public_key` (a JWT\nsigned by its key, S11-T1) and `identity_provider` (a trusted\nidentity provider's token, S11-T2)."
+          },
           "name": {
             "type": "string"
+          },
+          "owner_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "owner_user_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "S11-T4: the person answerable for the client, and their address."
+          },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "rate_limit_rpm": {
             "type": "integer",
@@ -141935,8 +142003,7 @@
         "type": "object",
         "required": [
           "client_id",
-          "name",
-          "service_user_ref"
+          "name"
         ],
         "properties": {
           "allowed_cidrs": {
@@ -141966,6 +142033,21 @@
               "null"
             ]
           },
+          "environment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "S11-T4: `production`, `staging`, `development` or `test`."
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "S11-T4: when the client stops working; its owner is reminded 14 days\nbefore."
+          },
           "max_concurrent": {
             "type": "integer",
             "format": "int32"
@@ -141977,6 +142059,21 @@
           "name": {
             "type": "string"
           },
+          "owner_user_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "S11-T4: the person answerable for the client; the caller by default."
+          },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "S11-T4: what the client is for."
+          },
           "rate_limit_rpm": {
             "type": "integer",
             "format": "int32"
@@ -141987,7 +142084,7 @@
               "null"
             ],
             "format": "uuid",
-            "description": "Required. The `user_account` this client acts as: every\nS2S-authenticated request runs with that user's privileges and is\nattributed to it in the audit trail. Must reference an existing user.\n(`Option` only so a missing value is reported through the JSON\nvalidation contract — `422 validation_error` naming the field — rather\nthan axum's plain-text body-rejection.)"
+            "description": "The `user_account` this client acts as: every S2S-authenticated\nrequest runs with that user's privileges and is attributed to it in\nthe audit trail. S11-T4: omit it and the client gets a service user\nof its own with no role, so it can do nothing until granted one."
           }
         }
       },
@@ -167601,7 +167698,8 @@
                 "status",
                 "rate_limit_rpm",
                 "created_at",
-                "key_slots"
+                "key_slots",
+                "methods"
               ],
               "properties": {
                 "client_id": {
@@ -167609,6 +167707,19 @@
                 },
                 "created_at": {
                   "type": "string",
+                  "format": "date-time"
+                },
+                "environment": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "expires_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
                   "format": "date-time"
                 },
                 "id": {
@@ -167628,8 +167739,35 @@
                   ],
                   "format": "date-time"
                 },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "S11-T6: how the client can authenticate: `key` (an active HMAC key,\nwhose secret also serves `client_secret_basic`), `public_key` (a JWT\nsigned by its key, S11-T1) and `identity_provider` (a trusted\nidentity provider's token, S11-T2)."
+                },
                 "name": {
                   "type": "string"
+                },
+                "owner_email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "owner_user_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "S11-T4: the person answerable for the client, and their address."
+                },
+                "purpose": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "rate_limit_rpm": {
                   "type": "integer",
@@ -204119,6 +204257,21 @@
               "null"
             ]
           },
+          "environment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "S11-T4: a new environment."
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "S11-T4: a new expiry (in the future); the owner is reminded again."
+          },
           "max_concurrent": {
             "type": [
               "integer",
@@ -204155,6 +204308,21 @@
               "type": "string"
             },
             "description": "S11-T1: the scopes an access token may carry."
+          },
+          "owner_user_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "S11-T4: a new owner."
+          },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "S11-T4: a new purpose."
           },
           "rate_limit_rpm": {
             "type": [
@@ -207483,6 +207651,6 @@
       }
     }
   },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }

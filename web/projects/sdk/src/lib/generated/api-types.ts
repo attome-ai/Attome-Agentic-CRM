@@ -29708,6 +29708,9 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             description?: string | null;
+            environment?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
             /** Format: uuid */
             id: string;
             keys: components["schemas"]["KeySummary"][];
@@ -29722,7 +29725,13 @@ export interface components {
             oauth_public_key_set: boolean;
             /** @description S11-T1: the scopes an access token may carry. */
             oauth_scopes: string[];
+            /**
+             * Format: uuid
+             * @description S11-T4: the person answerable for the client.
+             */
+            owner_user_ref?: string | null;
             permissions: components["schemas"]["PermissionItem"][];
+            purpose?: string | null;
             /** Format: int32 */
             rate_limit_rpm: number;
             /** Format: int64 */
@@ -29737,12 +29746,29 @@ export interface components {
             client_id: string;
             /** Format: date-time */
             created_at: string;
+            environment?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
             /** Format: uuid */
             id: string;
             key_slots: string[];
             /** Format: date-time */
             last_used_at?: string | null;
+            /**
+             * @description S11-T6: how the client can authenticate: `key` (an active HMAC key,
+             *     whose secret also serves `client_secret_basic`), `public_key` (a JWT
+             *     signed by its key, S11-T1) and `identity_provider` (a trusted
+             *     identity provider's token, S11-T2).
+             */
+            methods: string[];
             name: string;
+            owner_email?: string | null;
+            /**
+             * Format: uuid
+             * @description S11-T4: the person answerable for the client, and their address.
+             */
+            owner_user_ref?: string | null;
+            purpose?: string | null;
             /** Format: int32 */
             rate_limit_rpm: number;
             status: string;
@@ -30849,23 +30875,36 @@ export interface components {
             /** @description Machine-readable slug, e.g. "sap-erp". Immutable after creation. */
             client_id: string;
             description?: string | null;
+            /** @description S11-T4: `production`, `staging`, `development` or `test`. */
+            environment?: string | null;
+            /**
+             * Format: date-time
+             * @description S11-T4: when the client stops working; its owner is reminded 14 days
+             *     before.
+             */
+            expires_at?: string | null;
             /** Format: int32 */
             max_concurrent?: number;
             /** Format: int64 */
             max_payload_bytes?: number;
             name: string;
+            /**
+             * Format: uuid
+             * @description S11-T4: the person answerable for the client; the caller by default.
+             */
+            owner_user_ref?: string | null;
+            /** @description S11-T4: what the client is for. */
+            purpose?: string | null;
             /** Format: int32 */
             rate_limit_rpm?: number;
             /**
              * Format: uuid
-             * @description Required. The `user_account` this client acts as: every
-             *     S2S-authenticated request runs with that user's privileges and is
-             *     attributed to it in the audit trail. Must reference an existing user.
-             *     (`Option` only so a missing value is reported through the JSON
-             *     validation contract — `422 validation_error` naming the field — rather
-             *     than axum's plain-text body-rejection.)
+             * @description The `user_account` this client acts as: every S2S-authenticated
+             *     request runs with that user's privileges and is attributed to it in
+             *     the audit trail. S11-T4: omit it and the client gets a service user
+             *     of its own with no role, so it can do nothing until granted one.
              */
-            service_user_ref: string | null;
+            service_user_ref?: string | null;
         };
         CreateConditionBody: {
             field_logicalname: string;
@@ -40820,12 +40859,29 @@ export interface components {
                 client_id: string;
                 /** Format: date-time */
                 created_at: string;
+                environment?: string | null;
+                /** Format: date-time */
+                expires_at?: string | null;
                 /** Format: uuid */
                 id: string;
                 key_slots: string[];
                 /** Format: date-time */
                 last_used_at?: string | null;
+                /**
+                 * @description S11-T6: how the client can authenticate: `key` (an active HMAC key,
+                 *     whose secret also serves `client_secret_basic`), `public_key` (a JWT
+                 *     signed by its key, S11-T1) and `identity_provider` (a trusted
+                 *     identity provider's token, S11-T2).
+                 */
+                methods: string[];
                 name: string;
+                owner_email?: string | null;
+                /**
+                 * Format: uuid
+                 * @description S11-T4: the person answerable for the client, and their address.
+                 */
+                owner_user_ref?: string | null;
+                purpose?: string | null;
                 /** Format: int32 */
                 rate_limit_rpm: number;
                 status: string;
@@ -54837,6 +54893,13 @@ export interface components {
             /** @description S1-T10: grant or withdraw acting as a user. */
             can_act_as_user?: boolean | null;
             description?: string | null;
+            /** @description S11-T4: a new environment. */
+            environment?: string | null;
+            /**
+             * Format: date-time
+             * @description S11-T4: a new expiry (in the future); the owner is reminded again.
+             */
+            expires_at?: string | null;
             /** Format: int32 */
             max_concurrent?: number | null;
             /** Format: int64 */
@@ -54849,6 +54912,13 @@ export interface components {
             oauth_public_key_pem?: string | null;
             /** @description S11-T1: the scopes an access token may carry. */
             oauth_scopes?: string[] | null;
+            /**
+             * Format: uuid
+             * @description S11-T4: a new owner.
+             */
+            owner_user_ref?: string | null;
+            /** @description S11-T4: a new purpose. */
+            purpose?: string | null;
             /** Format: int32 */
             rate_limit_rpm?: number | null;
             /** Format: int64 */
