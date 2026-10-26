@@ -216,14 +216,17 @@ pub async fn stage(state: &EngineState, job_id: Uuid) -> Result<StageOutcome, Ap
         return Err(AppError::Validation(error));
     }
     let staged_now = stage_rows(db, job_id, &names, &rows, STAGE_CHUNK, None).await?;
+    // A23-T9: the header order, which the error file repeats (a staged
+    // row's JSON object does not keep it).
     sqlx::query(
         "UPDATE import_job SET status = 'staged', \
-                counts = counts || jsonb_build_object('staged', $2::int), \
+                counts = counts || jsonb_build_object('staged', $2::int, 'columns', $3::jsonb), \
                 row_version = row_version + 1 \
           WHERE id = $1",
     )
     .bind(job_id)
     .bind(i32::try_from(rows.len()).map_err(AppError::internal)?)
+    .bind(serde_json::to_value(&names).map_err(AppError::internal)?)
     .execute(db)
     .await
     .map_err(AppError::internal)?;

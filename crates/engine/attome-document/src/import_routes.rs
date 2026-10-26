@@ -84,6 +84,10 @@ pub struct ImportOptions {
     #[serde(default)]
     #[schema(value_type = Option<Object>)]
     pub schedule: Option<Value>,
+    /// A23-T9: this file fixes the rows of that job's error file; each row's
+    /// `attome_row` names the row it fixes.
+    #[serde(default)]
+    pub source_job_id: Option<Uuid>,
 }
 
 /// The multipart body of an upload, for the API document.
@@ -402,10 +406,14 @@ pub(crate) async fn create_import(
     attome_storage::mirror::write_object(&state.base.storage, &key, bytes)
         .await
         .map_err(AppError::internal)?;
-    let counts = match &options.schedule {
+    let mut counts = match &options.schedule {
         Some(schedule) => serde_json::json!({ "schedule": schedule }),
         None => serde_json::json!({}),
     };
+    if let Some(source) = options.source_job_id {
+        visible_job(&state, &ctx, &entity, source).await?;
+        counts["source_job_id"] = serde_json::json!(source);
+    }
     let actor = ctx.user_id;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let row = sqlx::query_scalar::<_, Uuid>(
@@ -906,6 +914,84 @@ pub(crate) async fn cancel_import(
     Ok((StatusCode::ACCEPTED, Json(accepted)))
 }
 
+/// The reader's language from `Accept-Language`: `ar` or `en` (a region
+/// counts), else the deployment's.
+fn reader_locale(headers: &HeaderMap, state: &EngineState) -> String {
+    headers
+        .get(axum::http::header::ACCEPT_LANGUAGE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|raw| {
+            raw.split(',').find_map(|tag| {
+                let tag = tag.split(';').next().unwrap_or("").trim();
+                match tag
+                    .split('-')
+                    .next()
+                    .unwrap_or("")
+                    .to_ascii_lowercase()
+                    .as_str()
+                {
+                    "ar" => Some("ar".to_owned()),
+                    "en" => Some("en".to_owned()),
+                    _ => None,
+                }
+            })
+        })
+        .unwrap_or_else(|| state.deployment_locale())
+}
+
+/// Download an import's row errors
+///
+/// A23-T9: a CSV (UTF-8 with a byte order mark) of the invalid rows: their
+/// number, their original columns, the problems in the reader's language
+/// and an empty `fix` column. Upload it fixed with `source_job_id`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/{entity}/imports/{id}/errors",
+    tag = "import",
+    operation_id = "import_error_file",
+    params(
+        ("entity" = String, Path, description = "The entity"),
+        ("id" = Uuid, Path, description = "The import job"),
+    ),
+    responses(
+        (status = 200, description = "The error file", content_type = "text/csv", body = String),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not import this entity's records", body = ErrorResponse),
+        (status = 404, description = "No such import the caller may see", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn import_error_file(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path((entity, id)): Path<(String, Uuid)>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    let (entity, _) = admitted(&state, &ctx, &entity).await?;
+    let job = visible_job(&state, &ctx, &entity, id).await?;
+    let locale = reader_locale(&headers, &state);
+    let stream = crate::import_error_file::stream(state.clone(), id, locale).await?;
+    let stem = job
+        .file_name
+        .rsplit_once('.')
+        .map_or(job.file_name.as_str(), |(stem, _)| stem)
+        .replace(['"', '\\', '\r', '\n'], "_");
+    Ok((
+        [
+            (
+                axum::http::header::CONTENT_TYPE,
+                "text/csv; charset=utf-8".to_owned(),
+            ),
+            (
+                axum::http::header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{stem}-errors.csv\""),
+            ),
+        ],
+        axum::body::Body::from_stream(stream),
+    )
+        .into_response())
+}
+
 /// Preview an import
 ///
 /// A23-T8: the first staged rows as mapped, every sensitive attribute's
@@ -1169,6 +1255,10 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/{entity}/imports/{id}/cancel", post(cancel_import))
         .route("/api/v1/{entity}/imports/{id}/preview", get(preview_import))
         .route(
+            "/api/v1/{entity}/imports/{id}/errors",
+            get(import_error_file),
+        )
+        .route(
             "/api/v1/admin/imports/policy/{entity}",
             get(get_import_policy).put(put_import_policy),
         )
@@ -1218,6 +1308,7 @@ pub async fn execute_approved_apply(
         undo_import,
         cancel_import,
         preview_import,
+        import_error_file,
         get_import_policy,
         put_import_policy
     ),

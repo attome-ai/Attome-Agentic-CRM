@@ -13,6 +13,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Import error file (A23-T9): `GET /api/v1/{entity}/imports/{id}/errors` streams the invalid rows as
+  CSV (UTF-8 with a byte order mark): `attome_row`, the file's columns in their original order (now
+  kept in `counts.columns` at staging), `error` in the reader's language (`Accept-Language` `ar` or
+  `en`, else the deployment's; a `ui_text` label of `import.error.<code>` overrides the built-in
+  English and Arabic text) and an empty `fix`. Re-upload it with `options.source_job_id`.
 - Import routes (A23-T8): `POST /api/v1/{entity}/imports` (multipart: `file` + JSON `options`; the
   same file answers its existing job with 200), `GET /api/v1/{entity}/imports[/{id}]`,
   `POST .../imports/{id}/dry-run|apply|undo|cancel` (202), `GET .../imports/{id}/preview`
