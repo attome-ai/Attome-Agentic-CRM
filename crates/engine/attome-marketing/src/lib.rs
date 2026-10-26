@@ -32,6 +32,8 @@ pub mod loyalty;
 pub mod model;
 pub mod nurture_tracks;
 pub mod precheck;
+/// E23-T2: profile events in batches, and a contact's traits rolled up from them.
+pub mod profile;
 /// E23-T1: profile events and their retention.
 pub mod profile_events;
 pub mod referral;
@@ -66,6 +68,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<deliverability::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<profile::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<forms::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dynamic_blocks::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<tracking_script::ApiDocFragment as utoipa::OpenApi>::openapi());

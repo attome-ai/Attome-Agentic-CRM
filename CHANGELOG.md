@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Profile event ingestion and contact traits (E23-T2): `POST /api/v1/marketing/profile-events`
+  takes up to 500 events per batch (60 batches a minute per caller, `contact.update`), each for a
+  readable contact or an anonymous id within the last 7 days; events that fail a check come back
+  with their index and reason. `GET /api/v1/marketing/contacts/{id}/traits` rolls the contact's
+  events up into last seen, visits, purchases and their total, when read.
 - Cascading metric targets (P9-T7): `POST /api/v1/metrics/{id}/targets/spread` (privilege
   `attome_metric.set_target`) writes a period's total target and one child target per member of a
   metric dimension, by given shares (summing to 1) or by last year's actuals per member. Children

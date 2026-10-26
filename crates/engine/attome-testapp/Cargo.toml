@@ -54,6 +54,7 @@ attome-model.workspace = true
 attome-notification.workspace = true
 attome-jobs.workspace = true
 attome-ledger.workspace = true
+attome-marketing.workspace = true
 attome-metadata.workspace = true
 attome-metric.workspace = true
 attome-search.workspace = true
