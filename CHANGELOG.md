@@ -13,6 +13,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Search ranking controls (A25-T3): every full search now applies the administrator's synonyms
+  (`search_synonym`, as extra lexical alternatives), stop words (`search_stopword`, dropped unless
+  they are the whole query), entity boosts (`search_entity_setting.boost`) and pins (`search_pin`,
+  placed only when the caller may read the record), plus optional personal ranking for records the
+  person owns, opened from a search in the last 30 days, or a team of theirs owns
+  (`search.personal_weights`, all 0 by default). The ranker id on impressions is now `rrf/v2`.
 - Import wizard on the server job (A23-T13): the CSV import screen now sends the file to
   `/api/v1/{entity}/imports` (the browser reads only 50 rows, for an instant preview and name
   matching), shows the dry run's counts and preview, lets the mapping agent suggest each column's

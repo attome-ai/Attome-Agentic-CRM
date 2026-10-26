@@ -25,6 +25,8 @@
 pub mod access_cache;
 pub mod aggregate;
 pub mod backfill;
+/// A25-T3: synonyms, stop words, boosts, pins and personal ranking.
+pub mod controls;
 pub mod corpus;
 pub mod coverage;
 pub mod drain;

@@ -436,6 +436,24 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!("SA"),
         ),
+        // A25-T3: personal ranking, off until a deployment sets weights.
+        SettingDescriptor::new(
+            "search.personal_weights",
+            "Small additions to a search result's score for a record the person owns (`owner`), \
+         one they opened from a search in the last 30 days (`opened`) and one a team of theirs \
+         owns (`team`), each 0 to 1; all 0 by default (A25-T3). It only re-orders records the \
+         person can already see.",
+            || {
+                json!({"type": "object", "additionalProperties": false, "properties": {
+                    "owner": {"type": "number", "minimum": 0, "maximum": 1},
+                    "opened": {"type": "number", "minimum": 0, "maximum": 1},
+                    "team": {"type": "number", "minimum": 0, "maximum": 1}
+                }})
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!({"owner": 0, "opened": 0, "team": 0}),
+        ),
         // F6-T14: when an order counts as stuck.
         SettingDescriptor::new(
             "fulfilment.stuck_hours",

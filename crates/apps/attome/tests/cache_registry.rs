@@ -152,6 +152,15 @@ const DECLARED_CACHES: &[Declared] = &[
         "empty",
     ),
     (
+        "crates/engine/attome-search/src/controls.rs",
+        "search ranking controls (one snapshot)",
+        "PostgreSQL search_synonym, search_stopword, search_entity_setting, search_pin",
+        "60 s",
+        "controls::invalidate on the writing node; other nodes wait for the TTL",
+        "a failed load is logged and the search runs untuned",
+        "the first search loads",
+    ),
+    (
         "crates/engine/attome-security/src/cache.rs",
         "security:ctx (SecurityContext)",
         "PostgreSQL roles, grants and memberships",

@@ -59,7 +59,7 @@ static ACCESS_MAPS: LazyLock<AccessMapCache> = LazyLock::new(AccessMapCache::new
 /// two — every later comparison silently averages across a change nobody can
 /// see in the data. Bump this whenever the ordering logic changes in a way
 /// that could move results.
-const RANKER_ID: &str = "rrf/v1";
+const RANKER_ID: &str = "rrf/v2";
 
 /// Per-route statement timeout.
 ///
@@ -443,6 +443,17 @@ pub async fn execute_search(
     } else {
         parsed.free_text.as_str()
     };
+    // A25-T3: the administrator's synonyms, stop words, boosts and pins. A
+    // snapshot that cannot be read leaves this search untuned.
+    let controls = match crate::controls::load(&state.base.db).await {
+        Ok(controls) => controls,
+        Err(error) => {
+            tracing::warn!(?error, "search: ranking controls unavailable");
+            std::sync::Arc::new(crate::controls::Controls::default())
+        }
+    };
+    let without_stopwords = controls.without_stopwords(text_for_pipeline);
+    let text_for_pipeline = without_stopwords.as_str();
     let normalized = crate::normalize_ar(text_for_pipeline);
     let stemmed = crate::project::index_text(text_for_pipeline);
 
@@ -490,7 +501,7 @@ pub async fn execute_search(
 
     // C10-T1: glossary synonyms widen a full search. A glossary that cannot
     // be read widens nothing; the search itself goes ahead.
-    let synonyms: Vec<String> = match crate::glossary::approved_terms(&state.base.db).await {
+    let mut synonyms: Vec<String> = match crate::glossary::approved_terms(&state.base.db).await {
         Ok(terms) => crate::glossary::alternatives(text_for_pipeline, &terms)
             .iter()
             .map(|a| crate::project::index_text(a))
@@ -501,6 +512,13 @@ pub async fn execute_search(
             Vec::new()
         }
     };
+    // A25-T3: the search synonyms widen it the same way.
+    for alternative in controls.alternatives(&normalized) {
+        let stemmed_alt = crate::project::index_text(&alternative);
+        if !stemmed_alt.trim().is_empty() && !synonyms.contains(&stemmed_alt) {
+            synonyms.push(stemmed_alt);
+        }
+    }
     let default_country = attome_core::setting_registry()
         .get("core.default_country")
         .map(|d| state.settings.load().resolve(d, None, None).0)
@@ -621,6 +639,38 @@ pub async fn execute_search(
         .await;
     }
 
+    // A25-T3: boosts and personal ranking re-order what the caller may see,
+    // then the query's pins take their places (each one read through the
+    // visibility fragment first when it was not already a result).
+    let weights = personal_weights(state);
+    let personal = if weights.is_off() {
+        std::collections::HashMap::new()
+    } else {
+        personal_signals(state, ctx, &fused).await
+    };
+    crate::controls::rerank(&mut fused, &controls, weights, &personal);
+    let pins = controls.pins_for(&normalized);
+    if !pins.is_empty() {
+        let missing: Vec<crate::controls::FusedRow> = pins
+            .iter()
+            .filter(|p| !fused.iter().any(|r| r.0 == p.record_id && r.1 == p.entity))
+            .map(|p| {
+                (
+                    p.record_id,
+                    p.entity.clone(),
+                    0.0,
+                    Vec::new(),
+                    serde_json::Value::Null,
+                )
+            })
+            .collect();
+        let readable = fetch_display_text(state, ctx, &access_map, &default_shares, &missing).await;
+        let mut visible: std::collections::HashSet<(String, Uuid)> =
+            fused.iter().map(|r| (r.1.clone(), r.0)).collect();
+        visible.extend(readable.keys().cloned());
+        crate::controls::place_pins(&mut fused, pins, &visible);
+    }
+
     let found = fused.len() as u64;
     // The score floor is the crude half of the abstention contract: a human
     // ignores an irrelevant fourth result, a model cites it.
@@ -696,6 +746,76 @@ pub async fn execute_search(
         limited: false,
         items,
     })
+}
+
+/// A25-T3: `search.personal_weights`, all zero unless set.
+fn personal_weights(state: &EngineState) -> crate::controls::PersonalWeights {
+    attome_core::setting_registry()
+        .get("search.personal_weights")
+        .map(|d| state.settings.load().resolve(d, None, None).0)
+        .map(|v| crate::controls::PersonalWeights::from_setting(&v))
+        .unwrap_or_default()
+}
+
+/// A25-T3: for each candidate, whether the caller owns it, a team of theirs
+/// owns it, or they opened it from a search in the last 30 days. Ranking
+/// signals only: every candidate already passed the visibility filter. A
+/// read that fails leaves the ranking unpersonalised.
+async fn personal_signals(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    fused: &[crate::controls::FusedRow],
+) -> std::collections::HashMap<(String, Uuid), crate::controls::Personal> {
+    let mut out = std::collections::HashMap::new();
+    if fused.is_empty() {
+        return out;
+    }
+    let entities: Vec<String> = fused.iter().map(|r| r.1.clone()).collect();
+    let ids: Vec<Uuid> = fused.iter().map(|r| r.0).collect();
+    let pool = state.base.read_pool(ctx.user_id).await;
+    let owners: Result<Vec<(String, Uuid, Option<Uuid>)>, sqlx::Error> = sqlx::query_as(
+        "SELECT t.entity_logicalname, t.record_id, t.owner_id FROM search_index t \
+           JOIN unnest($1::text[], $2::uuid[]) AS c(entity_logicalname, record_id) \
+             ON c.entity_logicalname = t.entity_logicalname AND c.record_id = t.record_id",
+    )
+    .bind(&entities)
+    .bind(&ids)
+    .fetch_all(pool)
+    .await;
+    let opened: Result<Vec<(String, Uuid)>, sqlx::Error> = sqlx::query_as(
+        "SELECT DISTINCT i.entity_logicalname, i.record_id FROM search_interaction i \
+           JOIN search_impression m ON m.id = i.impression_ref \
+           JOIN unnest($2::text[], $3::uuid[]) AS c(entity_logicalname, record_id) \
+             ON c.entity_logicalname = i.entity_logicalname AND c.record_id = i.record_id \
+          WHERE m.caller_ref = $1 AND i.created_at >= now() - interval '30 days'",
+    )
+    .bind(ctx.user_id)
+    .bind(&entities)
+    .bind(&ids)
+    .fetch_all(pool)
+    .await;
+    match owners {
+        Ok(rows) => {
+            for (entity, id, owner) in rows {
+                let entry: &mut crate::controls::Personal = out.entry((entity, id)).or_default();
+                entry.owned = owner == Some(ctx.user_id);
+                entry.team_owned = owner.is_some_and(|o| ctx.team_ids.contains(&o));
+            }
+        }
+        Err(error) => tracing::warn!(?error, "search: owners for personal ranking unavailable"),
+    }
+    match opened {
+        Ok(rows) => {
+            for key in rows {
+                out.entry(key).or_default().opened = true;
+            }
+        }
+        Err(error) => tracing::warn!(
+            ?error,
+            "search: opened records for personal ranking unavailable"
+        ),
+    }
+    out
 }
 
 /// DSL post-fusion narrowing (`dsl`'s module doc) — required phrases and
