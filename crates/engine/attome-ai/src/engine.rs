@@ -68,6 +68,7 @@ impl EngineModel for ActionModel {
         Router::new()
             .route("/api/v1/actions", get(list_invocable_actions))
             .route("/api/v1/actions/{id}/invoke", post(invoke_action))
+            .route("/api/v1/actions/{name}", post(invoke_custom_action))
             // S1-T12: a record-bound action, invoked on one record.
             .route(
                 "/api/v1/{entity}/{id}/actions/{name}",
@@ -456,6 +457,86 @@ async fn invoke_action(
     Ok(Json(outcome))
 }
 
+/// AE1-T2: runs the published custom action `custom.{name}` as the calling
+/// person. The arguments are checked against its input schema first (every
+/// problem by field); a consequential action needs an `Idempotency-Key` (or
+/// `x-idempotency-key`) header, which becomes the invocation's key, so a
+/// retry with the same key never runs it twice. A completed action answers
+/// 200; one that waits (a confirmation, an approval, an undo window) 202.
+#[utoipa::path(
+    post,
+    path = "/api/v1/actions/{name}",
+    tag = "action",
+    params(
+        ("name" = String, Path, description = "The custom action's name (its id without `custom.`)"),
+        ("Idempotency-Key" = Option<String>, Header, description = "Required for a consequential action"),
+    ),
+    request_body = serde_json::Value,
+    responses(
+        (status = 200, description = "The action ran", body = ActionOutcome),
+        (status = 202, description = "The action waits for a confirmation, an approval or its undo window", body = ActionOutcome),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks a privilege the action requires", body = ErrorResponse),
+        (status = 404, description = "No published custom action by that name", body = ErrorResponse),
+        (status = 422, description = "Arguments that do not fit the schema, or a missing Idempotency-Key", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("dispatch -> the custom action's flow"),
+        "as /api/v1/actions/{id}/invoke: the route invokes as the calling human, never an \
+         agent session, so dispatch's agent-gated Ai+Execute event never fires here; what the \
+         custom action's flow changes is audited by the flow's own steps",
+    )))),
+)]
+async fn invoke_custom_action(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(name): Path<String>,
+    headers: axum::http::HeaderMap,
+    Json(args): Json<Value>,
+) -> Result<(axum::http::StatusCode, Json<ActionOutcome>), AppError> {
+    let id = format!("{}{}", crate::custom_action::ID_PREFIX, name.trim());
+    let descriptor = crate::custom_action::descriptor(&id).ok_or(AppError::NotFound)?;
+    let errors = crate::custom_action::validate_args(descriptor.input_schema, &args);
+    if !errors.is_empty() {
+        return Err(AppError::FieldValidation(errors));
+    }
+    let key = ["idempotency-key", "x-idempotency-key"]
+        .iter()
+        .find_map(|h| headers.get(*h))
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|k| !k.is_empty() && k.len() <= 200)
+        .map(str::to_owned);
+    if descriptor.risk == crate::descriptor::RiskTier::Consequential && key.is_none() {
+        return Err(AppError::Validation(
+            "a consequential action needs an Idempotency-Key header".into(),
+        ));
+    }
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
+    let inputs = gate_inputs(&state, descriptor.module);
+    let user = ctx.user_id;
+    let mut action_ctx = ActionContext::user(ctx.into_inner());
+    action_ctx.idempotency_key = key.map(|k| format!("{id}:{user}:{k}"));
+    let outcome = dispatch(
+        &state,
+        &REGISTRY,
+        &EXECUTORS,
+        &id,
+        &action_ctx,
+        &inputs,
+        &args,
+    )
+    .await?;
+    let status = if matches!(outcome, ActionOutcome::Completed { .. }) {
+        axum::http::StatusCode::OK
+    } else {
+        axum::http::StatusCode::ACCEPTED
+    };
+    Ok((status, Json(outcome)))
+}
+
 /// S1-T12: whether an action works on one record: its arguments require
 /// `entity` and `record_id`.
 pub fn is_record_bound(input_schema: &str) -> bool {
@@ -775,6 +856,7 @@ async fn get_model_comparison(
 #[openapi(paths(
     list_invocable_actions,
     invoke_action,
+    invoke_custom_action,
     invoke_record_action,
     record_suggestion_outcome,
     list_prompts,

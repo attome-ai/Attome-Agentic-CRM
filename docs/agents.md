@@ -123,6 +123,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   MCP clients see it in `tools/list` with its schema and description, and a flow runs it with the
   `custom_action` node (`config.action`, the wired `args`), once per run, through the same gate; a
   custom action that needs a person's confirmation or approval fails the node instead of waiting.
+  Each is also a route, `POST /api/v1/actions/{name}`, with its arguments checked against the schema
+  and an `Idempotency-Key` required when it is consequential, and it is listed in the deployment's
+  OpenAPI document.
 - Branding (B13-T11): `brand.draft_from_document` reads a theme's brand guidelines PDF and saves the
   colours, fonts and density it finds as a new draft theme; it never publishes, and only an
   administrator may run it.

@@ -307,10 +307,63 @@ pub(crate) async fn deployment_openapi(
         .fetch_optional(&state.base.db)
         .await
         .map_err(AppError::internal)?;
+    // AE1-T2: each published custom action the caller holds the privileges
+    // of, as its own operation with its input schema.
+    if let Some(paths) = filtered.get_mut("paths").and_then(Value::as_object_mut) {
+        for descriptor in attome_ai::custom_action::descriptors() {
+            let held = ctx.is_admin
+                || descriptor
+                    .required_privileges
+                    .iter()
+                    .all(|p| ctx.privileges.contains(*p));
+            if held {
+                let (path, item) = custom_action_path(descriptor);
+                paths.insert(path, item);
+            }
+        }
+    }
     if let Some(overlay) = overlay {
         apply_overlay(&mut filtered, &overlay);
     }
     Ok(Json(filtered))
+}
+
+/// AE1-T2: one custom action as a path of the deployment document. Pure.
+pub fn custom_action_path(descriptor: &attome_ai::ActionDescriptor) -> (String, Value) {
+    let id = descriptor.id.as_str();
+    let name = id
+        .strip_prefix(attome_ai::custom_action::ID_PREFIX)
+        .unwrap_or(id);
+    let schema: Value = serde_json::from_str(descriptor.input_schema)
+        .unwrap_or_else(|_| json!({ "type": "object" }));
+    let consequential = descriptor.risk == attome_ai::descriptor::RiskTier::Consequential;
+    let mut parameters = Vec::new();
+    if consequential {
+        parameters.push(json!({
+            "name": "Idempotency-Key", "in": "header", "required": true,
+            "schema": { "type": "string" }
+        }));
+    }
+    (
+        format!("/api/v1/actions/{name}"),
+        json!({
+            "post": {
+                "operationId": format!("custom_action_{name}"),
+                "summary": descriptor.description,
+                "tags": ["custom actions"],
+                "parameters": parameters,
+                "requestBody": {
+                    "required": true,
+                    "content": { "application/json": { "schema": schema } }
+                },
+                "responses": {
+                    "200": { "description": "The action ran" },
+                    "202": { "description": "The action waits for a confirmation, an approval or its undo window" },
+                    "default": { "$ref": "#/components/responses/Error" }
+                }
+            }
+        }),
+    )
 }
 
 // ── S2-T16: the builder's overlay ───────────────────────────────────────────

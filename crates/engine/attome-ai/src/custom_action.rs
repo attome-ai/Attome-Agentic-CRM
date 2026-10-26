@@ -270,6 +270,94 @@ fn build(definitions: &[Value]) -> BTreeMap<&'static str, &'static CustomAction>
     by_id
 }
 
+/// AE1-T2: `args` checked against a custom action's input schema, every
+/// problem by field (the A3 shape): an object; every `required` property
+/// present; each property of its declared `type` (and one of its `enum`
+/// values); no other property when `additionalProperties` is false. A
+/// schema keyword outside these is not checked here; the action's flow sees
+/// its arguments as given. Pure.
+pub fn validate_args(schema_text: &str, args: &Value) -> Vec<attome_types::FieldError> {
+    fn problem(field: &str, code: &str, message: String) -> attome_types::FieldError {
+        attome_types::FieldError {
+            field: field.to_owned(),
+            code: code.to_owned(),
+            message,
+        }
+    }
+    let Ok(schema) = serde_json::from_str::<Value>(schema_text) else {
+        return Vec::new();
+    };
+    let Some(object) = args.as_object() else {
+        return vec![problem(
+            "",
+            "invalid_type",
+            "the arguments are a JSON object".into(),
+        )];
+    };
+    let empty = serde_json::Map::new();
+    let properties = schema
+        .get("properties")
+        .and_then(Value::as_object)
+        .unwrap_or(&empty);
+    let mut errors = Vec::new();
+    for name in schema
+        .get("required")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+    {
+        if object.get(name).is_none_or(Value::is_null) {
+            errors.push(problem(name, "required", format!("{name} is required")));
+        }
+    }
+    let closed = schema.get("additionalProperties") == Some(&Value::Bool(false));
+    for (name, value) in object {
+        let Some(property) = properties.get(name) else {
+            if closed {
+                errors.push(problem(
+                    name,
+                    "unknown_field",
+                    format!("{name} is not an argument of this action"),
+                ));
+            }
+            continue;
+        };
+        if value.is_null() {
+            continue;
+        }
+        if let Some(kind) = property.get("type").and_then(Value::as_str) {
+            let fits = match kind {
+                "string" => value.is_string(),
+                "number" => value.is_number(),
+                "integer" => value.is_i64() || value.is_u64(),
+                "boolean" => value.is_boolean(),
+                "object" => value.is_object(),
+                "array" => value.is_array(),
+                _ => true,
+            };
+            if !fits {
+                errors.push(problem(
+                    name,
+                    "invalid_type",
+                    format!("{name} must be of type {kind}"),
+                ));
+                continue;
+            }
+        }
+        if let Some(allowed) = property.get("enum").and_then(Value::as_array)
+            && !allowed.contains(value)
+        {
+            errors.push(problem(
+                name,
+                "invalid_choice",
+                format!("{name} is not one of the allowed values"),
+            ));
+        }
+    }
+    errors
+}
+
 /// The loaded custom action named `id`.
 pub fn get(id: &str) -> Option<&'static CustomAction> {
     CURRENT.load().by_id.get(id).copied()
@@ -378,6 +466,30 @@ mod tests {
         ));
         // A version without it loads nothing.
         assert!(build(&[]).is_empty());
+    }
+
+    #[test]
+    fn custom_action_arguments_are_checked_by_field() {
+        let schema = r#"{"type":"object","required":["lead_id"],"additionalProperties":false,
+            "properties":{"lead_id":{"type":"string"},"slot":{"type":"string","enum":["am","pm"]},
+            "people":{"type":"integer"}}}"#;
+        assert!(validate_args(schema, &json!({ "lead_id": "L1", "slot": "am" })).is_empty());
+        let errors = validate_args(schema, &json!({ "slot": "noon", "people": 1.5, "x": 1 }));
+        let mut fields: Vec<(&str, &str)> = errors
+            .iter()
+            .map(|e| (e.field.as_str(), e.code.as_str()))
+            .collect();
+        fields.sort_unstable();
+        assert_eq!(
+            fields,
+            vec![
+                ("lead_id", "required"),
+                ("people", "invalid_type"),
+                ("slot", "invalid_choice"),
+                ("x", "unknown_field"),
+            ]
+        );
+        assert_eq!(validate_args(schema, &json!([1]))[0].code, "invalid_type");
     }
 
     #[test]

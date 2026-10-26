@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Custom actions as routes (AE1-T2): `POST /api/v1/actions/{name}` runs the published custom action
+  `custom.{name}` as the caller. Its arguments are checked against the input schema with every
+  problem by field (`422` in the field-validation shape), a consequential one needs an
+  `Idempotency-Key`, and an action that waits on a confirmation or an approval answers `202`. The
+  deployment document (`/api/v1/openapi/deployment.json`) lists each custom action the caller may
+  run, with its schema.
 - Transition actions run (M8-T1): a transition's exit and entry actions, stored until now but never
   run, are run after the transition commits. A change-feed consumer sees every change of a state
   field (through `/transition` or an update) and queues one job per change; the job runs the actions
