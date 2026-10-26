@@ -3231,6 +3231,11 @@ pub const PROFILE_EVENT_RETENTION: attome_jobs::JobType =
 pub const MARKETING_LIST_IMPORT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::static_list::IMPORT_JOB, 1);
 
+/// E1-T3: a marketing list's people added to a campaign (payload
+/// `{"campaign", "list", "purpose", "user"}`). Only enqueued.
+pub const CAMPAIGN_MEMBERS_FROM_LIST: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::campaign::MEMBERS_JOB, 1);
+
 /// E14-T5: writes a queued collection batch into `marketing_web_event` and
 /// upserts `marketing_web_session`; filters bots, staff and office networks
 /// first. Only enqueued (by the collect route), never scheduled.
@@ -3775,6 +3780,18 @@ pub fn register_job_types() {
                 }
                 let payload: Payload = job.payload()?;
                 attome_marketing::static_list::run_import(&state, payload.import_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CAMPAIGN_MEMBERS_FROM_LIST,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: serde_json::Value = job.payload()?;
+                attome_marketing::campaign::run_from_list(&state, payload)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())

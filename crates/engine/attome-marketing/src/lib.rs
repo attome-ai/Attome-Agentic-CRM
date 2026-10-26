@@ -10,6 +10,8 @@ pub mod address_check;
 pub mod alerts;
 pub mod attribution;
 pub mod blocklist;
+/// E1-T3: campaign members from a marketing list, and members by status.
+pub mod campaign;
 pub mod deliverability;
 /// E6-T7: DMARC aggregate reports.
 pub mod dmarc;
@@ -63,6 +65,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<email_campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<deliverability::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<forms::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dynamic_blocks::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<tracking_script::ApiDocFragment as utoipa::OpenApi>::openapi());

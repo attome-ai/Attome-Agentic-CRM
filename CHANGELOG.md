@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Campaign members from a list (E1-T3): `POST /api/v1/marketing/campaigns/{id}/members/from-list`
+  queues a job (`campaign_members_from_list`) that adds a marketing list's contacts or leads to a
+  campaign as `targeted` members through the record API, skipping existing members and, for an
+  email, social, advertising or content campaign, people without a current consent for the given
+  purpose. `GET /api/v1/marketing/campaigns/{id}/members/summary` counts members by status.
 - Change data capture documentation (L7-T10): `docs/change-data-capture.md` covers change-stream
   subscriptions, reading events, erasure and schema events, the export-to-stream handover,
   `410 resync_needed`, consumer expiry and health, and links the delta-token and timeline pages.
