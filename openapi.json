@@ -49257,6 +49257,279 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/permission-set-assignments/{id}": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "A permission set's assignments",
+        "description": "Who the set is assigned to, live and ended. Administrators only.",
+        "operationId": "list_assignments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The permission set",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The assignments, newest first (page 1 holds them all)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AssignmentItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such live set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Assign a permission set",
+        "description": "Gives the set to a user or a team, optionally until an end date. Environment data, not recorded in the changeset. Administrators only; audited.",
+        "operationId": "create_assignment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The permission set",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssignmentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Assigned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such live set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not exactly one of user_id and team_id, an unknown one, or an end date in the past",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "grant"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/permission-set-assignments/{id}/{assignment_id}": {
+      "delete": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Remove a permission set assignment",
+        "description": "The user or team stops getting the set. Administrators only; audited.",
+        "operationId": "delete_assignment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The permission set",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "description": "The assignment",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such live assignment of this set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "revoke"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/permission-sets": {
       "get": {
         "tags": [
@@ -49698,279 +49971,6 @@
             {
               "category": "access",
               "operation": "update"
-            }
-          ],
-          "policy": "mandatory"
-        },
-        "x-cache": "no-store",
-        "x-idempotent": "key",
-        "x-module": "core",
-        "x-privilege": "admin",
-        "x-rate-class": "api",
-        "x-risk": "high"
-      }
-    },
-    "/api/v1/admin/security/permission-sets/{id}/assignments": {
-      "get": {
-        "tags": [
-          "admin-security"
-        ],
-        "summary": "A permission set's assignments",
-        "description": "Who the set is assigned to, live and ended. Administrators only.",
-        "operationId": "list_assignments",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "The permission set",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The assignments, newest first (page 1 holds them all)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_AssignmentItem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Caller lacks the required privilege",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such live set",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "session_cookie": []
-          },
-          {
-            "api_key": []
-          }
-        ],
-        "x-cache": "private-revalidate",
-        "x-idempotent": "natural",
-        "x-module": "core",
-        "x-privilege": "admin",
-        "x-rate-class": "api",
-        "x-risk": "high"
-      },
-      "post": {
-        "tags": [
-          "admin-security"
-        ],
-        "summary": "Assign a permission set",
-        "description": "Gives the set to a user or a team, optionally until an end date. Environment data, not recorded in the changeset. Administrators only; audited.",
-        "operationId": "create_assignment",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "The permission set",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAssignmentBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Assigned",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssignmentItem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Caller lacks the required privilege",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such live set",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Not exactly one of user_id and team_id, an unknown one, or an end date in the past",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "session_cookie": []
-          },
-          {
-            "api_key": []
-          }
-        ],
-        "x-audit": {
-          "events": [
-            {
-              "category": "access",
-              "operation": "grant"
-            }
-          ],
-          "policy": "mandatory"
-        },
-        "x-cache": "no-store",
-        "x-idempotent": "key",
-        "x-module": "core",
-        "x-privilege": "admin",
-        "x-rate-class": "api",
-        "x-risk": "high"
-      }
-    },
-    "/api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}": {
-      "delete": {
-        "tags": [
-          "admin-security"
-        ],
-        "summary": "Remove a permission set assignment",
-        "description": "The user or team stops getting the set. Administrators only; audited.",
-        "operationId": "delete_assignment",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "The permission set",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "assignment_id",
-            "in": "path",
-            "description": "The assignment",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Removed"
-          },
-          "401": {
-            "description": "Missing or invalid credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Caller lacks the required privilege",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such live assignment of this set",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "session_cookie": []
-          },
-          {
-            "api_key": []
-          }
-        ],
-        "x-audit": {
-          "events": [
-            {
-              "category": "access",
-              "operation": "revoke"
             }
           ],
           "policy": "mandatory"
@@ -51566,6 +51566,327 @@
             {
               "category": "credential",
               "operation": "rotate"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/role-conflicts/current": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Current conflicts",
+        "description": "Everyone who holds both sides of a live rule today (granted before the rule existed, or through paths a rule cannot stop), by rule then user. Administrators only.",
+        "operationId": "list_current",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CurrentConflict"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/role-conflicts/rules": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Conflict rules",
+        "description": "Every live rule naming two roles, privileges or permission sets one person must not hold together. Administrators only.",
+        "operationId": "list_rules",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ConflictRule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Add a conflict rule",
+        "description": "From now on, a grant that would give one person both sides is refused (`refuse`) or needs a second administrator (`approval`). Administrators only; audited.",
+        "operationId": "create_rule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConflictRuleBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictRule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown kind, mode or side, the same thing on both sides, or no reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/role-conflicts/rules/{id}": {
+      "delete": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Remove a conflict rule",
+        "description": "Grants stop being checked against it. Administrators only; audited.",
+        "operationId": "delete_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The rule",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such live rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "soft_delete"
             }
           ],
           "policy": "mandatory"
@@ -150304,6 +150625,47 @@
           }
         }
       },
+      "ConflictRule": {
+        "type": "object",
+        "description": "One live rule.",
+        "required": [
+          "id",
+          "left_kind",
+          "left_ref",
+          "right_kind",
+          "right_ref",
+          "mode",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "left_kind": {
+            "type": "string",
+            "description": "`role`, `privilege` or `set`."
+          },
+          "left_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": "string",
+            "description": "`refuse` or `approval`."
+          },
+          "reason": {
+            "type": "string"
+          },
+          "right_kind": {
+            "type": "string"
+          },
+          "right_ref": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ConsentBody": {
         "type": "object",
         "properties": {
@@ -151355,6 +151717,42 @@
             "description": "0=eq 1=ne 2=gt 3=lt 4=gte 5=lte 6=in"
           },
           "value": {}
+        }
+      },
+      "CreateConflictRuleBody": {
+        "type": "object",
+        "required": [
+          "left_kind",
+          "left_ref",
+          "right_kind",
+          "right_ref",
+          "mode",
+          "reason"
+        ],
+        "properties": {
+          "left_kind": {
+            "type": "string",
+            "description": "`role`, `privilege` or `set`."
+          },
+          "left_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": "string",
+            "description": "`refuse` or `approval`."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why the pair conflicts; shown to whoever is refused or asked."
+          },
+          "right_kind": {
+            "type": "string"
+          },
+          "right_ref": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "CreateDefinitionBody": {
@@ -153035,6 +153433,24 @@
           },
           "opening_balance": {
             "type": "string"
+          }
+        }
+      },
+      "CurrentConflict": {
+        "type": "object",
+        "description": "One person holding both sides of a rule now.",
+        "required": [
+          "user_id",
+          "rule_id"
+        ],
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -179276,6 +179692,81 @@
           }
         }
       },
+      "PaginatedResponse_ConflictRule": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One live rule.",
+              "required": [
+                "id",
+                "left_kind",
+                "left_ref",
+                "right_kind",
+                "right_ref",
+                "mode",
+                "reason"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "left_kind": {
+                  "type": "string",
+                  "description": "`role`, `privilege` or `set`."
+                },
+                "left_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "mode": {
+                  "type": "string",
+                  "description": "`refuse` or `approval`."
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "right_kind": {
+                  "type": "string"
+                },
+                "right_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_ConsumerHealth": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -179486,6 +179977,58 @@
                 "url": {
                   "type": "string",
                   "description": "Where to fetch it: `/api/v1/cooked/{kind}/{hash}`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_CurrentConflict": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One person holding both sides of a rule now.",
+              "required": [
+                "user_id",
+                "rule_id"
+              ],
+              "properties": {
+                "rule_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
                 }
               }
             }
@@ -221076,6 +221619,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -221127,7 +221672,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  }
 }

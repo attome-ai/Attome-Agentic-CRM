@@ -9527,6 +9527,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/permission-set-assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A permission set's assignments
+         * @description Who the set is assigned to, live and ended. Administrators only.
+         */
+        get: operations["list_assignments"];
+        put?: never;
+        /**
+         * Assign a permission set
+         * @description Gives the set to a user or a team, optionally until an end date. Environment data, not recorded in the changeset. Administrators only; audited.
+         */
+        post: operations["create_assignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/permission-set-assignments/{id}/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a permission set assignment
+         * @description The user or team stops getting the set. Administrators only; audited.
+         */
+        delete: operations["delete_assignment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/permission-sets": {
         parameters: {
             query?: never;
@@ -9577,50 +9621,6 @@ export interface paths {
          * @description Changes a set's Arabic name or description. `If-Match: "<row_version>"` guards against a lost update. Administrators only; audited and recorded in the changeset.
          */
         patch: operations["update_set"];
-        trace?: never;
-    };
-    "/api/v1/admin/security/permission-sets/{id}/assignments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * A permission set's assignments
-         * @description Who the set is assigned to, live and ended. Administrators only.
-         */
-        get: operations["list_assignments"];
-        put?: never;
-        /**
-         * Assign a permission set
-         * @description Gives the set to a user or a team, optionally until an end date. Environment data, not recorded in the changeset. Administrators only; audited.
-         */
-        post: operations["create_assignment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove a permission set assignment
-         * @description The user or team stops getting the set. Administrators only; audited.
-         */
-        delete: operations["delete_assignment"];
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/security/permission-sets/{id}/entity-access": {
@@ -9958,6 +9958,70 @@ export interface paths {
          */
         post: operations["trigger_rewrap"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/role-conflicts/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current conflicts
+         * @description Everyone who holds both sides of a live rule today (granted before the rule existed, or through paths a rule cannot stop), by rule then user. Administrators only.
+         */
+        get: operations["list_current"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/role-conflicts/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Conflict rules
+         * @description Every live rule naming two roles, privileges or permission sets one person must not hold together. Administrators only.
+         */
+        get: operations["list_rules"];
+        put?: never;
+        /**
+         * Add a conflict rule
+         * @description From now on, a grant that would give one person both sides is refused (`refuse`) or needs a second administrator (`approval`). Administrators only; audited.
+         */
+        post: operations["create_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/role-conflicts/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a conflict rule
+         * @description Grants stop being checked against it. Administrators only; audited.
+         */
+        delete: operations["delete_rule"];
         options?: never;
         head?: never;
         patch?: never;
@@ -32422,6 +32486,21 @@ export interface components {
             /** @description `api`, `bulk` or `import`. */
             source: string;
         };
+        /** @description One live rule. */
+        ConflictRule: {
+            /** Format: uuid */
+            id: string;
+            /** @description `role`, `privilege` or `set`. */
+            left_kind: string;
+            /** Format: uuid */
+            left_ref: string;
+            /** @description `refuse` or `approval`. */
+            mode: string;
+            reason: string;
+            right_kind: string;
+            /** Format: uuid */
+            right_ref: string;
+        };
         ConsentBody: {
             privacy_version?: string | null;
             terms_version?: string | null;
@@ -32834,6 +32913,19 @@ export interface components {
              */
             operator: number;
             value: unknown;
+        };
+        CreateConflictRuleBody: {
+            /** @description `role`, `privilege` or `set`. */
+            left_kind: string;
+            /** Format: uuid */
+            left_ref: string;
+            /** @description `refuse` or `approval`. */
+            mode: string;
+            /** @description Why the pair conflicts; shown to whoever is refused or asked. */
+            reason: string;
+            right_kind: string;
+            /** Format: uuid */
+            right_ref: string;
         };
         CreateDefinitionBody: {
             /**
@@ -33469,6 +33561,13 @@ export interface components {
             currency: string;
             entries: components["schemas"]["StatementEntry"][];
             opening_balance: string;
+        };
+        /** @description One person holding both sides of a rule now. */
+        CurrentConflict: {
+            /** Format: uuid */
+            rule_id: string;
+            /** Format: uuid */
+            user_id: string;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_AgentRun: {
@@ -43682,6 +43781,34 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ConflictRule: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** @description `role`, `privilege` or `set`. */
+                left_kind: string;
+                /** Format: uuid */
+                left_ref: string;
+                /** @description `refuse` or `approval`. */
+                mode: string;
+                reason: string;
+                right_kind: string;
+                /** Format: uuid */
+                right_ref: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ConsumerHealth: {
             items: {
                 consumer: string;
@@ -43768,6 +43895,26 @@ export interface components {
                 key: string;
                 /** @description Where to fetch it: `/api/v1/cooked/{kind}/{hash}`. */
                 url: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_CurrentConflict: {
+            items: {
+                /** Format: uuid */
+                rule_id: string;
+                /** Format: uuid */
+                user_id: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -89657,6 +89804,169 @@ export interface operations {
             };
         };
     };
+    list_assignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assignments, newest first (page 1 holds them all) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AssignmentItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_assignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAssignmentBody"];
+            };
+        };
+        responses: {
+            /** @description Assigned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not exactly one of user_id and team_id, an unknown one, or an end date in the past */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_assignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The permission set */
+                id: string;
+                /** @description The assignment */
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live assignment of this set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_sets: {
         parameters: {
             query?: {
@@ -89936,169 +90246,6 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    list_assignments: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The permission set */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The assignments, newest first (page 1 holds them all) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedResponse_AssignmentItem"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such live set */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    create_assignment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The permission set */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateAssignmentBody"];
-            };
-        };
-        responses: {
-            /** @description Assigned */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssignmentItem"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such live set */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not exactly one of user_id and team_id, an unknown one, or an end date in the past */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    delete_assignment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The permission set */
-                id: string;
-                /** @description The assignment */
-                assignment_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Removed */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such live assignment of this set */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -91063,6 +91210,203 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_current: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CurrentConflict"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_rules: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ConflictRule"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateConflictRuleBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictRule"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown kind, mode or side, the same thing on both sides, or no reason */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The rule */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live rule */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

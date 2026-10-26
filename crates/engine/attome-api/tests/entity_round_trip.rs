@@ -10590,7 +10590,7 @@ fn json_req(method: &str, uri: &str, cookie: &str, body: Option<Value>) -> Reque
 /// An administrator builds a set (a privilege and an entity level), assigns
 /// it to a user who had nothing, and the user can list the entity; removing
 /// the assignment takes it away again.
-// op: POST /api/v1/admin/entities, POST /api/v1/admin/security/permission-sets, POST /api/v1/admin/security/permission-sets/{id}/privileges, POST /api/v1/admin/security/permission-sets/{id}/entity-access, GET /api/v1/admin/security/permission-sets/{id}, POST /api/v1/admin/security/permission-sets/{id}/assignments, DELETE /api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}, GET /api/v1/{entity}
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/security/permission-sets, POST /api/v1/admin/security/permission-sets/{id}/privileges, POST /api/v1/admin/security/permission-sets/{id}/entity-access, GET /api/v1/admin/security/permission-sets/{id}, POST /api/v1/admin/security/permission-set-assignments/{id}, DELETE /api/v1/admin/security/permission-set-assignments/{id}/{assignment_id}, GET /api/v1/{entity}
 #[test]
 fn create_set_and_assign_to_user() {
     attome_testkit::run_shared(async {
@@ -10678,7 +10678,7 @@ fn create_set_and_assign_to_user() {
             .clone()
             .oneshot(json_req(
                 "POST",
-                &format!("{base}/assignments"),
+                &format!("/api/v1/admin/security/permission-set-assignments/{set_id}"),
                 &admin,
                 Some(serde_json::json!({"user_id": user_id, "reason": "audit season"})),
             ))
@@ -10693,7 +10693,7 @@ fn create_set_and_assign_to_user() {
             .clone()
             .oneshot(json_req(
                 "DELETE",
-                &format!("{base}/assignments/{assignment}"),
+                &format!("/api/v1/admin/security/permission-set-assignments/{set_id}/{assignment}"),
                 &admin,
                 None,
             ))

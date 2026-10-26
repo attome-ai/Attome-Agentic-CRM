@@ -1,5 +1,7 @@
 //! Q10-T5: permission sets over the admin API, under
-//! `/api/v1/admin/security/permission-sets`.
+//! `/api/v1/admin/security/permission-sets`; their assignments under
+//! `/api/v1/admin/security/permission-set-assignments/{set}`, outside the
+//! production authoring gate, as a user's roles are.
 //!
 //! The set, its entity levels and its privileges are configuration: every
 //! write is recorded in the changeset ledger (D-785) as
@@ -805,7 +807,7 @@ async fn change_privilege(
 /// Who the set is assigned to, live and ended. Administrators only.
 #[utoipa::path(
     get,
-    path = "/api/v1/admin/security/permission-sets/{id}/assignments",
+    path = "/api/v1/admin/security/permission-set-assignments/{id}",
     tag = "admin-security",
     params(("id" = Uuid, Path, description = "The permission set")),
     responses(
@@ -869,7 +871,7 @@ pub(super) async fn list_assignments(
 /// Gives the set to a user or a team, optionally until an end date. Environment data, not recorded in the changeset. Administrators only; audited.
 #[utoipa::path(
     post,
-    path = "/api/v1/admin/security/permission-sets/{id}/assignments",
+    path = "/api/v1/admin/security/permission-set-assignments/{id}",
     tag = "admin-security",
     params(("id" = Uuid, Path, description = "The permission set")),
     request_body = CreateAssignmentBody,
@@ -926,6 +928,22 @@ pub(super) async fn create_assignment(
         Some(id),
     )
     .await?;
+    // Q10-T8: the set must not complete a conflicting pair for anyone it reaches.
+    let reached: Vec<Uuid> = match (body.user_id, body.team_id) {
+        (Some(user), _) => vec![user],
+        (_, Some(team)) => sqlx::query_scalar(
+            "SELECT user_ref FROM user_account_mm_team WHERE team_ref = $1 AND is_deleted = false",
+        )
+        .bind(team)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(AppError::internal)?,
+        _ => Vec::new(),
+    };
+    for user in reached {
+        crate::conflicts::refuse_any_conflict(&mut tx, user, crate::conflicts::GrantRef::Set(id))
+            .await?;
+    }
     let (assignment_id, created_at): (Uuid, DateTime<Utc>) = sqlx::query_as(
         "INSERT INTO permission_set_assignment \
              (set_ref, user_ref, team_ref, ends_at, reason, granted_by) \
@@ -962,7 +980,7 @@ pub(super) async fn create_assignment(
 /// The user or team stops getting the set. Administrators only; audited.
 #[utoipa::path(
     delete,
-    path = "/api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}",
+    path = "/api/v1/admin/security/permission-set-assignments/{id}/{assignment_id}",
     tag = "admin-security",
     params(
         ("id" = Uuid, Path, description = "The permission set"),
@@ -1059,11 +1077,11 @@ pub(super) fn routes() -> Router<EngineState> {
             delete(revoke_privilege),
         )
         .route(
-            "/api/v1/admin/security/permission-sets/{id}/assignments",
+            "/api/v1/admin/security/permission-set-assignments/{id}",
             get(list_assignments).post(create_assignment),
         )
         .route(
-            "/api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}",
+            "/api/v1/admin/security/permission-set-assignments/{id}/{assignment_id}",
             delete(delete_assignment),
         )
 }

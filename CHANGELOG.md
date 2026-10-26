@@ -23,6 +23,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Conflicting-access rules (Q10-T8): migration `0295` adds `role_conflict_rule`, a pair of roles,
+  privileges or permission sets one person must not hold together, managed under
+  `/api/v1/admin/security/role-conflicts/rules` with `GET .../current` listing who holds a pair
+  today. A role grant, team join, team role or set assignment that would complete a pair is
+  refused (409 `role_conflict`); in `approval` mode a direct role grant goes to a second
+  administrator with a reason instead, and the other paths refuse with
+  `role_conflict_needs_approval`.
 - Access paths (Q10-T10): `GET /api/v1/admin/security/users/{id}/effective-access?entity=&action=`
   adds `paths`, every role, team, permission set, conditional grant, position and direct grant that
   gives the person a level on the entity for the operation, from the resolver's own statement.
@@ -31,7 +38,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   adds the set's privileges and levels to the person exactly like one more role; an ended one gives
   nothing, and a set never carries `system.admin` (422 `set_cannot_grant_admin`). Administrators
   manage them under `/api/v1/admin/security/permission-sets` (the set, `/entity-access`,
-  `/privileges`, `/assignments`). Sets travel in bundles (`permission_sets`) and changesets (six new
+  `/privileges`; behind the production authoring gate, like roles and field profiles) and assign
+  them under `/api/v1/admin/security/permission-set-assignments/{set}`. Sets travel in bundles (`permission_sets`) and changesets (six new
   `attome-changeset/v1` operations, `upsert_permission_set` to `revoke_permission_set_privilege`);
   assignments are environment data and do not.
 - Access explainer (Q14-T4): `GET /api/v1/{entity}/{id}/access/explain?user=&action=` lists why a

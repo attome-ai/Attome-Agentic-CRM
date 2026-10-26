@@ -375,14 +375,6 @@ const RECORDED: &[(&str, &[&str])] = &[
 /// §1.3 and §7).
 const EXCLUDED: &[(&str, &str)] = &[
     (
-        "POST /api/v1/admin/security/permission-sets/{id}/assignments",
-        "Q10-T5: assigning a set to a user or team is environment data, like a user's roles",
-    ),
-    (
-        "DELETE /api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}",
-        "Q10-T5: an assignment is environment data, like a user's roles",
-    ),
-    (
         "POST /api/v1/admin/themes/preview-check",
         "B13-T5: checks unsaved tokens and writes nothing",
     ),

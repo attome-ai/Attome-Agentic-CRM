@@ -179,6 +179,15 @@ pub async fn do_assign_user_role(
         .ok_or_else(|| AppError::Validation("no active role found with this role_id".into()))?;
 
     let mut tx = SecurityTx::begin(state, event).await?;
+    // Q10-T8: a refusing conflict rule stops the grant here, in its own
+    // transaction. An approval rule was routed by `grant_role_as` before the
+    // grant reached this point (or this is the approved grant itself).
+    if let crate::conflicts::ConflictOutcome::Refuse(_) =
+        crate::conflicts::check_grant(&mut tx, user_id, crate::conflicts::GrantRef::Role(role_id))
+            .await?
+    {
+        return Err(crate::conflicts::refused());
+    }
     let id: Uuid = sqlx::query_scalar(
         "INSERT INTO user_account_mm_role (id, user_ref, role_ref, valid_until, grant_reason) \
          VALUES ($1, $2, $3, $4, $5) \
@@ -252,6 +261,41 @@ pub async fn grant_role_as(
         "valid_until": valid_until,
         "reason": reason,
     });
+    // Q10-T8: a conflict rule refuses the grant, or sends it to a second
+    // administrator with a reason, whatever `approval.required_actions` says.
+    let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    let conflict = crate::conflicts::check_grant(
+        &mut conn,
+        user_id,
+        crate::conflicts::GrantRef::Role(role_id),
+    )
+    .await?;
+    drop(conn);
+    match conflict {
+        crate::conflicts::ConflictOutcome::Refuse(_) => return Err(crate::conflicts::refused()),
+        crate::conflicts::ConflictOutcome::NeedsApproval(rule) => {
+            if reason.map(str::trim).is_none_or(str::is_empty) {
+                return Err(AppError::Validation(
+                    "role_conflict_reason_required: this grant conflicts with a rule and needs a \
+                     second administrator; give a reason"
+                        .into(),
+                ));
+            }
+            let mut payload = payload;
+            payload["conflict_rule"] = serde_json::json!(rule.id);
+            let request = attome_audit::approval::gate_required(
+                state,
+                ACTION_ROLE_GRANT,
+                payload,
+                granter.user_id,
+                true,
+            )
+            .await?
+            .ok_or_else(|| AppError::internal("a required approval was not submitted"))?;
+            return Ok(RoleGrantOutcome::Pending(request.id));
+        }
+        crate::conflicts::ConflictOutcome::None => {}
+    }
     if let Some(request) =
         attome_audit::approval::gate(state, ACTION_ROLE_GRANT, payload, granter.user_id).await?
     {

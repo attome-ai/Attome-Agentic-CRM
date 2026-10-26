@@ -37,6 +37,7 @@ mod organizations;
 mod permission_sets;
 mod positions;
 mod privileges;
+mod role_conflicts;
 mod role_entity_access;
 mod role_grant_conditions;
 mod role_grants;
@@ -79,6 +80,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         roles::openapi_fragment(),
         role_grants::openapi_fragment(),
         role_grant_conditions::openapi_fragment(),
+        role_conflicts::openapi_fragment(),
         role_entity_access::openapi_fragment(),
         user_roles::openapi_fragment(),
         positions::openapi_fragment(),
@@ -113,6 +115,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(roles::routes())
         .merge(role_grants::routes())
         .merge(role_grant_conditions::routes())
+        .merge(role_conflicts::routes())
         .merge(role_entity_access::routes())
         .merge(user_roles::routes())
         .merge(positions::routes())

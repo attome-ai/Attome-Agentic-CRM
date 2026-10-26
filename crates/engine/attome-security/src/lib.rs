@@ -7,6 +7,7 @@ pub mod cache;
 /// U12-T1 — company walls in the record filter.
 pub mod company_walls;
 pub mod conditions;
+pub mod conflicts;
 pub mod context;
 pub mod db;
 pub mod entity_privileges;

@@ -2520,6 +2520,37 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        // ── conflict rules (Q10-T8) ─────────────────────────────────────────
+        "POST /api/v1/admin/security/role-conflicts/rules" => {
+            let (left, right) = (role(fx).await, role(fx).await);
+            request(
+                "POST",
+                &format!("{S}/role-conflicts/rules"),
+                t,
+                Some(json!({
+                    "left_kind": "role", "left_ref": left,
+                    "right_kind": "role", "right_ref": right,
+                    "mode": "refuse", "reason": "four eyes",
+                })),
+            )
+        }
+        "DELETE /api/v1/admin/security/role-conflicts/rules/{id}" => {
+            let (left, right) = (role(fx).await, role(fx).await);
+            let id = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("{S}/role-conflicts/rules"),
+                    Some(json!({
+                        "left_kind": "role", "left_ref": left,
+                        "right_kind": "role", "right_ref": right,
+                        "mode": "refuse", "reason": "four eyes",
+                    })),
+                )
+                .await,
+            );
+            request("DELETE", &format!("{S}/role-conflicts/rules/{id}"), t, None)
+        }
         // ── permission sets (Q10-T5) ────────────────────────────────────────
         "POST /api/v1/admin/security/permission-sets" => request(
             "POST",
@@ -2591,31 +2622,31 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
-        "POST /api/v1/admin/security/permission-sets/{id}/assignments" => {
+        "POST /api/v1/admin/security/permission-set-assignments/{id}" => {
             let id = permission_set(fx).await;
             let (user, _) = seed_user(&fx.base, "set-holder").await;
             request(
                 "POST",
-                &format!("{S}/permission-sets/{id}/assignments"),
+                &format!("{S}/permission-set-assignments/{id}"),
                 t,
                 Some(json!({"user_id": user})),
             )
         }
-        "DELETE /api/v1/admin/security/permission-sets/{id}/assignments/{assignment_id}" => {
+        "DELETE /api/v1/admin/security/permission-set-assignments/{id}/{assignment_id}" => {
             let id = permission_set(fx).await;
             let (user, _) = seed_user(&fx.base, "set-holder").await;
             let assignment = id_of(
                 &admin(
                     fx,
                     "POST",
-                    &format!("{S}/permission-sets/{id}/assignments"),
+                    &format!("{S}/permission-set-assignments/{id}"),
                     Some(json!({"user_id": user})),
                 )
                 .await,
             );
             request(
                 "DELETE",
-                &format!("{S}/permission-sets/{id}/assignments/{assignment}"),
+                &format!("{S}/permission-set-assignments/{id}/{assignment}"),
                 t,
                 None,
             )

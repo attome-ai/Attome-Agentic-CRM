@@ -289,6 +289,13 @@ pub(super) async fn add_team_member(
         None,
     )
     .await?;
+    // Q10-T8: joining brings the team's roles and sets; a conflict refuses.
+    crate::conflicts::refuse_any_conflict(
+        &mut tx,
+        user_id,
+        crate::conflicts::GrantRef::Team(team_id),
+    )
+    .await?;
     let id: Uuid = sqlx::query_scalar(
         "INSERT INTO user_account_mm_team (id, user_ref, team_ref) VALUES ($1, $2, $3) \
          ON CONFLICT (user_ref, team_ref) DO UPDATE SET is_deleted = false, updated_at = NOW() \
@@ -439,6 +446,22 @@ pub(super) async fn add_team_role(
         None,
     )
     .await?;
+    // Q10-T8: every member gets the role; a conflict for any of them refuses.
+    let members: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT user_ref FROM user_account_mm_team WHERE team_ref = $1 AND is_deleted = false",
+    )
+    .bind(team_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    for member in members {
+        crate::conflicts::refuse_any_conflict(
+            &mut tx,
+            member,
+            crate::conflicts::GrantRef::Role(role_id),
+        )
+        .await?;
+    }
     let id: Uuid = sqlx::query_scalar(
         "INSERT INTO role_mm_team (id, role_ref, team_ref) VALUES ($1, $2, $3) \
          ON CONFLICT (role_ref, team_ref) DO UPDATE SET is_deleted = false, updated_at = NOW() \

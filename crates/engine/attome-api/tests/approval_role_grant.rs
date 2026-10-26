@@ -400,3 +400,149 @@ async fn different_admin_approving_executes_the_grant_and_a_second_decide_confli
         .unwrap();
     assert_eq!(resp.status(), StatusCode::CONFLICT);
 }
+
+// ── Q10-T8: conflicting-access rules ──
+
+fn admin_post(cookie: &str, uri: &str, body: Value) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(uri)
+        .header("cookie", cookie)
+        .header("content-type", "application/json")
+        .header("origin", "http://localhost:4200")
+        .header("sec-fetch-site", "same-origin")
+        .body(Body::from(body.to_string()))
+        .unwrap()
+}
+
+/// A rule pairing two roles: the target already holds the first.
+async fn conflict_fixture(
+    app: &axum::Router,
+    db: &attome_db::DbPool,
+    admin_cookie: &str,
+    target: Uuid,
+    mode: &str,
+) -> (Uuid, Uuid) {
+    let (first, second) = (seed_role(db).await, seed_role(db).await);
+    let resp = app
+        .clone()
+        .oneshot(admin_post(
+            admin_cookie,
+            "/api/v1/admin/security/role-conflicts/rules",
+            serde_json::json!({
+                "left_kind": "role", "left_ref": first,
+                "right_kind": "role", "right_ref": second,
+                "mode": mode, "reason": "payments and approvals stay apart",
+            }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let resp = app
+        .clone()
+        .oneshot(assign_role_request(admin_cookie, target, first))
+        .await
+        .unwrap();
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "the first role alone is fine"
+    );
+    (first, second)
+}
+
+#[tokio::test]
+async fn conflicting_grant_is_refused() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (_, admin_cookie) = seed_user(&system, true).await;
+    let (target, _) = seed_user(&system, false).await;
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+    let (_, second) = conflict_fixture(&app, &db, &admin_cookie, target, "refuse").await;
+
+    let resp = app
+        .clone()
+        .oneshot(assign_role_request(&admin_cookie, target, second))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+    assert!(body_json(resp).await.to_string().contains("role_conflict"));
+    assert!(!user_has_role(&db, target, second).await);
+
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/security/role-conflicts/current")
+                .header("cookie", &admin_cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let current = body_json(resp).await;
+    assert!(
+        !current.to_string().contains(&target.to_string()),
+        "the refused pair is not held: {current}"
+    );
+}
+
+#[tokio::test]
+async fn conflicting_grant_with_approval_mode_needs_second_admin() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (_, requester) = seed_user(&system, true).await;
+    let (_, approver) = seed_user(&system, true).await;
+    let (target, _) = seed_user(&system, false).await;
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+    let (_, second) = conflict_fixture(&app, &db, &requester, target, "approval").await;
+
+    let uri = format!("/api/v1/admin/security/users/{target}/roles");
+    let resp = app
+        .clone()
+        .oneshot(admin_post(
+            &requester,
+            &uri,
+            serde_json::json!({ "role_id": second }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "a reason is required"
+    );
+
+    let resp = app
+        .clone()
+        .oneshot(admin_post(
+            &requester,
+            &uri,
+            serde_json::json!({ "role_id": second, "reason": "covering the month end" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        resp.status(),
+        StatusCode::ACCEPTED,
+        "routed to a second administrator although role grants are not gated"
+    );
+    let body = body_json(resp).await;
+    let request_id: Uuid = body["approval_request_id"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert!(!user_has_role(&db, target, second).await);
+
+    let resp = app
+        .clone()
+        .oneshot(decide_request(&approver, request_id, "approve", 0))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(
+        user_has_role(&db, target, second).await,
+        "granted once approved"
+    );
+}
