@@ -1739,6 +1739,10 @@ pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/metrics", get(list_metrics))
         .route("/api/v1/metrics/{id}/builder", post(build_metric))
+        .route(
+            "/api/v1/metrics/{id}/targets/spread",
+            post(crate::targets::post_spread),
+        )
         .route("/api/v1/metrics/{id}/snapshots", get(list_snapshots))
         .route("/api/v1/metrics/{id}/compute", post(compute_metric))
         .route(
@@ -1757,6 +1761,7 @@ pub fn routes() -> Router<EngineState> {
     list_snapshots,
     compute_metric,
     build_metric,
+    crate::targets::post_spread,
     crate::lineage::metric_lineage,
     crate::lineage_graph::metric_impact
 ))]

@@ -2142,6 +2142,29 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({})),
             )
         }
+        // P9-T7: a spread writes the total and member targets.
+        "POST /api/v1/metrics/{id}/targets/spread" => {
+            let id = query_metric(fx).await;
+            sqlx::query(
+                "UPDATE dashboard_metric_definition SET dimension_attributes = 'region' WHERE id = $1",
+            )
+            .bind(id)
+            .execute(&fx.base.db)
+            .await
+            .expect("give the metric a dimension");
+            request(
+                "POST",
+                &format!("/api/v1/metrics/{id}/targets/spread"),
+                t,
+                Some(json!({
+                    "period_start": "2026-07-01T00:00:00Z",
+                    "total": 100,
+                    "method": "share",
+                    "dimension_attribute": "region",
+                    "shares": {"east": 0.5, "west": 0.5},
+                })),
+            )
+        }
         // P9-T3: the first build creates the metric's stored query.
         "POST /api/v1/metrics/{id}/builder" => {
             let id = query_metric(fx).await;

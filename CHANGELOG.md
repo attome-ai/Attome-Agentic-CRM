@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Cascading metric targets (P9-T7): `POST /api/v1/metrics/{id}/targets/spread` (privilege
+  `attome_metric.set_target`) writes a period's total target and one child target per member of a
+  metric dimension, by given shares (summing to 1) or by last year's actuals per member. Children
+  are rounded to cents and add up to the parent; a repeated spread updates the same targets.
 - Delivery proof for the own fleet (F6-T11): the shipment's driver calls
   `POST /api/v1/fulfilment/shipments/{id}/out-for-delivery`, then
   `POST /api/v1/fulfilment/shipments/{id}/proof` with the outcome (delivered, failed attempt or

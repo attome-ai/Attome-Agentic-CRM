@@ -16,6 +16,8 @@ pub mod lineage_graph;
 pub mod metric;
 pub mod model;
 pub mod principal;
+/// P9-T7: a period's total target spread to a dimension's members.
+pub mod targets;
 
 pub use model::MetricModel;
 
