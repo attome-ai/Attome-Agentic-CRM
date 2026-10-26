@@ -544,6 +544,7 @@ dependencies = [
  "attome-content",
  "attome-core",
  "attome-db",
+ "attome-document",
  "attome-field",
  "attome-fulfilment",
  "attome-inference",

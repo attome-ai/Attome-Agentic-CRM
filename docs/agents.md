@@ -156,6 +156,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Recovery drills (with the ops module, `ops.read`, reads only): `ops.drill_freshness` says whether each
   drill kind is fresh, stale, failed or never run, with the checks the last run failed;
   `ops.drill_evidence` reads one drill's numbers and check results. No tool uploads or changes evidence.
+- File imports (the caller's own imports, or any for an administrator): `import.propose_mapping` proposes
+  each column's field, transform and confidence from five sample values per column (none for a column
+  named after a sensitive field) and never names a field the entity lacks; `import.status` and
+  `import.error_rows` (row numbers and errors, no cell values) read; `import.start` (consequential)
+  applies a validated import, within the agent session's daily write limit.
 - Upgrades (with the ops module, `ops.read`, read only): `ops.upgrade_status` reads the latest upgrade, its
   check report and how it ended; starting or rolling back an upgrade stays with people.
 - Recovery (with the ops module, `ops.read`, read only): `ops.recovery_readiness` reads the recovery targets and

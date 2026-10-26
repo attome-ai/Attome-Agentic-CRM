@@ -13,6 +13,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Agent import tools (A23-T11): `import.propose_mapping` (a model maps a staged import's columns to
+  fields with a confidence each; sensitive fields' samples are never sent, unknown fields are
+  dropped), `import.start` (consequential; the rows must fit the agent session's remaining daily
+  writes, and the job records the session), `import.status` and `import.error_rows`.
+  `ai_agent_policy.allowed_action_ids` again offers exactly the registered actions (it lacked
+  fourteen: the approvals, calendar, expression and ops tools).
 - Import error file (A23-T9): `GET /api/v1/{entity}/imports/{id}/errors` streams the invalid rows as
   CSV (UTF-8 with a byte order mark): `attome_row`, the file's columns in their original order (now
   kept in `counts.columns` at staging), `error` in the reader's language (`Accept-Language` `ar` or

@@ -48,6 +48,8 @@ pub mod graph;
 /// Q2-T5: identity.broker_steps, identity.explain_signin_failure.
 pub mod identity_assist;
 /// AI3-T1: filing an inbound email on the records made from it.
+/// A23-T11: agent tools for file imports.
+pub mod import;
 pub mod inbox;
 pub mod knowledge;
 pub mod knowledge_answer;
@@ -150,6 +152,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(system_status::descriptor());
     all.extend(ops_cluster::descriptors());
     all.extend(ops_drills::descriptors());
+    all.extend(import::descriptors());
     all.extend(ops_recovery::descriptors());
     all.push(ops_slo::descriptor());
     all.push(ops_upgrade::descriptor());
@@ -240,6 +243,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(system_status::SystemStatus));
     all.extend(ops_cluster::executors());
     all.extend(ops_drills::executors());
+    all.extend(import::executors());
     all.extend(ops_recovery::executors());
     all.push(Box::new(ops_slo::OpsSloHealth));
     all.push(Box::new(ops_upgrade::OpsUpgradeStatus));

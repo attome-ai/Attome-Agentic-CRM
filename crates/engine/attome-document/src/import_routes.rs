@@ -1239,6 +1239,130 @@ pub(crate) async fn put_import_policy(
     Ok(Json(row.view(entity)))
 }
 
+// ── For agent tools (A23-T11) ─────────────────────────────────────────────────
+
+/// The entity of import `job_id`, or a 404.
+async fn job_entity(state: &EngineState, job_id: Uuid) -> Result<String, AppError> {
+    sqlx::query_scalar("SELECT entity_logicalname FROM import_job WHERE id = $1")
+        .bind(job_id)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .ok_or(AppError::NotFound)
+}
+
+/// Import `job_id` as `ctx` may see it, with the entity's attributes; the
+/// same checks as `GET /api/v1/{entity}/imports/{id}`.
+pub async fn job_for(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    job_id: Uuid,
+) -> Result<(ImportJobView, Vec<AttrInfo>), AppError> {
+    let entity = job_entity(state, job_id).await?;
+    let (entity, attrs) = admitted(state, ctx, &entity).await?;
+    Ok((visible_job(state, ctx, &entity, job_id).await?, attrs))
+}
+
+/// Applies import `job_id` for `ctx`, as `POST .../imports/{id}/apply` does:
+/// queued, or waiting for approval when its policy wants it.
+pub async fn start_import(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    job_id: Uuid,
+) -> Result<ImportAccepted, AppError> {
+    let entity = job_entity(state, job_id).await?;
+    act(state, ctx, &entity, job_id, ImportAction::Apply).await
+}
+
+/// The first `limit` invalid rows of import `job_id`: their numbers and
+/// error lists, no cell values.
+pub async fn error_rows(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    job_id: Uuid,
+    limit: i64,
+) -> Result<Vec<(i32, Value)>, AppError> {
+    job_for(state, ctx, job_id).await?;
+    sqlx::query_as(
+        "SELECT row_no, COALESCE(error->'errors', '[]'::jsonb) FROM import_stage \
+          WHERE job_id = $1 AND status = 'invalid' ORDER BY row_no LIMIT $2",
+    )
+    .bind(job_id)
+    .bind(limit.clamp(1, 1_000))
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Up to `per_column` non-empty sample cells of each column of import
+/// `job_id`, from its first staged rows; the columns in the file's order.
+pub async fn column_samples(
+    state: &EngineState,
+    job_id: Uuid,
+    per_column: usize,
+) -> Result<Vec<(String, Vec<String>)>, AppError> {
+    let columns: Option<Value> =
+        sqlx::query_scalar("SELECT counts->'columns' FROM import_job WHERE id = $1")
+            .bind(job_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?
+            .flatten();
+    let rows: Vec<Value> = sqlx::query_scalar(
+        "SELECT raw FROM import_stage WHERE job_id = $1 ORDER BY row_no LIMIT 200",
+    )
+    .bind(job_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let names: Vec<String> = columns
+        .and_then(|c| serde_json::from_value(c).ok())
+        .or_else(|| {
+            rows.first()
+                .and_then(Value::as_object)
+                .map(|o| o.keys().cloned().collect())
+        })
+        .unwrap_or_default();
+    Ok(names
+        .into_iter()
+        .map(|name| {
+            let samples: Vec<String> = rows
+                .iter()
+                .filter_map(|r| r.get(&name).and_then(Value::as_str))
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .take(per_column)
+                .map(|v| v.chars().take(80).collect())
+                .collect();
+            (name, samples)
+        })
+        .collect())
+}
+
+/// The mappings of the entity's last `n` imports that named columns.
+pub async fn recent_mappings(
+    state: &EngineState,
+    entity: &str,
+    n: i64,
+) -> Result<Vec<Value>, AppError> {
+    sqlx::query_scalar(
+        "SELECT mapping FROM import_job \
+          WHERE entity_logicalname = $1 AND jsonb_array_length(COALESCE(mapping->'columns', '[]'::jsonb)) > 0 \
+          ORDER BY created_at DESC LIMIT $2",
+    )
+    .bind(entity)
+    .bind(n)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Whether an attribute's values are sensitive (masked in previews, never
+/// sent to a model).
+pub fn attribute_is_sensitive(attr: &AttrInfo) -> bool {
+    is_sensitive(attr)
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
