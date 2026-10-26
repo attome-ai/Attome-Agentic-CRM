@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Custom actions (AE1-T1): a new metadata kind, `custom_action`, defines an action backed by a
+  published flow; on publish it is loaded into the AI action registry as a second source, with the
+  same descriptor (risk tier, retry class, required privileges, input schema), as `custom.<name>`.
+  It can never take a built-in action's id.
 - Theme from brand guidelines (B13-T11): the AI action `brand.draft_from_document` reads a theme's
   `guidelines_pdf` asset, asks the model for theme tokens and saves them as a new draft of that
   theme's scope (administrators only, a Configuration audit event); a reply that is not a valid

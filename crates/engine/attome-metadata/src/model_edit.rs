@@ -36,6 +36,8 @@ fn registered_kinds() -> Vec<Arc<dyn Kind>> {
         Arc::new(attome_model::kinds::SurveyKind),
         Arc::new(attome_model::kinds::StageProcessKind),
         Arc::new(attome_model::kinds::BusinessEventKind),
+        // AE1-T1: custom actions, loaded into the AI action registry.
+        Arc::new(attome_model::kinds::CustomActionKind),
         Arc::new(attome_model::kinds::DependencyKind),
         Arc::new(attome_model::kinds::EntitySettingsKind),
         Arc::new(attome_model::kinds::RuleFunctionKind),

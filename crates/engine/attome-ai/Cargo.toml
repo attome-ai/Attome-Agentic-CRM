@@ -11,6 +11,7 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
+arc-swap.workspace            = true
 attome-approval.workspace     = true
 attome-audit.workspace        = true
 attome-auth.workspace         = true

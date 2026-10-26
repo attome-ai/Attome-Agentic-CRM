@@ -1389,7 +1389,12 @@ impl Executors {
     }
 
     fn get(&self, id: ActionId) -> Option<&dyn Action> {
-        self.inner.iter().find(|a| a.id() == id).map(|a| a.as_ref())
+        self.inner
+            .iter()
+            .find(|a| a.id() == id)
+            .map(|a| a.as_ref())
+            // AE1-T1: a published custom action runs its own executor.
+            .or_else(|| crate::custom_action::get(id.as_str()).map(|a| a as &dyn Action))
     }
 }
 

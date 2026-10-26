@@ -114,8 +114,29 @@ pub async fn refresh_cooked(state: &EngineState) -> Result<(), AppError> {
     }
     attome_db::tx::commit(tx).await?;
     cooked().load_version(db, switched.to, manifest).await?;
+    load_custom_actions();
     attome_model::switch::record_node_switch(db, node(), switched.to).await?;
     Ok(())
+}
+
+/// AE1-T1: hands the loaded version's custom actions to the AI action
+/// registry (its second source), replacing the previous version's.
+pub fn load_custom_actions() {
+    let cooked = cooked();
+    let snapshot = cooked.snapshot();
+    let prefix = format!("{}:", attome_model::kinds::CUSTOM_ACTION.0);
+    let definitions: Vec<serde_json::Value> = snapshot
+        .manifest
+        .artefacts
+        .keys()
+        .filter(|key| key.starts_with(&prefix))
+        .filter_map(|key| {
+            cooked.get::<serde_json::Value>(attome_model::kinds::CUSTOM_ACTION.0, key)
+        })
+        .map(|doc| (*doc).clone())
+        .collect();
+    let loaded = attome_ai::custom_action::install(&definitions);
+    tracing::info!(loaded, "custom actions loaded");
 }
 
 /// Loads the deployment's current metadata version on this node when it is
@@ -128,6 +149,7 @@ pub(crate) async fn follow_cooked(db: &attome_db::DbPool) -> bool {
     match attome_model::switch::follow_current(db, cooked(), node()).await {
         Ok(Some(version)) => {
             tracing::info!(version, "switched to metadata version");
+            load_custom_actions();
             true
         }
         Ok(None) => true,

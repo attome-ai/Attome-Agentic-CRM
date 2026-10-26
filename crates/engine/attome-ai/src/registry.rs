@@ -55,14 +55,26 @@ impl ActionRegistry {
     /// This is the boundary invariant I-9 rests on for tool dispatch: a model
     /// names a tool, and either it matches a registered action or nothing
     /// happens. A model cannot invent a capability by naming one.
+    ///
+    /// AE1-T1: after the built-in actions, the published custom actions
+    /// (`crate::custom_action`, ids `custom.<name>`, never a built-in id).
     pub fn resolve(&self, id: &str) -> Option<&ActionDescriptor> {
+        self.builtin(id)
+            .or_else(|| crate::custom_action::descriptor(id))
+    }
+
+    /// A built-in action only.
+    pub fn builtin(&self, id: &str) -> Option<&ActionDescriptor> {
         self.actions
             .values()
             .find(|descriptor| descriptor.id.as_str() == id)
     }
 
+    /// Every action: the built-in ones in id order, then the published
+    /// custom ones (AE1-T1).
     pub fn all(&self) -> impl Iterator<Item = &ActionDescriptor> {
-        self.actions.values()
+        let custom: Vec<&ActionDescriptor> = crate::custom_action::descriptors();
+        self.actions.values().chain(custom)
     }
 
     /// The ids of every action that counts against `class` (AH4-T2).
@@ -90,7 +102,7 @@ impl ActionRegistry {
         ctx: &'a crate::context::ActionContext,
         inputs: &'a VisibilityInputs<'a>,
     ) -> impl Iterator<Item = &'a ActionDescriptor> {
-        self.actions.values().filter(move |descriptor| {
+        self.all().filter(move |descriptor| {
             let gate_inputs = crate::gate::GateInputs {
                 licensed: (inputs.is_licensed)(descriptor.module),
                 ai: inputs.ai,

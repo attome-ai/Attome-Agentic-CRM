@@ -4,6 +4,7 @@
 pub mod agent;
 pub mod business_event;
 pub mod component;
+pub mod custom_action;
 pub mod decision_table;
 pub mod dependency;
 pub mod entity_settings;
@@ -26,6 +27,7 @@ pub mod tour;
 pub use agent::{AGENT, AgentKind};
 pub use business_event::{BUSINESS_EVENT, BusinessEventKind};
 pub use component::{COMPONENT, ComponentKind};
+pub use custom_action::{CUSTOM_ACTION, CustomActionKind};
 pub use decision_table::{DECISION_TABLE, DecisionTableKind};
 pub use dependency::{DEPENDENCY, DependencyKind};
 pub use entity_settings::{ENTITY_SETTINGS, EntitySettingsKind};

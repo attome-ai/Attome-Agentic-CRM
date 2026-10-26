@@ -88,6 +88,8 @@ pub mod context;
 /// C11 B1 (P-1) — the context window: newest first, whole exchanges, bounded
 /// by tokens, in native tool-call structure. Pure; `conversation` loads.
 pub mod context_window;
+/// AE1-T1: published custom actions, the registry's second source.
+pub mod custom_action;
 /// C2 (D-552, I-12) — the durable conversational ledger: conversations,
 /// the append-only message transcript, and the `context_messages` projection
 /// that is the only thing permitted to shape model input from it (I-15).

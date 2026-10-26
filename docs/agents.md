@@ -115,6 +115,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Configuration and help: `builder.explain` (AD6-T1) explains how something is configured from the
   catalogue and the lineage, citing the flows, rules and entities involved; `help.answer` (B14-T2)
   answers how-to questions from the built-in documentation and the configuration, citing both.
+- Custom actions (AE1-T1): a builder publishes a `custom_action` metadata object (descriptions in
+  English and Arabic, an input schema, a risk tier, a retry class, required privileges and the flow
+  it runs). It then appears as the tool `custom.<name>` beside the built-in actions, under the same
+  gate, confirmations and approvals; a consequential one needs approval when an agent proposes it.
+  Running it starts the flow as the person, with the arguments as the flow's context.
 - Branding (B13-T11): `brand.draft_from_document` reads a theme's brand guidelines PDF and saves the
   colours, fonts and density it finds as a new draft theme; it never publishes, and only an
   administrator may run it.
