@@ -9,6 +9,8 @@
 pub mod alerts;
 pub mod anomaly;
 pub mod auth;
+/// P9-T3: a metric built from an entity, an aggregate, a date and filters.
+pub mod builder;
 pub mod lineage;
 pub mod lineage_graph;
 pub mod metric;

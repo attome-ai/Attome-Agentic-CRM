@@ -1690,9 +1690,55 @@ async fn compute_metric(
     }))
 }
 
+/// The metric's builder query.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BuilderQueryResponse {
+    pub metric_id: Uuid,
+    /// The stored query the metric now reads.
+    pub query_id: Uuid,
+}
+
+/// Build a metric from its parts
+///
+/// P9-T3: describes the metric as an entity, an aggregate over one of its
+/// attributes, the date that places a record in the metric's period, filters
+/// and dimensions; creates (or republishes) the metric's stored query from it
+/// and points the metric at that query. Needs the metric's update privilege.
+#[utoipa::path(
+    post,
+    path = "/api/v1/metrics/{id}/builder",
+    tag = "dashboard",
+    params(("id" = Uuid, Path, description = "The metric")),
+    request_body = crate::builder::MetricSpec,
+    responses(
+        (status = 200, description = "The metric reads the built query", body = BuilderQueryResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such metric", body = ErrorResponse),
+        (status = 409, description = "The metric changed while it was being built", body = ErrorResponse),
+        (status = 422, description = "An unknown or sensitive attribute, a non-numeric measure, a bad filter, or a period without a calendar", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    // The stored query is Configuration: created the first time, republished after.
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create), (attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+)]
+async fn build_metric(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<MetricUpdate>>,
+    Path(metric_id): Path<Uuid>,
+    Json(spec): Json<crate::builder::MetricSpec>,
+) -> Result<Json<BuilderQueryResponse>, AppError> {
+    let query_id = crate::builder::upsert_builder_query(&state, &ctx, metric_id, &spec).await?;
+    Ok(Json(BuilderQueryResponse {
+        metric_id,
+        query_id,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/metrics", get(list_metrics))
+        .route("/api/v1/metrics/{id}/builder", post(build_metric))
         .route("/api/v1/metrics/{id}/snapshots", get(list_snapshots))
         .route("/api/v1/metrics/{id}/compute", post(compute_metric))
         .route(
@@ -1710,6 +1756,7 @@ pub fn routes() -> Router<EngineState> {
     list_metrics,
     list_snapshots,
     compute_metric,
+    build_metric,
     crate::lineage::metric_lineage,
     crate::lineage_graph::metric_impact
 ))]

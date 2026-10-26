@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Metric builder (P9-T3): `POST /api/v1/metrics/{id}/builder` takes an entity, an aggregate (`count`,
+  `sum`, `avg`, `median`, `min`, `max`), a measure, the date that places a record in the metric's period,
+  filters and up to three dimensions, creates or republishes the metric's stored query (`value` over
+  the current period) and points the metric at it. Sensitive attributes are refused.
 - Delta tokens (L7-T4): `GET /api/v1/{entity}?delta_token=` and `query/execute`'s `delta_token` answer
   the records created, updated and deleted in the filtered list since the token, with `next_token`
   (`latest` gives a first token); the list's filters, record scope and field security apply. A token

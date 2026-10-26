@@ -2142,6 +2142,20 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({})),
             )
         }
+        // P9-T3: the first build creates the metric's stored query.
+        "POST /api/v1/metrics/{id}/builder" => {
+            let id = query_metric(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/metrics/{id}/builder"),
+                t,
+                Some(json!({
+                    "entity_logicalname": fx.entity,
+                    "aggregate": "count",
+                    "date_attribute": "created_at",
+                })),
+            )
+        }
 
         // ── AI providers (D-566) ────────────────────────────────────────────
         "POST /api/v1/admin/ai/providers/{id}/credential" => {
