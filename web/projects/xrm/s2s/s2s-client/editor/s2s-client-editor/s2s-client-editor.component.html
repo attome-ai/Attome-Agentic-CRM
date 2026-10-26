@@ -75,6 +75,33 @@
         <p id="s2s-client-oauth-scopes-hint" class="cell-muted">{{ 's2sClientPage.oauthScopesHint' | translate }}</p>
       </div>
     </div>
+    <!-- S11-T4/T6: the service account -->
+    <h4>{{ 's2sClients.serviceAccount' | translate }}</h4>
+    <p class="cell-muted" data-owner>
+      {{ 's2sClients.owner' | translate }}: <span dir="ltr">{{ client()!.owner_user_ref ?? ('s2sClients.noOwner' | translate) }}</span>
+    </p>
+    <div class="form-row-1">
+      <div class="field">
+        <label for="s2s-client-purpose">{{ 's2sClients.purpose' | translate }}</label>
+        <input id="s2s-client-purpose" [(ngModel)]="editPurpose" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="s2s-client-env">{{ 's2sClients.environment' | translate }}</label>
+        <select id="s2s-client-env" [(ngModel)]="editEnvironment">
+          <option value="">{{ 's2sClients.environmentNone' | translate }}</option>
+          @for (env of environments; track env) {
+            <option [value]="env">{{ 's2sClients.environments.' + env | translate }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="s2s-client-expiry">{{ 's2sClients.expires' | translate }}</label>
+        <input id="s2s-client-expiry" type="date" [(ngModel)]="editExpiry" aria-describedby="s2s-client-expiry-hint">
+        <p id="s2s-client-expiry-hint" class="cell-muted">{{ 's2sClients.expiresHint' | translate }}</p>
+      </div>
+    </div>
     @if (metaError()) { <p class="error-msg">{{ metaError() }}</p> }
     <div class="btn-row">
       <button class="btn-primary" (click)="saveMeta()" [disabled]="savingMeta()">
@@ -86,15 +113,25 @@
   <!-- ── Keys ──────────────────────────────────────────────────────────── -->
   <div class="card">
     <div class="section-header">
-      <h3>Keys</h3>
+      <h3>{{ 's2sClients.keys' | translate }}</h3>
+      <button class="btn-ghost" (click)="rotate()" [disabled]="generating() || !freeSlot()" data-rotate>
+        <i class="las la-sync"></i> {{ 's2sClients.rotate' | translate }}
+      </button>
     </div>
+    <p class="cell-muted">{{ (bothActive() ? 's2sClients.rotateRetire' : 's2sClients.rotateHint') | translate }}</p>
 
     @if (revealedSecret()) {
-      <div class="migrate-banner">
-        <strong>New secret (shown once — copy it now):</strong>
-        <div class="cell-mono" style="margin-top:6px; word-break:break-all">{{ revealedSecret() }}</div>
-        <div class="btn-row"><button class="btn-ghost" (click)="revealedSecret.set(null)">Dismiss</button></div>
-      </div>
+      <section class="migrate-banner" role="alert" aria-live="assertive" data-secret-once>
+        <strong>{{ 's2sClients.secretTitle' | translate }}</strong>
+        <p>{{ 's2sClients.secretOnce' | translate }}</p>
+        <div class="cell-mono secret-value" dir="ltr" data-secret>{{ revealedSecret() }}</div>
+        <div class="btn-row">
+          <button class="btn-primary" (click)="copySecret()" data-copy>
+            <i class="las la-copy"></i> {{ (copied() ? 's2sClients.copied' : 's2sClients.copy') | translate }}
+          </button>
+          <button class="btn-ghost" (click)="dismissSecret()" data-dismiss>{{ 's2sClients.stored' | translate }}</button>
+        </div>
+      </section>
     }
 
     <div class="table-wrap">
@@ -134,6 +171,74 @@
       </table>
     </div>
     @if (keyError()) { <p class="error-msg">{{ keyError() }}</p> }
+  </div>
+
+  <!-- ── Identity-provider trusts (S11-T2) ─────────────────────────────── -->
+  <div class="card" data-trusts>
+    <div class="section-header">
+      <h3>{{ 's2sClients.trusts' | translate }} <span class="count">{{ trusts().length }}</span></h3>
+      <button class="btn-ghost" (click)="showTrustForm.set(!showTrustForm())">
+        <i class="las la-plus"></i> {{ 's2sClients.addTrust' | translate }}
+      </button>
+    </div>
+    <p class="cell-muted">{{ 's2sClients.trustsHint' | translate }}</p>
+    @if (trusts().length > 0) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ 's2sClients.issuer' | translate }}</th>
+              <th>{{ 's2sClients.audience' | translate }}</th>
+              <th>{{ 's2sClients.subject' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of trusts(); track t.id) {
+              <tr>
+                <td class="cell-mono" dir="ltr">{{ t.issuer }}</td>
+                <td class="cell-mono" dir="ltr">{{ t.audience }}</td>
+                <td class="cell-mono" dir="ltr">{{ t.subject }}</td>
+                <td class="actions">
+                  <button class="btn-sm btn-sm-danger" (click)="removeTrust(t.id)" [attr.aria-label]="'s2sClients.removeTrust' | translate">
+                    <i class="las la-trash-alt"></i>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (showTrustForm()) {
+      <div class="inline-form-panel">
+        <div class="form-row-2">
+          <div class="field">
+            <label for="s2s-trust-issuer">{{ 's2sClients.issuer' | translate }}</label>
+            <input id="s2s-trust-issuer" [(ngModel)]="trustIssuer" dir="ltr" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="s2s-trust-audience">{{ 's2sClients.audience' | translate }}</label>
+            <input id="s2s-trust-audience" [(ngModel)]="trustAudience" dir="ltr" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label for="s2s-trust-subject">{{ 's2sClients.subject' | translate }}</label>
+            <input id="s2s-trust-subject" [(ngModel)]="trustSubject" dir="ltr" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="s2s-trust-jwks">{{ 's2sClients.jwksUri' | translate }}</label>
+            <input id="s2s-trust-jwks" [(ngModel)]="trustJwksUri" dir="ltr" autocomplete="off">
+          </div>
+        </div>
+        @if (trustError()) { <p class="error-msg" role="alert">{{ trustError() }}</p> }
+        <div class="btn-row">
+          <button class="btn-primary" (click)="addTrust()" [disabled]="savingTrust()">{{ 's2sClients.saveTrust' | translate }}</button>
+          <button class="btn-ghost" (click)="showTrustForm.set(false)">{{ 's2sClients.cancel' | translate }}</button>
+        </div>
+      </div>
+    }
   </div>
 
   <!-- ── Permissions ───────────────────────────────────────────────────── -->

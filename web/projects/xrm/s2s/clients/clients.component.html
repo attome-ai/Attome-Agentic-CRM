@@ -1,0 +1,138 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 's2sClients.title' | translate }}</h2>
+    <p class="subtitle">{{ 's2sClients.count' | translate: { count: clients().length } }}</p>
+  </div>
+  <button class="btn-primary" (click)="toggleCreate()" data-new-client>
+    <i class="las la-plus"></i> {{ 's2sClients.new' | translate }}
+  </button>
+</div>
+
+@if (issued(); as cred) {
+  <section class="secret-once" role="alert" aria-live="assertive" data-secret-once>
+    <h3>{{ 's2sClients.secretTitle' | translate }}</h3>
+    <p>{{ 's2sClients.secretOnce' | translate }}</p>
+    <dl class="secret-grid">
+      <dt>{{ 's2sClients.clientId' | translate }}</dt>
+      <dd class="cell-mono" dir="ltr">{{ cred.clientId }}</dd>
+      <dt>{{ 's2sClients.keyId' | translate }}</dt>
+      <dd class="cell-mono" dir="ltr">{{ cred.publicId }}</dd>
+      <dt>{{ 's2sClients.secret' | translate }}</dt>
+      <dd class="cell-mono secret-value" dir="ltr" data-secret>{{ cred.secret }}</dd>
+    </dl>
+    <div class="btn-row">
+      <button class="btn-primary" (click)="copySecret()" data-copy>
+        <i class="las la-copy"></i> {{ (copied() ? 's2sClients.copied' : 's2sClients.copy') | translate }}
+      </button>
+      <button class="btn-ghost" (click)="dismissSecret()" data-dismiss>{{ 's2sClients.stored' | translate }}</button>
+    </div>
+  </section>
+}
+
+@if (showCreate()) {
+  <div class="create-panel">
+    <h3>{{ 's2sClients.newTitle' | translate }}</h3>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="s2s-new-client-id">{{ 's2sClients.clientId' | translate }}</label>
+        <input id="s2s-new-client-id" [(ngModel)]="newClientId" autocomplete="off" class="mono-input" dir="ltr"
+               aria-describedby="s2s-new-client-id-hint">
+        <p id="s2s-new-client-id-hint" class="cell-muted">{{ 's2sClients.clientIdHint' | translate }}</p>
+      </div>
+      <div class="field">
+        <label for="s2s-new-client-name">{{ 's2sClients.name' | translate }}</label>
+        <input id="s2s-new-client-name" [(ngModel)]="newName" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label for="s2s-new-client-purpose">{{ 's2sClients.purpose' | translate }}</label>
+      <input id="s2s-new-client-purpose" [(ngModel)]="newPurpose" autocomplete="off">
+    </div>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="s2s-new-client-env">{{ 's2sClients.environment' | translate }}</label>
+        <select id="s2s-new-client-env" [(ngModel)]="newEnvironment">
+          <option value="">{{ 's2sClients.environmentNone' | translate }}</option>
+          @for (env of environments; track env) {
+            <option [value]="env">{{ 's2sClients.environments.' + env | translate }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="s2s-new-client-expiry">{{ 's2sClients.expires' | translate }}</label>
+        <input id="s2s-new-client-expiry" type="date" [(ngModel)]="newExpiry" aria-describedby="s2s-new-client-expiry-hint">
+        <p id="s2s-new-client-expiry-hint" class="cell-muted">{{ 's2sClients.expiresHint' | translate }}</p>
+      </div>
+    </div>
+    <p class="cell-muted">{{ 's2sClients.startsEmpty' | translate }}</p>
+    @if (createError()) { <p class="error-msg" role="alert">{{ createError() }}</p> }
+    <div class="btn-row">
+      <button class="btn-primary" (click)="create()" [disabled]="creating()" data-create>
+        {{ (creating() ? 's2sClients.creating' : 's2sClients.create') | translate }}
+      </button>
+      <button class="btn-ghost" (click)="toggleCreate()">{{ 's2sClients.cancel' | translate }}</button>
+    </div>
+  </div>
+}
+
+<div class="filter-bar">
+  <input class="search" [ngModel]="search()" (ngModelChange)="search.set($event)"
+         [placeholder]="'s2sClients.search' | translate" [attr.aria-label]="'s2sClients.search' | translate" autocomplete="off">
+  <div class="prefix-tabs">
+    <button [class.active]="statusFilter() === ''" (click)="setStatus('')">{{ 's2sClients.all' | translate }}</button>
+    @for (s of ['active', 'suspended', 'revoked']; track s) {
+      <button [class.active]="statusFilter() === s" (click)="setStatus(s)">{{ 's2sClients.statuses.' + s | translate }}</button>
+    }
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">{{ 's2sClients.loading' | translate }}</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (filtered().length === 0) {
+  <div class="empty-state"><p>{{ 's2sClients.none' | translate }}</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>{{ 's2sClients.client' | translate }}</th>
+          <th>{{ 's2sClients.status' | translate }}</th>
+          <th>{{ 's2sClients.owner' | translate }}</th>
+          <th>{{ 's2sClients.purpose' | translate }}</th>
+          <th>{{ 's2sClients.method' | translate }}</th>
+          <th>{{ 's2sClients.expires' | translate }}</th>
+          <th>{{ 's2sClients.lastUsed' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of filtered(); track c.id) {
+          <tr data-client-row>
+            <td>
+              <a [routerLink]="['/xrm/admin/s2s/clients', c.id]" class="cell-link">{{ c.name }}</a>
+              <div class="cell-muted cell-mono" dir="ltr">{{ c.client_id }}</div>
+            </td>
+            <td>
+              <span class="badge">{{ 's2sClients.statuses.' + c.status | translate }}</span>
+              @if (c.environment) {
+                <div class="cell-muted">{{ 's2sClients.environments.' + c.environment | translate }}</div>
+              }
+            </td>
+            <td class="cell-muted" dir="ltr">{{ c.owner_email ?? ('s2sClients.noOwner' | translate) }}</td>
+            <td>{{ c.purpose ?? '' }}</td>
+            <td>
+              @for (m of c.methods; track m) {
+                <span class="badge method">{{ 's2sClients.methods.' + m | translate }}</span>
+              } @empty {
+                <span class="cell-muted">{{ 's2sClients.methods.none' | translate }}</span>
+              }
+            </td>
+            <td class="cell-muted">{{ c.expires_at ? (c.expires_at | localDate: { dateStyle: 'medium' }) : ('s2sClients.never' | translate) }}</td>
+            <td class="cell-muted">{{ c.last_used_at ? (c.last_used_at | localDate: { dateStyle: 'medium', timeStyle: 'short' }) : ('s2sClients.neverUsed' | translate) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

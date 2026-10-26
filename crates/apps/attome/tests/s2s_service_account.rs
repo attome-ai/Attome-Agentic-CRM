@@ -258,6 +258,60 @@ async fn service_account_new_client_holds_nothing_until_granted() {
         "a new client can do nothing"
     );
 
+    // S11-T6: the list shows owner, purpose, expiry and methods.
+    let client_db_id = uuid_of(&client, "id");
+    let listed = |page: &serde_json::Value| {
+        page["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["id"] == client_db_id.to_string())
+            .cloned()
+            .expect("the new client is listed")
+    };
+    let (_, page) = call(
+        &app,
+        &cookie,
+        "GET",
+        "/api/v1/admin/s2s/clients?page_size=200",
+        None,
+    )
+    .await;
+    let row = listed(&page);
+    assert_eq!(row["purpose"], "nightly ledger export");
+    assert_eq!(row["owner_user_ref"], admin.to_string());
+    assert!(
+        row["owner_email"]
+            .as_str()
+            .is_some_and(|e| e.ends_with("@test.invalid")),
+        "{row}"
+    );
+    assert_eq!(row["methods"], serde_json::json!([]), "no credential yet");
+    let (status, _) = call(
+        &app,
+        &cookie,
+        "POST",
+        &format!("/api/v1/admin/s2s/clients/{client_db_id}/trusts"),
+        Some(serde_json::json!({
+            "issuer": "https://login.example.com/t/v2.0", "audience": "api://attome",
+            "subject": slug, "jwks_uri": "https://login.example.com/t/keys",
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let (_, page) = call(
+        &app,
+        &cookie,
+        "GET",
+        "/api/v1/admin/s2s/clients?page_size=200",
+        None,
+    )
+    .await;
+    assert_eq!(
+        listed(&page)["methods"],
+        serde_json::json!(["identity_provider"])
+    );
+
     // Grant it a role holding one entity's read privilege.
     let keys: Vec<(Uuid, String)> = sqlx::query_as(
         "SELECT id, key FROM privilege WHERE key LIKE '%.read' AND key <> 'system.admin'          ORDER BY key LIMIT 2",

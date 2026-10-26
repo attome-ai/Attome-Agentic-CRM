@@ -178,6 +178,17 @@ struct ClientListItem {
     last_used_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     key_slots: Vec<String>,
+    /// S11-T4: the person answerable for the client, and their address.
+    owner_user_ref: Option<Uuid>,
+    owner_email: Option<String>,
+    purpose: Option<String>,
+    environment: Option<String>,
+    expires_at: Option<DateTime<Utc>>,
+    /// S11-T6: how the client can authenticate: `key` (an active HMAC key,
+    /// whose secret also serves `client_secret_basic`), `public_key` (a JWT
+    /// signed by its key, S11-T1) and `identity_provider` (a trusted
+    /// identity provider's token, S11-T2).
+    methods: Vec<String>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -311,7 +322,25 @@ async fn list_clients(
         offset,
     } = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
 
-    let rows = sqlx::query_as::<_, (Uuid, String, String, String, i32, Option<DateTime<Utc>>, DateTime<Utc>, Vec<String>)>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            String,
+            String,
+            String,
+            i32,
+            Option<DateTime<Utc>>,
+            DateTime<Utc>,
+            Vec<String>,
+            Option<Uuid>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<DateTime<Utc>>,
+            Vec<String>,
+        ),
+    >(
         r#"
         SELECT
             c.id,
@@ -324,12 +353,26 @@ async fn list_clients(
             COALESCE(
                 ARRAY_AGG(k.key_slot ORDER BY k.key_slot) FILTER (WHERE k.id IS NOT NULL AND k.status = 'active' AND (k.is_deleted = FALSE)),
                 '{}'
-            ) AS key_slots
+            ) AS key_slots,
+            c.owner_user_ref,
+            o.email,
+            c.purpose,
+            c.environment,
+            c.expires_at,
+            ARRAY_REMOVE(ARRAY[
+                CASE WHEN COUNT(k.id) > 0 THEN 'key' END,
+                CASE WHEN c.oauth_public_key_pem IS NOT NULL THEN 'public_key' END,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM s2s_federated_trust t
+                    WHERE t.client_ref = c.id AND t.is_deleted = FALSE
+                ) THEN 'identity_provider' END
+            ], NULL) AS methods
         FROM s2s_client c
         LEFT JOIN s2s_client_key k ON k.client_ref = c.id AND k.is_deleted = FALSE AND k.status = 'active'
+        LEFT JOIN user_account o ON o.id = c.owner_user_ref
         WHERE c.is_deleted = FALSE
           AND ($1::text IS NULL OR c.status = $1)
-        GROUP BY c.id, c.client_id, c.name, c.status, c.rate_limit_rpm, c.last_used_at, c.created_at
+        GROUP BY c.id, c.client_id, c.name, c.status, c.rate_limit_rpm, c.last_used_at, c.created_at, o.email
         ORDER BY c.created_at DESC
         LIMIT $2 OFFSET $3
         "#,
@@ -360,6 +403,12 @@ async fn list_clients(
             last_used_at: r.5,
             created_at: r.6,
             key_slots: r.7,
+            owner_user_ref: r.8,
+            owner_email: r.9,
+            purpose: r.10,
+            environment: r.11,
+            expires_at: r.12,
+            methods: r.13,
         })
         .collect();
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))

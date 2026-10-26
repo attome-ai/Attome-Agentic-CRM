@@ -29,6 +29,12 @@ describe('S2sAdminService', () => {
     last_used_at: null,
     created_at: '2026-01-01T00:00:00Z',
     key_slots: ['primary'],
+    owner_user_ref: null,
+    owner_email: null,
+    purpose: null,
+    environment: null,
+    expires_at: null,
+    methods: ['key'],
   });
 
   const page = (items: ClientListItem[], pageIndex: number, total: number) => ({

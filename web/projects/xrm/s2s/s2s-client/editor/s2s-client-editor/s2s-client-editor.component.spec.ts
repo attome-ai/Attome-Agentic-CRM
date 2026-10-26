@@ -1,4 +1,6 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { LangService } from '@attome/base';
 import { EMPTY, of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { S2sAdminService } from '../../../services/s2s-admin.service';
@@ -7,13 +9,17 @@ import { S2sClientEditorComponent } from './s2s-client-editor.component';
 describe('S2sClientEditorComponent route input', () => {
   const getClient = vi.fn(() => EMPTY);
   const listLogs = vi.fn(() => EMPTY);
+  const listTrusts = vi.fn(() => EMPTY);
 
   beforeEach(() => {
     getClient.mockClear();
     listLogs.mockClear();
     TestBed.configureTestingModule({
       imports: [S2sClientEditorComponent],
-      providers: [{ provide: S2sAdminService, useValue: { getClient, listLogs } }],
+      providers: [
+        { provide: S2sAdminService, useValue: { getClient, listLogs, listTrusts } },
+        { provide: LangService, useValue: { translate: (k: string) => k, errorText: () => 'error', current: signal('en') } },
+      ],
     });
     TestBed.overrideComponent(S2sClientEditorComponent, { set: { template: '' } });
   });
@@ -37,7 +43,7 @@ describe('S2sClientEditorComponent route input', () => {
     };
     getClient.mockReturnValueOnce(of(client) as never);
     const updateClient = vi.fn(() => EMPTY);
-    TestBed.overrideProvider(S2sAdminService, { useValue: { getClient, listLogs, updateClient } });
+    TestBed.overrideProvider(S2sAdminService, { useValue: { getClient, listLogs, listTrusts, updateClient } });
     const fixture = TestBed.createComponent(S2sClientEditorComponent);
     fixture.componentRef.setInput('id', 'client-1');
     fixture.detectChanges();

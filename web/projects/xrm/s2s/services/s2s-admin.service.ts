@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { ApiService } from '@attome/base';
 
 // ── Response types (mirror s2s_admin.rs exactly) ──────────────────────────────
@@ -13,6 +13,38 @@ export interface ClientListItem {
   last_used_at:   string | null;
   created_at:     string;
   key_slots:      string[];
+  /** S11-T4: the person answerable for the client. */
+  owner_user_ref: string | null;
+  owner_email:    string | null;
+  purpose:        string | null;
+  environment:    S2sEnvironment | null;
+  expires_at:     string | null;
+  /** S11-T6: how the client can authenticate. */
+  methods:        S2sMethod[];
+}
+
+/** S11-T4: the environments a client may be declared for. */
+export type S2sEnvironment = 'production' | 'staging' | 'development' | 'test';
+export const S2S_ENVIRONMENTS: readonly S2sEnvironment[] = ['production', 'staging', 'development', 'test'];
+
+/** S11-T6: `key` (an HMAC key, also the client secret), `public_key` (S11-T1), `identity_provider` (S11-T2). */
+export type S2sMethod = 'key' | 'public_key' | 'identity_provider';
+
+/** S11-T2: a trusted identity provider of a client. */
+export interface TrustItem {
+  id:         string;
+  issuer:     string;
+  audience:   string;
+  subject:    string;
+  jwks_uri:   string;
+  created_at: string;
+}
+
+export interface CreateTrustBody {
+  issuer:   string;
+  audience: string;
+  subject:  string;
+  jwks_uri: string;
 }
 
 export interface KeySummary {
@@ -54,6 +86,11 @@ export interface ClientDetail {
   oauth_public_key_set: boolean;
   /** S11-T1: the scopes an OAuth access token may carry. */
   oauth_scopes:       string[];
+  /** S11-T4: the service-account fields. */
+  owner_user_ref:     string | null;
+  purpose:            string | null;
+  environment:        S2sEnvironment | null;
+  expires_at:         string | null;
   last_used_at:       string | null;
   row_version:        number;
   created_at:         string;
@@ -104,6 +141,11 @@ export interface CreateClientBody {
   max_payload_bytes?: number;
   auto_disable_days?: number;
   can_act_as_user?:   boolean;
+  /** S11-T4: the caller when omitted. */
+  owner_user_ref?:    string;
+  purpose?:           string;
+  environment?:       S2sEnvironment;
+  expires_at?:        string;
 }
 
 export interface UpdateClientBody {
@@ -119,6 +161,10 @@ export interface UpdateClientBody {
   /** S11-T1: a PEM public key; an empty string removes it. */
   oauth_public_key_pem?: string;
   oauth_scopes?:       string[];
+  /** S11-T4: the service-account fields; omitted ones are kept. */
+  purpose?:            string;
+  environment?:        S2sEnvironment;
+  expires_at?:         string;
   row_version:         number;
 }
 
@@ -179,6 +225,20 @@ export class S2sAdminService {
 
   deletePermission(clientId: string, entityName: string): Observable<void> {
     return this.api.delete(`/api/v1/admin/s2s/clients/${clientId}/permissions/${entityName}`);
+  }
+
+  listTrusts(clientId: string): Observable<TrustItem[]> {
+    return this.api
+      .get<{ items: TrustItem[] }>(`/api/v1/admin/s2s/clients/${clientId}/trusts`)
+      .pipe(map(page => page.items));
+  }
+
+  createTrust(clientId: string, body: CreateTrustBody): Observable<TrustItem> {
+    return this.api.post<TrustItem>(`/api/v1/admin/s2s/clients/${clientId}/trusts`, body);
+  }
+
+  deleteTrust(clientId: string, trustId: string): Observable<void> {
+    return this.api.delete(`/api/v1/admin/s2s/clients/${clientId}/trusts/${trustId}`);
   }
 
   listLogs(clientId: string, limit = 50, offset = 0): Observable<AccessLogPage> {
