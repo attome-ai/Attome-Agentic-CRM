@@ -534,10 +534,121 @@ pub async fn resolve_step_approvers(
     step: &ApprovalStep,
     request: &ApprovalRequest,
 ) -> Result<(usize, Vec<Uuid>, Vec<Uuid>, HashMap<Uuid, Uuid>), AppError> {
-    resolve_step_approvers_for(
+    let (population, principals, mut allowed, delegate_of) = resolve_step_approvers_for(
         state,
         step,
         &crate::approval_resolvers::ResolveCtx::of(request),
+    )
+    .await?;
+    // Z10-T8: the person the step's reminder escalated to may decide it too
+    // (never the requester). They decide in their own slot.
+    if let Some(escalated) = request.escalated_to
+        && escalated != request.requested_by
+        && !allowed.contains(&escalated)
+    {
+        allowed.push(escalated);
+    }
+    Ok((population, principals, allowed, delegate_of))
+}
+
+/// Z10-T8: why a step's due time could not be worked out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StepDueError {
+    /// The step counts business hours and the deployment has no usable
+    /// calendar. Never answered with wall-clock time (D-517).
+    CalendarUnresolved,
+    /// The calendar could not cover the minutes (closed, or too far out).
+    Calendar(attome_calendar::CalendarError),
+    /// The minutes overflow the time range.
+    OutOfRange,
+}
+
+impl std::fmt::Display for StepDueError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CalendarUnresolved => f.write_str("no business calendar is resolved"),
+            Self::Calendar(e) => write!(f, "business calendar: {e}"),
+            Self::OutOfRange => f.write_str("step minutes are out of range"),
+        }
+    }
+}
+
+/// Z10-T8: when a step's `minutes` run out from `started`: business time
+/// through `calendar` when the step counts business hours, wall-clock
+/// otherwise.
+pub fn step_due_at(
+    step: &ApprovalStep,
+    started: DateTime<Utc>,
+    minutes: i64,
+    calendar: Option<&attome_calendar::BusinessCalendar>,
+) -> Result<DateTime<Utc>, StepDueError> {
+    let duration = chrono::Duration::minutes(minutes);
+    if !step.extras.business_hours {
+        return started
+            .checked_add_signed(duration)
+            .ok_or(StepDueError::OutOfRange);
+    }
+    let calendar = calendar.ok_or(StepDueError::CalendarUnresolved)?;
+    calendar
+        .add_business_duration(started, duration)
+        .map_err(StepDueError::Calendar)
+}
+
+/// Z10-T8: the first user a step's `escalate_to` token names for this
+/// request, never the requester; `None` when it names nobody (or is a
+/// token no resolver knows).
+pub async fn resolve_escalation_target(
+    state: &EngineState,
+    request: &ApprovalRequest,
+    token: &str,
+) -> Result<Option<Uuid>, AppError> {
+    let registry = crate::approval_resolvers::registry();
+    let Some((resolver, rest)) = registry.lookup(token) else {
+        return Ok(None);
+    };
+    let ctx = crate::approval_resolvers::ResolveCtx::of(request);
+    let mut users = resolver.resolve(state, rest, &ctx).await?;
+    users.sort();
+    Ok(users.into_iter().find(|u| *u != request.requested_by))
+}
+
+/// Z10-T8: marks `request`'s current step reminded (and escalated to
+/// `escalated_to`, when set) with an audit event in the same transaction
+/// when it escalates: who may decide a step changed. `Ok(None)` when another
+/// node or a decision got there first.
+pub async fn mark_reminded_and_audit(
+    state: &EngineState,
+    request: &ApprovalRequest,
+    escalated_to: Option<Uuid>,
+) -> Result<Option<ApprovalRequest>, AppError> {
+    let (_discarded_ctx, organization_ref) = fetch_audit_ctx(state, request.requested_by).await;
+    let audit = AuditHook::new(audit_service(state), move |updated: &ApprovalRequest| {
+        let Some(to) = updated.escalated_to.filter(|_| escalated_to.is_some()) else {
+            return Vec::new();
+        };
+        vec![HookEvent::Security(
+            SecurityEvent::new(
+                MandatoryCategory::Security,
+                AuditOperation::Escalated,
+                attome_approval::POLICY_ACTOR_ID,
+                "approval_request",
+                Some(updated.id),
+            )
+            .named(updated.action_type.clone())
+            .comment(format!(
+                "approval request {} step {} escalated to {to} on its reminder (decided_by=policy)",
+                updated.id, updated.step
+            ))
+            .source(AuditSource::BackgroundJob)
+            .organization(organization_ref),
+        )]
+    });
+    attome_approval::mark_reminded_with(
+        &state.base.db,
+        request.id,
+        request.row_version,
+        escalated_to,
+        &audit,
     )
     .await
 }
@@ -966,6 +1077,19 @@ pub async fn apply_and_audit_step_timeout_with(
     request_id: Uuid,
     extra: &dyn attome_db::BeforeCommit<(ApprovalRequest, attome_approval::TimeoutOutcome)>,
 ) -> Result<Option<(ApprovalRequest, attome_approval::TimeoutOutcome, Vec<Uuid>)>, AppError> {
+    apply_and_audit_step_timeout_due(state, request_id, extra, &attome_approval::wall_clock_due)
+        .await
+}
+
+/// Z10-T8: [`apply_and_audit_step_timeout_with`] with the step's due time
+/// from `due` (the sweep passes business hours through the deployment
+/// calendar, [`step_due_at`]).
+pub async fn apply_and_audit_step_timeout_due(
+    state: &EngineState,
+    request_id: Uuid,
+    extra: &dyn attome_db::BeforeCommit<(ApprovalRequest, attome_approval::TimeoutOutcome)>,
+    due: &attome_approval::StepDue,
+) -> Result<Option<(ApprovalRequest, attome_approval::TimeoutOutcome, Vec<Uuid>)>, AppError> {
     // The event names the request's organization, and the hook cannot look
     // it up itself: it runs on the timeout's own connection, inside its
     // transaction (guidelines §4). One cheap read before that transaction
@@ -1021,10 +1145,12 @@ pub async fn apply_and_audit_step_timeout_with(
         },
     );
 
-    let Some((request, outcome)) = attome_approval::apply_step_timeout_with(
+    let Some((request, outcome)) = attome_approval::apply_step_timeout_due_at(
         &state.base.db,
         request_id,
         &attome_db::Chain(&audit, extra),
+        &attome_types::SystemClock,
+        due,
     )
     .await?
     else {
@@ -1236,6 +1362,56 @@ mod condition_permits_tests {
         assert!(!condition_permits(
             Some("kind == \"erasure\" and urgent"),
             &serde_json::json!({ "kind": "erasure", "urgent": false })
+        ));
+    }
+}
+
+#[cfg(test)]
+mod step_due_tests {
+    use super::*;
+    use attome_calendar::{BusinessCalendar, TimeRange};
+    use chrono::{TimeZone, Weekday};
+
+    fn step(business_hours: bool) -> ApprovalStep {
+        let mut step: ApprovalStep = serde_json::from_value(serde_json::json!({
+            "mode": "any", "approvers": ["user:a"], "sla_minutes": 120,
+        }))
+        .unwrap();
+        step.extras.reminder_minutes = Some(60);
+        step.extras.business_hours = business_hours;
+        step
+    }
+
+    #[test]
+    fn step_due_at_skips_weekend() {
+        let mon_fri = [
+            Weekday::Mon,
+            Weekday::Tue,
+            Weekday::Wed,
+            Weekday::Thu,
+            Weekday::Fri,
+        ];
+        let calendar = BusinessCalendar::simple(
+            chrono_tz::UTC,
+            mon_fri.into_iter().collect(),
+            TimeRange::new(9 * 60, 17 * 60),
+        )
+        .unwrap();
+        // Friday 16:30: half an hour on Friday, the rest on Monday morning.
+        let started = Utc.with_ymd_and_hms(2026, 10, 23, 16, 30, 0).unwrap();
+        assert_eq!(
+            step_due_at(&step(true), started, 60, Some(&calendar)).unwrap(),
+            Utc.with_ymd_and_hms(2026, 10, 26, 9, 30, 0).unwrap()
+        );
+        // Wall-clock when the step does not count business hours.
+        assert_eq!(
+            step_due_at(&step(false), started, 60, Some(&calendar)).unwrap(),
+            Utc.with_ymd_and_hms(2026, 10, 23, 17, 30, 0).unwrap()
+        );
+        // No calendar: refused, never wall-clock (D-517).
+        assert!(matches!(
+            step_due_at(&step(true), started, 60, None),
+            Err(StepDueError::CalendarUnresolved)
         ));
     }
 }

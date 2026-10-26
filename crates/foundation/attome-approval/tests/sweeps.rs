@@ -394,3 +394,58 @@ fn clock_now(clock: &attome_types::FakeClock) -> chrono::DateTime<chrono::Utc> {
     use attome_types::Clock;
     clock.now()
 }
+
+/// Z10-T8: a step whose reminder minutes have passed is listed until it is
+/// marked reminded, then never again; the mark records who it escalated to
+/// and is a compare-and-set, so a second sweep's stale copy does nothing.
+#[tokio::test]
+async fn reminder_listed_once_then_marked() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let mut plan = plan_with_sla(Some(600));
+    plan.steps[0].extras.reminder_minutes = Some(60);
+    let due = submit_plan_started_minutes_ago(&pool, plan.clone(), 90).await;
+    let early = submit_plan_started_minutes_ago(&pool, plan, 30).await;
+    let none = submit_plan_started_minutes_ago(&pool, plan_with_sla(Some(600)), 90).await;
+
+    let now = chrono::Utc::now();
+    let listed: Vec<Uuid> = attome_approval::list_due_reminders(&pool, now, 10_000)
+        .await
+        .expect("list reminders")
+        .into_iter()
+        .map(|r| r.id)
+        .collect();
+    assert!(listed.contains(&due), "past its reminder minutes");
+    assert!(!listed.contains(&early), "not yet");
+    assert!(!listed.contains(&none), "no reminder on the step");
+
+    let before = get(&pool, due).await.expect("get");
+    let target = Uuid::now_v7();
+    let marked = attome_approval::mark_reminded_with(
+        &pool,
+        due,
+        before.row_version,
+        Some(target),
+        &attome_db::NoHook,
+    )
+    .await
+    .expect("mark")
+    .expect("marked");
+    assert!(marked.reminded_at.is_some());
+    assert_eq!(marked.escalated_to, Some(target));
+    assert_eq!(marked.row_version, before.row_version + 1);
+
+    let again = attome_approval::mark_reminded_with(
+        &pool,
+        due,
+        before.row_version,
+        None,
+        &attome_db::NoHook,
+    )
+    .await
+    .expect("second mark");
+    assert!(again.is_none(), "a stale copy marks nothing");
+    let listed = attome_approval::list_due_reminders(&pool, chrono::Utc::now(), 10_000)
+        .await
+        .expect("list reminders");
+    assert!(listed.iter().all(|r| r.id != due), "reminded once");
+}

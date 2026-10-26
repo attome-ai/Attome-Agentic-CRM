@@ -16,8 +16,10 @@
 //! that notification, since it is the crate with a send API
 //! (`dispatch::create_dispatch`).
 
-use attome_approval::{ApprovalRequest, TimeoutOutcome};
+use attome_approval::{ApprovalRequest, ApprovalStep, TimeoutOutcome};
+use attome_audit::approval::StepDueError;
 use attome_core::EngineState;
+use chrono::{DateTime, Utc};
 
 use crate::dispatch::{self, DispatchRequest};
 
@@ -63,62 +65,71 @@ impl attome_db::BeforeCommit<(ApprovalRequest, TimeoutOutcome)> for EnqueueAutoA
 /// Called from `poller::spawn`'s tick, alongside `dispatch::run_due_escalations`.
 /// Bounded per tick (`limit`) so one slow/large batch can't starve the
 /// notification-dispatch scan running in the same loop.
+///
+/// Z10-T8: the tick also sends each step's reminder, and both reminders and
+/// timeouts count a `business_hours` step's minutes in the deployment's
+/// default calendar, loaded once per tick when there is work. The calendar
+/// is the organisation default, not an approver's own: a step's SLA
+/// belongs to the step, which may have many approvers.
 pub async fn run_due_approval_timeouts(state: &EngineState, limit: i64) {
+    let now = chrono::Utc::now();
+    let reminders = match attome_approval::list_due_reminders(&state.base.db, now, limit).await {
+        Ok(requests) => requests,
+        Err(e) => {
+            tracing::error!(error = %e, "approval reminder sweep: list_due_reminders failed");
+            Vec::new()
+        }
+    };
     let due = match attome_approval::list_due_step_timeouts(&state.base.db, limit).await {
         Ok(ids) => ids,
         Err(e) => {
             tracing::error!(error = %e, "approval step-timeout sweep: list_due_step_timeouts failed");
-            return;
+            Vec::new()
         }
     };
+    if reminders.is_empty() && due.is_empty() {
+        return;
+    }
+    let loaded = default_calendar(state).await;
+    let calendar = loaded.as_ref().map(|c| &c.calendar);
 
+    for request in reminders {
+        remind(state, request, now, calendar).await;
+    }
+
+    let due_at = |request: &ApprovalRequest,
+                  step: &ApprovalStep,
+                  started: DateTime<Utc>,
+                  minutes: i64|
+     -> Option<DateTime<Utc>> {
+        due_or_skip(request, step, started, minutes, calendar)
+    };
     for request_id in due {
-        match attome_audit::approval::apply_and_audit_step_timeout_with(
+        match attome_audit::approval::apply_and_audit_step_timeout_due(
             state,
             request_id,
             &EnqueueAutoApprovedExecution,
+            &due_at,
         )
         .await
         {
             Ok(Some((request, attome_approval::TimeoutOutcome::Escalated, notify_ids))) => {
                 for user_id in notify_ids {
-                    let req = DispatchRequest {
-                        template_key: None,
-                        locale: "en".to_string(),
-                        recipient_user_ref: Some(user_id),
-                        is_global: false,
-                        organization_ref: None,
-                        channels: None,
-                        subject: Some(format!(
+                    notify(
+                        state,
+                        &request,
+                        user_id,
+                        format!(
                             "Approval reminder: {} is waiting on you",
                             request.action_type
-                        )),
-                        body_html: None,
-                        body_text: Some(format!(
+                        ),
+                        format!(
                             "Approval request {} (step {}) has passed its SLA and needs a \
                              decision.",
                             request.id, request.step
-                        )),
-                        route: Some(format!("/approvals/{}", request.id)),
-                        variables: Default::default(),
-                        priority: "high".to_string(),
-                        escalate_after_minutes: None,
-                        escalate_channels: None,
-                    };
-                    if let Err(e) = dispatch::create_dispatch(
-                        &state.base.db,
-                        &state.base.config.notification,
-                        req,
+                        ),
                     )
-                    .await
-                    {
-                        tracing::error!(
-                            request_id = %request.id,
-                            %user_id,
-                            error = %e,
-                            "approval step-timeout sweep: escalation notification failed to enqueue",
-                        );
-                    }
+                    .await;
                 }
             }
             Ok(Some((request, attome_approval::TimeoutOutcome::Expired, _notify_ids))) => {
@@ -138,7 +149,8 @@ pub async fn run_due_approval_timeouts(state: &EngineState, limit: i64) {
             }
             Ok(None) => {
                 // Raced (a human decided it first, another node already
-                // handled it, etc.) — not due after all, nothing to do.
+                // handled it, etc.) or not due yet in business time —
+                // nothing to do this tick.
             }
             Err(e) => {
                 tracing::error!(
@@ -148,5 +160,182 @@ pub async fn run_due_approval_timeouts(state: &EngineState, limit: i64) {
                 );
             }
         }
+    }
+}
+
+/// Z10-T8: the deployment's default calendar, or `None` (no default, or it
+/// does not resolve); a business-hours step then waits (D-517).
+async fn default_calendar(state: &EngineState) -> Option<attome_core::calendar::LoadedCalendar> {
+    let db = &state.base.db;
+    let id = match attome_core::calendar::default_calendar_id(db).await {
+        Ok(Some(id)) => id,
+        Ok(None) => return None,
+        Err(e) => {
+            tracing::error!(error = %e, "approval sweep: default calendar lookup failed");
+            return None;
+        }
+    };
+    match attome_core::calendar::load_calendar(db, id).await {
+        Ok(Ok(loaded)) => Some(loaded),
+        Ok(Err(unresolved)) => {
+            tracing::warn!(calendar_id = %id, %unresolved, "approval sweep: default calendar does not resolve");
+            None
+        }
+        Err(e) => {
+            tracing::error!(calendar_id = %id, error = %e, "approval sweep: default calendar failed to load");
+            None
+        }
+    }
+}
+
+/// Z10-T8: the step's due time, or `None` to skip the request this tick.
+/// A business-hours step with no calendar is skipped with a warning and a
+/// count, never timed on the wall clock (D-517).
+fn due_or_skip(
+    request: &ApprovalRequest,
+    step: &ApprovalStep,
+    started: DateTime<Utc>,
+    minutes: i64,
+    calendar: Option<&attome_calendar::BusinessCalendar>,
+) -> Option<DateTime<Utc>> {
+    match attome_audit::approval::step_due_at(step, started, minutes, calendar) {
+        Ok(at) => Some(at),
+        Err(StepDueError::CalendarUnresolved) => {
+            tracing::warn!(
+                request_id = %request.id,
+                "approval sweep: business-hours step skipped, no business calendar is resolved",
+            );
+            metrics::counter!("approval_calendar_unresolved_total").increment(1);
+            None
+        }
+        Err(error) => {
+            tracing::warn!(request_id = %request.id, %error, "approval sweep: step due time unknown, skipped");
+            None
+        }
+    }
+}
+
+/// Z10-T8: one step's reminder: once its `reminder_minutes` have passed (in
+/// business time when the step says so), mark it reminded (resolving its
+/// `escalate_to`, who may then decide), then — after that commit, never
+/// under the request lock — notify the step's approvers and the escalation
+/// target. `reminded_at` gates it, so it is sent once per step.
+async fn remind(
+    state: &EngineState,
+    request: ApprovalRequest,
+    now: DateTime<Utc>,
+    calendar: Option<&attome_calendar::BusinessCalendar>,
+) {
+    let Some(plan) = request.plan.as_ref() else {
+        return;
+    };
+    let Some(step) = usize::try_from(request.step)
+        .ok()
+        .and_then(|i| plan.steps.get(i))
+    else {
+        return;
+    };
+    let (Some(minutes), Some(started)) = (step.extras.reminder_minutes, request.step_started_at)
+    else {
+        return;
+    };
+    match due_or_skip(&request, step, started, minutes, calendar) {
+        Some(at) if now >= at => {}
+        _ => return,
+    }
+    let escalated_to = match step.extras.escalate_to.as_deref() {
+        Some(token) => {
+            match attome_audit::approval::resolve_escalation_target(state, &request, token).await {
+                Ok(user) => user,
+                Err(e) => {
+                    tracing::warn!(request_id = %request.id, error = %e, "approval reminder: escalation target unresolved");
+                    None
+                }
+            }
+        }
+        None => None,
+    };
+    let marked = match attome_audit::approval::mark_reminded_and_audit(
+        state,
+        &request,
+        escalated_to,
+    )
+    .await
+    {
+        Ok(Some(marked)) => marked,
+        Ok(None) => return,
+        Err(e) => {
+            tracing::error!(request_id = %request.id, error = %e, "approval reminder: not recorded");
+            return;
+        }
+    };
+    let recipients = match attome_audit::approval::resolve_step_approvers(state, step, &marked)
+        .await
+    {
+        Ok((_population, _principals, allowed, _delegate_of)) => allowed,
+        Err(e) => {
+            tracing::error!(request_id = %marked.id, error = %e, "approval reminder: approvers unresolved");
+            return;
+        }
+    };
+    for user_id in recipients {
+        let (subject, body) = if Some(user_id) == marked.escalated_to {
+            (
+                format!("Approval escalated to you: {}", marked.action_type),
+                format!(
+                    "Approval request {} (step {}) has been escalated to you; you may decide it.",
+                    marked.id, marked.step
+                ),
+            )
+        } else {
+            (
+                format!(
+                    "Approval reminder: {} is waiting on you",
+                    marked.action_type
+                ),
+                format!(
+                    "Approval request {} (step {}) is waiting for your decision.",
+                    marked.id, marked.step
+                ),
+            )
+        };
+        notify(state, &marked, user_id, subject, body).await;
+    }
+}
+
+/// Queues one high-priority notification about `request` for `user_id`; a
+/// failure is logged and the sweep goes on.
+async fn notify(
+    state: &EngineState,
+    request: &ApprovalRequest,
+    user_id: uuid::Uuid,
+    subject: String,
+    body: String,
+) {
+    let req = DispatchRequest {
+        template_key: None,
+        locale: "en".to_string(),
+        recipient_user_ref: Some(user_id),
+        is_global: false,
+        organization_ref: None,
+        channels: None,
+        subject: Some(subject),
+        body_html: None,
+        body_text: Some(body),
+        route: Some(format!("/approvals/{}", request.id)),
+        variables: Default::default(),
+        priority: "high".to_string(),
+        escalate_after_minutes: None,
+        escalate_channels: None,
+    };
+    if let Err(e) =
+        dispatch::create_dispatch(&state.base.db, &state.base.config.notification, req).await
+    {
+        tracing::error!(
+            request_id = %request.id,
+            %user_id,
+            error = %e,
+            "approval sweep: notification failed to enqueue",
+        );
     }
 }

@@ -129,6 +129,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "طلبات الموافقة التي حسمتها السياسة تلقائيًا.",
     },
     MetricInfo {
+        name: "approval_calendar_unresolved_total",
+        kind: "counter",
+        unit: "requests",
+        en: "Business-hours approval steps skipped by the sweep because no calendar resolved.",
+        ar: "خطوات موافقة بساعات العمل تخطّاها المسح لعدم وجود تقويم صالح.",
+    },
+    MetricInfo {
         name: "approval_executing_stale",
         kind: "gauge",
         unit: "requests",

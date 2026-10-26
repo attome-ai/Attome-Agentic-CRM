@@ -13,6 +13,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Approval reminders and escalation (Z10-T8): a plan step with `reminder_minutes` is reminded once
+  (its approvers get a high-priority notification), and with `escalate_to` the first person that
+  token names is recorded as `escalated_to`, may then decide the step, and is notified; the
+  escalation writes a Security audit event. A `business_hours` step counts its reminder and SLA
+  minutes in the deployment's default calendar; with no calendar the step waits (logged, counted
+  in `approval_calendar_unresolved_total`) and is never timed on the wall clock.
 - SEO end-to-end tests (E13-T13): with every SEO flag off a publish does no SEO work, a moved page
   answers at its old path, and the SEO tables hold no personal data. The manual Arabic link-preview
   check is `docs/content/seo-arabic-preview-check.md`; `content.seo_arabic_paths` stays off until it passes.

@@ -661,6 +661,12 @@ pub struct ApprovalRequest {
     pub skipped_steps: Vec<i32>,
     /// Z10-T5: the version of the policy that supplied `plan`.
     pub policy_version: Option<i32>,
+    /// Z10-T8: when the current step's reminder went out. Cleared when the
+    /// step advances, so each step is reminded once.
+    pub reminded_at: Option<DateTime<Utc>>,
+    /// Z10-T8: who the current step's reminder escalated to; that person
+    /// may then decide the step. Cleared when the step advances.
+    pub escalated_to: Option<Uuid>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -686,6 +692,8 @@ struct ApprovalRequestRow {
     recalled_at: Option<DateTime<Utc>>,
     skipped_steps: Vec<i32>,
     policy_version: Option<i32>,
+    reminded_at: Option<DateTime<Utc>>,
+    escalated_to: Option<Uuid>,
 }
 
 impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
@@ -719,6 +727,8 @@ impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
             recalled_at: row.recalled_at,
             skipped_steps: row.skipped_steps,
             policy_version: row.policy_version,
+            reminded_at: row.reminded_at,
+            escalated_to: row.escalated_to,
         })
     }
 }
@@ -726,7 +736,7 @@ impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
 const REQUEST_COLUMNS: &str = "id, action_type, payload, requested_by, requested_at, status, \
      required_approvals, row_version, expires_at, executed_at, plan, step, step_started_at, \
      escalated_at, policy_id, regarding_entity, regarding_id, parent_request_id, recalled_at, \
-     skipped_steps, policy_version";
+     skipped_steps, policy_version, reminded_at, escalated_to";
 
 /// Enqueues a new pending approval request instead of the caller executing
 /// its mutation inline. `required_approvals` lets a future N-of-M policy
@@ -1889,6 +1899,8 @@ async fn decide_in_stage(
         "UPDATE approval_request \
          SET status = $3, step = $4, step_started_at = $5, \
              escalated_at = CASE WHEN $6 THEN NULL ELSE escalated_at END, \
+             reminded_at = CASE WHEN $6 THEN NULL ELSE reminded_at END, \
+             escalated_to = CASE WHEN $6 THEN NULL ELSE escalated_to END, \
              row_version = row_version + 1 \
          WHERE id = $1 AND row_version = $2 \
          RETURNING {REQUEST_COLUMNS}"
@@ -2752,6 +2764,38 @@ pub async fn apply_step_timeout_at(
     hook: &dyn attome_db::BeforeCommit<(ApprovalRequest, TimeoutOutcome)>,
     clock: &dyn attome_types::Clock,
 ) -> Result<Option<(ApprovalRequest, TimeoutOutcome)>, AppError> {
+    apply_step_timeout_due_at(pool, request_id, hook, clock, &wall_clock_due).await
+}
+
+/// Z10-T8: when a step's `minutes` run out, given when it started, or
+/// `None` when that cannot be known now (a business-hours step whose
+/// calendar is unresolved): the step is then not due this tick.
+pub type StepDue =
+    dyn Fn(&ApprovalRequest, &ApprovalStep, DateTime<Utc>, i64) -> Option<DateTime<Utc>> + Sync;
+
+/// Wall-clock minutes, the due time of a step that does not count business
+/// hours.
+pub fn wall_clock_due(
+    _request: &ApprovalRequest,
+    _step: &ApprovalStep,
+    started: DateTime<Utc>,
+    minutes: i64,
+) -> Option<DateTime<Utc>> {
+    started.checked_add_signed(Duration::minutes(minutes))
+}
+
+/// Z10-T8: [`apply_step_timeout_at`] with the step's due time from `due`
+/// (business hours through the deployment calendar). The SQL listing stays
+/// wall-clock: business time never runs faster than wall time, so every
+/// step due in business time is already listed, and this re-check under the
+/// lock is what decides.
+pub async fn apply_step_timeout_due_at(
+    pool: &PgPool,
+    request_id: Uuid,
+    hook: &dyn attome_db::BeforeCommit<(ApprovalRequest, TimeoutOutcome)>,
+    clock: &dyn attome_types::Clock,
+    due: &StepDue,
+) -> Result<Option<(ApprovalRequest, TimeoutOutcome)>, AppError> {
     let now = clock.now();
     let mut tx = attome_db::tx::begin(pool).await?;
 
@@ -2819,8 +2863,9 @@ pub async fn apply_step_timeout_at(
     let Some(started) = current.step_started_at else {
         return Ok(None);
     };
-    if now < started + Duration::minutes(sla) {
-        return Ok(None);
+    match due(&current, step, started, sla) {
+        Some(due_at) if now >= due_at => {}
+        _ => return Ok(None),
     }
 
     let on_timeout = step.on_timeout;
@@ -2901,6 +2946,8 @@ pub async fn apply_step_timeout_at(
     let row: Option<ApprovalRequestRow> = sqlx::query_as(&format!(
         "UPDATE approval_request \
          SET status = $2, step = $3, step_started_at = $4, escalated_at = $5, \
+             reminded_at = CASE WHEN step IS DISTINCT FROM $3 THEN NULL ELSE reminded_at END, \
+             escalated_to = CASE WHEN step IS DISTINCT FROM $3 THEN NULL ELSE escalated_to END, \
              row_version = row_version + 1 \
          WHERE id = $1 AND row_version = $6 \
          RETURNING {REQUEST_COLUMNS}"
@@ -2933,6 +2980,87 @@ pub async fn apply_step_timeout_at(
     tx.commit().await.map_err(AppError::internal)?;
     log_transition(&updated, ApprovalStatus::Pending);
     Ok(Some((updated, outcome)))
+}
+
+/// Z10-T8: pending plan requests whose current step has `reminder_minutes`
+/// and has not been reminded, oldest first, at most `limit`. Due-ness here
+/// is wall-clock (a superset of business-hours due-ness); the caller checks
+/// each step's own due time before reminding. Same int4 guard as
+/// [`list_due_step_timeouts_at`].
+pub async fn list_due_reminders(
+    pool: &PgPool,
+    now: DateTime<Utc>,
+    limit: i64,
+) -> Result<Vec<ApprovalRequest>, AppError> {
+    let rows: Vec<ApprovalRequestRow> = sqlx::query_as(&format!(
+        "SELECT {REQUEST_COLUMNS} FROM approval_request \
+         WHERE status = 'pending' AND plan IS NOT NULL AND step_started_at IS NOT NULL \
+           AND reminded_at IS NULL \
+           AND step_started_at \
+                 + CASE WHEN (plan->'steps'->step->>'reminder_minutes') ~ '^[0-9]{{1,9}}$' \
+                        THEN make_interval(mins => (plan->'steps'->step->>'reminder_minutes')::int) \
+                   END <= $2 \
+         ORDER BY step_started_at ASC LIMIT $1"
+    ))
+    .bind(limit.clamp(1, i64::MAX))
+    .bind(now)
+    .fetch_all(pool)
+    .await
+    .map_err(AppError::internal)?;
+    rows.into_iter().map(ApprovalRequest::try_from).collect()
+}
+
+/// Z10-T8: records that the current step was reminded, and who it
+/// escalated to (kept when `None`), under the same lock a decision takes and
+/// with a compare-and-set on `expected_row_version`. `Ok(None)` when the
+/// lock is held, the request moved, is no longer pending, or was already
+/// reminded: the caller sends nothing. `hook` runs in the same transaction
+/// (the caller's audit event). The caller sends its notifications after this
+/// commits, never under the lock.
+pub async fn mark_reminded_with(
+    pool: &PgPool,
+    request_id: Uuid,
+    expected_row_version: i64,
+    escalated_to: Option<Uuid>,
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+) -> Result<Option<ApprovalRequest>, AppError> {
+    let mut tx = attome_db::tx::begin(pool).await?;
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+        .bind(ADVISORY_LOCK_NAMESPACE)
+        .bind(format!("attome-approval/decide:{request_id}"))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        return Ok(None);
+    }
+    let row: Option<ApprovalRequestRow> = sqlx::query_as(&format!(
+        "UPDATE approval_request \
+            SET reminded_at = NOW(), escalated_to = COALESCE($3, escalated_to), \
+                row_version = row_version + 1 \
+          WHERE id = $1 AND row_version = $2 AND status = 'pending' AND reminded_at IS NULL \
+          RETURNING {REQUEST_COLUMNS}"
+    ))
+    .bind(request_id)
+    .bind(expected_row_version)
+    .bind(escalated_to)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let request: ApprovalRequest = row.try_into()?;
+    hook.before_commit(&mut tx, &request).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    tracing::info!(
+        request_id = %request.id,
+        action_type = %request.action_type,
+        step = request.step,
+        escalated = request.escalated_to.is_some(),
+        "approval request reminded",
+    );
+    Ok(Some(request))
 }
 
 /// BAP-13 / BAP-F8 — one structured line per state transition: the request

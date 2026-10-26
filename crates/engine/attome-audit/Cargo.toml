@@ -13,6 +13,7 @@ publish.workspace      = true
 [dependencies]
 attome-approval.workspace = true
 attome-auth.workspace     = true
+attome-calendar.workspace = true
 attome-cache.workspace    = true
 attome-config.workspace   = true
 attome-core.workspace     = true
@@ -41,6 +42,7 @@ utoipa.workspace          = true
 uuid.workspace            = true
 
 [dev-dependencies]
+chrono-tz.workspace      = true
 attome-jobs.workspace    = true
 attome-testkit.workspace = true
 tokio.workspace          = true
