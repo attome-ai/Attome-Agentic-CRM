@@ -64,8 +64,8 @@ pub use config::{
     KdfSection, LETS_ENCRYPT_DIRECTORY, LocalStorageSettings, MetadataSection, ModelCapability,
     ModelPrice, NotificationSection, ObservabilitySection, OidcProviderConfig, OidcSection,
     OpsSection, PortalSection, RateLimitSection, ReleaseReportSection, RuntimeDbCredentials,
-    S2SSection, S2sMtlsSection, S2sSeededClient, S2sSeededPermission, S3Target, SendGridSettings, SendingDomain,
-    SesSettings, ShedPermits, ShedSection, SpendSection, StatementClassOverrides,
+    S2SSection, S2sMtlsSection, S2sSeededClient, S2sSeededPermission, S3Target, SendGridSettings,
+    SendingDomain, SesSettings, ShedPermits, ShedSection, SpendSection, StatementClassOverrides,
     StatementClassTimeouts, StorageBackend, StorageSection, TlsSection, TranslationSection,
     WebchatSection, WebcrawlSection, cidr_contains, config_json_schema, endpoint_is_in_deployment,
 };
