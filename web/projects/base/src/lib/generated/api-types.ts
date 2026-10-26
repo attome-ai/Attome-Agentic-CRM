@@ -5624,6 +5624,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/imports/policy/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an entity's import policy
+         * @description A23-T8: the defaults (no caps, approval for sensitive attributes) when
+         *     none is stored. Administrators only.
+         */
+        get: operations["get_import_policy"];
+        /**
+         * Set an entity's import policy
+         * @description A23-T8: replaces the policy. Send the row version you read as
+         *     `If-Match` (`0` when none was stored); a stale one is a 409.
+         *     Administrators only; audited.
+         */
+        put: operations["put_import_policy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/inbound-hooks": {
         parameters: {
             query?: never;
@@ -23855,6 +23882,176 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List an entity's imports
+         * @description A23-T8: newest first; an administrator's are every one, anyone else's
+         *     their own.
+         */
+        get: operations["list_imports"];
+        put?: never;
+        /**
+         * Upload a file to import
+         * @description A23-T8: a `multipart/form-data` body with a `file` part and an optional
+         *     `options` part (JSON). Stores the file and stages it in the background;
+         *     the same file for the same entity answers the job already made for it.
+         */
+        post: operations["create_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/imports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an import
+         * @description A23-T8: its status, counts, mapping, who started it and when.
+         */
+        get: operations["get_import"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/imports/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply an import
+         * @description A23-T8: applies a validated import, or asks for approval when its policy wants it.
+         */
+        post: operations["apply_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/imports/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel an import
+         * @description A23-T8: cancels an import that has not started applying.
+         */
+        post: operations["cancel_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/imports/{id}/dry-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dry-run an import
+         * @description A23-T8: validates the import and writes nothing.
+         */
+        post: operations["dry_run_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/imports/{id}/errors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download an import's row errors
+         * @description A23-T9: a CSV (UTF-8 with a byte order mark) of the invalid rows: their
+         *     number, their original columns, the problems in the reader's language
+         *     and an empty `fix` column. Upload it fixed with `source_job_id`.
+         */
+        get: operations["import_error_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/imports/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview an import
+         * @description A23-T8: the first staged rows as mapped, every sensitive attribute's
+         *     value masked.
+         */
+        get: operations["preview_import"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/imports/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo an import
+         * @description A23-T8: reverts an applied import; records edited since stay and are reported.
+         */
+        post: operations["undo_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/key/{keyspec}": {
         parameters: {
             query?: never;
@@ -36168,6 +36365,17 @@ export interface components {
             /** @description Affected definitions the caller may not see, counted only. */
             hidden: number;
         };
+        /** @description A queued phase. */
+        ImportAccepted: {
+            /**
+             * Format: uuid
+             * @description When the apply waits for approval: the request.
+             */
+            approval_request_id?: string | null;
+            /** Format: uuid */
+            job_id: string;
+            status: string;
+        };
         /**
          * @description Body of `POST /api/v1/admin/metadata/import`. `mode=plan` reads `bundle`
          *     (+ `allow_retire`); `mode=apply` reads `plan_id`.
@@ -36179,6 +36387,94 @@ export interface components {
             /** Format: uuid */
             plan_id?: string | null;
         };
+        /** @description An upload's answer. */
+        ImportCreated: {
+            /** @description The same file was imported before: this is that job. */
+            existing: boolean;
+            /** Format: uuid */
+            job_id: string;
+        };
+        /** @description One import job. */
+        ImportJobView: {
+            all_or_nothing: boolean;
+            counts: Record<string, never>;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+            entity_logicalname: string;
+            file_name: string;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            mapping: Record<string, never>;
+            match_columns: string[];
+            match_mode: string;
+            /** Format: int64 */
+            row_version: number;
+            status: string;
+            triggers_on: boolean;
+        };
+        /** @description The options part of an upload. */
+        ImportOptions: {
+            all_or_nothing?: boolean;
+            /** @description Stop after validation. */
+            dry_run?: boolean;
+            encoding?: string | null;
+            /**
+             * @description `attome_records::import_validate::ImportMapping`: `columns`,
+             *     `lookups`, `create_missing`.
+             */
+            mapping?: Record<string, never> | null;
+            match_columns?: string[];
+            /** @description `create`, `update` or `upsert` (the default). */
+            match_mode?: string | null;
+            /** @description Make the job a recurring import's template (A23-T7). */
+            schedule?: Record<string, never> | null;
+            sheet?: string | null;
+            /**
+             * Format: uuid
+             * @description A23-T9: this file fixes the rows of that job's error file; each row's
+             *     `attome_row` names the row it fixes.
+             */
+            source_job_id?: string | null;
+            /** @description Run workflow triggers and notifications for the imported rows. */
+            triggers_on?: boolean;
+        };
+        /** @description An entity's import policy. */
+        ImportPolicy: {
+            /** @description Role ids that may import; empty lets anyone who may create records. */
+            allowed_roles?: string[];
+            /**
+             * Format: int32
+             * @description More staged rows than this need approval before applying.
+             */
+            approval_over_rows?: number | null;
+            /**
+             * Format: int32
+             * @description The largest file, in rows.
+             */
+            max_rows?: number | null;
+            /** @description `[{"start": "HH:MM", "end": "HH:MM"}]` in the deployment's time. */
+            quiet_hours?: Record<string, never> | null;
+            /** @description Mapping a sensitive attribute needs approval. */
+            sensitive_needs_approval?: boolean;
+        };
+        /** @description A policy as stored, with its row version (send it back as `If-Match`). */
+        ImportPolicyView: components["schemas"]["ImportPolicy"] & {
+            entity_logicalname: string;
+            /** Format: int64 */
+            row_version: number;
+        };
+        /** @description The preview of a job. */
+        ImportPreview: {
+            /** Format: uuid */
+            job_id: string;
+            /** @description The attributes whose values were masked. */
+            masked: string[];
+            rows: components["schemas"]["PreviewRow"][];
+        };
         ImportResponse: {
             /** @description The drafts saved, in file order. */
             drafts: components["schemas"]["CommandsResponse"][];
@@ -36188,6 +36484,16 @@ export interface components {
             data_source_ref: string;
             /** Format: int64 */
             imported_count: number;
+        };
+        /** @description The multipart body of an upload, for the API document. */
+        ImportUpload: {
+            /**
+             * Format: binary
+             * @description The CSV or XLSX file.
+             */
+            file: string;
+            /** @description ImportOptions, as JSON text. */
+            options?: string | null;
         };
         /** @description A hook's definition. */
         InboundHookBody: {
@@ -42962,6 +43268,41 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ImportJobView: {
+            items: {
+                all_or_nothing: boolean;
+                counts: Record<string, never>;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                created_by: string;
+                entity_logicalname: string;
+                file_name: string;
+                /** Format: date-time */
+                finished_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                mapping: Record<string, never>;
+                match_columns: string[];
+                match_mode: string;
+                /** Format: int64 */
+                row_version: number;
+                status: string;
+                triggers_on: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_InboundHookView: {
             items: {
                 /** @description `{kind, preset?, header?, encoding?, prefix?, timestamp_header?, id_header?}`. */
@@ -47908,6 +48249,16 @@ export interface components {
         PreviewResponse: {
             rendered: string;
             warnings: components["schemas"]["PreviewWarning"][];
+        };
+        /** @description One staged row as the preview shows it. */
+        PreviewRow: {
+            action?: string | null;
+            error?: Record<string, never> | null;
+            /** @description The mapped values; a sensitive attribute's value is `"•••"`. */
+            mapped: Record<string, never>;
+            /** Format: int32 */
+            row_no: number;
+            status: string;
         };
         /** @description One field the template names that rendered empty for this caller. */
         PreviewWarning: {
@@ -74571,6 +74922,128 @@ export interface operations {
             };
             /** @description No such override */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_import_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPolicyView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_import_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportPolicy"];
+            };
+        };
+        responses: {
+            /** @description The policy as stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPolicyView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The policy changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing or malformed If-Match, or a value out of range */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -128504,6 +128977,552 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_imports: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of import jobs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ImportJobView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity the rows become */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        /** @description A `file` part and an optional `options` part (ImportOptions as JSON) */
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImportUpload"];
+            };
+        };
+        responses: {
+            /** @description The same file was imported before: its job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCreated"];
+                };
+            };
+            /** @description Stored; staging starts in the background */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCreated"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Larger than the request body limit */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No file, not CSV or XLSX, or options that do not parse */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+                /** @description The import job */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The import job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportJobView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    apply_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+                /** @description The import job */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued, or waiting for approval */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportAccepted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The import is not in a state that allows this */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+                /** @description The import job */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued, or waiting for approval */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportAccepted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The import is not in a state that allows this */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dry_run_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+                /** @description The import job */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued, or waiting for approval */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportAccepted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The import is not in a state that allows this */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    import_error_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+                /** @description The import job */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The error file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_import: {
+        parameters: {
+            query?: {
+                /** @description Rows to show, 1 to 200 (50 by default). */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+                /** @description The import job */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The first staged rows */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    undo_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+                /** @description The import job */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued, or waiting for approval */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportAccepted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The import is not in a state that allows this */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

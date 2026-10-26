@@ -30241,6 +30241,197 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/imports/policy/{entity}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get an entity's import policy",
+        "description": "A23-T8: the defaults (no caps, approval for sensitive attributes) when\nnone is stored. Administrators only.",
+        "operationId": "get_import_policy",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPolicyView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set an entity's import policy",
+        "description": "A23-T8: replaces the policy. Send the row version you read as\n`If-Match` (`0` when none was stored); a stale one is a 409.\nAdministrators only; audited.",
+        "operationId": "put_import_policy",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The policy as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPolicyView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The policy changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or malformed If-Match, or a value out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/inbound-hooks": {
       "get": {
         "tags": [
@@ -118552,6 +118743,924 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/{entity}/imports": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "List an entity's imports",
+        "description": "A23-T8: newest first; an administrator's are every one, anyone else's\ntheir own.",
+        "operationId": "list_imports",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of import jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ImportJobView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "{entity}.read",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Upload a file to import",
+        "description": "A23-T8: a `multipart/form-data` body with a `file` part and an optional\n`options` part (JSON). Stores the file and stages it in the background;\nthe same file for the same entity answers the job already made for it.",
+        "operationId": "create_import",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity the rows become",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "A `file` part and an optional `options` part (ImportOptions as JSON)",
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The same file was imported before: its job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCreated"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Stored; staging starts in the background",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Larger than the request body limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No file, not CSV or XLSX, or options that do not parse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/{entity}/imports/{id}": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Get an import",
+        "description": "A23-T8: its status, counts, mapping, who started it and when.",
+        "operationId": "get_import",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The import job",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The import job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJobView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "{entity}.read",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/{entity}/imports/{id}/apply": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Apply an import",
+        "description": "A23-T8: applies a validated import, or asks for approval when its policy wants it.",
+        "operationId": "apply_import",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The import job",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued, or waiting for approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The import is not in a state that allows this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/{entity}/imports/{id}/cancel": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Cancel an import",
+        "description": "A23-T8: cancels an import that has not started applying.",
+        "operationId": "cancel_import",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The import job",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued, or waiting for approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The import is not in a state that allows this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/{entity}/imports/{id}/dry-run": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Dry-run an import",
+        "description": "A23-T8: validates the import and writes nothing.",
+        "operationId": "dry_run_import",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The import job",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued, or waiting for approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The import is not in a state that allows this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/{entity}/imports/{id}/errors": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Download an import's row errors",
+        "description": "A23-T9: a CSV (UTF-8 with a byte order mark) of the invalid rows: their\nnumber, their original columns, the problems in the reader's language\nand an empty `fix` column. Upload it fixed with `source_job_id`.",
+        "operationId": "import_error_file",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The import job",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The error file",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "{entity}.read",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/{entity}/imports/{id}/preview": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Preview an import",
+        "description": "A23-T8: the first staged rows as mapped, every sensitive attribute's\nvalue masked.",
+        "operationId": "preview_import",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The import job",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Rows to show, 1 to 200 (50 by default).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The first staged rows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "{entity}.read",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/{entity}/imports/{id}/undo": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Undo an import",
+        "description": "A23-T8: reverts an applied import; records edited since stay and are reported.",
+        "operationId": "undo_import",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The import job",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued, or waiting for approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The import is not in a state that allows this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/{entity}/key/{keyspec}": {
       "get": {
         "tags": [
@@ -155373,6 +156482,31 @@
           }
         }
       },
+      "ImportAccepted": {
+        "type": "object",
+        "description": "A queued phase.",
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "properties": {
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "When the apply waits for approval: the request."
+          },
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "ImportBody": {
         "type": "object",
         "description": "Body of `POST /api/v1/admin/metadata/import`. `mode=plan` reads `bundle`\n(+ `allow_retire`); `mode=apply` reads `plan_id`.",
@@ -155397,6 +156531,255 @@
               "null"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "ImportCreated": {
+        "type": "object",
+        "description": "An upload's answer.",
+        "required": [
+          "job_id",
+          "existing"
+        ],
+        "properties": {
+          "existing": {
+            "type": "boolean",
+            "description": "The same file was imported before: this is that job."
+          },
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ImportJobView": {
+        "type": "object",
+        "description": "One import job.",
+        "required": [
+          "id",
+          "entity_logicalname",
+          "file_name",
+          "status",
+          "counts",
+          "mapping",
+          "match_mode",
+          "match_columns",
+          "all_or_nothing",
+          "triggers_on",
+          "created_by",
+          "created_at",
+          "row_version"
+        ],
+        "properties": {
+          "all_or_nothing": {
+            "type": "boolean"
+          },
+          "counts": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entity_logicalname": {
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mapping": {
+            "type": "object"
+          },
+          "match_columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "match_mode": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "triggers_on": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ImportOptions": {
+        "type": "object",
+        "description": "The options part of an upload.",
+        "properties": {
+          "all_or_nothing": {
+            "type": "boolean"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Stop after validation."
+          },
+          "encoding": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mapping": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "`attome_records::import_validate::ImportMapping`: `columns`,\n`lookups`, `create_missing`."
+          },
+          "match_columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "match_mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`create`, `update` or `upsert` (the default)."
+          },
+          "schedule": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Make the job a recurring import's template (A23-T7)."
+          },
+          "sheet": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_job_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A23-T9: this file fixes the rows of that job's error file; each row's\n`attome_row` names the row it fixes."
+          },
+          "triggers_on": {
+            "type": "boolean",
+            "description": "Run workflow triggers and notifications for the imported rows."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportPolicy": {
+        "type": "object",
+        "description": "An entity's import policy.",
+        "properties": {
+          "allowed_roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Role ids that may import; empty lets anyone who may create records."
+          },
+          "approval_over_rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "More staged rows than this need approval before applying."
+          },
+          "max_rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The largest file, in rows."
+          },
+          "quiet_hours": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "`[{\"start\": \"HH:MM\", \"end\": \"HH:MM\"}]` in the deployment's time."
+          },
+          "sensitive_needs_approval": {
+            "type": "boolean",
+            "description": "Mapping a sensitive attribute needs approval."
+          }
+        }
+      },
+      "ImportPolicyView": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ImportPolicy"
+          },
+          {
+            "type": "object",
+            "required": [
+              "entity_logicalname",
+              "row_version"
+            ],
+            "properties": {
+              "entity_logicalname": {
+                "type": "string"
+              },
+              "row_version": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          }
+        ],
+        "description": "A policy as stored, with its row version (send it back as `If-Match`)."
+      },
+      "ImportPreview": {
+        "type": "object",
+        "description": "The preview of a job.",
+        "required": [
+          "job_id",
+          "rows",
+          "masked"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "masked": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The attributes whose values were masked."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewRow"
+            }
           }
         }
       },
@@ -155429,6 +156812,27 @@
           "imported_count": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "ImportUpload": {
+        "type": "object",
+        "description": "The multipart body of an upload, for the API document.",
+        "required": [
+          "file"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "The CSV or XLSX file."
+          },
+          "options": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ImportOptions, as JSON text."
           }
         }
       },
@@ -173284,6 +174688,114 @@
           }
         }
       },
+      "PaginatedResponse_ImportJobView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One import job.",
+              "required": [
+                "id",
+                "entity_logicalname",
+                "file_name",
+                "status",
+                "counts",
+                "mapping",
+                "match_mode",
+                "match_columns",
+                "all_or_nothing",
+                "triggers_on",
+                "created_by",
+                "created_at",
+                "row_version"
+              ],
+              "properties": {
+                "all_or_nothing": {
+                  "type": "boolean"
+                },
+                "counts": {
+                  "type": "object"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "created_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "entity_logicalname": {
+                  "type": "string"
+                },
+                "file_name": {
+                  "type": "string"
+                },
+                "finished_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "mapping": {
+                  "type": "object"
+                },
+                "match_columns": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "match_mode": {
+                  "type": "string"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "triggers_on": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_InboundHookView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -186435,6 +187947,40 @@
             "items": {
               "$ref": "#/components/schemas/PreviewWarning"
             }
+          }
+        }
+      },
+      "PreviewRow": {
+        "type": "object",
+        "description": "One staged row as the preview shows it.",
+        "required": [
+          "row_no",
+          "status",
+          "mapped"
+        ],
+        "properties": {
+          "action": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "mapped": {
+            "type": "object",
+            "description": "The mapped values; a sensitive attribute's value is `\"•••\"`."
+          },
+          "row_no": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
           }
         }
       },
