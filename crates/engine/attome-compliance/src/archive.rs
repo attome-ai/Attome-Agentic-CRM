@@ -91,7 +91,7 @@ fn file_keys(attrs: &[AttrInfo], record: &Value) -> Vec<(String, String)> {
 
 /// `archive/{key}` — where an attachment `key` (a live-prefix object key,
 /// `{entity}/{record_id}/{field}/…`) lands once archived.
-fn archived_key(key: &str) -> String {
+pub(crate) fn archived_key(key: &str) -> String {
     format!("archive/{key}")
 }
 
@@ -105,7 +105,7 @@ fn archived_key(key: &str) -> String {
 /// object — a missing source object is logged and skipped (see this
 /// module's top doc comment), any other storage error aborts the whole
 /// operation. Returns how many objects were actually copied.
-async fn copy_attachments(
+pub(crate) async fn copy_attachments(
     store: &dyn ObjectStore,
     attrs: &[AttrInfo],
     record: &Value,

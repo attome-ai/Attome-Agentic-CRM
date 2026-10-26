@@ -66,6 +66,10 @@ SendGrid are not received yet.
 - **Retention rules** (`/api/v1/admin/retention/rules`): per entity, a condition, the date the period
   starts from, the period and the action (purge, archive or review). Records past their period are
   proposed daily; nothing happens until a person approves the proposal.
+- **Archive tier**: archived records of one entity and month can be kept together in one Parquet
+  file in object storage (`archive-tier/{entity}/{yyyy}/{mm}/`), with an index of which file holds
+  each record. The live row is cleared the way a single-record archive clears it, and any record
+  restores exactly from its file. Only deleted records outside a legal hold are archived.
 - **Legal holds** stop deletion, purge and retention for the records they cover.
 - **Audit**: every change is in the hash-chained audit log; search it from the audit screen, and
   `attome verify-audit-chain` checks the chain.

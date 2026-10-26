@@ -13,6 +13,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Parquet archive tier (L11-T1): `attome_compliance::archive_tier` writes the archived, deleted
+  records of one entity and month to one Parquet file (each row's exact JSON), indexes them
+  (migration 0279: `archive_tier_file`, `archive_tier_record`), clears the live rows and restores
+  any one record exactly, attachments included.
 - Cloud secret stores at start (Z1-T12): with `ATTOME_SECRET_SOURCE=aws` or `azure`, the secrets
   under `ATTOME_SECRET_SOURCE_PREFIX` in AWS Secrets Manager or Azure Key Vault answer `${NAME}`
   placeholders ahead of the environment, read once by `serve`, `worker`, `migrate` and `preflight`

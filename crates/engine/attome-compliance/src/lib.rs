@@ -39,6 +39,8 @@
 
 pub mod archive;
 pub mod archive_admin;
+/// L11-T1: the Parquet archive tier, many records per entity and month.
+pub mod archive_tier;
 /// R5-T2: breach records from security cases, with deadline timers.
 pub mod breach;
 /// Z1-T7 — node starts and their configuration fingerprints.
