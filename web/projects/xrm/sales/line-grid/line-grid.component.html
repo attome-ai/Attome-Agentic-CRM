@@ -22,10 +22,10 @@
       <p class="lg-note">{{ 'xrm.sales.lines.noPriceList' | translate }}</p>
     }
     @if (results().length) {
-      <ul class="lg-results" role="listbox" data-testid="line-grid-results">
+      <ul class="lg-results" data-testid="line-grid-results">
         @for (p of results(); track p.product_id) {
           <li>
-            <button type="button" role="option" class="lg-result" (click)="add(p)" [attr.data-product]="p.product_id">
+            <button type="button" class="lg-result" (click)="add(p)" [attr.data-product]="p.product_id">
               <span>{{ p.name ?? p.sku ?? p.product_id }}</span>
               @if (p.list_price) { <span dir="ltr">{{ p.list_price }}</span> }
             </button>
