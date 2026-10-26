@@ -49,7 +49,7 @@ use uuid::Uuid;
 use crate::import_jobs::{self, Phase, PhaseJob};
 
 /// One staged import row as the preview reads it.
-type PreviewRow = (i32, String, Option<String>, Option<Value>, Option<Value>);
+type PreviewRowData = (i32, String, Option<String>, Option<Value>, Option<Value>);
 
 /// The approval action an import apply waits on.
 pub const ACTION_IMPORT_APPLY: &str = "records.import_apply";
@@ -1147,7 +1147,7 @@ pub(crate) async fn preview_import(
     let (entity, attrs) = admitted(&state, &ctx, &entity).await?;
     visible_job(&state, &ctx, &entity, id).await?;
     let limit = query.limit.unwrap_or(50).clamp(1, MAX_PREVIEW);
-    let rows: Vec<PreviewRow> = sqlx::query_as(
+    let rows: Vec<PreviewRowData> = sqlx::query_as(
         "SELECT row_no, status, action, COALESCE(mapped, raw), error FROM import_stage \
           WHERE job_id = $1 ORDER BY row_no LIMIT $2",
     )
