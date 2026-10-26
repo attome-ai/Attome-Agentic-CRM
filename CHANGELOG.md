@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Accessibility checks at publish (B22-T2): validating or publishing a form or a page lists
+  findings with their fixes in `warnings` (a section, tab or related list without a label, a page
+  title or component name missing in English or Arabic, a field shown twice, an empty section,
+  text colours below 4.5:1). They never block the publish.
 - Warehouse load scripts (P13-T2): `GET /api/v1/admin/integrations/warehouse/{entity}/load-script`
   writes a Snowflake or BigQuery script that stages the export's new Parquet files and merges them
   by `id` (tombstones delete, older changes are ignored), to schedule on the warehouse side.

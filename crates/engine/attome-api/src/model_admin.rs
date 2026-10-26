@@ -233,6 +233,9 @@ impl From<&Issue> for IssueView {
 pub(crate) struct ModelValidateResponse {
     valid: bool,
     issues: Vec<IssueView>,
+    /// B22-T2: accessibility findings with their fixes (a form's or a page's
+    /// labels, order and contrast). They do not stop a publish.
+    warnings: Vec<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -609,7 +612,17 @@ async fn validate(
     Ok(Json(ModelValidateResponse {
         valid: issues.is_empty(),
         issues: issues.iter().map(IssueView::from).collect(),
+        warnings: a11y_warnings(kind.name().as_str(), &request.doc),
     }))
+}
+
+/// B22-T2: the accessibility findings of a form or page document, one line
+/// each with its fix.
+fn a11y_warnings(kind: &str, doc: &serde_json::Value) -> Vec<String> {
+    attome_model::a11y::check(kind, doc)
+        .iter()
+        .map(attome_model::a11y::A11yFinding::as_warning)
+        .collect()
 }
 
 /// Edit an object's draft
@@ -795,6 +808,12 @@ async fn publish(
     if !gate.blocked.is_empty() {
         return Err(AppError::Validation(gate.blocked.join("; ")));
     }
+    // B22-T2: a form's or page's accessibility findings warn; they never block.
+    let mut warnings = gate.warnings;
+    if matches!(kind.name().as_str(), "form" | "page") {
+        let draft = attome_model::store::read(&state.base.db, id, None).await?;
+        warnings.extend(a11y_warnings(kind.name().as_str(), &draft.doc));
+    }
     // Z15-T14: with the guard on, blocking customer tests pass first.
     attome_records::customer_tests::publish_guard(&state, &ctx).await?;
     // A27-T1: an entity's first record type gives its table the
@@ -864,7 +883,7 @@ async fn publish(
     Ok(Json(ModelPublishResponse {
         id,
         version_no: published.version_no,
-        warnings: gate.warnings,
+        warnings,
     }))
 }
 
