@@ -13,6 +13,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Import apply and undo (A23-T5, A23-T6): `attome_records::import_apply::apply` writes a validated
+  import's rows 500 per transaction through the bulk worker's per-item create and update (record
+  rules, field security, row versions, creator share, file mirror, audit), each row with its
+  `import_row` and stage status in the same commit, so a stopped run resumes and applies every row
+  once. Updates write only the mapped columns and refuse a record changed since the dry run. With
+  `triggers_on` off the writes are quiet (no flow starts; the change feed still has them). An
+  all-or-nothing job refuses to start with invalid rows and undoes itself when a row fails.
+  `attome_records::import_undo::undo` soft-deletes created records and restores updated ones that
+  are unchanged since, and lists the rest in `counts.undo`.
 - Import validation, the dry run (A23-T4): `attome_records::import_validate::validate` maps a staged
   import's rows (rename, skip, split, constant), converts each cell to its field's type and runs the
   generic create validator, resolves lookups by id, name, code or external key with one query per

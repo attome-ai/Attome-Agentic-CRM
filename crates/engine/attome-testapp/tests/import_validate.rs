@@ -210,7 +210,7 @@ fn dry_run_writes_no_records() {
             (status.as_str(), action.as_deref()),
             ("valid", Some("update"))
         );
-        assert_eq!(mapped["level"], 5.0, "{mapped}");
+        assert_eq!(mapped["level"].as_f64(), Some(5.0), "{mapped}");
         let (status, _, _, error) = stage_row(&app, job, 6).await;
         assert_eq!(status, "invalid");
         assert_eq!(codes(&error), ["invalid_number"], "{error}");

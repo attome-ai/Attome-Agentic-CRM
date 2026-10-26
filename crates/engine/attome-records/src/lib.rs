@@ -50,6 +50,10 @@ pub mod entity_mutation;
 /// Z11-T12: one expression checked for an editor or agent.
 pub mod expression_check;
 pub mod import_choice_match;
+/// A23-T5: applying a validated import.
+pub mod import_apply;
+/// A23-T6: undoing an applied import.
+pub mod import_undo;
 /// A23-T4: validating a staged import (the dry run).
 pub mod import_validate;
 /// C-10 — the shared mutation-commit orchestration helper (creator share,
