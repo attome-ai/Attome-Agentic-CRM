@@ -339,6 +339,139 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/actions/{name}": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "AE1-T2: runs the published custom action `custom.{name}` as the calling\nperson. The arguments are checked against its input schema first (every\nproblem by field); a consequential action needs an `Idempotency-Key` (or\n`x-idempotency-key`) header, which becomes the invocation's key, so a\nretry with the same key never runs it twice. A completed action answers\n200; one that waits (a confirmation, an approval, an undo window) 202.",
+        "operationId": "invoke_custom_action",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The custom action's name (its id without `custom.`)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Required for a consequential action",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "X-Confirm",
+            "in": "header",
+            "description": "`true` once the person confirmed a consequential action; without it the action answers `confirmation_required`",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The action ran",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionOutcome"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The action waits for a confirmation, an approval or its undo window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks a privilege the action requires",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published custom action by that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Arguments that do not fit the schema, or a missing Idempotency-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "as /api/v1/actions/{id}/invoke: the route invokes as the calling human, never an agent session, so dispatch's agent-gated Ai+Execute event never fires here; what the custom action's flow changes is audited by the flow's own steps",
+          "reason": "delegated",
+          "via": "dispatch -> the custom action's flow"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/agents/sessions": {
       "get": {
         "tags": [
@@ -82775,6 +82908,191 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/fulfilment/orders": {
+      "get": {
+        "tags": [
+          "fulfilment"
+        ],
+        "summary": "A sales order's fulfilment",
+        "description": "F6-T17: every line of the order's fulfilment orders with ordered,\nshipped, delivered and backordered quantities, the promised date, and the\nshipments carrying it.",
+        "operationId": "fulfilment_order_rollup",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "query",
+            "description": "The sales order.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order's lines",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderFulfilment"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks fulfilment_order.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "fulfilment",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/fulfilment/orders/{id}/override-sourcing": {
+      "post": {
+        "tags": [
+          "fulfilment"
+        ],
+        "summary": "Override where a fulfilment order ships from",
+        "description": "F6-T4: before the order is released (`draft` or `on_hold`), a person with\n`fulfilment_order.override_sourcing` names the location instead of the\nsourcing rules; who did it is kept on the order.",
+        "operationId": "override_fulfilment_sourcing",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The fulfilment order",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The fulfilment order ships from the new location",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overridden"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks fulfilment_order.override_sourcing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such fulfilment order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fulfilment order changed meanwhile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The order is already released, or the location is not an enabled stock location",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "fulfilment",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/fulfilment/orders/{id}/packages": {
       "post": {
         "tags": [
@@ -86811,6 +87129,190 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/macros/{name}/preview": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "Preview a macro",
+        "description": "G6-T2: what running the macro on these records would do, step by step,\nwith each step's filled-in arguments and the problems found. Runs nothing.",
+        "operationId": "preview_macro",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The macro",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MacroRecords"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published macro by that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No records, or more than 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "lists the steps a macro would run; runs and writes nothing",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/macros/{name}/run": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "Run a macro",
+        "description": "G6-T2: runs the macro's steps on each record as the caller, through the\naction gate; each step is held for the macro's undo window first, so it\ncan be cancelled. Each record's outcomes are listed.",
+        "operationId": "run_macro",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The macro",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MacroRecords"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each record's outcomes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published macro by that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No records, or more than 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "every step is an action dispatched as the calling human, audited by its own executor (a record write through entity_crud), exactly as when the action is invoked alone",
+          "reason": "delegated",
+          "via": "dispatch -> each step's own action"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/marketing/address-check": {
@@ -93144,6 +93646,107 @@
           },
           "422": {
             "description": "Missing actual for a manual metric, formula source, or bad query_ref",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "execute"
+            },
+            {
+              "category": "access",
+              "operation": "grant"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/metrics/{id}/compute-tree": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Compute a metric and everything under it",
+        "description": "P9-T8: computes every query and formula metric the metric is built from\n(its children and its formula's inputs, transitively), children before\nparents, then the metric itself, for each one's current period. One\nmetric's failure is reported and the rest go on; a cycle is refused.",
+        "operationId": "compute_tree",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The root metric",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What each metric of the tree did",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputeTreeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such metric",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The tree has a cycle",
             "content": {
               "application/json": {
                 "schema": {
@@ -119521,6 +120124,191 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/workflow/sequences": {
+      "get": {
+        "tags": [
+          "workflow"
+        ],
+        "summary": "List sequences",
+        "description": "D17-T2: the published, active sequences a rep can enrol contacts in,\nwith what ends them and how many contacts are in each now.",
+        "operationId": "list_sequences",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The published sequences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SequenceSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks contact.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/workflow/sequences/{logicalname}/enrolments": {
+      "post": {
+        "tags": [
+          "workflow"
+        ],
+        "summary": "Enrol contacts in a sequence.",
+        "description": "Name the contacts, or give a marketing list of contacts (as you see it).\nEach contact gets one run of the sequence; a contact already active in it\nis skipped. The contact leaves the sequence when they reply, a meeting\nwith them is booked, or a deal at their account changes stage (as the\nsequence's `settings.sequence.exit_on` says).",
+        "operationId": "enrol_in_sequence",
+        "parameters": [
+          {
+            "name": "logicalname",
+            "in": "path",
+            "description": "The sequence's workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrolBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The contacts are enrolled and their runs started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrolOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks contact.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published, active sequence with this name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No contacts, more than 1,000 named or 10,000 in a list, a list of other records, or the sequence's exits are invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/workflow/trigger-dead-letters": {
       "get": {
         "tags": [
@@ -119769,6 +120557,77 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/workforce/adherence/live": {
+      "get": {
+        "tags": [
+          "workforce"
+        ],
+        "summary": "A planning group's adherence now",
+        "description": "Each member's latest minute in the last five minutes: what was\nscheduled, what they were doing and whether that fits. For a holder of\n`wfm_adherence.read` who is a member of the group.",
+        "operationId": "workforce_adherence_live",
+        "parameters": [
+          {
+            "name": "group",
+            "in": "query",
+            "description": "The planning group.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The group's people now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LiveRow"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks wfm_adherence.read or is not in the group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "workforce",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/workforce/assignments/{id}": {
@@ -120189,6 +121048,55 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/workforce/me/adherence": {
+      "get": {
+        "tags": [
+          "workforce"
+        ],
+        "summary": "My adherence",
+        "description": "The caller's own adherence and conformance for the last 31 days.",
+        "operationId": "workforce_my_adherence",
+        "responses": {
+          "200": {
+            "description": "The caller's days, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DayRow"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "workforce",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/workforce/me/preferences": {
@@ -147475,6 +148383,21 @@
           }
         }
       },
+      "ComputeTreeResponse": {
+        "type": "object",
+        "description": "A tree computation, in the order it ran.",
+        "required": [
+          "metrics"
+        ],
+        "properties": {
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TreeComputed"
+            }
+          }
+        }
+      },
       "ConditionAll": {
         "type": "object",
         "required": [
@@ -148828,6 +149751,13 @@
           "name"
         ],
         "properties": {
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "D17-T1: `flow` (the default), `journey`, `nurture` or `sequence`.\nFixed once created."
+          },
           "logicalname": {
             "type": "string"
           },
@@ -149683,8 +150613,36 @@
           "is_active": {
             "type": "boolean"
           },
+          "locked_states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedState"
+            },
+            "description": "M8-T2: states in which a record is read-only except the listed fields."
+          },
           "name": {
             "type": "string"
+          },
+          "reason_field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T2: an attribute of the entity holding the status reason."
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateReasons"
+            },
+            "description": "M8-T2: the reasons each state allows; a state listed here needs one."
+          },
+          "record_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T2: the record type (a `record_type` code of the entity) this model\ngoverns; omit for the entity's model of every other record. Fixed once\ncreated. A typed model is not recorded in changesets or bundles: make\nit through this API in each deployment."
           },
           "state_field": {
             "type": "string",
@@ -150019,6 +150977,13 @@
                 "description": "M07 Phase F (D-770): an approval plan (ordered `any`/`all`/`n_of_m`\nsteps of `user:`/`role:`/`team:`/`position:manager_of_requester`\ntokens), validated with attome-approval's own validator. Requires\n`pending_state`."
               }
             ]
+          },
+          "auto_condition": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T3: an attome-rules condition over the record's fields (such as\n`due_date < today()`). When it holds for a record in `from_state`,\nthe transition happens by itself, checked after each write and daily."
           },
           "display_order": {
             "type": "integer",
@@ -152114,6 +153079,38 @@
           }
         }
       },
+      "DayRow": {
+        "type": "object",
+        "description": "One person's day.",
+        "required": [
+          "day",
+          "minutes"
+        ],
+        "properties": {
+          "adherence_pct": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "conformance_pct": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "minutes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "DdlLogEntry": {
         "type": "object",
         "description": "One DDL statement as the ledger recorded it.",
@@ -152886,6 +153883,7 @@
           "created_at",
           "updated_at",
           "owner_layer",
+          "kind",
           "versions"
         ],
         "properties": {
@@ -152899,6 +153897,10 @@
           },
           "is_active": {
             "type": "boolean"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`flow`, `journey`, `nurture` or `sequence` (D17-T1)."
           },
           "logicalname": {
             "type": "string"
@@ -155978,6 +156980,56 @@
           }
         }
       },
+      "EnrolBody": {
+        "type": "object",
+        "description": "The contacts to enrol: named, or a marketing list's (D17-T2).",
+        "properties": {
+          "contact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "At most 1,000 contacts."
+          },
+          "list_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A marketing list of contacts, as the caller sees it (at most\n[`MAX_LIST`] people), instead of `contact_ids`."
+          }
+        }
+      },
+      "EnrolOutcome": {
+        "type": "object",
+        "description": "What an enrolment did.",
+        "required": [
+          "enrolled",
+          "skipped_active",
+          "skipped_missing"
+        ],
+        "properties": {
+          "enrolled": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_active": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Already active in this sequence.",
+            "minimum": 0
+          },
+          "skipped_missing": {
+            "type": "integer",
+            "format": "int64",
+            "description": "No such live contact.",
+            "minimum": 0
+          }
+        }
+      },
       "EnrollResponseBody": {
         "type": "object",
         "required": [
@@ -157941,6 +158993,15 @@
             "type": "string"
           }
         }
+      },
+      "ExitOn": {
+        "type": "string",
+        "description": "Why a contact leaves a sequence.",
+        "enum": [
+          "reply",
+          "meeting",
+          "stage_change"
+        ]
       },
       "ExpiredFlag": {
         "type": "object",
@@ -163187,6 +164248,10 @@
           "args": {
             "description": "The action's own arguments. Shape is per-action and validated by the\nexecutor, not here — a handler that understood every action's argument\nshape would be the business logic guidelines §12 keeps out of transport."
           },
+          "confirm": {
+            "type": "boolean",
+            "description": "AE1-T4: the person confirmed this invocation. A consequential action\nanswers `confirmation_required` until it is called with this set."
+          },
           "undo_window_seconds": {
             "type": [
               "integer",
@@ -164573,6 +165638,115 @@
           }
         }
       },
+      "LineRollup": {
+        "type": "object",
+        "description": "One line's fulfilment.",
+        "required": [
+          "line_id",
+          "fulfilment_order_id",
+          "ordered",
+          "shipped",
+          "delivered",
+          "backordered",
+          "shipments"
+        ],
+        "properties": {
+          "backordered": {
+            "type": "number",
+            "format": "double"
+          },
+          "delivered": {
+            "type": "number",
+            "format": "double"
+          },
+          "fulfilment_order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_line_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ordered": {
+            "type": "number",
+            "format": "double"
+          },
+          "product_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "promised_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "shipments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineShipment"
+            }
+          },
+          "shipped": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "LineShipment": {
+        "type": "object",
+        "description": "A shipment carrying a line.",
+        "required": [
+          "shipment_id"
+        ],
+        "properties": {
+          "carrier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "shipment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tracking_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "LineageChangeKind": {
         "type": "string",
         "description": "What a draft change does.",
@@ -164884,6 +166058,36 @@
           }
         }
       },
+      "LiveRow": {
+        "type": "object",
+        "description": "One person's latest minute.",
+        "required": [
+          "user_id",
+          "minute",
+          "scheduled",
+          "actual",
+          "in_adherence"
+        ],
+        "properties": {
+          "actual": {
+            "type": "string"
+          },
+          "in_adherence": {
+            "type": "boolean"
+          },
+          "minute": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "scheduled": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "LockedField": {
         "type": "object",
         "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
@@ -164905,6 +166109,25 @@
             "format": "uuid"
           },
           "rule_name": {
+            "type": "string"
+          }
+        }
+      },
+      "LockedState": {
+        "type": "object",
+        "description": "M8-T2: a state in which a record is read-only except `editable`.",
+        "required": [
+          "state"
+        ],
+        "properties": {
+          "editable": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The fields that may still change while the record is in `state`."
+          },
+          "state": {
             "type": "string"
           }
         }
@@ -164985,6 +166208,80 @@
               "null"
             ],
             "description": "The target's `primary_name_attribute` value, when it declares one."
+          }
+        }
+      },
+      "MacroPreview": {
+        "type": "object",
+        "description": "What running a macro would do.",
+        "required": [
+          "name",
+          "entity",
+          "undo_minutes",
+          "records"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecordPlan"
+            }
+          },
+          "undo_minutes": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "MacroRecords": {
+        "type": "object",
+        "description": "Records to run a macro on.",
+        "required": [
+          "record_ids"
+        ],
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "description": "AE1-T4: the person confirmed the run, so its consequential steps run.\nIgnored by the preview."
+          },
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "MacroRun": {
+        "type": "object",
+        "description": "What a run did.",
+        "required": [
+          "name",
+          "undo_minutes",
+          "records"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecordRun"
+            }
+          },
+          "undo_minutes": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
@@ -170467,6 +171764,26 @@
           }
         }
       },
+      "OrderFulfilment": {
+        "type": "object",
+        "description": "A sales order's fulfilment.",
+        "required": [
+          "order_id",
+          "lines"
+        ],
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineRollup"
+            }
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "OrderItemView": {
         "type": "object",
         "description": "One item of an order, as its owner sees it.",
@@ -171128,6 +172445,41 @@
             "type": "integer",
             "format": "int64",
             "description": "Send back to replace it; 0 when none is set."
+          }
+        }
+      },
+      "Overridden": {
+        "type": "object",
+        "description": "The fulfilment order after an override.",
+        "required": [
+          "fulfilment_order_id",
+          "location_id",
+          "sourcing_reason"
+        ],
+        "properties": {
+          "fulfilment_order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "location_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourcing_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "OverrideBody": {
+        "type": "object",
+        "description": "The location to ship from instead.",
+        "required": [
+          "location_id"
+        ],
+        "properties": {
+          "location_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -188780,6 +190132,75 @@
           }
         }
       },
+      "PaginatedResponse_SequenceSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A published sequence, as a rep picks it (D17-T2).",
+              "required": [
+                "logicalname",
+                "name",
+                "published_version",
+                "exit_on",
+                "active"
+              ],
+              "properties": {
+                "active": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Contacts active in it now."
+                },
+                "exit_on": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExitOn"
+                  },
+                  "description": "What ends a contact's sequence."
+                },
+                "logicalname": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "published_version": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_SessionSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -189429,12 +190850,40 @@
                 "is_active": {
                   "type": "boolean"
                 },
+                "locked_states": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LockedState"
+                  },
+                  "description": "M8-T2: states in which a record is read-only except listed fields."
+                },
                 "name": {
                   "type": "string"
                 },
                 "owner_layer": {
                   "type": "string",
                   "description": "Solution 7 (D-785): the layer that owns this model — `platform`,\n`product`, `project` or `customer`. Only a changeset of that layer may\nchange or retire it."
+                },
+                "reason_field": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "M8-T2: the attribute holding the record's status reason."
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StateReasons"
+                  },
+                  "description": "M8-T2: the reasons each state allows."
+                },
+                "record_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "M8-T2: the record type this model governs; absent for the entity's\nmodel of every record without one of its own."
                 },
                 "row_version": {
                   "type": "integer",
@@ -197982,6 +199431,53 @@
           }
         }
       },
+      "RecordPlan": {
+        "type": "object",
+        "description": "One record's plan.",
+        "required": [
+          "record_id",
+          "steps"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StepPlan"
+            }
+          }
+        }
+      },
+      "RecordRun": {
+        "type": "object",
+        "description": "One record's outcomes, step by step.",
+        "required": [
+          "record_id",
+          "outcomes"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the record stopped early, when it did."
+          },
+          "outcomes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "RecordSelection": {
         "type": "object",
         "description": "Which records a bulk operation covers: exactly one of the two.",
@@ -205738,6 +207234,41 @@
         },
         "additionalProperties": false
       },
+      "SequenceSummary": {
+        "type": "object",
+        "description": "A published sequence, as a rep picks it (D17-T2).",
+        "required": [
+          "logicalname",
+          "name",
+          "published_version",
+          "exit_on",
+          "active"
+        ],
+        "properties": {
+          "active": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Contacts active in it now."
+          },
+          "exit_on": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExitOn"
+            },
+            "description": "What ends a contact's sequence."
+          },
+          "logicalname": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "published_version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "SessionInfo": {
         "type": "object",
         "description": "P-session-refresh-hardening (D-129) — `GET /api/v1/auth/session`'s\nresponse shape; see `session_info`.",
@@ -208932,8 +210463,29 @@
           "is_active": {
             "type": "boolean"
           },
+          "locked_states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedState"
+            },
+            "description": "M8-T2: states in which a record is read-only except listed fields.\nOmitted from an export when there are none."
+          },
           "name": {
             "type": "string"
+          },
+          "reason_field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T2: the attribute holding the status reason."
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateReasons"
+            },
+            "description": "M8-T2: the reasons each state allows."
           },
           "state_field": {
             "type": "string",
@@ -208980,12 +210532,40 @@
           "is_active": {
             "type": "boolean"
           },
+          "locked_states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedState"
+            },
+            "description": "M8-T2: states in which a record is read-only except listed fields."
+          },
           "name": {
             "type": "string"
           },
           "owner_layer": {
             "type": "string",
             "description": "Solution 7 (D-785): the layer that owns this model."
+          },
+          "reason_field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T2: the attribute holding the record's status reason."
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateReasons"
+            },
+            "description": "M8-T2: the reasons each state allows."
+          },
+          "record_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T2: the record type this model governs; absent for the entity's\nmodel of every record without one of its own."
           },
           "row_version": {
             "type": "integer",
@@ -209032,6 +210612,13 @@
           "is_active": {
             "type": "boolean"
           },
+          "locked_states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedState"
+            },
+            "description": "M8-T2: states in which a record is read-only except listed fields."
+          },
           "name": {
             "type": "string"
           },
@@ -209039,11 +210626,51 @@
             "type": "string",
             "description": "Solution 7 (D-785): the layer that owns this model — `platform`,\n`product`, `project` or `customer`. Only a changeset of that layer may\nchange or retire it."
           },
+          "reason_field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T2: the attribute holding the record's status reason."
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateReasons"
+            },
+            "description": "M8-T2: the reasons each state allows."
+          },
+          "record_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T2: the record type this model governs; absent for the entity's\nmodel of every record without one of its own."
+          },
           "row_version": {
             "type": "integer",
             "format": "int64"
           },
           "state_field": {
+            "type": "string"
+          }
+        }
+      },
+      "StateReasons": {
+        "type": "object",
+        "description": "M8-T2: the reasons a record may give for being in `state`.",
+        "required": [
+          "state",
+          "reasons"
+        ],
+        "properties": {
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "state": {
             "type": "string"
           }
         }
@@ -209067,6 +210694,13 @@
                 "description": "M07 Phase F (D-770): a `attome-approval` plan the transition runs before\nit happens; requires `pending_state`. Omitted from an export when\nabsent, so bundles without approvals are unchanged."
               }
             ]
+          },
+          "auto_condition": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T3: the condition that makes the transition happen by itself.\nOmitted from an export when absent."
           },
           "display_order": {
             "type": "integer",
@@ -209446,6 +211080,36 @@
           "all",
           "nof_m"
         ]
+      },
+      "StepPlan": {
+        "type": "object",
+        "description": "One step for one record.",
+        "required": [
+          "action",
+          "args",
+          "problems"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "args": {
+            "type": "object"
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risk": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`Read`, `Reversible` or `Consequential`; absent for an unknown action."
+          }
+        }
       },
       "StepUpChallengeBody": {
         "type": "object",
@@ -212533,6 +214197,13 @@
               }
             ]
           },
+          "auto_condition": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "M8-T3: the condition that makes the transition happen by itself.\nOmitted when absent."
+          },
           "display_order": {
             "type": "integer",
             "format": "int32"
@@ -212810,6 +214481,30 @@
           "truncated": {
             "type": "boolean",
             "description": "Set whenever a bound (depth, per-hop fan-out, the overall node cap, or\nthe statement timeout) cut the walk short. Never silently return a\npartial graph."
+          }
+        }
+      },
+      "TreeComputed": {
+        "type": "object",
+        "description": "One metric of a tree computation.",
+        "required": [
+          "metric_id",
+          "outcome"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metric_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "`computed`, `skipped` (a snapshot for the period existed) or `failed`."
           }
         }
       },
@@ -214666,8 +216361,27 @@
           "is_active": {
             "type": "boolean"
           },
+          "locked_states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedState"
+            },
+            "description": "M8-T2: full replacement, like every field here."
+          },
           "name": {
             "type": "string"
+          },
+          "reason_field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateReasons"
+            }
           },
           "row_version": {
             "type": "integer",
@@ -214828,6 +216542,13 @@
                 "description": "Full replacement like every other field here: omitted clears the\napproval (the transition happens on write again). See\n`CreateTransitionBody::approval_plan`."
               }
             ]
+          },
+          "auto_condition": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Full replacement: omitted makes the transition a manual one again.\nSee `CreateTransitionBody::auto_condition`."
           },
           "display_order": {
             "type": "integer",
@@ -217249,8 +218970,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
   "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {

@@ -111,6 +111,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/actions/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AE1-T2: runs the published custom action `custom.{name}` as the calling
+         *     person. The arguments are checked against its input schema first (every
+         *     problem by field); a consequential action needs an `Idempotency-Key` (or
+         *     `x-idempotency-key`) header, which becomes the invocation's key, so a
+         *     retry with the same key never runs it twice. A completed action answers
+         *     200; one that waits (a confirmation, an approval, an undo window) 202.
+         */
+        post: operations["invoke_custom_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/agents/sessions": {
         parameters: {
             query?: never;
@@ -16404,6 +16428,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fulfilment/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A sales order's fulfilment
+         * @description F6-T17: every line of the order's fulfilment orders with ordered,
+         *     shipped, delivered and backordered quantities, the promised date, and the
+         *     shipments carrying it.
+         */
+        get: operations["fulfilment_order_rollup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fulfilment/orders/{id}/override-sourcing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Override where a fulfilment order ships from
+         * @description F6-T4: before the order is released (`draft` or `on_hold`), a person with
+         *     `fulfilment_order.override_sourcing` names the location instead of the
+         *     sourcing rules; who did it is kept on the order.
+         */
+        post: operations["override_fulfilment_sourcing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fulfilment/orders/{id}/packages": {
         parameters: {
             query?: never;
@@ -17227,6 +17295,49 @@ export interface paths {
         get: operations["live"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/macros/{name}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a macro
+         * @description G6-T2: what running the macro on these records would do, step by step,
+         *     with each step's filled-in arguments and the problems found. Runs nothing.
+         */
+        post: operations["preview_macro"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/macros/{name}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a macro
+         * @description G6-T2: runs the macro's steps on each record as the caller, through the
+         *     action gate; each step is held for the macro's undo window first, so it
+         *     can be cancelled. Each record's outcomes are listed.
+         */
+        post: operations["run_macro"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18657,6 +18768,29 @@ export interface paths {
          *     use (`DashboardUpdate`).
          */
         post: operations["compute_metric"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/{id}/compute-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compute a metric and everything under it
+         * @description P9-T8: computes every query and formula metric the metric is built from
+         *     (its children and its formula's inputs, transitively), children before
+         *     parents, then the metric itself, for each one's current period. One
+         *     metric's failure is reported and the rest go on; a cycle is refused.
+         */
+        post: operations["compute_tree"];
         delete?: never;
         options?: never;
         head?: never;
@@ -24050,6 +24184,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflow/sequences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List sequences
+         * @description D17-T2: the published, active sequences a rep can enrol contacts in,
+         *     with what ends them and how many contacts are in each now.
+         */
+        get: operations["list_sequences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/sequences/{logicalname}/enrolments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enrol contacts in a sequence.
+         * @description Name the contacts, or give a marketing list of contacts (as you see it).
+         *     Each contact gets one run of the sequence; a contact already active in it
+         *     is skipped. The contact leaves the sequence when they reply, a meeting
+         *     with them is booked, or a deal at their account changes stage (as the
+         *     sequence's `settings.sequence.exit_on` says).
+         */
+        post: operations["enrol_in_sequence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflow/trigger-dead-letters": {
         parameters: {
             query?: never;
@@ -24092,6 +24271,28 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["workflow_replay_trigger_dead_letter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/adherence/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A planning group's adherence now
+         * @description Each member's latest minute in the last five minutes: what was
+         *     scheduled, what they were doing and whether that fits. For a holder of
+         *     `wfm_adherence.read` who is a member of the group.
+         */
+        get: operations["workforce_adherence_live"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -24176,6 +24377,26 @@ export interface paths {
          *     read it by the schedules list once it finishes.
          */
         post: operations["post_workforce_schedule_build"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/me/adherence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My adherence
+         * @description The caller's own adherence and conformance for the last 31 days.
+         */
+        get: operations["workforce_my_adherence"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -31774,6 +31995,10 @@ export interface components {
             skipped: boolean;
             snapshot: components["schemas"]["SnapshotRow"];
         };
+        /** @description A tree computation, in the order it ran. */
+        ComputeTreeResponse: {
+            metrics: components["schemas"]["TreeComputed"][];
+        };
         ConditionAll: {
             /**
              * @description The tree nests, so utoipa must not expand it inline (the recursion
@@ -32313,6 +32538,11 @@ export interface components {
             value: unknown;
         };
         CreateDefinitionBody: {
+            /**
+             * @description D17-T1: `flow` (the default), `journey`, `nurture` or `sequence`.
+             *     Fixed once created.
+             */
+            kind?: string | null;
             logicalname: string;
             name: string;
         };
@@ -32622,7 +32852,20 @@ export interface components {
             entity_logicalname: string;
             initial_state: string;
             is_active?: boolean;
+            /** @description M8-T2: states in which a record is read-only except the listed fields. */
+            locked_states?: components["schemas"]["LockedState"][];
             name: string;
+            /** @description M8-T2: an attribute of the entity holding the status reason. */
+            reason_field?: string | null;
+            /** @description M8-T2: the reasons each state allows; a state listed here needs one. */
+            reasons?: components["schemas"]["StateReasons"][];
+            /**
+             * @description M8-T2: the record type (a `record_type` code of the entity) this model
+             *     governs; omit for the entity's model of every other record. Fixed once
+             *     created. A typed model is not recorded in changesets or bundles: make
+             *     it through this API in each deployment.
+             */
+            record_type?: string | null;
             /** @description Must name an existing `Choice` attribute on `entity_logicalname`. */
             state_field: string;
         };
@@ -32741,6 +32984,12 @@ export interface components {
         };
         CreateTransitionBody: {
             approval_plan?: null | components["schemas"]["ApprovalPlan"];
+            /**
+             * @description M8-T3: an attome-rules condition over the record's fields (such as
+             *     `due_date < today()`). When it holds for a record in `from_state`,
+             *     the transition happens by itself, checked after each write and daily.
+             */
+            auto_condition?: string | null;
             /** Format: int32 */
             display_order?: number;
             entry_actions?: string[];
@@ -33622,6 +33871,17 @@ export interface components {
             total_travel_minutes: number;
             unassigned: string[];
         };
+        /** @description One person's day. */
+        DayRow: {
+            /** Format: double */
+            adherence_pct?: number | null;
+            /** Format: double */
+            conformance_pct?: number | null;
+            /** Format: date */
+            day: string;
+            /** Format: int64 */
+            minutes: number;
+        };
         /** @description One DDL statement as the ledger recorded it. */
         DdlLogEntry: {
             /** Format: uuid */
@@ -33925,6 +34185,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             is_active: boolean;
+            /** @description `flow`, `journey`, `nurture` or `sequence` (D17-T1). */
+            kind: string;
             logicalname: string;
             name: string;
             /** @description Solution 7 (D-785): the layer that owns this workflow. */
@@ -35100,6 +35362,32 @@ export interface components {
             /** @description What enforces it: a check's id, a label, an `entity.attribute`, ... */
             target_ref: string;
         };
+        /** @description The contacts to enrol: named, or a marketing list's (D17-T2). */
+        EnrolBody: {
+            /** @description At most 1,000 contacts. */
+            contact_ids?: string[];
+            /**
+             * Format: uuid
+             * @description A marketing list of contacts, as the caller sees it (at most
+             *     [`MAX_LIST`] people), instead of `contact_ids`.
+             */
+            list_id?: string | null;
+        };
+        /** @description What an enrolment did. */
+        EnrolOutcome: {
+            /** Format: int64 */
+            enrolled: number;
+            /**
+             * Format: int64
+             * @description Already active in this sequence.
+             */
+            skipped_active: number;
+            /**
+             * Format: int64
+             * @description No such live contact.
+             */
+            skipped_missing: number;
+        };
         EnrollResponseBody: {
             otpauth_uri: string;
             secret_base32: string;
@@ -36021,6 +36309,11 @@ export interface components {
             row_version: number;
             status: string;
         };
+        /**
+         * @description Why a contact leaves a sequence.
+         * @enum {string}
+         */
+        ExitOn: "reply" | "meeting" | "stage_change";
         /** @description T6-T1: a flag past its expiry date, for the expiry report. */
         ExpiredFlag: {
             /** Format: date */
@@ -38082,6 +38375,11 @@ export interface components {
              */
             args?: unknown;
             /**
+             * @description AE1-T4: the person confirmed this invocation. A consequential action
+             *     answers `confirmation_required` until it is called with this set.
+             */
+            confirm?: boolean;
+            /**
              * Format: int32
              * @description AH8: hold the action this many seconds (30 to 86400) before it runs,
              *     so it can be cancelled — the undo for an action that cannot be undone
@@ -38637,6 +38935,38 @@ export interface components {
             /** Format: double */
             unit_price?: number | null;
         };
+        /** @description One line's fulfilment. */
+        LineRollup: {
+            /** Format: double */
+            backordered: number;
+            /** Format: double */
+            delivered: number;
+            /** Format: uuid */
+            fulfilment_order_id: string;
+            /** Format: uuid */
+            line_id: string;
+            order_line_ref?: string | null;
+            /** Format: double */
+            ordered: number;
+            /** Format: uuid */
+            product_ref?: string | null;
+            /** Format: date-time */
+            promised_date?: string | null;
+            shipments: components["schemas"]["LineShipment"][];
+            /** Format: double */
+            shipped: number;
+            status?: string | null;
+        };
+        /** @description A shipment carrying a line. */
+        LineShipment: {
+            carrier?: string | null;
+            /** Format: double */
+            quantity?: number | null;
+            /** Format: uuid */
+            shipment_id: string;
+            status?: string | null;
+            tracking_number?: string | null;
+        };
         /**
          * @description What a draft change does.
          * @enum {string}
@@ -38746,6 +39076,16 @@ export interface components {
             /** @description `queued`, `running`, `done`, `failed` or `undone`. */
             status: string;
         };
+        /** @description One person's latest minute. */
+        LiveRow: {
+            actual: string;
+            in_adherence: boolean;
+            /** Format: date-time */
+            minute: string;
+            scheduled: string;
+            /** Format: uuid */
+            user_id: string;
+        };
         /**
          * @description One field a business rule locks for the writer (D-789 §3.5): `effect` is
          *     `hidden` or `disabled`. No value is ever echoed.
@@ -38756,6 +39096,12 @@ export interface components {
             /** Format: uuid */
             rule_id: string;
             rule_name: string;
+        };
+        /** @description M8-T2: a state in which a record is read-only except `editable`. */
+        LockedState: {
+            /** @description The fields that may still change while the record is in `state`. */
+            editable?: string[];
+            state: string;
         };
         LoginBody: {
             /** @description The current TOTP code, when the account has MFA enrolled. */
@@ -38791,6 +39137,30 @@ export interface components {
             is_active: boolean;
             /** @description The target's `primary_name_attribute` value, when it declares one. */
             name?: string | null;
+        };
+        /** @description What running a macro would do. */
+        MacroPreview: {
+            entity: string;
+            name: string;
+            records: components["schemas"]["RecordPlan"][];
+            /** Format: int64 */
+            undo_minutes: number;
+        };
+        /** @description Records to run a macro on. */
+        MacroRecords: {
+            /**
+             * @description AE1-T4: the person confirmed the run, so its consequential steps run.
+             *     Ignored by the preview.
+             */
+            confirm?: boolean;
+            record_ids: string[];
+        };
+        /** @description What a run did. */
+        MacroRun: {
+            name: string;
+            records: components["schemas"]["RecordRun"][];
+            /** Format: int64 */
+            undo_minutes: number;
         };
         /** @description A connection, as its owner sees it. */
         MailConnection: {
@@ -40838,6 +41208,12 @@ export interface components {
             order_id: string;
             status: string;
         };
+        /** @description A sales order's fulfilment. */
+        OrderFulfilment: {
+            lines: components["schemas"]["LineRollup"][];
+            /** Format: uuid */
+            order_id: string;
+        };
         /** @description One item of an order, as its owner sees it. */
         OrderItemView: {
             /** Format: uuid */
@@ -41073,6 +41449,19 @@ export interface components {
              * @description Send back to replace it; 0 when none is set.
              */
             row_version: number;
+        };
+        /** @description The fulfilment order after an override. */
+        Overridden: {
+            /** Format: uuid */
+            fulfilment_order_id: string;
+            /** Format: uuid */
+            location_id: string;
+            sourcing_reason: string;
+        };
+        /** @description The location to ship from instead. */
+        OverrideBody: {
+            /** Format: uuid */
+            location_id: string;
         };
         OwnerItem: {
             entity: string;
@@ -47728,6 +48117,33 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SequenceSummary: {
+            items: {
+                /**
+                 * Format: int64
+                 * @description Contacts active in it now.
+                 */
+                active: number;
+                /** @description What ends a contact's sequence. */
+                exit_on: components["schemas"]["ExitOn"][];
+                logicalname: string;
+                name: string;
+                /** Format: int32 */
+                published_version: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SessionSummary: {
             items: {
                 /** Format: uuid */
@@ -47973,6 +48389,8 @@ export interface components {
                 id: string;
                 initial_state: string;
                 is_active: boolean;
+                /** @description M8-T2: states in which a record is read-only except listed fields. */
+                locked_states?: components["schemas"]["LockedState"][];
                 name: string;
                 /**
                  * @description Solution 7 (D-785): the layer that owns this model — `platform`,
@@ -47980,6 +48398,15 @@ export interface components {
                  *     change or retire it.
                  */
                 owner_layer: string;
+                /** @description M8-T2: the attribute holding the record's status reason. */
+                reason_field?: string | null;
+                /** @description M8-T2: the reasons each state allows. */
+                reasons?: components["schemas"]["StateReasons"][];
+                /**
+                 * @description M8-T2: the record type this model governs; absent for the entity's
+                 *     model of every record without one of its own.
+                 */
+                record_type?: string | null;
                 /** Format: int64 */
                 row_version: number;
                 state_field: string;
@@ -51299,6 +51726,20 @@ export interface components {
             old_lookup_name?: string | null;
             old_value?: string | null;
         };
+        /** @description One record's plan. */
+        RecordPlan: {
+            /** Format: uuid */
+            record_id: string;
+            steps: components["schemas"]["StepPlan"][];
+        };
+        /** @description One record's outcomes, step by step. */
+        RecordRun: {
+            /** @description Why the record stopped early, when it did. */
+            error?: string | null;
+            outcomes: Record<string, never>[];
+            /** Format: uuid */
+            record_id: string;
+        };
         /** @description Which records a bulk operation covers: exactly one of the two. */
         RecordSelection: {
             /** @description Every live record owned by the user with this email. */
@@ -54284,6 +54725,20 @@ export interface components {
         SeoTopicPagesBody: {
             page_ids: string[];
         };
+        /** @description A published sequence, as a rep picks it (D17-T2). */
+        SequenceSummary: {
+            /**
+             * Format: int64
+             * @description Contacts active in it now.
+             */
+            active: number;
+            /** @description What ends a contact's sequence. */
+            exit_on: components["schemas"]["ExitOn"][];
+            logicalname: string;
+            name: string;
+            /** Format: int32 */
+            published_version: number;
+        };
         /**
          * @description P-session-refresh-hardening (D-129) — `GET /api/v1/auth/session`'s
          *     response shape; see `session_info`.
@@ -55562,7 +56017,16 @@ export interface components {
             entity_logicalname: string;
             initial_state: string;
             is_active?: boolean;
+            /**
+             * @description M8-T2: states in which a record is read-only except listed fields.
+             *     Omitted from an export when there are none.
+             */
+            locked_states?: components["schemas"]["LockedState"][];
             name: string;
+            /** @description M8-T2: the attribute holding the status reason. */
+            reason_field?: string | null;
+            /** @description M8-T2: the reasons each state allows. */
+            reasons?: components["schemas"]["StateReasons"][];
             /** @description A `Choice` attribute logicalname on `entity_logicalname`. */
             state_field: string;
             transitions?: components["schemas"]["StateTransitionDef"][];
@@ -55575,9 +56039,20 @@ export interface components {
             id: string;
             initial_state: string;
             is_active: boolean;
+            /** @description M8-T2: states in which a record is read-only except listed fields. */
+            locked_states?: components["schemas"]["LockedState"][];
             name: string;
             /** @description Solution 7 (D-785): the layer that owns this model. */
             owner_layer: string;
+            /** @description M8-T2: the attribute holding the record's status reason. */
+            reason_field?: string | null;
+            /** @description M8-T2: the reasons each state allows. */
+            reasons?: components["schemas"]["StateReasons"][];
+            /**
+             * @description M8-T2: the record type this model governs; absent for the entity's
+             *     model of every record without one of its own.
+             */
+            record_type?: string | null;
             /** Format: int64 */
             row_version: number;
             state_field: string;
@@ -55591,6 +56066,8 @@ export interface components {
             id: string;
             initial_state: string;
             is_active: boolean;
+            /** @description M8-T2: states in which a record is read-only except listed fields. */
+            locked_states?: components["schemas"]["LockedState"][];
             name: string;
             /**
              * @description Solution 7 (D-785): the layer that owns this model — `platform`,
@@ -55598,9 +56075,23 @@ export interface components {
              *     change or retire it.
              */
             owner_layer: string;
+            /** @description M8-T2: the attribute holding the record's status reason. */
+            reason_field?: string | null;
+            /** @description M8-T2: the reasons each state allows. */
+            reasons?: components["schemas"]["StateReasons"][];
+            /**
+             * @description M8-T2: the record type this model governs; absent for the entity's
+             *     model of every record without one of its own.
+             */
+            record_type?: string | null;
             /** Format: int64 */
             row_version: number;
             state_field: string;
+        };
+        /** @description M8-T2: the reasons a record may give for being in `state`. */
+        StateReasons: {
+            reasons: string[];
+            state: string;
         };
         /**
          * @description `state_transition` — set semantics inside its parent
@@ -55609,6 +56100,11 @@ export interface components {
          */
         StateTransitionDef: {
             approval_plan?: null | components["schemas"]["ApprovalPlan"];
+            /**
+             * @description M8-T3: the condition that makes the transition happen by itself.
+             *     Omitted from an export when absent.
+             */
+            auto_condition?: string | null;
             /** Format: int32 */
             display_order?: number;
             entry_actions?: string[];
@@ -55734,6 +56230,14 @@ export interface components {
         };
         /** @enum {string} */
         StepMode: "any" | "all" | "nof_m";
+        /** @description One step for one record. */
+        StepPlan: {
+            action: string;
+            args: Record<string, never>;
+            problems: string[];
+            /** @description `Read`, `Reversible` or `Consequential`; absent for an unknown action. */
+            risk?: string | null;
+        };
         /** @description A started step-up challenge. */
         StepUpChallengeBody: {
             /**
@@ -56850,6 +57354,11 @@ export interface components {
         };
         TransitionListItem: {
             approval_plan?: null | components["schemas"]["ApprovalPlan"];
+            /**
+             * @description M8-T3: the condition that makes the transition happen by itself.
+             *     Omitted when absent.
+             */
+            auto_condition?: string | null;
             /** Format: int32 */
             display_order: number;
             entry_actions: string[];
@@ -56974,6 +57483,14 @@ export interface components {
              *     partial graph.
              */
             truncated: boolean;
+        };
+        /** @description One metric of a tree computation. */
+        TreeComputed: {
+            error?: string | null;
+            /** Format: uuid */
+            metric_id: string;
+            /** @description `computed`, `skipped` (a snapshot for the period existed) or `failed`. */
+            outcome: string;
         };
         /**
          * @description One row of the draft tree, in the same `{id, row_version, data}` shape the
@@ -57658,7 +58175,11 @@ export interface components {
         UpdateStateModelBody: {
             initial_state: string;
             is_active: boolean;
+            /** @description M8-T2: full replacement, like every field here. */
+            locked_states?: components["schemas"]["LockedState"][];
             name: string;
+            reason_field?: string | null;
+            reasons?: components["schemas"]["StateReasons"][];
             /** Format: int64 */
             row_version: number;
             state_field: string;
@@ -57717,6 +58238,11 @@ export interface components {
          */
         UpdateTransitionBody: {
             approval_plan?: null | components["schemas"]["ApprovalPlan"];
+            /**
+             * @description Full replacement: omitted makes the transition a manual one again.
+             *     See `CreateTransitionBody::auto_condition`.
+             */
+            auto_condition?: string | null;
             /** Format: int32 */
             display_order?: number;
             entry_actions?: string[];
@@ -58894,6 +59420,83 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    invoke_custom_action: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required for a consequential action */
+                "Idempotency-Key"?: string | null;
+                /** @description `true` once the person confirmed a consequential action; without it the action answers `confirmation_required` */
+                "X-Confirm"?: string | null;
+            };
+            path: {
+                /** @description The custom action's name (its id without `custom.`) */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown;
+            };
+        };
+        responses: {
+            /** @description The action ran */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionOutcome"];
+                };
+            };
+            /** @description The action waits for a confirmation, an approval or its undo window */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks a privilege the action requires */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published custom action by that name */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Arguments that do not fit the schema, or a missing Idempotency-Key */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -109192,6 +109795,119 @@ export interface operations {
             };
         };
     };
+    fulfilment_order_rollup: {
+        parameters: {
+            query: {
+                /** @description The sales order. */
+                order_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order's lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderFulfilment"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks fulfilment_order.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    override_fulfilment_sourcing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The fulfilment order */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OverrideBody"];
+            };
+        };
+        responses: {
+            /** @description The fulfilment order ships from the new location */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overridden"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks fulfilment_order.override_sourcing */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such fulfilment order */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The fulfilment order changed meanwhile */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The order is already released, or the location is not an enabled stock location */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     fulfilment_order_pack: {
         parameters: {
             query?: never;
@@ -111629,6 +112345,114 @@ export interface operations {
                 };
             };
             /** @description More than 10 entities */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_macro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The macro */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MacroRecords"];
+            };
+        };
+        responses: {
+            /** @description The plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published macro by that name */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No records, or more than 200 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    run_macro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The macro */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MacroRecords"];
+            };
+        };
+        responses: {
+            /** @description Each record's outcomes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published macro by that name */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No records, or more than 200 */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -115424,6 +116248,65 @@ export interface operations {
                 };
             };
             /** @description Missing actual for a manual metric, formula source, or bad query_ref */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    compute_tree: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The root metric */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What each metric of the tree did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComputeTreeResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such metric */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The tree has a cycle */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -131530,6 +132413,118 @@ export interface operations {
             };
         };
     };
+    list_sequences: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The published sequences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SequenceSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks contact.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    enrol_in_sequence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The sequence's workflow */
+                logicalname: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnrolBody"];
+            };
+        };
+        responses: {
+            /** @description The contacts are enrolled and their runs started */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrolOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks contact.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published, active sequence with this name */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No contacts, more than 1,000 named or 10,000 in a list, a list of other records, or the sequence's exits are invalid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     workflow_list_trigger_dead_letters: {
         parameters: {
             query?: {
@@ -131677,6 +132672,47 @@ export interface operations {
             };
             /** @description Dispatch is overloaded or a dependency is unavailable; the dead letter is kept */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    workforce_adherence_live: {
+        parameters: {
+            query: {
+                /** @description The planning group. */
+                group: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The group's people now */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveRow"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_adherence.read or is not in the group */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -131922,6 +132958,35 @@ export interface operations {
             };
             /** @description A backwards or too long period */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    workforce_my_adherence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's days, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayRow"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
