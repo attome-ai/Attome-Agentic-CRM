@@ -566,6 +566,127 @@ pub(crate) async fn get_import(
     Ok(Json(visible_job(&state, &ctx, &entity, id).await?))
 }
 
+/// What `PATCH .../imports/{id}` changes; an absent field keeps its value.
+#[derive(Debug, Default, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ImportOptionsChange {
+    #[serde(default)]
+    #[schema(value_type = Option<Object>)]
+    pub mapping: Option<Value>,
+    #[serde(default)]
+    pub match_mode: Option<String>,
+    #[serde(default)]
+    pub match_columns: Option<Vec<String>>,
+    #[serde(default)]
+    pub all_or_nothing: Option<bool>,
+    #[serde(default)]
+    pub triggers_on: Option<bool>,
+}
+
+/// Change an import's mapping and options
+///
+/// A23-T13: the wizard sets the mapping after the file is staged (an agent
+/// can only propose one from staged rows). Allowed until the import starts
+/// applying; a validated import goes back to staged, so its counts are
+/// computed again by the next dry run.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/{entity}/imports/{id}",
+    tag = "import",
+    operation_id = "update_import",
+    params(
+        ("entity" = String, Path, description = "The entity"),
+        ("id" = Uuid, Path, description = "The import job"),
+    ),
+    request_body = ImportOptionsChange,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The import with its new options", body = ImportJobView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not import this entity's records", body = ErrorResponse),
+        (status = 404, description = "No such import the caller may see", body = ErrorResponse),
+        (status = 409, description = "The import started applying", body = ErrorResponse),
+        (status = 422, description = "A mapping or option that does not fit the entity", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn update_import(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path((entity, id)): Path<(String, Uuid)>,
+    Json(change): Json<ImportOptionsChange>,
+) -> Result<Json<ImportJobView>, AppError> {
+    let (entity, attrs) = admitted(&state, &ctx, &entity).await?;
+    let job = visible_job(&state, &ctx, &entity, id).await?;
+    if !matches!(job.status.as_str(), "uploaded" | "staged" | "validated") {
+        return Err(AppError::Conflict(
+            "an import's options change only until it starts applying",
+        ));
+    }
+    let mapping = change
+        .mapping
+        .clone()
+        .unwrap_or_else(|| job.mapping.clone());
+    let parsed: attome_records::import_validate::ImportMapping =
+        serde_json::from_value(mapping.clone())
+            .map_err(|e| AppError::Validation(format!("mapping: {e}")))?;
+    parsed.check(&attrs)?;
+    let match_mode = change
+        .match_mode
+        .clone()
+        .unwrap_or_else(|| job.match_mode.clone());
+    if !["create", "update", "upsert"].contains(&match_mode.as_str()) {
+        return Err(AppError::Validation(
+            "match_mode is create, update or upsert".into(),
+        ));
+    }
+    let match_columns = change
+        .match_columns
+        .clone()
+        .unwrap_or_else(|| job.match_columns.clone());
+    if let Some(unknown) = match_columns
+        .iter()
+        .find(|c| !attrs.iter().any(|a| &a.logicalname == *c))
+    {
+        return Err(AppError::Validation(format!(
+            "match_columns: {unknown} is not a field of this entity"
+        )));
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let updated: Option<ImportJobView> = sqlx::query_as(&format!(
+        "UPDATE import_job SET mapping = $2, match_mode = $3, match_columns = $4, \
+                all_or_nothing = $5, triggers_on = $6, \
+                status = CASE WHEN status = 'validated' THEN 'staged' ELSE status END, \
+                row_version = row_version + 1 \
+          WHERE id = $1 AND status IN ('uploaded', 'staged', 'validated') \
+         RETURNING {JOB_COLUMNS}"
+    ))
+    .bind(id)
+    .bind(&mapping)
+    .bind(&match_mode)
+    .bind(&match_columns)
+    .bind(change.all_or_nothing.unwrap_or(job.all_or_nothing))
+    .bind(change.triggers_on.unwrap_or(job.triggers_on))
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let updated = updated.ok_or(AppError::Conflict(
+        "an import's options change only until it starts applying",
+    ))?;
+    import_event(
+        &mut tx,
+        &state,
+        ctx.user_id,
+        id,
+        AuditOperation::Update,
+        "import.options",
+        format!("mapping and options of {}", updated.file_name),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Json(updated))
+}
+
 /// Whether an apply of `job` needs approval first: more staged rows than
 /// the policy allows, or a sensitive attribute mapped while the policy asks
 /// for approval of those.
@@ -1369,7 +1490,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/{entity}/imports",
             get(list_imports).post(create_import),
         )
-        .route("/api/v1/{entity}/imports/{id}", get(get_import))
+        .route(
+            "/api/v1/{entity}/imports/{id}",
+            get(get_import).patch(update_import),
+        )
         .route(
             "/api/v1/{entity}/imports/{id}/dry-run",
             post(dry_run_import),
@@ -1427,6 +1551,7 @@ pub async fn execute_approved_apply(
         create_import,
         list_imports,
         get_import,
+        update_import,
         dry_run_import,
         apply_import,
         undo_import,
@@ -1439,6 +1564,7 @@ pub async fn execute_approved_apply(
     components(schemas(
         ImportUpload,
         ImportOptions,
+        ImportOptionsChange,
         ImportCreated,
         ImportAccepted,
         ImportJobView,

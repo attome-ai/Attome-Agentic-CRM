@@ -164,6 +164,15 @@
         <button type="button" class="btn btn-secondary" [disabled]="bulkActionRunning()" (click)="exportList('xlsx')">
           <i class="las la-file-excel"></i> {{ 'entityList.exportExcel' | translate }}
         </button>
+        <!-- A23-T13: Parquet for analytics tools, and headers in my language. -->
+        <button type="button" class="btn btn-secondary" data-testid="export-parquet" [disabled]="bulkActionRunning()" (click)="exportList('parquet')">
+          <i class="las la-database"></i> {{ 'entityList.exportParquet' | translate }}
+        </button>
+        <label class="export-labels">
+          <input type="checkbox" data-testid="export-labels" [checked]="exportLabels()"
+                 (change)="exportLabels.set($any($event.target).checked)" />
+          <span>{{ 'entityList.exportLabels' | translate }}</span>
+        </label>
       </div>
     </div>
     }

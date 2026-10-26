@@ -403,13 +403,22 @@ export class EntityService {
    */
   exportRecords(
     entityName: string,
-    format:     'csv' | 'xlsx' | 'json',
+    format:     'csv' | 'xlsx' | 'json' | 'parquet',
     columns:    readonly string[] = [],
     /** Dashboard drill-through (Phase 3.4): the drill's exact filters, so the
      * file holds the records the drawer listed. */
     filter:     ApiComponents['schemas']['ExportRequestBody']['filter'] = [],
+    /** A23-T13: headers in the person's language (CSV, XLSX), and rows per
+     * file part (Parquet). */
+    options:    { labels?: boolean; split_rows?: number } = {},
   ): Observable<ExportEnqueueResponse> {
-    const body: ApiComponents['schemas']['ExportRequestBody'] = { format, columns: [...columns], filter: [...(filter ?? [])] };
+    const body: ApiComponents['schemas']['ExportRequestBody'] = {
+      format,
+      columns: [...columns],
+      filter: [...(filter ?? [])],
+      ...(options.labels ? { labels: true } : {}),
+      ...(options.split_rows ? { split_rows: options.split_rows } : {}),
+    };
     return this.api.post<ExportEnqueueResponse>(`/api/v1/${entityName}/export`, body);
   }
 

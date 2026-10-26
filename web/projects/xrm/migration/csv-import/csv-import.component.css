@@ -112,3 +112,29 @@
 .ci-result progress {
   inline-size: 100%;
 }
+
+/* A23-T13: the mapping agent's confidence per column. */
+.ci-badge {
+  display: inline-block;
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color, #d0d5dd);
+}
+
+.ci-badge-high {
+  background: var(--success-bg, transparent);
+  color: var(--success-color, inherit);
+}
+
+.ci-badge-medium {
+  background: var(--warning-bg, transparent);
+  color: var(--warning-color, inherit);
+}
+
+.ci-badge-low {
+  background: var(--danger-bg, transparent);
+  color: var(--danger-color, inherit);
+}

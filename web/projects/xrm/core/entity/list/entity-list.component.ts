@@ -1240,7 +1240,10 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
    * without it instead (D-408). The view's own stored-query SQL is not
    * forwarded: the export endpoint takes structured filters only.
    */
-  async exportList(format: 'csv' | 'xlsx' = 'csv'): Promise<void> {
+  /** A23-T13: export headers in the person's language. */
+  readonly exportLabels = signal(false);
+
+  async exportList(format: 'csv' | 'xlsx' | 'parquet' = 'csv'): Promise<void> {
     if (this.bulkActionRunning()) return;
     const entityName = this.entityName();
 
@@ -1257,7 +1260,9 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
 
     this.bulkActionRunning.set(true);
     try {
-      const enqueued = await firstValueFrom(this.entitySvc.exportRecords(entityName, format, [], exportable));
+      const enqueued = await firstValueFrom(
+        this.entitySvc.exportRecords(entityName, format, [], exportable, { labels: this.exportLabels() }),
+      );
       const status = await firstValueFrom(this.bulkJobs.poll(
         () => this.entitySvc.exportStatus(entityName, enqueued.id),
         s => isBulkTerminal(s.status),

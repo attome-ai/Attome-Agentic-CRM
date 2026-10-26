@@ -13,6 +13,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Import wizard on the server job (A23-T13): the CSV import screen now sends the file to
+  `/api/v1/{entity}/imports` (the browser reads only 50 rows, for an instant preview and name
+  matching), shows the dry run's counts and preview, lets the mapping agent suggest each column's
+  field with a confidence badge, applies with live status, waits for approval when the policy asks,
+  links the error file and offers Undo; it lists the entity's recent imports. English and Arabic
+  text; Arabic cells read right to left. New `PATCH /api/v1/{entity}/imports/{id}` changes a job's
+  mapping and options until it starts applying. The entity list gains Export Parquet and a "Headers
+  in my language" option. The browser-side chunked import runner (`csv-import-runner.ts`) is
+  removed: every import is a server job.
 - Exports at scale (A23-T10): `POST /api/v1/{entity}/export` takes `format: "parquet"` (row groups of
   50,000, Snappy; parquet/arrow 59 with default features off, so no C toolchain), `split_rows` (a new
   part each time one fills; 1,000,000 by default) and `labels` (CSV and XLSX headers in the
