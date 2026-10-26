@@ -14,7 +14,7 @@ describe('DataCatalogComponent', () => {
   const detail: CatalogEntityDetail = {
     id: 'e1', logicalname: 'contact', name: 'Contact', category: null, domain_ref: null,
     fields: [
-      { logicalname: 'email', display_name: 'Email', field_type: 'text', data_classification: 'personal', is_required: true },
+      { logicalname: 'email', display_name: 'Email', field_type: 'text', data_classification: 'personal', is_required: true, hidden: false },
     ],
     lineage: [
       { from_kind: 'query', from_ref: 'q1', from_label: 'Active contacts', to_attribute: null, created_at: '2026-09-01T00:00:00Z' },
