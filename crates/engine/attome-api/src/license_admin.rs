@@ -332,8 +332,11 @@ async fn update_module_configuration(
         .comment(format!("enabled_modules = [{}]", modules.join(", "))),
     )
     .await?;
+    // An upsert: no migration or seed creates the singleton row, and an
+    // UPDATE of a missing row saved nothing, so the switch lived only in this
+    // node's memory until the next reload (found by Y4-T2).
     sqlx::query(
-        "UPDATE module_configuration SET enabled = $1, enabled_modules = $2, updated_at = NOW() WHERE singleton = TRUE",
+        "INSERT INTO module_configuration (singleton, enabled, enabled_modules, updated_at)          VALUES (TRUE, $1, $2, NOW())          ON CONFLICT (singleton) DO UPDATE             SET enabled = EXCLUDED.enabled, enabled_modules = EXCLUDED.enabled_modules,                 updated_at = NOW()",
     )
     .bind(request.enabled)
     .bind(&modules)

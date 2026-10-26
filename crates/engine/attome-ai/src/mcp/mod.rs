@@ -878,6 +878,21 @@ async fn visible_tools(
         .collect()
 }
 
+/// Y4-T2: the tool names `tools/list` would show a user with `security`,
+/// for tests and diagnostics; the same listing, so an off module's tools are
+/// absent here exactly when they are absent there.
+pub async fn visible_tool_names(
+    state: &EngineState,
+    security: Arc<SecurityContext>,
+) -> Vec<String> {
+    let ctx = crate::context::ActionContext::user(security);
+    visible_tools(state, &ctx)
+        .await
+        .into_iter()
+        .filter_map(|tool| tool["name"].as_str().map(str::to_owned))
+        .collect()
+}
+
 async fn tools_list(
     state: &EngineState,
     security: Arc<SecurityContext>,

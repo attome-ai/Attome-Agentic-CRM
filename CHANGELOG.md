@@ -7,7 +7,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
 
 ## [Unreleased]
 
+### Fixed
+- Module Management's save now stores the configuration (Y4-T2). No migration created the
+  `module_configuration` row, so the update wrote nothing: the switch held only in the answering
+  node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
+
 ### Added
+- Switching a module off stops its background work (Y4-T2): a module's schedules (87 of them,
+  mapped by schedule) do not tick while Module Management has it off, alongside its routes
+  (`403 feature_hidden`), agent tools and menu items; turning it back on resumes them within a
+  minute, without a restart.
 - Module manifests (Y4-T1): every engine declares its version, the platform versions it runs on
   and the modules it needs on. Boot refuses a module configuration where a module that is on needs
   one that is off (today: Service and GRC need Project, which their entities look up), naming

@@ -7118,9 +7118,15 @@ async fn every_mapped_security_route_writes_its_event_body() {
         let body = axum::body::to_bytes(res.into_body(), usize::MAX)
             .await
             .unwrap_or_default();
-        // A module-configuration change narrows this node's licence; restore
-        // it so later routes stay mounted.
+        // A module-configuration change narrows this node's licence and is
+        // saved (Y4-T2); restore both so later routes stay mounted.
         fx.xrm.modules.store(full_license());
+        if key == "PUT /api/v1/admin/license/modules" {
+            sqlx::query("DELETE FROM module_configuration")
+                .execute(&fx.base.db)
+                .await
+                .expect("restore the module configuration");
+        }
         let status_ok = match expected {
             Some(expected) => status == expected,
             None => status.is_success(),

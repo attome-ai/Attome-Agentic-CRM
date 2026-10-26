@@ -5178,6 +5178,148 @@ fn jitter_seed() -> u64 {
 /// error: these are periodic maintenance ticks, so the next interval claims the
 /// next slot and the loss self-heals. `what` is the operator-facing subject of
 /// the log line, rendered exactly as each call site rendered it before.
+/// Y4-T2: the module each module-owned schedule belongs to, by its schedule
+/// key. A schedule not listed is platform work and always runs.
+pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
+    ("billing-handoff-sweep", "billing"),
+    ("billing-renewal-sweep", "billing"),
+    ("billing-generate-charges", "billing"),
+    ("mrr-snapshot", "billing"),
+    ("billing-request-sweep", "billing"),
+    ("billing-schedule-run", "billing"),
+    ("billing-overdue-sweep", "billing"),
+    ("billing-charge-due", "billing"),
+    ("billing-reconcile", "billing"),
+    ("billing-einvoice-sweep", "billing"),
+    ("billing-credit-hold", "billing"),
+    ("marketing-nightly", "marketing"),
+    ("segment-refresh-due", "marketing"),
+    ("marketing-sweep", "marketing"),
+    ("sms-campaign", "marketing"),
+    ("email-campaign", "marketing"),
+    ("webinar-sync", "marketing"),
+    ("marketing-blocklist-check", "marketing"),
+    ("marketing-reputation-fetch", "marketing"),
+    ("deliverability-rollup", "marketing"),
+    ("marketing-segment-live", "marketing"),
+    ("marketing-journey-entry", "marketing"),
+    ("marketing-journey-date-entry", "marketing"),
+    ("social-publish", "marketing"),
+    ("social-mentions-sync", "marketing"),
+    ("social-reviews-sync", "omnichannel"),
+    ("deal-risk", "sales"),
+    ("forecast-recompute", "sales"),
+    ("sales-default-team-sweep", "sales"),
+    ("sales-snapshot-prune", "sales"),
+    ("sales-deal-close-sweep", "sales"),
+    ("sales-leaver-sweep", "sales"),
+    ("sales-mention-scan", "sales"),
+    ("sales-deal-coverage", "sales"),
+    ("commission-credit-sweep", "commission"),
+    ("commission-acceptance", "commission"),
+    ("revrec-contract-sweep", "ledger"),
+    ("contract-key-dates", "contract"),
+    ("contract-link-sweep", "contract"),
+    ("workflow-sla-sweep", "workflow"),
+    ("workflow-entity-trigger-dispatch", "workflow"),
+    ("compute-metric-snapshots", "dashboard"),
+    ("dashboard-decision-measure", "dashboard"),
+    ("ai-quality-monitor", "ai"),
+    ("ai-tool-call-sweep", "ai"),
+    ("ai-followup-scan", "ai"),
+    ("ai-deferred-action-sweep", "ai"),
+    ("ai-autonomy-summary", "ai"),
+    ("ai-trial-compare", "ai"),
+    ("ai-meeting-brief-scan", "ai"),
+    ("ai-promise-extract", "ai"),
+    ("ai-agent-stats-rollup", "ai"),
+    ("ai-work-share-consume", "ai"),
+    ("ai-agent-behaviour-check", "ai"),
+    ("ai-agent-behaviour-rollup", "ai"),
+    ("ai-ops-weekly-digest", "ai"),
+    ("case-summary", "ai"),
+    ("search-suggestion-refresh", "search"),
+    ("search-saved-search-alert-sweep", "search"),
+    ("content-scheduled-publish-sweep", "content"),
+    ("content-page-stats-rollup", "content"),
+    ("content-review-reminder-sweep", "content"),
+    ("content-sitemap", "content"),
+    ("content-seo-audit", "content"),
+    ("content-search-console", "content"),
+    ("report-schedule-sweep", "report"),
+    ("process-extraction-sweep", "process"),
+    ("ticket-sla-sweep", "service"),
+    ("work-queue-escalation-sweep", "service"),
+    ("maintenance-generation", "service"),
+    ("device-readings", "service"),
+    ("warranty-expiry-reminder", "service"),
+    ("resource-utilization-sweep", "project"),
+    ("predict-scoring-sweep", "predict"),
+    ("predict-outcome-fill-sweep", "predict"),
+    ("predict-drift", "predict"),
+    ("fulfilment-split", "fulfilment"),
+    ("fulfilment-exceptions", "fulfilment"),
+    ("fulfilment-tracking", "fulfilment"),
+    ("workforce-intraday", "workforce"),
+    ("rfq-open", "procurement"),
+    ("grc-policy-sweep", "grc"),
+    ("grc-evidence-collect", "grc"),
+    ("ops-cluster-poll", "ops"),
+    ("ops-drill-skip-check", "ops"),
+    ("ops-drill-freshness", "ops"),
+    ("ops-live-rpo", "ops"),
+];
+
+/// How long a node trusts the module configuration it read for schedules.
+/// Module Management's change reaches schedules within this, and turning a
+/// module back on resumes its schedules without a restart.
+const SCHEDULE_MODULES_TTL: std::time::Duration = std::time::Duration::from_secs(60);
+
+/// The module configuration last read for schedules, and when (observational
+/// per-node state, rebuilt from the database; guidelines §5).
+static SCHEDULE_MODULE_SET: std::sync::Mutex<
+    Option<(std::time::Instant, attome_modules::ModuleSet)>,
+> = std::sync::Mutex::new(None);
+
+/// Y4-T2: whether schedule `name` may tick now: true unless it belongs to a
+/// module the deployment's module configuration has off. A failed read of
+/// the configuration keeps the schedule running (the safe direction for
+/// work that was running before this check existed).
+pub async fn schedule_allowed(db: &DbPool, name: &str) -> bool {
+    let Some(module) = SCHEDULE_MODULES
+        .iter()
+        .find(|(key, _)| *key == name)
+        .and_then(|(_, module)| attome_modules::module_by_name(module))
+    else {
+        return true;
+    };
+    let cached = SCHEDULE_MODULE_SET
+        .lock()
+        .ok()
+        .and_then(|guard| *guard)
+        .filter(|(at, _)| at.elapsed() < SCHEDULE_MODULES_TTL)
+        .map(|(_, set)| set);
+    let set = match cached {
+        Some(set) => set,
+        None => {
+            let set = attome_api::load_license(db).await;
+            if let Ok(mut guard) = SCHEDULE_MODULE_SET.lock() {
+                *guard = Some((std::time::Instant::now(), set));
+            }
+            set
+        }
+    };
+    set.has(module)
+}
+
+/// Y4-T2: forgets the cached module configuration, so the next tick reads
+/// it again (tests, and an operator's change on this node).
+pub fn forget_schedule_modules() {
+    if let Ok(mut guard) = SCHEDULE_MODULE_SET.lock() {
+        *guard = None;
+    }
+}
+
 async fn tick_or_warn(
     db: &DbPool,
     name: &'static str,
@@ -5185,6 +5327,10 @@ async fn tick_or_warn(
     job: EngineJob,
     what: &str,
 ) {
+    if !schedule_allowed(db, name).await {
+        tracing::debug!(schedule = name, "{what}: its module is off; not scheduled");
+        return;
+    }
     if let Err(e) = attome_jobs::schedule::tick(db, name, interval, job).await {
         tracing::warn!(error = %e, schedule = name, "{what}: schedule tick failed");
     }
@@ -7458,6 +7604,27 @@ pub fn spawn_predict_outcome_fill_sweep_scheduler(db: DbPool, interval: std::tim
 /// runs out of future partitions; a column typo fails loudly against a live
 /// database instead (`ensure_ahead_partitions`), but only in production —
 /// this test catches both without one.
+#[cfg(test)]
+mod schedule_module_tests {
+    use super::SCHEDULE_MODULES;
+
+    /// Y4-T2: every mapped schedule names a real module and a real schedule
+    /// key of this file, and appears once.
+    #[test]
+    fn schedule_modules_name_real_modules_and_keys() {
+        let source = include_str!("jobs.rs");
+        let mut seen = std::collections::HashSet::new();
+        for (key, module) in SCHEDULE_MODULES {
+            assert!(attome_modules::module_by_name(module).is_some(), "{module}");
+            assert!(seen.insert(*key), "{key} is mapped twice");
+            assert!(
+                source.contains(&format!("&str = \"{key}\";")),
+                "{key} is not a schedule key in jobs.rs"
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
