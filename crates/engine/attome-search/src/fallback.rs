@@ -164,6 +164,7 @@ pub async fn fallback_search(
                     subtitle: None,
                     score: 0.0,
                     matched_legs: vec![ROUTE.to_owned()],
+                    explain: None,
                 })),
                 // One table that cannot be read (a timeout, a dropped column)
                 // must not lose the others' rows; it is logged, not hidden.

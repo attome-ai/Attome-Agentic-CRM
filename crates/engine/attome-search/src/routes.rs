@@ -204,6 +204,10 @@ pub struct SearchParams {
     /// enforcement path — see `router`.
     #[serde(default)]
     pub audience: Option<String>,
+    /// A25-T4: explain each result's score. Only administrators and holders
+    /// of `metadata.read` get explanations; for anyone else this is ignored.
+    #[serde(default)]
+    pub explain: bool,
 }
 
 fn default_page() -> i64 {
@@ -223,6 +227,9 @@ pub struct SearchHit {
     /// Which legs matched this row. Useful to a human debugging relevance and
     /// to the impression log's feature vector.
     pub matched_legs: Vec<String>,
+    /// A25-T4: how the score came about, when asked for and allowed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub explain: Option<crate::explain::ScoreParts>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -379,8 +386,17 @@ async fn search(
                 .await?;
         return Ok(Json(response));
     }
-    let response =
-        execute_search(&state, &ctx, &q, params.page, params.page_size, audience).await?;
+    let explain = params.explain && crate::explain::may_explain(&ctx);
+    let response = execute_search_explained(
+        &state,
+        &ctx,
+        &q,
+        params.page,
+        params.page_size,
+        audience,
+        explain,
+    )
+    .await?;
     Ok(Json(response))
 }
 
@@ -403,6 +419,22 @@ pub async fn execute_search(
     page: i64,
     page_size: i64,
     audience: Audience,
+) -> Result<SearchResponse, AppError> {
+    execute_search_explained(state, ctx, q, page, page_size, audience, false).await
+}
+
+/// A25-T4: [`execute_search`], each hit carrying its [`crate::explain::ScoreParts`]
+/// when `explain` (the caller has already checked
+/// [`crate::explain::may_explain`]). Nothing is computed for explanations
+/// when it is false.
+pub async fn execute_search_explained(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    q: &str,
+    page: i64,
+    page_size: i64,
+    audience: Audience,
+    explain: bool,
 ) -> Result<SearchResponse, AppError> {
     let route = crate::router::route(q, audience);
 
@@ -519,6 +551,11 @@ pub async fn execute_search(
             synonyms.push(stemmed_alt);
         }
     }
+    let synonyms_used = if explain {
+        synonyms.clone()
+    } else {
+        Vec::new()
+    };
     let default_country = attome_core::setting_registry()
         .get("core.default_country")
         .map(|d| state.settings.load().resolve(d, None, None).0)
@@ -648,6 +685,12 @@ pub async fn execute_search(
     } else {
         personal_signals(state, ctx, &fused).await
     };
+    // A25-T4: the fused scores before tuning, for an explanation.
+    let fused_before: std::collections::HashMap<(String, Uuid), f64> = if explain {
+        fused.iter().map(|r| ((r.1.clone(), r.0), r.2)).collect()
+    } else {
+        std::collections::HashMap::new()
+    };
     crate::controls::rerank(&mut fused, &controls, weights, &personal);
     let pins = controls.pins_for(&normalized);
     if !pins.is_empty() {
@@ -699,17 +742,41 @@ pub async fn execute_search(
 
     let items: Vec<SearchHit> = page_rows
         .into_iter()
-        .map(|(record_id, entity_logicalname, score, matched_legs, _)| {
-            let text = display.get(&(entity_logicalname.clone(), record_id));
-            SearchHit {
-                entity_logicalname,
-                record_id,
-                title: text.and_then(|(t, _)| t.clone()),
-                subtitle: text.and_then(|(_, s)| s.clone()),
-                score,
-                matched_legs,
-            }
-        })
+        .map(
+            |(record_id, entity_logicalname, score, matched_legs, leg_values)| {
+                let key = (entity_logicalname.clone(), record_id);
+                let text = display.get(&key);
+                let explain = explain.then(|| {
+                    let pinned = matched_legs.iter().any(|l| l == "pin")
+                        || controls
+                            .pins_for(&normalized)
+                            .iter()
+                            .any(|p| p.record_id == record_id && p.entity == entity_logicalname);
+                    let mut parts = crate::explain::parts(
+                        fused_before.get(&key).copied().unwrap_or(0.0),
+                        controls.boost(&entity_logicalname),
+                        personal.get(&key),
+                        weights,
+                        pinned,
+                        &matched_legs,
+                        &leg_values,
+                        &synonyms_used,
+                    );
+                    // A pin sets the place, not the score: report the score shown.
+                    parts.score = score;
+                    parts
+                });
+                SearchHit {
+                    entity_logicalname,
+                    record_id,
+                    title: text.and_then(|(t, _)| t.clone()),
+                    subtitle: text.and_then(|(_, s)| s.clone()),
+                    score,
+                    matched_legs,
+                    explain,
+                }
+            },
+        )
         .collect();
 
     let elapsed_ms = i32::try_from(started.elapsed().as_millis()).unwrap_or(i32::MAX);

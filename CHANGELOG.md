@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Search explanations (A25-T4): `GET /api/v1/search?...&explain=true` gives administrators and
+  holders of `metadata.read` each result's `explain`: the legs that matched with their values, the
+  fused score, what the entity boost and personal ranking added, whether a pin placed it, and the
+  synonyms used. Others get none; nothing is computed unless asked.
 - Z10 (approvals): plan steps with conditions, parallel groups, step-up, signatures, reminders and
   business hours; versioned policies; approver resolvers by prefix; `POST /api/v1/approvals/{id}/recall`
   and `/resubmit`, `/api/v1/approvals/bulk-decide`, `/api/v1/approvals/email-link` (`/decide`),

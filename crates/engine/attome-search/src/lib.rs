@@ -32,6 +32,8 @@ pub mod controls;
 pub mod corpus;
 pub mod coverage;
 pub mod drain;
+/// A25-T4: explaining a result and its rank.
+pub mod explain;
 pub mod dsl;
 pub mod embedding_writer;
 pub mod engine;
