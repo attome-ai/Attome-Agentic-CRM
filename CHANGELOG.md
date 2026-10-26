@@ -13,6 +13,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Approval request responses now carry `policy_version` and `parent_request_id` (Z10-T14), and the
+  approval engine has end-to-end HTTP tests: a policy with a skipped step and a two-branch group,
+  a policy edited while a request waits, and recall then resubmit.
 - Approval reminders and escalation (Z10-T8): a plan step with `reminder_minutes` is reminded once
   (its approvers get a high-priority notification), and with `escalate_to` the first person that
   token names is recorded as `escalated_to`, may then decide the step, and is notified; the

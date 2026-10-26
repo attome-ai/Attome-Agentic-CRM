@@ -1752,3 +1752,320 @@ fn a_repeated_timeout_sweep_enqueues_one_job() {
         drop_execution_jobs(&db, fixture.request_id).await;
     })
 }
+
+// ── Z10-T14: the approval engine end to end over HTTP ───────────────────────
+
+/// A `security.role_grant` policy with `plan`, replacing any other.
+async fn create_policy_with_plan(
+    app: &axum::Router,
+    db: &sqlx::PgPool,
+    admin_cookie: &str,
+    plan: Value,
+) -> Uuid {
+    cleanup_role_grant_policy(db).await;
+    let resp = app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            "/api/v1/admin/approval-policies".to_string(),
+            admin_cookie,
+            serde_json::json!({
+                "name": format!("engine-v2-{}", Uuid::now_v7()),
+                "action_type": "security.role_grant",
+                "plan": plan,
+            }),
+        ))
+        .await
+        .unwrap();
+    let status = resp.status();
+    let body = body_json(resp).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    body["id"].as_str().unwrap().parse().unwrap()
+}
+
+async fn gated_role_grant(app: &axum::Router, cookie: &str, user: Uuid, role: Uuid) -> Uuid {
+    let resp = app
+        .clone()
+        .oneshot(assign_role_request(cookie, user, role))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+    body_json(resp).await["approval_request_id"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap()
+}
+
+async fn current_row_version(db: &sqlx::PgPool, request_id: Uuid) -> i64 {
+    sqlx::query_scalar("SELECT row_version FROM approval_request WHERE id = $1")
+        .bind(request_id)
+        .fetch_one(db)
+        .await
+        .unwrap()
+}
+
+/// A policy with a skipped step (which also asks for step-up, never asked
+/// because it does not run), then a two-branch group: one branch for a role,
+/// one for a named user, both with a reminder. The reminder goes out once
+/// through the sweep; each branch's approver decides; the request is
+/// approved with the policy's version stamped, two grants and one audit
+/// event per decision.
+// feature: Z10
+#[test]
+fn full_policy_flow() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_requester_id, requester_cookie) = seed_user(&system, true).await;
+        let (role_member, role_member_cookie) = seed_user(&system, false).await;
+        let (named, named_cookie) = seed_user(&system, false).await;
+        let (target_user_id, _) = seed_user(&system, false).await;
+        let db = system.state().base.db.clone();
+        let approver_role = seed_role(&db).await;
+        let granted_role = seed_role(&db).await;
+        sqlx::query(
+            "INSERT INTO user_account_mm_role (id, user_ref, role_ref) VALUES ($1, $2, $3)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(role_member)
+        .bind(approver_role)
+        .execute(&db)
+        .await
+        .unwrap();
+        let state = system.state().clone();
+        let app = full_app(system);
+
+        create_policy_with_plan(
+            &app,
+            &db,
+            &requester_cookie,
+            serde_json::json!({ "steps": [
+                { "mode": "any", "approvers": [format!("user:{named}")], "sla_minutes": 600,
+                  "on_timeout": "escalate", "skip_unless": "1 > 2", "requires_step_up": true },
+                { "mode": "any", "approvers": [format!("role:{approver_role}")], "sla_minutes": 600,
+                  "on_timeout": "escalate", "group": 1, "reminder_minutes": 60 },
+                { "mode": "any", "approvers": [format!("user:{named}")], "sla_minutes": 600,
+                  "on_timeout": "escalate", "group": 1, "reminder_minutes": 60 },
+            ]}),
+        )
+        .await;
+        let request_id =
+            gated_role_grant(&app, &requester_cookie, target_user_id, granted_role).await;
+        let (skipped, step, policy_version): (Vec<i32>, i32, Option<i32>) = sqlx::query_as(
+            "SELECT skipped_steps, step, policy_version FROM approval_request WHERE id = $1",
+        )
+        .bind(request_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(skipped, vec![0], "the false condition skips the first step");
+        assert_eq!(step, 1, "the request starts at the group");
+        assert_eq!(policy_version, Some(1));
+
+        // The reminder: 90 minutes in, the sweep sends it once.
+        sqlx::query(
+            "UPDATE approval_request SET step_started_at = NOW() - INTERVAL '90 minutes' \
+             WHERE id = $1",
+        )
+        .bind(request_id)
+        .execute(&db)
+        .await
+        .unwrap();
+        attome_notification::approval_timeouts::run_due_approval_timeouts(&state, 500).await;
+        let reminded: Option<chrono::DateTime<chrono::Utc>> =
+            sqlx::query_scalar("SELECT reminded_at FROM approval_request WHERE id = $1")
+                .bind(request_id)
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        assert!(reminded.is_some(), "the group's reminder went out");
+
+        // Both branches decide.
+        for cookie in [&role_member_cookie, &named_cookie] {
+            let row_version = current_row_version(&db, request_id).await;
+            let resp = app
+                .clone()
+                .oneshot(eligible_decide_request(cookie, request_id, row_version))
+                .await
+                .unwrap();
+            let status = resp.status();
+            let body = body_json(resp).await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+        }
+        let status: String =
+            sqlx::query_scalar("SELECT status FROM approval_request WHERE id = $1")
+                .bind(request_id)
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        assert!(
+            status == "approved" || status == "executed",
+            "both branches approved: {status}"
+        );
+        let grants: Vec<i32> = sqlx::query_scalar(
+            "SELECT step FROM approval_grant WHERE request_id = $1 ORDER BY step",
+        )
+        .bind(request_id)
+        .fetch_all(&db)
+        .await
+        .unwrap();
+        assert_eq!(
+            grants,
+            vec![1, 2],
+            "one grant per branch, none for the skipped step"
+        );
+        let decisions: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM audit_ingest \
+             WHERE payload->>'entity_name' = 'approval_request' \
+               AND payload->>'record_id' = $1 \
+               AND payload->>'operation' IN ('Approved', 'Rejected')",
+        )
+        .bind(request_id.to_string())
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(decisions, 2, "one audit event per decision");
+        cleanup_role_grant_policy(&db).await;
+    })
+}
+
+/// A policy edited while a request waits does not change that request: it
+/// keeps the plan and version it was submitted under, and its approver
+/// decides it.
+// feature: Z10
+#[test]
+fn edit_policy_mid_flight_keeps_old_plan() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_requester_id, requester_cookie) = seed_user(&system, true).await;
+        let (first, first_cookie) = seed_user(&system, false).await;
+        let (second, _) = seed_user(&system, false).await;
+        let (target_user_id, _) = seed_user(&system, false).await;
+        let db = system.state().base.db.clone();
+        let role_id = seed_role(&db).await;
+        let app = full_app(system);
+
+        let step = |approver: Uuid| {
+            serde_json::json!({ "steps": [{ "mode": "any", "approvers": [format!("user:{approver}")],
+                                             "sla_minutes": 60, "on_timeout": "escalate" }] })
+        };
+        let policy_id = create_policy_with_plan(&app, &db, &requester_cookie, step(first)).await;
+        let request_id = gated_role_grant(&app, &requester_cookie, target_user_id, role_id).await;
+
+        let resp = app
+            .clone()
+            .oneshot(json_request(
+                "PUT",
+                format!("/api/v1/admin/approval-policies/{policy_id}"),
+                &requester_cookie,
+                serde_json::json!({ "plan": step(second), "row_version": 0 }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let resp = app
+            .clone()
+            .oneshot(eligible_decide_request(&first_cookie, request_id, 0))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "the version-1 approver still decides: {body}"
+        );
+        let (policy_version, plan): (Option<i32>, Value) =
+            sqlx::query_as("SELECT policy_version, plan FROM approval_request WHERE id = $1")
+                .bind(request_id)
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        assert_eq!(policy_version, Some(1));
+        assert_eq!(plan["steps"][0]["approvers"][0], format!("user:{first}"));
+        cleanup_role_grant_policy(&db).await;
+    })
+}
+
+/// The requester recalls a pending request and resubmits it corrected: the
+/// new request names the recalled one, and both stay readable.
+// feature: Z10
+#[test]
+fn recall_resubmit_history() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_requester_id, requester_cookie) = seed_user(&system, true).await;
+        let (approver, _) = seed_user(&system, false).await;
+        let (target_user_id, _) = seed_user(&system, false).await;
+        let db = system.state().base.db.clone();
+        let role_id = seed_role(&db).await;
+        let app = full_app(system);
+
+        create_policy_with_plan(
+            &app,
+            &db,
+            &requester_cookie,
+            serde_json::json!({ "steps": [{ "mode": "any", "approvers": [format!("user:{approver}")],
+                                             "sla_minutes": 60, "on_timeout": "escalate" }] }),
+        )
+        .await;
+        let first = gated_role_grant(&app, &requester_cookie, target_user_id, role_id).await;
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/v1/approvals/{first}/recall"))
+                    .header("cookie", &requester_cookie)
+                    .header("if-match", "\"0\"")
+                    .header("origin", "http://localhost:4200")
+                    .header("sec-fetch-site", "same-origin")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["status"], "recalled");
+
+        let resp = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                format!("/api/v1/approvals/{first}/resubmit"),
+                &requester_cookie,
+                serde_json::json!({ "payload": {
+                    "user_id": target_user_id, "role_id": role_id,
+                    "valid_until": null, "reason": "corrected",
+                }}),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        let second: Uuid = body["id"].as_str().unwrap().parse().unwrap();
+        assert_ne!(second, first);
+        assert_eq!(body["parent_request_id"], first.to_string());
+
+        for (id, status) in [(first, "recalled"), (second, "pending")] {
+            let resp = app
+                .clone()
+                .oneshot(plain_request(
+                    "GET",
+                    format!("/api/v1/admin/approvals/{id}"),
+                    &requester_cookie,
+                ))
+                .await
+                .unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = body_json(resp).await;
+            assert_eq!(body["status"], status, "{body}");
+        }
+        cleanup_role_grant_policy(&db).await;
+    })
+}

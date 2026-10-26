@@ -657,8 +657,7 @@ async fn dispatch_approved(
             serde_json::to_value(&item).map_err(AppError::internal)?
         }
         attome_document::import_routes::ACTION_IMPORT_APPLY => {
-            attome_document::import_routes::execute_approved_apply(state, &request.payload)
-                .await?
+            attome_document::import_routes::execute_approved_apply(state, &request.payload).await?
         }
         attome_records::query_admin::ACTION_QUERY_PUBLISH => {
             // Attributed to `request.requested_by` (whoever actually wrote
@@ -1545,6 +1544,10 @@ struct ApprovalRequestView {
     step_started_at: Option<DateTime<Utc>>,
     escalated_at: Option<DateTime<Utc>>,
     policy_id: Option<Uuid>,
+    /// Z10-T5: the version of the policy whose plan this request runs.
+    policy_version: Option<i32>,
+    /// Z10-T10: the recalled request this one resubmits.
+    parent_request_id: Option<Uuid>,
 }
 
 impl From<ApprovalRequest> for ApprovalRequestView {
@@ -1565,6 +1568,8 @@ impl From<ApprovalRequest> for ApprovalRequestView {
             step_started_at: r.step_started_at,
             escalated_at: r.escalated_at,
             policy_id: r.policy_id,
+            policy_version: r.policy_version,
+            parent_request_id: r.parent_request_id,
         }
     }
 }
