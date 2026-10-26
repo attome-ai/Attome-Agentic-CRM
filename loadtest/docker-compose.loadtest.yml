@@ -8,6 +8,8 @@
 # before doing anything destructive/heavy.
 #
 # Usage: docker compose -f docker-compose.loadtest.yml up -d
+#        (LOADTEST_PG_PORT / LOADTEST_CACHE_PORT move the host ports, e.g. when the
+#        test stack already holds 5556/6380; common.ps1 reads the same variables)
 #        docker compose -f docker-compose.loadtest.yml down -v   # wipe between runs
 
 services:
@@ -18,7 +20,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: loadtest-throwaway-pw
     ports:
-      - "5556:5432"
+      - "${LOADTEST_PG_PORT:-5556}:5432"
     volumes:
       # Postgres 18's image expects a mount at the parent dir (it manages
       # its own major-version-specific subdirectory now) — mounting at
@@ -33,7 +35,7 @@ services:
   dragonfly-loadtest:
     image: docker.dragonflydb.io/dragonflydb/dragonfly
     ports:
-      - "6380:6379"
+      - "${LOADTEST_CACHE_PORT:-6380}:6379"
     ulimits:
       memlock: -1
 

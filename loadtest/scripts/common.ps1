@@ -8,9 +8,9 @@
 
 $script:LoadtestDbName = "attome_loadtest"
 $script:LoadtestDbHost = "127.0.0.1"
-$script:LoadtestDbPort = 5556
+$script:LoadtestDbPort = if ($env:LOADTEST_PG_PORT) { [int]$env:LOADTEST_PG_PORT } else { 5556 }
 $script:LoadtestCacheHost = "127.0.0.1"
-$script:LoadtestCachePort = 6380
+$script:LoadtestCachePort = if ($env:LOADTEST_CACHE_PORT) { [int]$env:LOADTEST_CACHE_PORT } else { 6380 }
 $script:LoadtestBasePort = 7900
 $script:LoadtestJwtSecret = "loadtest-throwaway-jwt-secret-do-not-reuse-anywhere-else-32chars-min"
 $script:LoadtestApikeyHashPepper = "loadtest-throwaway-api_key-pepper-do-not-reuse-anywhere-else-32chars-min"
@@ -76,7 +76,12 @@ function New-LoadtestConfig {
         # P1.8d step 6 (P1.13 re-run): re-runs the same k6 matrix with
         # audit.chainer_enabled=true instead of this harness's prior default of
         # false, to compare against the 2026-07-19 sync-path baseline.
-        [switch]$ChainerEnabled
+        [switch]$ChainerEnabled,
+        # Y13-T6: "memory" runs the node as Solo does, with no Redis
+        # (cache.backend, docs/solo-memory-backend.md); "redis" (default) is
+        # the loadtest Dragonfly as before.
+        [ValidateSet("redis", "memory")]
+        [string]$CacheBackend = "redis"
     )
 
     $bootstrapLine = if ($BootstrapAdminEmail) { "`"$BootstrapAdminEmail`"" } else { "null" }
@@ -125,6 +130,7 @@ function New-LoadtestConfig {
     "disable_statement_cache": false
   },
   "cache": {
+    "backend": "$CacheBackend",
     "host": "$($script:LoadtestCacheHost)",
     "port": $($script:LoadtestCachePort),
     "password": "",
@@ -202,7 +208,9 @@ function Start-LoadtestNodes {
         [string]$BootstrapAdminEmail = "",
         [ValidateSet("direct", "pgbouncer")]
         [string]$Topology = "direct",
-        [switch]$ChainerEnabled
+        [switch]$ChainerEnabled,
+        [ValidateSet("redis", "memory")]
+        [string]$CacheBackend = "redis"
     )
     Assert-LoadtestSafety
 
@@ -228,7 +236,7 @@ function Start-LoadtestNodes {
         # which serde_json doesn't skip (fails "expected value at line 1
         # column 1") — write UTF-8 without BOM explicitly instead.
         $cfgJson = New-LoadtestConfig -Port $Port -BootstrapAdminEmail $BootstrapAdminEmail `
-            -Topology $Topology -ChainerEnabled:$ChainerEnabled
+            -Topology $Topology -ChainerEnabled:$ChainerEnabled -CacheBackend $CacheBackend
         [System.IO.File]::WriteAllText($cfgPath, $cfgJson, (New-Object System.Text.UTF8Encoding($false)))
 
         $env:APP_ENV = "debug"
@@ -295,9 +303,14 @@ function Start-LoadtestNodes {
     # results doc: a real multi-node deployment's nodes come up staggered in
     # practice (rolling restarts), but a simultaneous cold start (e.g. a
     # fresh docker-compose up --scale server=N) would hit this today.
+    # Y13-T6: seconds from process start to the first ready answer, per
+    # node, for footprint.ps1.
+    $script:NodeStartupSeconds = @{}
     foreach ($port in $ports) {
+        $startedAt = Get-Date
         Start-OneNode -Port $port
         Wait-NodeReady -Port $port
+        $script:NodeStartupSeconds[$port] = [Math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2)
     }
     Start-Sleep -Seconds 1
     Write-Host "$Count node(s) ready on ports: $($ports -join ', ')"
