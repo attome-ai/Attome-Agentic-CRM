@@ -16,6 +16,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Record timeline sources and provenance (B1-T1): `GET /api/v1/{entity}/{id}/timeline` adds approvals,
+  flow runs and agent runs; every entry carries `actor`, `actor_kind` (person, agent, flow, system),
+  `run_id` and `source_record`. The new setting `records.timeline_roll_in` rolls in related records
+  (an account's contacts), and new filters `actor`, `channel`, `from`, `to`, `q` and `related` apply
+  inside every source, so paging stays exact. Migration 0283 indexes the audit and approval sources
+  by record.
 - Data catalogue documentation (L4-T9): `docs/data-catalog.md` covers the asset index, visibility,
   the `/api/v1/catalog/*` routes, access requests, usage, agent tools and what is not built yet.
 - Data catalogue agent tools (L4-T7): `catalog.search`, `catalog.describe_asset` and `catalog.ask` (a

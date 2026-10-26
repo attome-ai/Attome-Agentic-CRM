@@ -166,6 +166,13 @@ mod tests {
             source_id: uuid::Uuid::now_v7(),
             summary: summary.into(),
             detail: json!({ "secret": "never shown" }),
+            actor: None,
+            actor_kind: attome_records::entity_crud::timeline::ActorKind::Person,
+            run_id: None,
+            source_record: attome_records::entity_crud::timeline::SourceRecord {
+                entity: "contact".into(),
+                id: uuid::Uuid::nil(),
+            },
         }
     }
 

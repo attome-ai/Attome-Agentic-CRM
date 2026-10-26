@@ -439,10 +439,38 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // B1-T1: the related records each entity's timeline rolls in.
+        SettingDescriptor::new(
+            "records.timeline_roll_in",
+            "The related records whose entries a record's timeline also shows, by entity: each a \
+         child entity and its lookup to this one, such as {\"account\": [{\"entity\": \"contact\", \
+         \"via\": \"account_id\"}]}. Only children the person may read roll in, the newest 200 \
+         per relationship. Empty by default: a timeline shows its own record only.",
+            || {
+                json!({
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "maxItems": 10,
+                        "items": {
+                            "type": "object",
+                            "required": ["entity", "via"],
+                            "properties": {
+                                "entity": {"type": "string"},
+                                "via": {"type": "string"}
+                            }
+                        }
+                    }
+                })
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!({}),
+        ),
         // B5-T4: a person's saved bulk edits.
         SettingDescriptor::new(
             "records.bulk_actions",
-            "The person's saved bulk edits, by entity: each a name and the operations it              applies, rerun from the bulk edit dialog.",
+            "The person's saved bulk edits, by entity: each a name and the operations it applies, rerun from the bulk edit dialog.",
             || {
                 json!({
                     "type": "object",

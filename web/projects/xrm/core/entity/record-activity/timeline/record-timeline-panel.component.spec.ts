@@ -13,7 +13,11 @@ function entry(id: string, kind: TimelineEntry['kind'], summary: string): Timeli
     source_id: id,
     summary,
     detail: {},
-  };
+    actor: null,
+    actor_kind: 'person',
+    run_id: null,
+    source_record: { entity: 'contact', id: 'c1' },
+  } as TimelineEntry;
 }
 
 describe('RecordTimelinePanelComponent', () => {

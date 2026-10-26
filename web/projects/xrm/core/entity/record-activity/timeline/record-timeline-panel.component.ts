@@ -7,13 +7,18 @@ import {
   RecordTimelineService, TIMELINE_KINDS, TimelineEntry, TimelineEntryKind,
 } from './record-timeline.service';
 
-const KIND_ICONS: Record<TimelineEntryKind, string> = {
+// Keyed by string so the B1-T1 kinds render before and after the API types
+// list them.
+const KIND_ICONS: Record<string, string> = {
   audit_event:      'las la-pen',
   state_transition: 'las la-sync',
   communication:    'las la-envelope',
   note:             'las la-sticky-note',
   activity:         'las la-tasks',
   decision:         'las la-gavel',
+  approval:         'las la-check-circle',
+  flow_run:         'las la-project-diagram',
+  agent_run:        'las la-robot',
 };
 
 /** Entries fetched per page. */

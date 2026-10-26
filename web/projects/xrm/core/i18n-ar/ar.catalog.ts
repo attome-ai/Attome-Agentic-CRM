@@ -943,6 +943,7 @@ export const xrmAr = {
     kinds: {
       audit_event: 'التغييرات', state_transition: 'الحالة', communication: 'المراسلات',
       note: 'الملاحظات', activity: 'الأنشطة', decision: 'القرارات',
+      approval: 'الموافقات', flow_run: 'تشغيلات التدفق', agent_run: 'تشغيلات الوكيل',
     },
     empty: 'لم يحدث شيء على هذا السجل بعد.',
     error: 'تعذر تحميل الخط الزمني.',

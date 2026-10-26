@@ -542,6 +542,7 @@ fn opts(page_size: i64, cursor: Option<String>) -> TimelineOptions {
         cursor,
         page_size: Some(page_size),
         kinds: None,
+        ..Default::default()
     })
     .expect("valid timeline query")
 }

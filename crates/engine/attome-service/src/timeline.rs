@@ -56,6 +56,9 @@ pub async fn build_timeline(
         cursor: None,
         page_size: MAX_PAGE_SIZE,
         kinds: Some(TICKET_TIMELINE_KINDS.into_iter().collect::<HashSet<_>>()),
+        // The ticket alone, as this route has always shown it.
+        related: false,
+        ..Default::default()
     };
     let page = record_timeline(state, ctx, TICKET_ENTITY, ticket_id, &opts).await?;
     let total = page.items.len() as i64;
