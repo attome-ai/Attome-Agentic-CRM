@@ -88,6 +88,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/query').then(m => m.QueryListComponent),
           },
           {
+            // A14-T3: before `queries/:id`, which would take `builder` for an id.
+            path: 'queries/builder',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/query').then(m => m.QueryBuilderComponent),
+          },
+          {
             path: 'queries/:id',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/query').then(m => m.QueryEditorComponent),

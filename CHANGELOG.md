@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Query builder screen (A14-T3): `/xrm/admin/queries/builder` builds a QuerySpec by clicking (columns,
+  related columns by path, conditions, grouping with date buckets and summaries, sort) or from a sentence
+  (`search.parse_filter`, shown as a proposal until applied), runs it through `query/run` and saves it as a
+  stored query.
 - Timeline pins, gaps, inline actions and live updates (B1-T2): `PUT`/`DELETE
   /api/v1/{entity}/{id}/timeline/pins/{kind}/{source_id}` pin an entry for everyone who opens the record
   (record update access, at most 50, migration 0284); timeline entries carry `pinned` and

@@ -1,0 +1,199 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'queryBuilder.title' | translate }}</h2>
+    <p class="subtitle">{{ 'queryBuilder.subtitle' | translate }}</p>
+  </div>
+</div>
+
+<section class="card qb-section" data-testid="qb-sentence">
+  <label for="qb-sentence">{{ 'queryBuilder.sentenceLabel' | translate }}</label>
+  <div class="qb-row">
+    <textarea id="qb-sentence" class="qb-grow" [placeholder]="'queryBuilder.sentencePlaceholder' | translate"
+              [ngModel]="sentence()" (ngModelChange)="sentence.set($event)" data-testid="qb-sentence-text"></textarea>
+    <button type="button" class="btn-primary" (click)="ask()" [disabled]="asking() || !sentence().trim()"
+            data-testid="qb-ask">
+      {{ (asking() ? 'queryBuilder.asking' : 'queryBuilder.ask') | translate }}
+    </button>
+  </div>
+  @if (declined()) {
+    <p class="hint" role="status" data-testid="qb-declined">{{ 'queryBuilder.declined' | translate }}</p>
+  }
+  @if (proposal(); as p) {
+    <div class="qb-proposal" role="note" data-testid="qb-proposal">
+      <p>{{ 'queryBuilder.proposal' | translate: { entity: p.entity, count: p.conditions.length } }}</p>
+      <ul>
+        @for (c of p.conditions; track $index) {
+          <li><span class="cell-mono">{{ c.field }}</span> {{ 'queryBuilder.ops.' + c.op | translate }} {{ c.value }}</li>
+        }
+        @if (p.extraWhere) {
+          <li>{{ 'queryBuilder.extraWhere' | translate }}</li>
+        }
+      </ul>
+      <div class="qb-row">
+        <button type="button" class="btn-primary" (click)="applyProposal()" data-testid="qb-apply">
+          {{ 'queryBuilder.apply' | translate }}
+        </button>
+        <button type="button" class="btn-ghost" (click)="dismissProposal()">{{ 'queryBuilder.dismiss' | translate }}</button>
+      </div>
+    </div>
+  }
+</section>
+
+<section class="card qb-section">
+  <label for="qb-entity">{{ 'queryBuilder.entity' | translate }}</label>
+  <div class="qb-row">
+    <input id="qb-entity" class="mono-input" [ngModel]="entityInput()" (ngModelChange)="entityInput.set($event)"
+           data-testid="qb-entity" />
+    <button type="button" class="btn-ghost" (click)="loadEntity()" data-testid="qb-load">
+      {{ 'queryBuilder.load' | translate }}
+    </button>
+  </div>
+  @if (schemaError()) { <p class="error-msg" role="alert">{{ schemaError() }}</p> }
+
+  @if (fields().length) {
+    <h4>{{ 'queryBuilder.columns' | translate }}</h4>
+    <div class="qb-columns">
+      @for (f of fields(); track f.name) {
+        <label class="qb-check">
+          <input type="checkbox" [checked]="state().select.includes(f.name)" (change)="toggleColumn(f.name)"
+                 [attr.data-column]="f.name" />
+          {{ f.display_name || f.name }}
+        </label>
+      }
+    </div>
+    <div class="qb-row">
+      <input class="mono-input" [placeholder]="'queryBuilder.relatedPlaceholder' | translate"
+             [ngModel]="relatedPath()" (ngModelChange)="relatedPath.set($event)" data-testid="qb-related" />
+      <button type="button" class="btn-ghost" (click)="addRelated()" data-testid="qb-add-related">
+        {{ 'queryBuilder.addRelated' | translate }}
+      </button>
+    </div>
+    @if (state().select.length) {
+      <p class="hint">{{ 'queryBuilder.selected' | translate }} <span class="cell-mono">{{ state().select.join(', ') }}</span></p>
+    }
+
+    <h4>{{ 'queryBuilder.conditions' | translate }}</h4>
+    @for (c of state().conditions; track $index; let i = $index) {
+      <div class="qb-row" data-testid="qb-condition">
+        <select [ngModel]="c.field" (ngModelChange)="setCondition(i, { field: $event })" [attr.aria-label]="'queryBuilder.field' | translate">
+          <option value="">{{ 'queryBuilder.pickField' | translate }}</option>
+          @for (f of fields(); track f.name) { <option [value]="f.name">{{ f.display_name || f.name }}</option> }
+        </select>
+        <select [ngModel]="c.op" (ngModelChange)="setCondition(i, { op: $event })" [attr.aria-label]="'queryBuilder.operator' | translate">
+          @for (op of operators; track op) { <option [value]="op">{{ 'queryBuilder.ops.' + op | translate }}</option> }
+        </select>
+        @if (c.op !== 'is_null' && c.op !== 'is_not_null') {
+          <input [ngModel]="c.value" (ngModelChange)="setCondition(i, { value: $event })"
+                 [attr.aria-label]="'queryBuilder.value' | translate" />
+        }
+        <button type="button" class="btn-text" (click)="removeCondition(i)" [attr.aria-label]="'queryBuilder.remove' | translate">
+          <i class="las la-times" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+    @if (state().extraWhere) { <p class="hint">{{ 'queryBuilder.extraWhere' | translate }}</p> }
+    <button type="button" class="btn-ghost" (click)="addCondition()" data-testid="qb-add-condition">
+      {{ 'queryBuilder.addCondition' | translate }}
+    </button>
+
+    <h4>{{ 'queryBuilder.grouping' | translate }}</h4>
+    @for (g of state().groups; track $index; let i = $index) {
+      <div class="qb-row" data-testid="qb-group">
+        <select [ngModel]="g.field" (ngModelChange)="setGroup(i, { field: $event })" [attr.aria-label]="'queryBuilder.field' | translate">
+          <option value="">{{ 'queryBuilder.pickField' | translate }}</option>
+          @for (f of fields(); track f.name) { <option [value]="f.name">{{ f.display_name || f.name }}</option> }
+        </select>
+        @if (dateFields().has(g.field)) {
+          <select [ngModel]="g.bucket" (ngModelChange)="setGroup(i, { bucket: $event })" [attr.aria-label]="'queryBuilder.bucket' | translate">
+            <option value="">{{ 'queryBuilder.exactValue' | translate }}</option>
+            @for (b of buckets; track b) { <option [value]="b">{{ 'queryBuilder.buckets.' + b | translate }}</option> }
+          </select>
+        }
+        <button type="button" class="btn-text" (click)="removeGroup(i)" [attr.aria-label]="'queryBuilder.remove' | translate">
+          <i class="las la-times" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+    @for (a of state().aggregates; track $index; let i = $index) {
+      <div class="qb-row" data-testid="qb-aggregate">
+        <select [ngModel]="a.func" (ngModelChange)="setAggregate(i, { func: $event })" [attr.aria-label]="'queryBuilder.function' | translate">
+          @for (fn of funcs; track fn) { <option [value]="fn">{{ 'queryBuilder.funcs.' + fn | translate }}</option> }
+        </select>
+        <select [ngModel]="a.field" (ngModelChange)="setAggregate(i, { field: $event })" [attr.aria-label]="'queryBuilder.field' | translate">
+          <option value="">{{ 'queryBuilder.records' | translate }}</option>
+          @for (f of fields(); track f.name) { <option [value]="f.name">{{ f.display_name || f.name }}</option> }
+        </select>
+        <input class="mono-input" [ngModel]="a.alias" (ngModelChange)="setAggregate(i, { alias: $event })"
+               [attr.aria-label]="'queryBuilder.alias' | translate" />
+        <button type="button" class="btn-text" (click)="removeAggregate(i)" [attr.aria-label]="'queryBuilder.remove' | translate">
+          <i class="las la-times" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+    <div class="qb-row">
+      <button type="button" class="btn-ghost" (click)="addGroup()" data-testid="qb-add-group">{{ 'queryBuilder.addGroup' | translate }}</button>
+      <button type="button" class="btn-ghost" (click)="addAggregate()" data-testid="qb-add-aggregate">{{ 'queryBuilder.addAggregate' | translate }}</button>
+    </div>
+
+    <h4>{{ 'queryBuilder.sort' | translate }}</h4>
+    <div class="qb-row">
+      <select [ngModel]="state().sortField" (ngModelChange)="update({ sortField: $event })" [attr.aria-label]="'queryBuilder.sort' | translate">
+        <option value="">{{ 'queryBuilder.noSort' | translate }}</option>
+        @for (f of fields(); track f.name) { <option [value]="f.name">{{ f.display_name || f.name }}</option> }
+      </select>
+      <label class="qb-check">
+        <input type="checkbox" [checked]="state().sortDesc" (change)="update({ sortDesc: !state().sortDesc })" />
+        {{ 'queryBuilder.descending' | translate }}
+      </label>
+    </div>
+  }
+</section>
+
+<section class="card qb-section">
+  <div class="qb-row">
+    <button type="button" class="btn-primary" (click)="run()" [disabled]="running() || !state().entity"
+            data-testid="qb-run">
+      {{ (running() ? 'queryBuilder.running' : 'queryBuilder.run') | translate }}
+    </button>
+    <input [placeholder]="'queryBuilder.saveName' | translate" [ngModel]="saveName()" (ngModelChange)="saveName.set($event)"
+           data-testid="qb-save-name" />
+    <button type="button" class="btn-ghost" (click)="save()" [disabled]="!saveName().trim() || !state().entity"
+            data-testid="qb-save">
+      {{ 'queryBuilder.save' | translate }}
+    </button>
+    @if (saved()) { <span class="badge" role="status">{{ 'queryBuilder.saved' | translate }}</span> }
+  </div>
+  @if (runError()) { <p class="error-msg" role="alert" data-testid="qb-error">{{ runError() }}</p> }
+
+  @if (groups(); as gs) {
+    <div class="table-wrap">
+      <table data-testid="qb-groups">
+        <thead><tr>@for (col of groupColumns(); track col) { <th scope="col">{{ col }}</th> }</tr></thead>
+        <tbody>
+          @for (g of gs; track $index) {
+            <tr>
+              @for (col of groupColumns(); track col) {
+                <td>{{ cell(g.keys[col] ?? g.values[col]) }}</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (rows(); as rs) {
+    @if (rs.length === 0) {
+      <p class="hint" data-testid="qb-empty">{{ 'queryBuilder.noRows' | translate }}</p>
+    } @else {
+      <div class="table-wrap">
+        <table data-testid="qb-rows">
+          <thead><tr>@for (col of columns(); track col) { <th scope="col">{{ col }}</th> }</tr></thead>
+          <tbody>
+            @for (r of rs; track $index) {
+              <tr>@for (col of columns(); track col) { <td>{{ cell(r[col]) }}</td> }</tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</section>

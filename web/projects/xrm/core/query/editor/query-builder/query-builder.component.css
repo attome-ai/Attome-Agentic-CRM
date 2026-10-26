@@ -1,0 +1,26 @@
+/* A14-T3: the query builder. Logical properties only, so Arabic mirrors. */
+:host { display: block; }
+
+.qb-section { display: flex; flex-direction: column; gap: 8px; margin-block-end: 12px; }
+.qb-section h4 { margin-block: 8px 0; }
+
+.qb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.qb-grow { flex: 1 1 280px; min-block-size: 56px; font: inherit; }
+
+.qb-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px 12px;
+}
+
+.qb-check { display: inline-flex; align-items: center; gap: 6px; }
+
+.qb-proposal {
+  padding-block: 8px;
+  padding-inline: 12px;
+  border: 1px solid var(--color-accent, #14b8a6);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 8%, transparent);
+}
+
+.qb-proposal ul { margin-block: 4px 8px; padding-inline-start: 20px; }

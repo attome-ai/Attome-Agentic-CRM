@@ -11,5 +11,7 @@ export type {
 } from '@attome/xrm/core/query/data';
 export { QueryListComponent }         from './list/query-list/query-list.component';
 export { QueryEditorComponent }       from './editor/query-editor/query-editor.component';
+// A14-T3: build a query by clicking or by a sentence.
+export { QueryBuilderComponent }      from './editor/query-builder/query-builder.component';
 export { ViewListComponent }          from './view/list/view-list/view-list.component';
 export { ViewEditorComponent }        from './view/editor/view-editor/view-editor.component';
