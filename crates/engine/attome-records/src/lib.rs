@@ -50,6 +50,8 @@ pub mod entity_mutation;
 /// Z11-T12: one expression checked for an editor or agent.
 pub mod expression_check;
 pub mod import_choice_match;
+/// A23-T4: validating a staged import (the dry run).
+pub mod import_validate;
 /// C-10 — the shared mutation-commit orchestration helper (creator share,
 /// file mirror, audit write, commit, post-commit invalidation, rw-pin).
 /// `pub`, not `pub(crate)`: `attome-server::communication` and

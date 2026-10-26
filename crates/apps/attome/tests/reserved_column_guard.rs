@@ -229,6 +229,18 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "Quotes the `match` key's columns for the conflict predicate and the unique index. The create and update branches write through create_one/update_one, i.e. build_insert_binds/build_update_binds below, which carry the system-column exclusion; no SET clause is built here.",
     ),
     (
+        "crates/engine/attome-records/src/import_validate.rs",
+        "resolve_lookup_batch",
+        Projection,
+        "A23-T4: a SELECT and `= ANY` predicate on the lookup target's name, code or key attribute (from the import mapping, checked against the target's metadata); reads only.",
+    ),
+    (
+        "crates/engine/attome-records/src/import_validate.rs",
+        "match_existing",
+        Projection,
+        "A23-T4: a JOIN predicate on the job's match_columns (checked against the entity's metadata) to find the records an import row matches; reads only.",
+    ),
+    (
         "crates/engine/attome-records/src/access_plan.rs",
         "projection",
         Projection,

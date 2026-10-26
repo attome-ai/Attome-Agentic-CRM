@@ -13,6 +13,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Import validation, the dry run (A23-T4): `attome_records::import_validate::validate` maps a staged
+  import's rows (rename, skip, split, constant), converts each cell to its field's type and runs the
+  generic create validator, resolves lookups by id, name, code or external key with one query per
+  lookup field per 2,000-row batch, matches existing records by the job's `match_columns`, runs the
+  duplicate check and flags a key repeated inside the file. Row errors are
+  `{field, code, message_key}`; the job gets `{create, update, skip, invalid, duplicates}` and
+  becomes `validated`. No entity row is written.
 - Saved-query sharing and parameter defaults (A14-T2): a saved query's parameters take an optional
   `default` of their type, used when a run leaves them out. `PUT /api/v1/admin/query-shares/{id}`
   shares a stored query with roles and teams to `read` (run it by id through `query/run` without

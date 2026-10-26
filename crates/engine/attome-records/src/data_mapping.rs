@@ -247,7 +247,7 @@ pub(crate) async fn load_choice_matchers(
 /// Maps a cell to the stored choice value(s) it names; a value already in
 /// stored form passes through unchanged. An empty cell is null; non-text
 /// cells are left for the field validator.
-fn match_choice_value(
+pub(crate) fn match_choice_value(
     matcher: &ChoiceMatcher,
     multi: bool,
     attr: &str,
