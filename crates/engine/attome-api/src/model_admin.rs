@@ -102,6 +102,16 @@ pub async fn refresh_cooked(state: &EngineState) -> Result<(), AppError> {
         attome_model::publish::cook_published(db, kinds(), Some(&previous.manifest)).await?;
     let hash = attome_model::switch::store_manifest(db, &manifest).await?;
     let switched = attome_model::switch::record(&mut tx, &hash, None).await?;
+    // AD6-T2: a new version is documented by a durable job enqueued in the
+    // same transaction, so the job exists exactly when the version does.
+    if switched.from != Some(switched.to) {
+        attome_jobs::enqueue_in_tx(
+            &mut tx,
+            attome_ai::builder::docs::publish_docs_job(switched.to),
+        )
+        .await
+        .map_err(AppError::internal)?;
+    }
     attome_db::tx::commit(tx).await?;
     cooked().load_version(db, switched.to, manifest).await?;
     attome_model::switch::record_node_switch(db, node(), switched.to).await?;
@@ -2515,6 +2525,51 @@ pub(crate) struct NodeSwitchView {
     switched_at: DateTime<Utc>,
 }
 
+/// The language of a version's documentation.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct VersionDocQuery {
+    /// `en` (the default) or `ar`.
+    pub lang: Option<String>,
+}
+
+/// A published version's documentation
+///
+/// AD6-T2: the documentation the publish of `version` generated: its
+/// entities and fields, flows, rules and the changes since the version
+/// before, as Markdown in English or Arabic. 404 until the job has written
+/// it.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/metadata/versions/{version}/docs",
+    operation_id = "get_metadata_version_docs",
+    tag = "admin",
+    params(("version" = i64, Path, description = "A published metadata version"), VersionDocQuery),
+    responses(
+        (status = 200, description = "The version's documentation", body = attome_ai::builder::docs::VersionDoc),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such version, or its documentation is not written yet", body = ErrorResponse),
+        (status = 422, description = "A language other than en and ar", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn version_docs(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(version): Path<i64>,
+    Query(query): Query<VersionDocQuery>,
+) -> Result<Json<attome_ai::builder::docs::VersionDoc>, AppError> {
+    let lang = query.lang.as_deref().unwrap_or("en");
+    if !attome_ai::builder::docs::LANGS.contains(&lang) {
+        return Err(AppError::Validation("lang is en or ar".into()));
+    }
+    attome_ai::builder::docs::read_doc(&state, version, lang)
+        .await?
+        .map(Json)
+        .ok_or(AppError::NotFound)
+}
+
 /// Lists the nodes serving a metadata version, earliest switch first
 /// (Y8-T10). A node missing from the list has not loaded the version yet.
 #[utoipa::path(
@@ -2565,6 +2620,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/admin/metadata/versions/{version}/nodes",
             get(version_nodes),
+        )
+        .route(
+            "/api/v1/admin/metadata/versions/{version}/docs",
+            get(version_docs),
         )
         .route("/api/v1/admin/metadata/rollback", post(rollback_version))
         .route(
@@ -2644,6 +2703,7 @@ pub fn routes() -> Router<EngineState> {
         switch_version,
         list_versions,
         version_nodes,
+        version_docs,
         rollback_version,
         option_merge::merge_values,
         flow_template::instantiate,

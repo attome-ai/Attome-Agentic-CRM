@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Documentation per publish (AD6-T2): each publish that records a metadata version enqueues a job
+  (`metadata_publish_docs`) that writes the version's documentation in English and Arabic (entities and
+  fields, flows, rules, changes since the previous version) to `metadata_version_doc` (migration 0285);
+  `GET /api/v1/admin/metadata/versions/{version}/docs?lang=` reads it.
 - Query builder screen (A14-T3): `/xrm/admin/queries/builder` builds a QuerySpec by clicking (columns,
   related columns by path, conditions, grouping with date buckets and summaries, sort) or from a sentence
   (`search.parse_filter`, shown as a proposal until applied), runs it through `query/run` and saves it as a

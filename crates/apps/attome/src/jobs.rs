@@ -3527,6 +3527,20 @@ pub const HEAVY_OP_UNDO_RETENTION: attome_jobs::JobType =
 pub fn register_job_types() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
+        // AD6-T2: a published version's documentation.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            attome_ai::builder::docs::PUBLISH_DOCS,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_ai::builder::docs::PublishDocsPayload = job.payload()?;
+                attome_ai::builder::docs::generate(&state, payload.version)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(version = payload.version, "metadata version documented");
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             HEAVY_OP_UNDO_RETENTION,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
