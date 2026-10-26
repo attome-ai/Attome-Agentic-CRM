@@ -944,6 +944,8 @@ impl EngineSystemBuilder {
         state.settings_writer = Some(Arc::new(crate::settings_admin::ApiSettingsWriter));
         // A25-T7: search's `mode=ask` reaches the model actions through this.
         state.search_asker = Some(Arc::new(attome_ai::actions::search_ask::AiSearchAsker));
+        // L4-T7: the catalogue's agent tools reach it through this.
+        state.catalog_tools = Some(Arc::new(crate::catalog_admin::ApiCatalogTools));
         // E8-T1 — the registered step handlers and kind guards, frozen the
         // same way.
         state.workflow_step_handlers = std::sync::Arc::new(self.workflow_step_handlers);

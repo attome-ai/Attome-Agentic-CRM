@@ -16,6 +16,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Data catalogue agent tools (L4-T7): `catalog.search`, `catalog.describe_asset` and `catalog.ask` (a
+  cited answer from the assets a search finds) read as the person; `catalog.draft_descriptions`
+  proposes descriptions that stay drafts until a builder approves them, and an agent's call waits for
+  a person's confirmation. They reach the catalogue through the new `CatalogTools` seam.
 - Catalogue usage and the personal data map (L4-T5): the nightly usage rollup keeps each entity's
   readers by kind (stored queries and reports, flows, dashboards, rules; from the metadata
   references) and an `unused` flag (no write in 90 days, no search in 30, no reader), shown on the

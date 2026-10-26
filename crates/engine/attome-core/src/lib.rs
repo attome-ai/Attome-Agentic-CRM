@@ -73,6 +73,8 @@ pub mod cache_sensitivity;
 /// D-517 — the single `calendar` loader: strict parsing into a
 /// `attome_calendar::BusinessCalendar`, typed unresolved reasons, content hash.
 pub mod calendar;
+/// L4-T7: the seam the catalogue agent tools reach the catalogue through.
+pub mod catalog_tools;
 pub mod change_feed;
 pub mod change_log;
 /// Solution 7 Phase 1 (D-785) — the changeset recorder core: layers, the v1

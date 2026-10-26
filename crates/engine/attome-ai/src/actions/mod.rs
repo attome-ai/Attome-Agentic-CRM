@@ -29,6 +29,8 @@ pub mod bulk;
 pub mod business;
 /// Z12-T12: holidays an agent lists and proposes.
 pub mod calendar;
+/// L4-T7: the data catalogue tools.
+pub mod catalog;
 pub mod claim_check;
 pub mod classify;
 pub mod collections;
@@ -133,6 +135,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(record_update_field::descriptor());
     all.extend(business::descriptors());
     all.extend(search_ask::descriptors());
+    all.extend(catalog::descriptors());
     all.extend(record_write::descriptors());
     all.extend(bulk::descriptors());
     all.extend(transition::descriptors());
@@ -224,6 +227,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(record_update_field::RecordUpdateField));
     all.extend(business::executors());
     all.extend(search_ask::executors());
+    all.extend(catalog::executors());
     all.extend(record_write::executors());
     all.extend(bulk::executors());
     all.push(Box::new(transition::RecordTransitions));

@@ -100,6 +100,11 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::agent_playground::playground_system_prompt(),
         },
         PromptEntry {
+            action_id: crate::actions::catalog::CATALOG_ASK,
+            version: crate::actions::catalog::ASK_PROMPT_VERSION,
+            text: crate::actions::catalog::ask_system_prompt(),
+        },
+        PromptEntry {
             action_id: crate::actions::search_ask::SEARCH_PARSE_FILTER,
             version: crate::actions::search_ask::PARSE_PROMPT_VERSION,
             // The caller's readable metadata goes in its own untrusted segment.

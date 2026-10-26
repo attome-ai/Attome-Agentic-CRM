@@ -880,6 +880,75 @@ async fn personal_data_map(
     )))
 }
 
+/// L4-T7: the catalogue for its agent tools, behind
+/// `attome_core::catalog_tools::CatalogTools`. Each call checks
+/// `metadata.read` and applies the caller's catalogue visibility, as the
+/// routes above do.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ApiCatalogTools;
+
+impl attome_core::catalog_tools::CatalogTools for ApiCatalogTools {
+    fn search<'a>(
+        &'a self,
+        state: &'a EngineState,
+        ctx: &'a SecurityContext,
+        q: Option<&'a str>,
+        kind: Option<&'a str>,
+        limit: i64,
+    ) -> attome_core::catalog_tools::CatalogFuture<'a> {
+        Box::pin(async move {
+            ctx.require_key(METADATA_READ)?;
+            let scope = catalog_index::asset_scope(state, ctx);
+            let filter = catalog_index::AssetFilter {
+                q: q.map(str::to_owned),
+                kind: kind.map(str::to_owned),
+                domain: None,
+                label: None,
+            };
+            let (items, total, facets) =
+                catalog_index::search_assets(state, &scope, &filter, limit.clamp(1, 50), 0).await?;
+            Ok(serde_json::json!({ "items": items, "total": total, "facets": facets }))
+        })
+    }
+
+    fn describe<'a>(
+        &'a self,
+        state: &'a EngineState,
+        ctx: &'a SecurityContext,
+        asset: Uuid,
+    ) -> attome_core::catalog_tools::CatalogFuture<'a> {
+        Box::pin(async move {
+            ctx.require_key(METADATA_READ)?;
+            let scope = catalog_index::asset_scope(state, ctx);
+            let page = catalog_index::asset_page(state, &scope, asset).await?;
+            serde_json::to_value(page).map_err(AppError::internal)
+        })
+    }
+
+    fn draft_description<'a>(
+        &'a self,
+        state: &'a EngineState,
+        ctx: &'a SecurityContext,
+        asset: Uuid,
+        row_version: i64,
+        description_en: Option<&'a str>,
+        description_ar: Option<&'a str>,
+    ) -> attome_core::catalog_tools::CatalogFuture<'a> {
+        Box::pin(async move {
+            ctx.require_key(METADATA_READ)?;
+            let scope = catalog_index::asset_scope(state, ctx);
+            let body = catalog_index::CatalogDescriptionBody {
+                description_en: description_en.map(str::to_owned),
+                description_ar: description_ar.map(str::to_owned),
+            };
+            let drafted =
+                catalog_index::set_description(state, ctx, &scope, asset, row_version, &body)
+                    .await?;
+            serde_json::to_value(drafted).map_err(AppError::internal)
+        })
+    }
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/catalog/entities", get(list_entities))

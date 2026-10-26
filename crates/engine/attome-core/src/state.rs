@@ -245,6 +245,9 @@ pub struct EngineState {
     /// A25-T7 — asking search in words, registered by `attome-api` with
     /// `attome-ai`'s implementation. `None` on a bare state (`search_ask.rs`).
     pub search_asker: Option<Arc<dyn crate::search_ask::SearchAsker>>,
+    /// L4-T7 — the data catalogue for its agent tools, registered by
+    /// `attome-api`. `None` on a bare state (`catalog_tools.rs`).
+    pub catalog_tools: Option<Arc<dyn crate::catalog_tools::CatalogTools>>,
     /// E8-T1 — the step handlers engines registered on the builder, by node
     /// key, frozen at build (`workflow_step.rs`). Empty on a bare state.
     pub workflow_step_handlers: Arc<
@@ -344,6 +347,7 @@ impl EngineState {
             stock_source: None,
             settings_writer: None,
             search_asker: None,
+            catalog_tools: None,
             workflow_step_handlers: Arc::new(std::collections::HashMap::new()),
             workflow_kind_guards: Arc::new(std::collections::HashMap::new()),
         }
