@@ -31,6 +31,8 @@ pub mod business;
 pub mod calendar;
 /// L4-T7: the data catalogue tools.
 pub mod catalog;
+/// L7-T8: `changes.since`, catching up from a delta token.
+pub mod changes;
 pub mod claim_check;
 pub mod classify;
 pub mod collections;
@@ -139,6 +141,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
     all.extend(timeline::descriptors());
+    all.push(changes::descriptor());
     all.push(crate::builder::explain::descriptor());
     all.extend(record_write::descriptors());
     all.extend(bulk::descriptors());
@@ -233,6 +236,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(search_ask::executors());
     all.extend(catalog::executors());
     all.extend(timeline::executors());
+    all.push(Box::new(changes::ChangesSince));
     all.push(Box::new(crate::builder::explain::BuilderExplain));
     all.extend(record_write::executors());
     all.extend(bulk::executors());

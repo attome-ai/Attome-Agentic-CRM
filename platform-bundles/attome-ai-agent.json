@@ -31,6 +31,7 @@
               "billing.payment_link.create", "billing.renewal.draft", "billing.subscription.read",
               "billing.usage.read", "bot.handoff", "builder.explain", "calendar.list_holidays", "calendar.propose_holiday",
               "catalog.ask", "catalog.describe_asset", "catalog.draft_descriptions", "catalog.search",
+              "changes.since",
               "code.generate", "collections.record_promise", "collections.send_reminder",
               "commission.draft_plan_from_policy", "commission.explain_line", "deliverability.explain",
               "deliverability.propose_segment", "document.extract", "duplicates.check", "duplicates.list",
