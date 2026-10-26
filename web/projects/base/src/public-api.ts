@@ -71,6 +71,8 @@ export type { LanguageDef }                        from './lib/i18n/languages';
 // Used by `@attome/base/dialog` and `@attome/base/step-up` (NGB-5.1b/c, D-760):
 // one modal stack for the whole app, so it has to be one module instance.
 export { trapFocus }                       from './lib/a11y/focus-trap';
+export { Announcer, ANNOUNCE_DELAY_MS, ANNOUNCER_ATTR } from './lib/announcer.service';
+export type { Politeness }                 from './lib/announcer.service';
 export { pushModal }                       from './lib/a11y/modal-stack';
 export type { ModalHandle }                from './lib/a11y/modal-stack';
 

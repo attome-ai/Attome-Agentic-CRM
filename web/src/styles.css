@@ -95,6 +95,18 @@ html.attome-reduced-motion *::after {
   transition: none !important;
   scroll-behavior: auto !important;
 }
+/* B22-T3: the device's own reduce-motion setting counts the same as the
+   person's setting above. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .xrm-main > router-outlet + *,
   .xrm-main attome-metadata-list,

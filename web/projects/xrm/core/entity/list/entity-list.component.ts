@@ -8,7 +8,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type { Observable, Subscription } from 'rxjs';
-import { ApiError, CurrencyService, LangService, LiveChannel, TranslatePipe } from '@attome/base';
+import { Announcer, ApiError, CurrencyService, LangService, LiveChannel, TranslatePipe } from '@attome/base';
 import type { LiveRecords } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityRecord, FieldType, ListFilter, LookupMeta } from '@attome/xrm';
@@ -271,6 +271,8 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   /** B4-T4: `?tag=<id>` from the tag page: only records carrying that tag. */
   readonly tagFilter = signal<string | null>(null);
   private readonly live = inject(LiveChannel);
+  /** B22-T3: new rows are read out; the bar alone is inserted silently. */
+  private readonly announcer = inject(Announcer);
   /** A13-T4: records created since the list loaded, shown as a banner. */
   readonly newRows = signal(0);
   /** A13-T4: more changed than the live channel lists; reload to see them. */
@@ -611,7 +613,12 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   onLiveRecords(entity: string, frame: LiveRecords): void {
     const outcome = liveRows(entity, frame, new Set(this.records().map(r => r.id)));
     if (outcome.overflow) this.liveOverflow.set(true);
-    if (outcome.created) this.newRows.update(n => n + outcome.created);
+    if (outcome.created) {
+      this.newRows.update(n => n + outcome.created);
+      this.announcer.announce(this.lang.translate('entityList.liveNewRows', { count: this.newRows() }));
+    } else if (outcome.overflow) {
+      this.announcer.announce(this.lang.translate('entityList.liveChanged'));
+    }
     if (outcome.reload) this.load();
   }
 

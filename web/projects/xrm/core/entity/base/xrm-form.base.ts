@@ -4,7 +4,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiError, CommandRegistry, LangService, MetadataVersion, VersionConflictState } from '@attome/base';
+import { Announcer, ApiError, CommandRegistry, LangService, MetadataVersion, VersionConflictState } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { firstValueFrom } from 'rxjs';
 import { BusinessRuleClient, ChoiceOptions, EntitySchema, FieldSchema } from '@attome/xrm';
@@ -215,6 +215,8 @@ export abstract class EngineFormBase implements OnInit {
   protected readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly recordChanges = inject(RecordChangeNotifier);
+  /** B22-T3: saves and errors are read out to a screen reader. */
+  private readonly announcer = inject(Announcer);
   /** Resolves the dialog and language services only when Duplicate needs them. */
   private readonly formInjector = inject(Injector);
 
@@ -690,6 +692,7 @@ export abstract class EngineFormBase implements OnInit {
     if (fg.invalid) {
       fg.markAllAsTouched();
       this.validationError.set(true);
+      this.announcer.announce(this.formInjector.get(LangService).translate('errors.validation'), 'assertive');
       return;
     }
     this.validationError.set(false);
@@ -744,6 +747,7 @@ export abstract class EngineFormBase implements OnInit {
         // `reload()`.
         if (e.kind === 'version_conflict') {
           this.conflict.set(true);
+          this.announcer.announce(e.message, 'assertive');
           // A16-T3: the dialog lists what changed when the server said so.
           const details = e.versionConflict;
           this.conflictDetails.set(details && details.changedAttributes.length ? details : null);
@@ -751,6 +755,7 @@ export abstract class EngineFormBase implements OnInit {
         else if (e.duplicates) this.onDuplicateRefusal(data, e.duplicates);
         else {
           this.error.set(e.message);
+          this.announcer.announce(e.message, 'assertive');
           // D-789 sections 3.4/3.5: a `field_locked*` or field-attached
           // `rule_violation` refusal is also shown under its field (it covers
           // a rule that changed after the form loaded).
@@ -810,6 +815,7 @@ export abstract class EngineFormBase implements OnInit {
     fg.markAsPristine();
     this.dirty.set(false);
     this.confirmSaved();
+    this.announcer.announce(this.formInjector.get(LangService).translate('xrmForm.saved'));
   }
 
   cancel(): void {

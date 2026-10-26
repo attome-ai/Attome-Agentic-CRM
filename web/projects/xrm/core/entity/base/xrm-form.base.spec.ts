@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntityRecord, EntitySchema } from '@attome/xrm';
+import { Announcer, LangService } from '@attome/base';
 import { EntityService } from '../services/entity.service';
 import { RecordChangeNotifier } from '../services/record-change-notifier.service';
 import { SAVED_CONFIRMATION_MS, EngineFormBase } from './xrm-form.base';
@@ -35,6 +36,10 @@ function record(userName: string, rowVersion: number): EntityRecord {
 
 @Component({ standalone: true, template: '' })
 class TestFormComponent extends EngineFormBase {}
+
+/** B22-T3: what the form read out, per test. */
+const announcer = { announce: vi.fn(), clear: vi.fn() };
+beforeEach(() => announcer.announce.mockClear());
 
 describe('EngineFormBase — submit button state', () => {
   const navigate = vi.fn();
@@ -68,6 +73,8 @@ describe('EngineFormBase — submit button state', () => {
             parseUrl: () => ({ queryParamMap: { get: () => null } }),
           },
         },
+        { provide: LangService, useValue: { translate: (key: string) => key } },
+        { provide: Announcer, useValue: announcer },
       ],
     });
   });
@@ -120,6 +127,8 @@ describe('EngineFormBase — submit button state', () => {
     expect(c.justSaved()).toBe(true);
     expect(c.dirty()).toBe(false);
     expect(c.canSave()).toBe(false);
+    // B22-T3: a screen reader hears the save.
+    expect(announcer.announce).toHaveBeenCalledWith('xrmForm.saved');
     // Patched from the response, so the next If-Match carries row_version 4.
     expect(control.value).toBe('after');
 
@@ -402,6 +411,8 @@ describe('EngineFormBase — business rules (D-789)', () => {
           provide: Router,
           useValue: { navigate: vi.fn(), url: '/', parseUrl: () => ({ queryParamMap: { get: () => null } }) },
         },
+        { provide: LangService, useValue: { translate: (key: string) => key } },
+        { provide: Announcer, useValue: announcer },
       ],
     });
   });
