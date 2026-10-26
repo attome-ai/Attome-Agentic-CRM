@@ -156,6 +156,11 @@ pub const ERROR_CODES: &[ErrorCode] = &[
         false,
     ),
     code(
+        "resync_needed",
+        "The delta token is older than the change feed keeps; read the list again for a new token.",
+        false,
+    ),
+    code(
         "idempotency_outcome_unknown",
         "An earlier attempt with this key did not finish; its outcome is unknown.",
         false,

@@ -103,6 +103,13 @@ pub struct ExecuteQueryRequest {
     /// 422 `unknown attribute`.
     #[serde(default)]
     select: Option<Vec<String>>,
+    /// L7-T4: a delta token from an earlier answer, or `latest` for a first
+    /// one: answer the changes since it among the rows this query selects
+    /// (`EntityDelta`: created, updated, deleted, next_token) instead of a
+    /// page. A query over one entity only. `410 resync_needed` once the token
+    /// is older than the change feed keeps.
+    #[serde(default)]
+    delta_token: Option<String>,
     /// S1-T2: page by keyset whatever `query.cursor_default` says (the
     /// generic list route's contract is a cursor page). Never sent by a
     /// client.
@@ -145,6 +152,7 @@ impl ExecuteQueryRequest {
             related_to: None,
             query_version_id,
             select: None,
+            delta_token: None,
             force_cursor: false,
         }
     }
@@ -163,6 +171,7 @@ impl ExecuteQueryRequest {
     ) -> Self {
         let mut request = Self::for_published_widget(Uuid::nil(), None, page_size, filters);
         request.query_id = None;
+        request.delta_token = None;
         request.entity = Some(entity);
         request.order_by = order_by;
         request.order_dir = order_dir;
@@ -1439,6 +1448,7 @@ fn plan_rows(plan: &Value) -> i64 {
             (Vec<u8> = "application/msgpack"),
         )),
         (status = 304, description = "AA7-T3: unchanged since the ETag in If-None-Match"),
+        (status = 410, description = "L7-T4: the delta token is older than the change feed keeps (resync_needed)", body = attome_types::ErrorResponse),
         (status = 422, description = "Invalid filter, ordering, or pagination contract"),
     ),
 )]
@@ -1462,6 +1472,11 @@ async fn execute(
     Json(body): Json<ExecuteQueryRequest>,
 ) -> Result<axum::response::Response, AppError> {
     use axum::response::IntoResponse;
+
+    // L7-T4: a delta token asks for the changes since it, not a page.
+    if let Some(token) = body.delta_token.clone() {
+        return Ok(Json(execute_delta(&state, &ctx, body, &token).await?).into_response());
+    }
 
     // An ETag is an optimisation: when it cannot be computed, the query runs.
     let etag = query_etag(&state, &ctx, &body).await.ok().flatten();
@@ -1497,6 +1512,60 @@ async fn execute(
         response.headers_mut().insert(axum::http::header::ETAG, tag);
     }
     Ok(response)
+}
+
+/// L7-T4: the changes since `token` among the rows `body` selects (see
+/// `changes`'s module doc). The change feed says which records changed; the
+/// query itself, restricted to them, says which it still holds and how it
+/// shows them, under the caller's privilege, record scope and field security.
+pub async fn execute_delta(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    mut body: ExecuteQueryRequest,
+    token: &str,
+) -> Result<crate::changes::EntityDelta, AppError> {
+    let entity = match body.entity.clone() {
+        Some(entity) => entity,
+        None => {
+            let db = state.base.readonly_query_pool(ctx.user_id).await;
+            let row = lookup(db, &body).await?;
+            row.entity_logical_name
+                .and_then(|id| {
+                    state
+                        .entities
+                        .load()
+                        .get_by_id(id)
+                        .map(|meta| meta.logicalname.clone())
+                })
+                .ok_or_else(|| {
+                    AppError::Validation("a delta token needs a query over one entity".into())
+                })?
+        }
+    };
+    let window = crate::changes::delta_window(state, ctx, &entity, token).await?;
+    if window.touched.is_empty() {
+        return Ok(window.answer(Vec::new()));
+    }
+    body.delta_token = None;
+    body.filters.push(attome_core::filter::Filter {
+        field: "id".into(),
+        op: "in".into(),
+        value: Some(Value::Array(
+            window
+                .touched
+                .iter()
+                .map(|id| Value::String(id.to_string()))
+                .collect(),
+        )),
+    });
+    body.page = 1;
+    body.page_size = i64::try_from(window.touched.len()).unwrap_or(crate::changes::DELTA_PAGE);
+    body.after_id = None;
+    body.seek = None;
+    body.include_total = false;
+    body.force_cursor = true;
+    let response = execute_stored_query_with_definition(state, ctx, body, None).await?;
+    Ok(window.answer(response.data.records))
 }
 
 /// AA7-T7: the MessagePack media type `query/execute` answers in when asked.

@@ -11,7 +11,12 @@
 //!   no value;
 //! - `sort=field` or `sort=-field` (descending);
 //! - `page_size` (1 to 200, default 50) and `cursor` (the last page's
-//!   `next_cursor`).
+//!   `next_cursor`);
+//! - L7-T4 `delta_token` (an earlier answer's `next_token`, or `latest`):
+//!   instead of a page, the records created, updated and deleted in this
+//!   filtered list since the token (`changes::EntityDelta`), and the next
+//!   token; `410 resync_needed` once the token is older than the change feed
+//!   keeps. Without it the answer is the page, unchanged.
 
 use attome_core::EngineState;
 use attome_core::filter::Filter;
@@ -60,6 +65,9 @@ pub struct ListParams {
     /// The previous page's `next_cursor`, verbatim (a cursor this
     /// deployment did not issue is a 400 `invalid_cursor`).
     pub cursor: Option<String>,
+    /// L7-T4: an earlier answer's `next_token`, or `latest` for a first one:
+    /// answer the changes since it (`EntityDelta`) instead of a page.
+    pub delta_token: Option<String>,
 }
 
 /// Every `filter[<field>][<op>]` pair among `pairs`.
@@ -124,7 +132,8 @@ pub fn parse_sort(sort: Option<&str>) -> (String, String) {
     tag = "entity",
     params(("entity" = String, Path, description = "The entity's logical name"), ListParams),
     responses(
-        (status = 200, description = "One page of records; next_cursor continues it", body = CursorPage<serde_json::Value>),
+        (status = 200, description = "One page of records; next_cursor continues it. With delta_token, an EntityDelta instead: the records created, updated and deleted since the token, and next_token", body = CursorPage<serde_json::Value>),
+        (status = 410, description = "L7-T4: the delta token is older than the change feed keeps (resync_needed); read the list again", body = ErrorResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller may not read this entity", body = ErrorResponse),
         (status = 404, description = "No such entity, or it has no default view", body = ErrorResponse),
@@ -138,7 +147,8 @@ pub(super) async fn list_records(
     Path(entity_input): Path<String>,
     Query(params): Query<ListParams>,
     Query(pairs): Query<Vec<(String, String)>>,
-) -> Result<Json<CursorPage<Value>>, AppError> {
+) -> Result<axum::response::Response, AppError> {
+    use axum::response::IntoResponse;
     let filters = parse_filters(&pairs)?;
     let (order_by, order_dir) = parse_sort(params.sort.as_deref());
     let select = params.select.as_deref().map(|s| {
@@ -149,6 +159,19 @@ pub(super) async fn list_records(
             .collect::<Vec<_>>()
     });
     let page_size = params.page_size.unwrap_or(50).clamp(1, 200);
+    if let Some(token) = params.delta_token.as_deref() {
+        let request = ExecuteQueryRequest::for_entity_list(
+            entity_input,
+            filters,
+            order_by,
+            order_dir,
+            page_size,
+            None,
+            select,
+        );
+        let delta = crate::query_exec::execute_delta(&state, &ctx, request, token).await?;
+        return Ok(Json(delta).into_response());
+    }
     let request = ExecuteQueryRequest::for_entity_list(
         entity_input,
         filters,
@@ -161,11 +184,11 @@ pub(super) async fn list_records(
     let response =
         crate::query_exec::execute_stored_query_with_definition(&state, &ctx, request, None)
             .await?;
-    Ok(Json(response.into_cursor_page()))
+    Ok(Json(response.into_cursor_page()).into_response())
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_records))]
+#[openapi(paths(list_records), components(schemas(crate::changes::EntityDelta)))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {

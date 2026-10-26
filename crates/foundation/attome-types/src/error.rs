@@ -280,6 +280,12 @@ pub enum AppError {
     #[error("the cursor is not valid; start again from the first page")]
     InvalidCursor,
 
+    /// L7-T4: a delta token older than the change feed keeps. The changes
+    /// since it can no longer be listed; the client reads the whole list
+    /// again and starts from the new token that list gives.
+    #[error("the token is older than the change feed keeps; read the list again for a new token")]
+    ResyncNeeded,
+
     /// A same-key retry of an earlier request whose outcome the server cannot
     /// know: it timed out, panicked, lost its client mid-request, or failed
     /// with an error that may have followed a write. The server will not run
@@ -421,6 +427,7 @@ impl IntoResponse for AppError {
             AppError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large"),
             AppError::RequestRejected(_) => (StatusCode::BAD_REQUEST, "request_rejected"),
             AppError::InvalidCursor => (StatusCode::BAD_REQUEST, "invalid_cursor"),
+            AppError::ResyncNeeded => (StatusCode::GONE, "resync_needed"),
             AppError::IdempotencyOutcomeUnknown => {
                 (StatusCode::CONFLICT, "idempotency_outcome_unknown")
             }
@@ -1412,6 +1419,7 @@ mod tests {
             AppError::CustomerTestsFailed(_) => 30,
             AppError::RequestRejected(_) => 31,
             AppError::InvalidCursor => 32,
+            AppError::ResyncNeeded => 33,
         }
     }
 
@@ -1490,6 +1498,7 @@ mod tests {
             AppError::PayloadTooLarge,
             AppError::RequestRejected("x"),
             AppError::InvalidCursor,
+            AppError::ResyncNeeded,
             AppError::IdempotencyOutcomeUnknown,
             AppError::IdempotencyReplayUnavailable,
             AppError::Internal("x".to_string()),
@@ -1573,7 +1582,7 @@ mod tests {
         indices.sort_unstable();
         assert_eq!(
             indices,
-            (0..=32).collect::<Vec<_>>(),
+            (0..=33).collect::<Vec<_>>(),
             "one_of_each_variant must hold exactly one sample of every variant_index arm"
         );
 

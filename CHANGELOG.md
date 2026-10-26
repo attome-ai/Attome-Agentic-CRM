@@ -16,6 +16,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Added
+- Delta tokens (L7-T4): `GET /api/v1/{entity}?delta_token=` and `query/execute`'s `delta_token` answer
+  the records created, updated and deleted in the filtered list since the token, with `next_token`
+  (`latest` gives a first token); the list's filters, record scope and field security apply. A token
+  older than `change_feed.retention_days` answers the new error `410 resync_needed`. Without a token
+  both answer as before.
 - Data catalogue screens (L4-T6): the catalogue page gains All assets (search in English or Arabic
   with kind, domain and label facets, and each asset's page with only the panels that have data,
   a bilingual description editor saving drafts with `If-Match` and an Approve button) and Personal

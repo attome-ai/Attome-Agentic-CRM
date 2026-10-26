@@ -19,8 +19,23 @@
 //! A record changed several times in one page is read once. The answer's
 //! `next_cursor` resumes after the last event read; a page shorter than
 //! `page_size` means the caller is up to date.
+//!
+//! **Delta tokens** (L7-T4). `GET /api/v1/{entity}?delta_token=` and
+//! `query/execute`'s `delta_token` answer the same question for a filtered
+//! list: [`delta_window`] reads the feed after the token, then the caller runs
+//! its own list or query restricted to the touched ids, so the list's filters,
+//! record scope and field security decide what comes back. A record that
+//! comes back is `created` when its first change in the window made it, else
+//! `updated`; a touched record that does not come back (deleted, hidden from
+//! the caller, or no longer matching the filters) is `deleted`. The token is
+//! the feed position, when it was issued and a version (`d1`), sealed by
+//! `attome_types::cursor`; `latest` asks for a first token and no changes. A
+//! token older than `change_feed.retention_days` is `410 resync_needed`: the
+//! events after it may have been pruned, so the client reads the list again.
 
 use std::collections::HashSet;
+
+use chrono::Utc;
 
 use attome_core::EngineState;
 use attome_core::change_feed::{CursorPosition, horizon, read_after_for_entity};
@@ -89,6 +104,184 @@ fn open_position(sealed: &str) -> Result<CursorPosition, AppError> {
         last_commit_xid,
         last_id,
     })
+}
+
+/// L7-T4: a delta token's version tag.
+const DELTA_VERSION: &str = "d1";
+
+/// L7-T4: the most change events one delta answer reads.
+pub const DELTA_PAGE: i64 = 200;
+
+/// L7-T4: the value of `delta_token` that asks for a first token.
+pub const DELTA_LATEST: &str = "latest";
+
+/// L7-T4: a delta token for `position`, issued at `issued_unix`.
+pub fn seal_delta(position: CursorPosition, issued_unix: i64) -> String {
+    attome_types::cursor::seal(&format!(
+        "{DELTA_VERSION}:{}:{}:{issued_unix}",
+        position.last_commit_xid,
+        position
+            .last_id
+            .map(|id| id.to_string())
+            .unwrap_or_default()
+    ))
+}
+
+/// L7-T4: a delta token's position and issue time; `InvalidCursor` for
+/// anything this deployment did not issue, or another version.
+pub fn open_delta(token: &str) -> Result<(CursorPosition, i64), AppError> {
+    let raw = attome_types::cursor::open(token)?;
+    let mut parts = raw.splitn(4, ':');
+    if parts.next() != Some(DELTA_VERSION) {
+        return Err(AppError::InvalidCursor);
+    }
+    let last_commit_xid: i64 = parts
+        .next()
+        .and_then(|x| x.parse().ok())
+        .ok_or(AppError::InvalidCursor)?;
+    let last_id = match parts.next().ok_or(AppError::InvalidCursor)? {
+        "" => None,
+        id => Some(Uuid::parse_str(id).map_err(|_| AppError::InvalidCursor)?),
+    };
+    let issued: i64 = parts
+        .next()
+        .and_then(|t| t.parse().ok())
+        .ok_or(AppError::InvalidCursor)?;
+    Ok((
+        CursorPosition {
+            last_commit_xid,
+            last_id,
+        },
+        issued,
+    ))
+}
+
+/// L7-T4: whether a token issued at `issued_unix` is older than the feed
+/// keeps. Pure.
+pub fn past_retention(issued_unix: i64, now_unix: i64, retention_days: i64) -> bool {
+    now_unix.saturating_sub(issued_unix) > retention_days.saturating_mul(86_400)
+}
+
+/// L7-T4: what a list or query answers to a delta token.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct EntityDelta {
+    /// Records made since the token that the list now holds, as it shows them.
+    #[schema(value_type = Vec<Object>)]
+    pub created: Vec<serde_json::Value>,
+    /// Records changed since the token that the list now holds.
+    #[schema(value_type = Vec<Object>)]
+    pub updated: Vec<serde_json::Value>,
+    /// Records changed since the token that the list no longer holds:
+    /// deleted, hidden from the caller, or no longer matching its filters.
+    pub deleted: Vec<Uuid>,
+    /// The token for the next call.
+    pub next_token: String,
+    /// Whether more changes wait: call again with `next_token` at once.
+    pub has_more: bool,
+}
+
+/// L7-T4: the records the feed says changed in `entity` after `token`.
+#[derive(Debug, Clone, Default)]
+pub struct DeltaWindow {
+    /// Each changed record once, oldest change first.
+    pub touched: Vec<Uuid>,
+    /// Those whose first change in the window made them.
+    pub created: HashSet<Uuid>,
+    pub next_token: String,
+    pub has_more: bool,
+}
+
+impl DeltaWindow {
+    /// The answer, given the touched records the list or query now holds
+    /// (each with its `id`). Pure.
+    pub fn answer(self, rows: Vec<serde_json::Value>) -> EntityDelta {
+        let mut held: HashSet<Uuid> = HashSet::new();
+        let (mut created, mut updated) = (Vec::new(), Vec::new());
+        for row in rows {
+            let Some(id) = row
+                .get("id")
+                .and_then(serde_json::Value::as_str)
+                .and_then(|s| Uuid::parse_str(s).ok())
+            else {
+                continue;
+            };
+            if !held.insert(id) {
+                continue;
+            }
+            if self.created.contains(&id) {
+                created.push(row);
+            } else {
+                updated.push(row);
+            }
+        }
+        EntityDelta {
+            created,
+            updated,
+            deleted: self
+                .touched
+                .into_iter()
+                .filter(|id| !held.contains(id))
+                .collect(),
+            next_token: self.next_token,
+            has_more: self.has_more,
+        }
+    }
+}
+
+/// L7-T4: the change feed for `entity` after `token`, as `ctx` may read the
+/// entity (`{entity}.read`); `latest` gives a first token and no changes.
+pub async fn delta_window(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity: &str,
+    token: &str,
+) -> Result<DeltaWindow, AppError> {
+    let entity = state
+        .entities
+        .load()
+        .get(entity)
+        .map(|meta| meta.logicalname.clone())
+        .ok_or(AppError::NotFound)?;
+    ctx.require(&entity, "read")?;
+    let now = Utc::now().timestamp();
+    let mut conn = state
+        .base
+        .read_pool(ctx.user_id)
+        .await
+        .acquire()
+        .await
+        .map_err(AppError::internal)?;
+    if token.trim() == DELTA_LATEST {
+        let start = horizon(&mut conn).await?;
+        return Ok(DeltaWindow {
+            next_token: seal_delta(start, now),
+            ..DeltaWindow::default()
+        });
+    }
+    let (position, issued) = open_delta(token.trim())?;
+    if past_retention(issued, now, state.base.config.change_feed.retention_days) {
+        return Err(AppError::ResyncNeeded);
+    }
+    let (events, next) = read_after_for_entity(&mut conn, &entity, position, DELTA_PAGE).await?;
+    drop(conn);
+    let has_more = i64::try_from(events.len()).unwrap_or(i64::MAX) >= DELTA_PAGE;
+    let mut window = DeltaWindow {
+        // A full page keeps the old issue time: the client is still catching
+        // up from it. Up to date, the token is as fresh as now.
+        next_token: seal_delta(next, if has_more { issued } else { now }),
+        has_more,
+        ..DeltaWindow::default()
+    };
+    for event in &events {
+        if window.touched.contains(&event.record_id) {
+            continue;
+        }
+        window.touched.push(event.record_id);
+        if event.operation() == Some(attome_core::change_feed::ChangeOperation::Create) {
+            window.created.insert(event.record_id);
+        }
+    }
+    Ok(window)
 }
 
 /// The ids among `ids` that are live and that `ctx` may read in `entity`.
@@ -257,6 +450,61 @@ pub async fn changes_since(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // feature: L7
+    #[test]
+    fn a_delta_token_round_trips_and_ages_out() {
+        let position = CursorPosition {
+            last_commit_xid: 99,
+            last_id: Some(Uuid::now_v7()),
+        };
+        let token = seal_delta(position, 1_700_000_000);
+        let (back, issued) = open_delta(&token).unwrap();
+        assert_eq!(back.last_commit_xid, 99);
+        assert_eq!(back.last_id, position.last_id);
+        assert_eq!(issued, 1_700_000_000);
+        // A changes cursor is not a delta token, and neither is a forgery.
+        assert!(matches!(
+            open_delta(&seal_position(position)),
+            Err(AppError::InvalidCursor)
+        ));
+        assert!(matches!(
+            open_delta("d1:1::2"),
+            Err(AppError::InvalidCursor)
+        ));
+        assert!(!past_retention(1_000, 1_000 + 30 * 86_400, 30));
+        assert!(past_retention(1_000, 1_000 + 30 * 86_400 + 1, 30));
+    }
+
+    // feature: L7
+    #[test]
+    fn a_delta_answer_splits_created_updated_and_deleted() {
+        let (a, b, c, d) = (
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+        );
+        let window = DeltaWindow {
+            touched: vec![a, b, c, d],
+            created: HashSet::from([a, c]),
+            next_token: "next".into(),
+            has_more: false,
+        };
+        let delta = window.answer(vec![
+            serde_json::json!({"id": a, "name": "new"}),
+            serde_json::json!({"id": b, "name": "changed"}),
+        ]);
+        assert_eq!(delta.created.len(), 1);
+        assert_eq!(delta.created[0]["name"], "new");
+        assert_eq!(delta.updated[0]["id"], serde_json::json!(b));
+        assert_eq!(
+            delta.deleted,
+            vec![c, d],
+            "made then gone, or no longer in the list"
+        );
+        assert_eq!(delta.next_token, "next");
+    }
 
     #[test]
     fn a_position_round_trips_and_a_forged_cursor_is_refused() {
