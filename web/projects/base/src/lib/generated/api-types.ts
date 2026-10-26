@@ -16488,6 +16488,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fulfilment/shipments/{id}/out-for-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Out for delivery
+         * @description The shipment's driver starts the delivery; with delivery codes on, the
+         *     customer is texted a code.
+         */
+        post: operations["fulfilment_shipment_out_for_delivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fulfilment/shipments/{id}/proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record delivery proof
+         * @description The shipment's driver records delivered, a failed attempt or a refusal,
+         *     with photo, signature, the customer's code (when codes are on), who
+         *     received it and where. A delivery with cash on delivery records the
+         *     cash payment.
+         */
+        post: operations["fulfilment_shipment_proof"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fulfilment/shipments/{id}/track": {
         parameters: {
             query?: never;
@@ -17210,6 +17254,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/campaigns/{id}/members/from-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a list's people to a campaign.
+         * @description In the background: people already members are skipped, and for an
+         *     email, social, advertising or content campaign, so are people without a
+         *     current consent for the purpose. Each member is created as `targeted`.
+         */
+        post: operations["add_campaign_members_from_list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/campaigns/{id}/members/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A campaign's members by status. */
+        get: operations["campaign_member_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/contacts/{id}/traits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A contact's traits
+         * @description Last seen, visits, purchases and their total, rolled up from the
+         *     contact's profile events when read.
+         */
+        get: operations["contact_traits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/deliverability/daily": {
         parameters: {
             query?: never;
@@ -17405,6 +17509,48 @@ export interface paths {
          *     `Attome-Challenge` otherwise).
          */
         post: operations["submit_marketing_form"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/identity/conflicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Identity conflicts to review
+         * @description Identifiers (email, visitor, portal user, phone) a deterministic event
+         *     tied to a second contact. Nothing moved; each waits for a decision.
+         */
+        get: operations["list_identity_conflicts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/identity/conflicts/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Settle an identity conflict
+         * @description Keep the identifier with the contact it is linked to, or move it to the
+         *     conflicting contact.
+         */
+        post: operations["resolve_identity_conflict"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17664,6 +17810,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/opportunities/{id}/attribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An opportunity's attribution
+         * @description How much of a won opportunity each marketing touch earned under one
+         *     model, by touch and by campaign; computed nightly.
+         */
+        get: operations["opportunity_attribution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/precheck": {
         parameters: {
             query?: never;
@@ -17682,6 +17849,28 @@ export interface paths {
          *     finding names a guidance key; nothing is sent or stored.
          */
         post: operations["post_marketing_precheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/profile-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send profile events
+         * @description Up to 500 events per batch, 60 batches a minute per caller. Each names
+         *     a contact or an anonymous id; events that fail a check come back with
+         *     their index and reason, and the rest are kept.
+         */
+        post: operations["ingest_profile_events"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18522,6 +18711,28 @@ export interface paths {
         get: operations["list_snapshots"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/{id}/targets/spread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Spread a target to a dimension's members
+         * @description P9-T7: writes the period's total target and one child target per member
+         *     of the dimension, by the caller's shares or by last year's actuals. The
+         *     children add up to the total. Needs `attome_metric.set_target`.
+         */
+        post: operations["post_spread"];
         delete?: never;
         options?: never;
         head?: never;
@@ -28282,6 +28493,19 @@ export interface components {
              */
             entity: string;
         };
+        /** @description An opportunity's credit under one model. */
+        Attribution: {
+            by_campaign: components["schemas"]["CampaignCredit"][];
+            /**
+             * Format: date-time
+             * @description When it was last computed; `None` when not yet.
+             */
+            computed_at?: string | null;
+            model: string;
+            /** Format: uuid */
+            opportunity_id: string;
+            touchpoints: components["schemas"]["TouchCredit"][];
+        };
         /** @description `PUT .../audience`. */
         AudienceBody: {
             /** @description `public` or `internal`. */
@@ -28701,6 +28925,11 @@ export interface components {
             id: string;
             /** @description The request's status after the decision, or `null` when it failed. */
             status?: string | null;
+        };
+        /** @description What a batch did. */
+        BatchResult: {
+            accepted: number;
+            rejected: components["schemas"]["RejectedEvent"][];
         };
         /**
          * @description The per-item results of a batch, in request order (Z14-T6). Every bulk
@@ -29889,6 +30118,15 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description One campaign's credit. */
+        CampaignCredit: {
+            /** Format: double */
+            amount?: number | null;
+            /** Format: uuid */
+            campaign_id: string;
+            /** Format: double */
+            share: number;
+        };
         CancelBody: {
             /** Format: int64 */
             row_version: number;
@@ -30704,6 +30942,12 @@ export interface components {
             /** Format: date-time */
             started_at: string;
             surface: string;
+        };
+        /** @description One member's target. */
+        ChildTarget: {
+            dimension_value: string;
+            /** Format: double */
+            target_value: number;
         };
         /** @description The tickets to link. */
         ChildrenBody: {
@@ -31728,6 +31972,33 @@ export interface components {
             max_lag_hours: number;
             /** @description `active`, or `expired` once it fell past its allowed lag. */
             status: string;
+        };
+        /** @description A contact's traits. */
+        ContactTraits: {
+            /** Format: uuid */
+            contact_id: string;
+            /**
+             * Format: int64
+             * @description All events kept for the contact.
+             */
+            events: number;
+            /**
+             * Format: date-time
+             * @description The latest event of any kind.
+             */
+            last_seen_at?: string | null;
+            /** Format: int64 */
+            purchases: number;
+            /**
+             * Format: double
+             * @description The sum of purchase events' numeric `amount`.
+             */
+            total_purchases: number;
+            /**
+             * Format: int64
+             * @description Events of a visit kind.
+             */
+            visits: number;
         };
         /**
          * @description A reusable container of pages — a pure organizational grouping, not a URL
@@ -35470,6 +35741,10 @@ export interface components {
             /** Format: uuid */
             scenario_id: string;
         };
+        /** @description A batch of events. */
+        EventBatch: {
+            events: components["schemas"]["IncomingEvent"][];
+        };
         /** @description One drill's evidence. */
         Evidence: {
             checks: components["schemas"]["Check"][];
@@ -36537,6 +36812,28 @@ export interface components {
             /** @description `fresh`, `stale`, `failed` or `never`. */
             status: string;
         };
+        /** @description Adding a list to a campaign. */
+        FromListBody: {
+            /**
+             * Format: uuid
+             * @description The marketing list whose people become members.
+             */
+            list_id: string;
+            /**
+             * @description The consent purpose; required for an email, social, advertising or
+             *     content campaign.
+             */
+            purpose?: string | null;
+        };
+        /** @description The queued job. */
+        FromListQueued: {
+            /** Format: uuid */
+            campaign_id: string;
+            /** @description Whether people without consent for the purpose are skipped. */
+            consent_checked: boolean;
+            /** Format: uuid */
+            list_id: string;
+        };
         FulfillErasureBody: {
             scopes: components["schemas"]["DsrScope"][];
         };
@@ -37283,6 +37580,31 @@ export interface components {
             to: string;
         };
         /**
+         * @description What an identifier is.
+         * @enum {string}
+         */
+        IdentifierType: "email" | "visitor" | "portal_user" | "phone";
+        /** @description An identifier claimed by two contacts. */
+        IdentityConflict: {
+            /**
+             * Format: uuid
+             * @description The contact it is linked to.
+             */
+            conflict_with?: string | null;
+            /**
+             * Format: uuid
+             * @description The contact the identifier was last seen with.
+             */
+            contact_id: string;
+            /** Format: uuid */
+            id: string;
+            identifier_type: string;
+            identifier_value: string;
+            /** Format: date-time */
+            linked_at: string;
+            source: string;
+        };
+        /**
          * @description P-federation-linking-policy §4.3(a) UI support — `GET
          *     /api/v1/auth/identity-links`'s response shape; see `identity_links`. One
          *     entry per `user_identity` row linked to the caller, plus (since this
@@ -37544,6 +37866,21 @@ export interface components {
             /** @description Base64 Ed25519 signature over `prev_batch_hash|merkle_root`. */
             signature?: string | null;
             signing_key_id?: string | null;
+        };
+        /** @description One event sent. */
+        IncomingEvent: {
+            /** @description A visitor not yet known as a contact. */
+            anonymous_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When; now when absent.
+             */
+            at?: string | null;
+            /** Format: uuid */
+            contact_id?: string | null;
+            /** @description What happened (1 to 100 characters), such as `page_view` or `purchase`. */
+            kind: string;
+            properties?: Record<string, never> | null;
         };
         /** @description The advice for one entity. */
         IndexAdvice: {
@@ -37854,6 +38191,11 @@ export interface components {
             jsonrpc: string;
             result?: unknown;
         };
+        /**
+         * @description How a conflict is settled.
+         * @enum {string}
+         */
+        Keep: "existing" | "new";
         KeyCreatedResponse: {
             /** Format: date-time */
             created_at: string;
@@ -38337,6 +38679,13 @@ export interface components {
             /** Format: uuid */
             request_id: string;
             status: string;
+        };
+        /** @description What [`link`] did for one identifier. */
+        LinkOutcome: {
+            identifier_type: components["schemas"]["IdentifierType"];
+            identifier_value: string;
+            /** @description `linked`, `same` or `conflict`. */
+            outcome: string;
         };
         /** @description What a link is for: an invoice, an order, or an amount for an account. */
         LinkRequest: {
@@ -38942,6 +39291,25 @@ export interface components {
             changed: number;
             /** @description Ids skipped: already in (or not in) the list, or not readable. */
             skipped: number;
+        };
+        /** @description What one run adds, in id order, and what it skips. Pure. */
+        MemberPlan: {
+            add: string[];
+            /** @description Already members of the campaign. */
+            skipped_existing: number;
+            /** @description No current consent for the purpose. */
+            skipped_no_consent: number;
+            /** @description Past [`MAX_MEMBERS`]. */
+            skipped_over_limit: number;
+        };
+        /** @description A campaign's members by status. */
+        MemberSummary: {
+            /** @description Count per status; a member without one counts under `none`. */
+            by_status: {
+                [key: string]: number;
+            };
+            /** Format: int64 */
+            total: number;
         };
         MembersBody: {
             /** @description The people (records of the list's target entity), at most 1,000. */
@@ -40594,6 +40962,14 @@ export interface components {
         OrphanScanRequest: {
             /** Format: uuid */
             entity_id: string;
+        };
+        /** @description Out for delivery. */
+        OutForDelivery: {
+            /** @description A delivery code was texted to the customer. */
+            code_sent: boolean;
+            /** Format: uuid */
+            shipment_id: string;
+            status: string;
         };
         OutOfOfficeBody: {
             /**
@@ -44398,6 +44774,39 @@ export interface components {
                 notified_at: string;
                 /** Format: uuid */
                 user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_IdentityConflict: {
+            items: {
+                /**
+                 * Format: uuid
+                 * @description The contact it is linked to.
+                 */
+                conflict_with?: string | null;
+                /**
+                 * Format: uuid
+                 * @description The contact the identifier was last seen with.
+                 */
+                contact_id: string;
+                /** Format: uuid */
+                id: string;
+                identifier_type: string;
+                identifier_value: string;
+                /** Format: date-time */
+                linked_at: string;
+                source: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -49900,6 +50309,37 @@ export interface components {
             text: string;
             version: string;
         };
+        /** @description What the driver records. */
+        ProofBody: {
+            /** Format: double */
+            latitude?: number | null;
+            /** Format: double */
+            longitude?: number | null;
+            /** @description The customer's delivery code, when codes are on. */
+            otp?: string | null;
+            /** @description `delivered`, `failed_attempt` or `refused`. */
+            outcome: string;
+            /** @description A photo, already uploaded through the files API (its file key). */
+            photo?: string | null;
+            /** @description Who took the delivery. */
+            received_by?: string | null;
+            /** @description A signature image, already uploaded (its file key). */
+            signature?: string | null;
+        };
+        /** @description The recorded proof. */
+        ProofRecorded: {
+            /**
+             * Format: uuid
+             * @description The cash payment recorded for cash on delivery.
+             */
+            cod_payment_id?: string | null;
+            otp_verified: boolean;
+            /** Format: uuid */
+            proof_id: string;
+            /** Format: uuid */
+            shipment_id: string;
+            status: string;
+        };
         /**
          * @description Which side of the running hash a sibling sits on.
          * @enum {string}
@@ -51211,6 +51651,11 @@ export interface components {
             is_required?: boolean | null;
             /** Format: int32 */
             max_length?: number | null;
+        };
+        /** @description An event left out, by its place in the batch. */
+        RejectedEvent: {
+            index: number;
+            reason: string;
         };
         RejectionWord: {
             /** Format: int64 */
@@ -54911,6 +55356,39 @@ export interface components {
             /** Format: uuid */
             split_type_id: string;
         };
+        /** @description A spread to make. */
+        SpreadBody: {
+            /** @description One of the metric's dimension attributes. */
+            dimension_attribute: string;
+            method: components["schemas"]["SpreadMethod"];
+            /**
+             * Format: date-time
+             * @description The period the targets are for (its start).
+             */
+            period_start: string;
+            /** @description With `share`: each member's share, summing to 1. */
+            shares?: {
+                [key: string]: number;
+            } | null;
+            /**
+             * Format: double
+             * @description The parent target.
+             */
+            total: number;
+        };
+        /**
+         * @description How a total is divided.
+         * @enum {string}
+         */
+        SpreadMethod: "share" | "last_year";
+        /** @description What a spread wrote. */
+        SpreadResult: {
+            children: components["schemas"]["ChildTarget"][];
+            /** Format: uuid */
+            parent_target_id: string;
+            /** Format: double */
+            sum_of_children: number;
+        };
         /** @description The SSP version written. */
         SspVersion: {
             /** Format: uuid */
@@ -56287,6 +56765,21 @@ export interface components {
             kind: "at_least";
             /** Format: int64 */
             value: number;
+        };
+        /** @description One touchpoint's credit. */
+        TouchCredit: {
+            /** Format: double */
+            amount?: number | null;
+            /** Format: uuid */
+            campaign_id?: string | null;
+            channel: string;
+            /** Format: double */
+            share: number;
+            /** Format: date-time */
+            touched_at: string;
+            /** Format: uuid */
+            touchpoint_id: string;
+            touchpoint_kind: string;
         };
         /** @description One guided tour as a signed-in person receives it (B14-T1). */
         TourView: {
@@ -108952,6 +109445,137 @@ export interface operations {
             };
         };
     };
+    fulfilment_shipment_out_for_delivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The shipment */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Out for delivery */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutForDelivery"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks delivery_proof.create or is not the shipment's driver */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such shipment */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shipment is already closed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fulfilment_shipment_proof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The shipment */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProofBody"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProofRecorded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks delivery_proof.create (or, for cash on delivery, customer_payment.create) or is not the shipment's driver */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such shipment */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shipment is already closed, or too many wrong codes */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad outcome or position, or a wrong or missing code */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     fulfilment_shipment_track: {
         parameters: {
             query?: never;
@@ -111057,6 +111681,169 @@ export interface operations {
             };
         };
     };
+    add_campaign_members_from_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The campaign */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FromListBody"];
+            };
+        };
+        responses: {
+            /** @description The members are being added */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FromListQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks campaign_member.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such campaign or list, or the marketing package is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The list holds neither contacts nor leads, or the campaign type needs a consent purpose */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    campaign_member_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The campaign */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Members by status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks campaign_member.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such campaign, or the marketing package is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    contact_traits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The contact */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The contact's traits */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactTraits"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks contact.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such contact, or not readable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_deliverability_daily: {
         parameters: {
             query?: {
@@ -111586,6 +112373,118 @@ export interface operations {
             };
             /** @description Too many submissions, or the challenge was not solved */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_identity_conflicts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Open conflicts, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_IdentityConflict"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks contact.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resolve_identity_conflict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The conflict */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveBody"];
+            };
+        };
+        responses: {
+            /** @description Settled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resolved"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks contact.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such open conflict */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The identifier is being linked */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -112372,6 +113271,71 @@ export interface operations {
             };
         };
     };
+    opportunity_attribution: {
+        parameters: {
+            query?: {
+                /**
+                 * @description `first_touch`, `last_touch`, `linear` (default), `u_shaped` or
+                 *     `time_decay`.
+                 */
+                model?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The credit under the model */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Attribution"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks opportunity.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity, or not readable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown model */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_marketing_precheck: {
         parameters: {
             query?: never;
@@ -112414,6 +113378,66 @@ export interface operations {
             };
             /** @description The message is empty */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ingest_profile_events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EventBatch"];
+            };
+        };
+        responses: {
+            /** @description Kept and left-out events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks contact.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An empty batch, or more than 500 events */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many batches this minute */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -114566,6 +115590,78 @@ export interface operations {
             };
             /** @description No such metric */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_spread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The metric */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpreadBody"];
+            };
+        };
+        responses: {
+            /** @description The parent and its children */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpreadResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks attome_metric.set_target */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such metric */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A spread for this metric and period is running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not one of the metric's dimensions, shares that do not add up to 1, or no actuals a year earlier */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
