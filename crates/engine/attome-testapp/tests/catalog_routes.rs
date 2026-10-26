@@ -1,7 +1,7 @@
 //! L4-T4: the asset catalogue routes end to end: search with facets, the
 //! asset page, a drafted then approved description (each with If-Match),
 //! and an access request decided by the owner with a role grant. L4-T5: the
-//! personal data map.
+//! personal data map. L4-T8: a non-owner never decides a request.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -282,5 +282,122 @@ fn personal_data_map_lists_labelled_attribute_and_reader() {
         assert!(attome_api::catalog_admin::is_unused(None, 0, 0, now));
         assert!(!attome_api::catalog_admin::is_unused(Some(now), 0, 0, now));
         assert!(!attome_api::catalog_admin::is_unused(None, 0, 2, now));
+    });
+}
+
+// feature: L4
+#[test]
+fn non_owner_cannot_decide_access_request() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let token = format!("catalogowner{}", &Uuid::now_v7().simple().to_string()[..10]);
+        let steward = seed_user(app.db(), "catalog-steward").await;
+        let other_steward = seed_user(app.db(), "catalog-other-steward").await;
+        let mut domains = Vec::new();
+        for (suffix, user) in [("a", steward.id), ("b", other_steward.id)] {
+            let domain: Uuid = sqlx::query_scalar(
+                "INSERT INTO data_domain (name, owner_layer, steward_ref) \
+                 VALUES ($1, 'customer', $2) RETURNING id",
+            )
+            .bind(format!("{token}-{suffix}"))
+            .bind(user)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+            domains.push(domain);
+        }
+        let asset: Uuid = sqlx::query_scalar(
+            "INSERT INTO catalog_asset (kind, ref, name_en, domain_ref, search) \
+             VALUES ('view', $1, $1, $2, to_tsvector('simple', $1)) RETURNING id",
+        )
+        .bind(&token)
+        .bind(domains[0])
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+
+        let (status, request) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/catalog/assets/{asset}/access-requests"),
+                Some(json!({"reason": "Quarter close"})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{request}");
+        let request_id = Uuid::parse_str(request["id"].as_str().unwrap()).unwrap();
+        let (status, role) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/security/roles",
+                Some(json!({"name": format!("Catalog owners {token}")})),
+            )
+            .await;
+        assert!(status.is_success(), "{role}");
+        let role_id = Uuid::parse_str(role["id"].as_str().unwrap()).unwrap();
+        let decide = format!("/api/v1/catalog/access-requests/{request_id}/decide");
+        let state = |app: TestApp| async move {
+            sqlx::query_as::<_, (String, Option<Uuid>)>(
+                "SELECT status, decided_by FROM catalog_access_request WHERE id = $1",
+            )
+            .bind(request_id)
+            .fetch_one(app.db())
+            .await
+            .unwrap()
+        };
+        let role_held = |app: TestApp| async move {
+            sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS (SELECT 1 FROM user_account_mm_role \
+                  WHERE user_ref = $1 AND role_ref = $2 AND is_deleted = false)",
+            )
+            .bind(app.admin.id)
+            .bind(role_id)
+            .fetch_one(app.db())
+            .await
+            .unwrap()
+        };
+
+        // The steward of another domain neither decides nor learns it exists.
+        for body in [
+            json!({"grant": true, "role_id": role_id}),
+            json!({"grant": false}),
+        ] {
+            let (status, answer) = app
+                .request_as(&other_steward.cookie, Method::POST, &decide, Some(body))
+                .await;
+            assert_eq!(status, StatusCode::NOT_FOUND, "{answer}");
+        }
+        assert_eq!(state(app.clone()).await, ("pending".to_owned(), None));
+        assert!(!role_held(app.clone()).await, "a non-owner grants nothing");
+
+        // The owner may decide, but a grant above their own ceiling is
+        // refused by the role-grant path and the request reopens.
+        let (status, answer) = app
+            .request_as(
+                &steward.cookie,
+                Method::POST,
+                &decide,
+                Some(json!({"grant": true, "role_id": role_id})),
+            )
+            .await;
+        assert!(!status.is_success(), "{status} {answer}");
+        assert_eq!(state(app.clone()).await, ("pending".to_owned(), None));
+        assert!(!role_held(app.clone()).await);
+
+        let (status, refused) = app
+            .request_as(
+                &steward.cookie,
+                Method::POST,
+                &decide,
+                Some(json!({"grant": false})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{refused}");
+        assert_eq!(refused["status"], "refused");
+        assert_eq!(
+            state(app.clone()).await,
+            ("refused".to_owned(), Some(steward.id))
+        );
     });
 }
