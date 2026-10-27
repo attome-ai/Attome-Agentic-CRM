@@ -21736,6 +21736,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/lead-conversions/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a lead conversion.
+         * @description Within 24 hours, by the person who converted, while every record it
+         *     made is unchanged: moves activities and notes back, returns the lead to
+         *     qualified and deletes the records it made.
+         */
+        post: operations["post_sales_lead_conversion_undo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/leads/{id}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview a lead's conversion.
+         * @description The values the account, contact and opportunity would get from the
+         *     conversion map, and the existing accounts and contacts the duplicate
+         *     rules match, so one can be linked instead.
+         */
+        get: operations["get_sales_lead_convert_preview"];
+        put?: never;
+        /**
+         * Convert a qualified lead.
+         * @description Creates or links the account, creates, links or skips the contact and
+         *     the opportunity, moves the lead's activities and notes to the contact
+         *     (else the account) and marks the lead converted. Send the lead's
+         *     `row_version` in `If-Match`.
+         */
+        post: operations["post_sales_lead_convert"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/opportunities/{id}/battlecards": {
         parameters: {
             query?: never;
@@ -27504,6 +27555,11 @@ export interface components {
             /** @description The renders, at `GET /api/v1/docgen/renders/{id}`. */
             render_ids: string[];
         };
+        /**
+         * @description What one source does for the record.
+         * @enum {string}
+         */
+        AccessExplainEffect: "grants" | "denies" | "not_applicable";
         /** @description The answer for one person, record and operation. */
         AccessExplanation: {
             /** @description `read`, `update` or `delete`. */
@@ -27638,7 +27694,7 @@ export interface components {
         AccessSource: {
             /** @description A short reason, in English. */
             detail: string;
-            effect: components["schemas"]["Effect"];
+            effect: components["schemas"]["AccessExplainEffect"];
             /**
              * @description `admin`, `privilege`, `role_level`, `business_unit`, `ownership`,
              *     `user_share`, `team_share`, `default_share`, `sharing_rule` or `deny`.
@@ -28656,6 +28712,11 @@ export interface components {
             /** @description The approval process's name, when the request came from one. */
             title?: string | null;
         };
+        /** @description A presented link. */
+        ApprovalEmailLinkBody: {
+            /** @description The token from the emailed link. */
+            token: string;
+        };
         /** @description M9-T4: one request in a record's approval history. */
         ApprovalHistoryItem: {
             action_type: string;
@@ -29659,11 +29720,6 @@ export interface components {
             /** @description The request's status after the decision, or `null` when it failed. */
             status?: string | null;
         };
-        /** @description What a batch did. */
-        BatchResult: {
-            accepted: number;
-            rejected: components["schemas"]["RejectedEvent"][];
-        };
         /**
          * @description The per-item results of a batch, in request order (Z14-T6). Every bulk
          *     response reports its items through this shape.
@@ -29958,14 +30014,16 @@ export interface components {
              */
             start: string;
         };
-        /** @description A booked shipment. */
+        /** @description A booking made. */
         Booked: {
-            carrier: string;
-            /** @description The carrier's label, when it returned one. */
-            label_url?: string | null;
             /** Format: uuid */
-            shipment_id: string;
-            tracking_number: string;
+            booking_id: string;
+            /** Format: date-time */
+            end: string;
+            /** @description The token of the reschedule/cancel link (also in the email). */
+            manage_token: string;
+            /** Format: date-time */
+            start: string;
         };
         BotAnalytics: {
             deflection: components["schemas"]["DeflectionStats"];
@@ -30485,6 +30543,13 @@ export interface components {
              */
             version?: string | null;
             views?: components["schemas"]["ViewDef"][];
+        };
+        BundleBreakGlassBody: {
+            /**
+             * Format: int32
+             * @description Window length in minutes. Default 60, maximum 240.
+             */
+            ttl_minutes?: number | null;
         };
         /** @description One entry of [`Requires::depends_on_bundles`] — M92 Phase 1. */
         BundleDependency: {
@@ -32670,18 +32735,8 @@ export interface components {
             right_ref: string;
         };
         ConsentBody: {
-            /** @description The administrator's email, when the id is not known. */
-            actor_email?: string | null;
-            /**
-             * Format: uuid
-             * @description The administrator who may act as you, by id or (below) by email.
-             */
-            actor_id?: string | null;
-            /**
-             * Format: int64
-             * @description How long, 1 to 72 hours.
-             */
-            hours: number;
+            privacy_version?: string | null;
+            terms_version?: string | null;
         };
         ConsentRow: {
             /** Format: uuid */
@@ -32907,6 +32962,13 @@ export interface components {
             } | null;
             /** @description text -> bool. */
             true_values?: string[] | null;
+        };
+        /** @description What to do with one target record. */
+        ConvertTarget: {
+            /** Format: uuid */
+            id?: string | null;
+            /** @description `create` (default), `link` (to `id`) or `skip` (not for the account). */
+            mode?: string | null;
         };
         ConvertToProjectRequest: {
             /**
@@ -35836,10 +35898,13 @@ export interface components {
             query_spec?: Record<string, never> | null;
         };
         /**
-         * @description What one source does for the record.
+         * @description What the action touches, independent of how risky it is. Kept separate from
+         *     [`RiskTier`] because they answer different questions: `Effect` decides
+         *     whether an air-gapped deployment can run it at all (I-7), `RiskTier`
+         *     decides who has to approve it.
          * @enum {string}
          */
-        Effect: "grants" | "denies" | "not_applicable";
+        Effect: "Read" | "Write" | "External";
         /**
          * @description The "effective" half: `SecurityContext` fields as actually resolved right
          *     now, uncached. `privileges` is sorted (the resolver's `HashSet` has no
@@ -38514,6 +38579,20 @@ export interface components {
             /** @description Affected definitions the caller may not see, counted only. */
             hidden: number;
         };
+        ImpersonationConsentBody: {
+            /** @description The administrator's email, when the id is not known. */
+            actor_email?: string | null;
+            /**
+             * Format: uuid
+             * @description The administrator who may act as you, by id or (below) by email.
+             */
+            actor_id?: string | null;
+            /**
+             * Format: int64
+             * @description How long, 1 to 72 hours.
+             */
+            hours: number;
+        };
         /** @description One consent. */
         ImpersonationConsentItem: {
             /** Format: uuid */
@@ -39400,6 +39479,52 @@ export interface components {
             /** @description Every route seen since this process started, slowest p95 first. */
             routes: components["schemas"]["RouteLatency"][];
         };
+        /** @description A conversion undone. */
+        LeadConversionUndone: {
+            /** Format: uuid */
+            conversion_id: string;
+            /** Format: uuid */
+            lead_id: string;
+            /** @description Records deleted. */
+            removed: number;
+        };
+        /** @description A conversion's choices; every target defaults to `create`. */
+        LeadConvertBody: {
+            account?: components["schemas"]["ConvertTarget"];
+            contact?: components["schemas"]["ConvertTarget"];
+            opportunity?: components["schemas"]["ConvertTarget"];
+        };
+        /** @description The preview of a conversion. */
+        LeadConvertPreview: {
+            account: Record<string, never>;
+            /** @description Existing accounts the new one would repeat, that the caller may read. */
+            account_matches: components["schemas"]["DuplicateMatch"][];
+            contact: Record<string, never>;
+            contact_matches: components["schemas"]["DuplicateMatch"][];
+            /**
+             * Format: int64
+             * @description Matches the caller may not read.
+             */
+            hidden_matches: number;
+            /** Format: uuid */
+            lead_id: string;
+            opportunity: Record<string, never>;
+        };
+        /** @description A conversion done. */
+        LeadConverted: {
+            /** Format: uuid */
+            account_id: string;
+            /** Format: uuid */
+            contact_id?: string | null;
+            /** Format: uuid */
+            conversion_id: string;
+            /** Format: uuid */
+            lead_id: string;
+            /** @description Activities and notes moved off the lead. */
+            moved: number;
+            /** Format: uuid */
+            opportunity_id?: string | null;
+        };
         /** @description The newest ledger row of one (layer, scope). */
         LedgerHead: {
             /** Format: uuid */
@@ -39808,6 +39933,20 @@ export interface components {
             provider: string;
             scopes: string;
         };
+        /** @description How it was resolved. */
+        MajorIncidentResolveBody: {
+            /** @description The last status update; a standard text when absent. */
+            message?: string | null;
+        };
+        /** @description The resolution. */
+        MajorIncidentResolved: {
+            /** Format: date-time */
+            restored_at: string;
+            /** Format: uuid */
+            status_incident_id?: string | null;
+            /** Format: uuid */
+            ticket_id: string;
+        };
         /** @description A booking as its manage link shows it. */
         ManagedBooking: {
             /** Format: date-time */
@@ -39920,6 +40059,11 @@ export interface components {
             list_id: string;
             person_ids: string[];
             target_entity: string;
+        };
+        /** @description What a batch did. */
+        MarketingProfileBatchResult: {
+            accepted: number;
+            rejected: components["schemas"]["RejectedEvent"][];
         };
         MarketingRegistration: {
             /** Format: uuid */
@@ -53553,10 +53697,8 @@ export interface components {
         ResetRequestBody: {
             email: string;
         };
-        /** @description How it was resolved. */
         ResolveBody: {
-            /** @description The last status update; a standard text when absent. */
-            message?: string | null;
+            keep: components["schemas"]["Keep"];
         };
         ResolveVariablesBody: {
             embed?: components["schemas"]["EmbedContext"];
@@ -53575,14 +53717,15 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** @description The resolution. */
+        /** @description The settled conflict. */
         Resolved: {
-            /** Format: date-time */
-            restored_at: string;
-            /** Format: uuid */
-            status_incident_id?: string | null;
-            /** Format: uuid */
-            ticket_id: string;
+            /**
+             * Format: uuid
+             * @description The contact the identifier is linked to now.
+             */
+            contact_id: string;
+            identifier_type: string;
+            identifier_value: string;
         };
         /** @description What a restore did. */
         RestoreCounts: {
@@ -55343,6 +55486,20 @@ export interface components {
              */
             weight: number;
         };
+        /** @description A25-T5: how far the drain is behind. */
+        SearchDrainBacklog: {
+            /**
+             * Format: int64
+             * @description Events after this consumer's cursor, counted up to
+             *     [`attome_core::change_feed::LAG_COUNT_CAP`].
+             */
+            events: number;
+            /**
+             * Format: double
+             * @description Age of the oldest of them in seconds; 0 with nothing to read.
+             */
+            lag_seconds: number;
+        };
         SearchEntitySettings: {
             attributes: components["schemas"]["SearchAttributeSetting"][];
             /** Format: float */
@@ -55483,7 +55640,7 @@ export interface components {
         };
         /** @description A25-T5: how far the index is behind, and its size per entity. */
         SearchStatus: {
-            backlog: components["schemas"]["Backlog"];
+            backlog: components["schemas"]["SearchDrainBacklog"];
             /** @description Per entity, largest first, from the daily upkeep. */
             sizes: components["schemas"]["IndexSize"][];
         };
@@ -56111,6 +56268,15 @@ export interface components {
             parameters: components["schemas"]["ParamDecl"][];
             /** @description Whether it holds a QuerySpec, so `query/run` can run it by id. */
             runnable: boolean;
+        };
+        /** @description A booked shipment. */
+        ShipmentBooked: {
+            carrier: string;
+            /** @description The carrier's label, when it returned one. */
+            label_url?: string | null;
+            /** Format: uuid */
+            shipment_id: string;
+            tracking_number: string;
         };
         SidebarAdminItem: {
             color?: string | null;
@@ -57214,6 +57380,13 @@ export interface components {
              *     reason.
              */
             reference?: string | null;
+        };
+        StaticListImportBody: {
+            /**
+             * Format: uuid
+             * @description The CSV document (`attome_document`) to import.
+             */
+            document_id: string;
         };
         /** @description One component. */
         StatusComponent: {
@@ -60259,6 +60432,14 @@ export interface components {
             /** Format: uuid */
             target_version_id: string;
             waiting: components["schemas"]["MoveMapping"][];
+        };
+        /**
+         * @description A planner's decision. Named apart from the approval engine's
+         *     `DecideBody` in the OpenAPI document, where one name is one schema.
+         */
+        WorkforceSwapDecideBody: {
+            approve: boolean;
+            reason?: string | null;
         };
         /** @description What the write-off did. */
         WriteOffOutcome: {
@@ -80643,7 +80824,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BreakGlassBody"];
+                "application/json": components["schemas"]["BundleBreakGlassBody"];
             };
         };
         responses: {
@@ -100106,7 +100287,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LinkBody"];
+                "application/json": components["schemas"]["ApprovalEmailLinkBody"];
             };
         };
         responses: {
@@ -112439,7 +112620,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Booked"];
+                    "application/json": components["schemas"]["ShipmentBooked"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -115873,7 +116054,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ImportBody"];
+                "application/json": components["schemas"]["StaticListImportBody"];
             };
         };
         responses: {
@@ -116558,7 +116739,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BatchResult"];
+                    "application/json": components["schemas"]["MarketingProfileBatchResult"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -117980,7 +118161,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ConsentBody"];
+                "application/json": components["schemas"]["ImpersonationConsentBody"];
             };
         };
         responses: {
@@ -126205,6 +126386,181 @@ export interface operations {
             };
         };
     };
+    post_sales_lead_conversion_undo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The conversion */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The conversion is undone */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadConversionUndone"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such conversion of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already undone, or a record it made has changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Older than 24 hours */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sales_lead_convert_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The lead */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What converting the lead would create, and the existing records it would repeat */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadConvertPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such lead the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_lead_convert: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The lead's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The lead */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadConvertBody"];
+            };
+        };
+        responses: {
+            /** @description The lead is converted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadConverted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change the lead or create the records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such lead, or a linked record the caller may not read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Changed since read, or already converted */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not qualified, a bad choice, or If-Match missing */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_sales_battlecards: {
         parameters: {
             query?: never;
@@ -130355,7 +130711,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ResolveBody"];
+                "application/json": components["schemas"]["MajorIncidentResolveBody"];
             };
         };
         responses: {
@@ -130365,7 +130721,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Resolved"];
+                    "application/json": components["schemas"]["MajorIncidentResolved"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -136004,7 +136360,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DecideBody"];
+                "application/json": components["schemas"]["WorkforceSwapDecideBody"];
             };
         };
         responses: {

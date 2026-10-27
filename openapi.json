@@ -33637,7 +33637,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BreakGlassBody"
+                "$ref": "#/components/schemas/BundleBreakGlassBody"
               }
             }
           },
@@ -65327,7 +65327,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LinkBody"
+                "$ref": "#/components/schemas/ApprovalEmailLinkBody"
               }
             }
           },
@@ -85442,7 +85442,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Booked"
+                  "$ref": "#/components/schemas/ShipmentBooked"
                 }
               }
             }
@@ -91180,7 +91180,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImportBody"
+                "$ref": "#/components/schemas/StaticListImportBody"
               }
             }
           },
@@ -92297,7 +92297,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BatchResult"
+                  "$ref": "#/components/schemas/MarketingProfileBatchResult"
                 }
               }
             }
@@ -94694,7 +94694,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ConsentBody"
+                "$ref": "#/components/schemas/ImpersonationConsentBody"
               }
             }
           },
@@ -108069,6 +108069,295 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/sales/lead-conversions/{id}/undo": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Undo a lead conversion.",
+        "description": "Within 24 hours, by the person who converted, while every record it\nmade is unchanged: moves activities and notes back, returns the lead to\nqualified and deletes the records it made.",
+        "operationId": "post_sales_lead_conversion_undo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The conversion",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The conversion is undone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadConversionUndone"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such conversion of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already undone, or a record it made has changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Older than 24 hours",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/sales/leads/{id}/convert": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Preview a lead's conversion.",
+        "description": "The values the account, contact and opportunity would get from the\nconversion map, and the existing accounts and contacts the duplicate\nrules match, so one can be linked instead.",
+        "operationId": "get_sales_lead_convert_preview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The lead",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What converting the lead would create, and the existing records it would repeat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadConvertPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such lead the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Convert a qualified lead.",
+        "description": "Creates or links the account, creates, links or skips the contact and\nthe opportunity, moves the lead's activities and notes to the contact\n(else the account) and marks the lead converted. Send the lead's\n`row_version` in `If-Match`.",
+        "operationId": "post_sales_lead_convert",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The lead",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The lead's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadConvertBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The lead is converted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadConverted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not change the lead or create the records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such lead, or a linked record the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed since read, or already converted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not qualified, a bad choice, or If-Match missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/sales/opportunities/{id}/battlecards": {
       "get": {
         "tags": [
@@ -114883,7 +115172,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ResolveBody"
+                "$ref": "#/components/schemas/MajorIncidentResolveBody"
               }
             }
           },
@@ -114895,7 +115184,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Resolved"
+                  "$ref": "#/components/schemas/MajorIncidentResolved"
                 }
               }
             }
@@ -124269,7 +124558,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DecideBody"
+                "$ref": "#/components/schemas/WorkforceSwapDecideBody"
               }
             }
           },
@@ -138059,6 +138348,15 @@
           }
         }
       },
+      "AccessExplainEffect": {
+        "type": "string",
+        "description": "What one source does for the record.",
+        "enum": [
+          "grants",
+          "denies",
+          "not_applicable"
+        ]
+      },
       "AccessExplanation": {
         "type": "object",
         "description": "The answer for one person, record and operation.",
@@ -138492,7 +138790,7 @@
             "description": "A short reason, in English."
           },
           "effect": {
-            "$ref": "#/components/schemas/Effect"
+            "$ref": "#/components/schemas/AccessExplainEffect"
           },
           "source": {
             "type": "string",
@@ -141135,6 +141433,19 @@
           }
         }
       },
+      "ApprovalEmailLinkBody": {
+        "type": "object",
+        "description": "A presented link.",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The token from the emailed link."
+          }
+        }
+      },
       "ApprovalHistoryItem": {
         "type": "object",
         "description": "M9-T4: one request in a record's approval history.",
@@ -143636,26 +143947,6 @@
           }
         }
       },
-      "BatchResult": {
-        "type": "object",
-        "description": "What a batch did.",
-        "required": [
-          "accepted",
-          "rejected"
-        ],
-        "properties": {
-          "accepted": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "rejected": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RejectedEvent"
-            }
-          }
-        }
-      },
       "BatchResult_BulkItemOk": {
         "type": "object",
         "description": "The per-item results of a batch, in request order (Z14-T6). Every bulk\nresponse reports its items through this shape.",
@@ -144423,29 +144714,29 @@
       },
       "Booked": {
         "type": "object",
-        "description": "A booked shipment.",
+        "description": "A booking made.",
         "required": [
-          "shipment_id",
-          "carrier",
-          "tracking_number"
+          "booking_id",
+          "start",
+          "end",
+          "manage_token"
         ],
         "properties": {
-          "carrier": {
-            "type": "string"
-          },
-          "label_url": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "The carrier's label, when it returned one."
-          },
-          "shipment_id": {
+          "booking_id": {
             "type": "string",
             "format": "uuid"
           },
-          "tracking_number": {
-            "type": "string"
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "manage_token": {
+            "type": "string",
+            "description": "The token of the reschedule/cancel link (also in the email)."
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -145758,6 +146049,20 @@
             "items": {
               "$ref": "#/components/schemas/ViewDef"
             }
+          }
+        }
+      },
+      "BundleBreakGlassBody": {
+        "type": "object",
+        "properties": {
+          "ttl_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Window length in minutes. Default 60, maximum 240.",
+            "minimum": 0
           }
         }
       },
@@ -151464,29 +151769,18 @@
       },
       "ConsentBody": {
         "type": "object",
-        "required": [
-          "hours"
-        ],
         "properties": {
-          "actor_email": {
+          "privacy_version": {
             "type": [
               "string",
               "null"
-            ],
-            "description": "The administrator's email, when the id is not known."
+            ]
           },
-          "actor_id": {
+          "terms_version": {
             "type": [
               "string",
               "null"
-            ],
-            "format": "uuid",
-            "description": "The administrator who may act as you, by id or (below) by email."
-          },
-          "hours": {
-            "type": "integer",
-            "format": "int64",
-            "description": "How long, 1 to 72 hours."
+            ]
           }
         }
       },
@@ -152040,6 +152334,26 @@
               "type": "string"
             },
             "description": "text -> bool."
+          }
+        }
+      },
+      "ConvertTarget": {
+        "type": "object",
+        "description": "What to do with one target record.",
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`create` (default), `link` (to `id`) or `skip` (not for the account)."
           }
         }
       },
@@ -159531,11 +159845,11 @@
       },
       "Effect": {
         "type": "string",
-        "description": "What one source does for the record.",
+        "description": "What the action touches, independent of how risky it is. Kept separate from\n[`RiskTier`] because they answer different questions: `Effect` decides\nwhether an air-gapped deployment can run it at all (I-7), `RiskTier`\ndecides who has to approve it.",
         "enum": [
-          "grants",
-          "denies",
-          "not_applicable"
+          "Read",
+          "Write",
+          "External"
         ]
       },
       "EffectiveAccess": {
@@ -165936,6 +166250,34 @@
           }
         }
       },
+      "ImpersonationConsentBody": {
+        "type": "object",
+        "required": [
+          "hours"
+        ],
+        "properties": {
+          "actor_email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The administrator's email, when the id is not known."
+          },
+          "actor_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The administrator who may act as you, by id or (below) by email."
+          },
+          "hours": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How long, 1 to 72 hours."
+          }
+        }
+      },
       "ImpersonationConsentItem": {
         "type": "object",
         "description": "One consent.",
@@ -168175,6 +168517,134 @@
           }
         }
       },
+      "LeadConversionUndone": {
+        "type": "object",
+        "description": "A conversion undone.",
+        "required": [
+          "conversion_id",
+          "lead_id",
+          "removed"
+        ],
+        "properties": {
+          "conversion_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lead_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "removed": {
+            "type": "integer",
+            "description": "Records deleted.",
+            "minimum": 0
+          }
+        }
+      },
+      "LeadConvertBody": {
+        "type": "object",
+        "description": "A conversion's choices; every target defaults to `create`.",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ConvertTarget"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/ConvertTarget"
+          },
+          "opportunity": {
+            "$ref": "#/components/schemas/ConvertTarget"
+          }
+        }
+      },
+      "LeadConvertPreview": {
+        "type": "object",
+        "description": "The preview of a conversion.",
+        "required": [
+          "lead_id",
+          "account",
+          "contact",
+          "opportunity",
+          "account_matches",
+          "contact_matches",
+          "hidden_matches"
+        ],
+        "properties": {
+          "account": {
+            "type": "object"
+          },
+          "account_matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateMatch"
+            },
+            "description": "Existing accounts the new one would repeat, that the caller may read."
+          },
+          "contact": {
+            "type": "object"
+          },
+          "contact_matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateMatch"
+            }
+          },
+          "hidden_matches": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Matches the caller may not read."
+          },
+          "lead_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "opportunity": {
+            "type": "object"
+          }
+        }
+      },
+      "LeadConverted": {
+        "type": "object",
+        "description": "A conversion done.",
+        "required": [
+          "conversion_id",
+          "lead_id",
+          "account_id",
+          "moved"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contact_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "conversion_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lead_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "moved": {
+            "type": "integer",
+            "description": "Activities and notes moved off the lead.",
+            "minimum": 0
+          },
+          "opportunity_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "LedgerHead": {
         "type": "object",
         "description": "The newest ledger row of one (layer, scope).",
@@ -169323,6 +169793,44 @@
           }
         }
       },
+      "MajorIncidentResolveBody": {
+        "type": "object",
+        "description": "How it was resolved.",
+        "properties": {
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The last status update; a standard text when absent."
+          }
+        }
+      },
+      "MajorIncidentResolved": {
+        "type": "object",
+        "description": "The resolution.",
+        "required": [
+          "ticket_id",
+          "restored_at"
+        ],
+        "properties": {
+          "restored_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status_incident_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ManagedBooking": {
         "type": "object",
         "description": "A booking as its manage link shows it.",
@@ -169612,6 +170120,26 @@
           },
           "target_entity": {
             "type": "string"
+          }
+        }
+      },
+      "MarketingProfileBatchResult": {
+        "type": "object",
+        "description": "What a batch did.",
+        "required": [
+          "accepted",
+          "rejected"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rejected": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RejectedEvent"
+            }
           }
         }
       },
@@ -205369,14 +205897,12 @@
       },
       "ResolveBody": {
         "type": "object",
-        "description": "How it was resolved.",
+        "required": [
+          "keep"
+        ],
         "properties": {
-          "message": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "The last status update; a standard text when absent."
+          "keep": {
+            "$ref": "#/components/schemas/Keep"
           }
         }
       },
@@ -205422,26 +205948,23 @@
       },
       "Resolved": {
         "type": "object",
-        "description": "The resolution.",
+        "description": "The settled conflict.",
         "required": [
-          "ticket_id",
-          "restored_at"
+          "identifier_type",
+          "identifier_value",
+          "contact_id"
         ],
         "properties": {
-          "restored_at": {
+          "contact_id": {
             "type": "string",
-            "format": "date-time"
+            "format": "uuid",
+            "description": "The contact the identifier is linked to now."
           },
-          "status_incident_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
+          "identifier_type": {
+            "type": "string"
           },
-          "ticket_id": {
-            "type": "string",
-            "format": "uuid"
+          "identifier_value": {
+            "type": "string"
           }
         }
       },
@@ -210094,6 +210617,26 @@
           }
         }
       },
+      "SearchDrainBacklog": {
+        "type": "object",
+        "description": "A25-T5: how far the drain is behind.",
+        "required": [
+          "events",
+          "lag_seconds"
+        ],
+        "properties": {
+          "events": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Events after this consumer's cursor, counted up to\n[`attome_core::change_feed::LAG_COUNT_CAP`]."
+          },
+          "lag_seconds": {
+            "type": "number",
+            "format": "double",
+            "description": "Age of the oldest of them in seconds; 0 with nothing to read."
+          }
+        }
+      },
       "SearchEntitySettings": {
         "type": "object",
         "required": [
@@ -210491,7 +211034,7 @@
         ],
         "properties": {
           "backlog": {
-            "$ref": "#/components/schemas/Backlog"
+            "$ref": "#/components/schemas/SearchDrainBacklog"
           },
           "sizes": {
             "type": "array",
@@ -212021,6 +212564,34 @@
           "runnable": {
             "type": "boolean",
             "description": "Whether it holds a QuerySpec, so `query/run` can run it by id."
+          }
+        }
+      },
+      "ShipmentBooked": {
+        "type": "object",
+        "description": "A booked shipment.",
+        "required": [
+          "shipment_id",
+          "carrier",
+          "tracking_number"
+        ],
+        "properties": {
+          "carrier": {
+            "type": "string"
+          },
+          "label_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The carrier's label, when it returned one."
+          },
+          "shipment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tracking_number": {
+            "type": "string"
           }
         }
       },
@@ -214847,6 +215418,19 @@
               "null"
             ],
             "description": "The document number, the payment's reference, or the write-off's\nreason."
+          }
+        }
+      },
+      "StaticListImportBody": {
+        "type": "object",
+        "required": [
+          "document_id"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The CSV document (`attome_document`) to import."
           }
         }
       },
@@ -222861,6 +223445,24 @@
           }
         }
       },
+      "WorkforceSwapDecideBody": {
+        "type": "object",
+        "description": "A planner's decision. Named apart from the approval engine's\n`DecideBody` in the OpenAPI document, where one name is one schema.",
+        "required": [
+          "approve"
+        ],
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "WriteOffOutcome": {
         "type": "object",
         "description": "What the write-off did.",
@@ -223054,7 +223656,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -223107,5 +223709,5 @@
       }
     }
   },
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }
