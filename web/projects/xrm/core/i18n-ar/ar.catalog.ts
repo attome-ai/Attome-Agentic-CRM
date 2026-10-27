@@ -3403,6 +3403,30 @@ export const xrmAr = {
         loadFailed: 'تعذّر تحميل التقسيمات.',
       },
     },
+    // ── G17-T13 — شاشات القوى العاملة ──
+    workforce: {
+      title: 'القوى العاملة',
+      group: 'مجموعة التخطيط',
+      tabs: { schedules: 'الجداول', swaps: 'التبديلات', intraday: 'خلال اليوم', adherence: 'الالتزام' },
+      from: 'من', to: 'إلى', build: 'إنشاء مسودة',
+      buildNeedsDates: 'اختر مجموعة التخطيط وأول يوم وآخر يوم.',
+      buildQueued: 'بدأ الإنشاء؛ تظهر المسودة هنا عند اكتمالها.',
+      noSchedules: 'لا توجد جداول بعد لهذه المجموعة.',
+      publish: 'نشر', publishConfirm: 'نعم، انشر',
+      confirmPublish: 'النشر يحجز كل مناوبة ويبلغ كل من في الجدول. هل تنشر؟',
+      published: 'نُشر الجدول.',
+      conflict: 'تغيّر هذا منذ أن حمّلته. أعد التحميل وحاول مرة أخرى.',
+      editTitle: 'نقل هذه المناوبة', person: 'الشخص', save: 'حفظ', cancel: 'إلغاء',
+      approve: 'موافقة', reject: 'رفض', noSwaps: 'لا توجد تبديلات بانتظار القرار.',
+      send: 'إرسال', noProposals: 'لا توجد مقترحات خلال اليوم بانتظار الإرسال.',
+      inAdherence: '{{count}} من {{total}} ملتزمون الآن.',
+      scheduled: 'المجدول', actual: 'ما يفعله الآن',
+      grid: {
+        empty: 'لا أحد مجدول في هذه الفترة.', person: 'الشخص',
+        coverage: 'التغطية لكل يوم', required: 'المطلوب', scheduled: 'المجدول',
+      },
+      activity: { work: 'عمل', break: 'استراحة', meal: 'وجبة', training: 'تدريب' },
+    },
   },
   // ── D17-T2 — تسلسلات المبيعات ──
   sequences: {

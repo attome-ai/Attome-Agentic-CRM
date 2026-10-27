@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Workforce screens (G17-T13, `@attome/xrm/workforce`, `/xrm/workforce`, workforce pack `0005`): pick a
+  planning group, build a draft schedule, see it as a people-by-days grid with shifts and breaks and
+  the coverage per day, move a shift, publish (a stale write asks to reload); swaps waiting for a
+  planner, intraday proposals to send and live adherence. Arabic and English, mirrored in RTL, with
+  Hijri dates beside Gregorian.
 - Starter flow templates (M6-T3, `templates/flows/`): twenty `flow_template` documents for sales,
   service, back office and MENA (ZATCA invoice approval, Hijri renewal and iqama expiry reminders), in
   English and Arabic, each instantiating with its defaults into a graph that passes publish validation.

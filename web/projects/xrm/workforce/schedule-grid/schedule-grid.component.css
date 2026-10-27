@@ -1,0 +1,40 @@
+:host { display: block; }
+
+.sg-wrap { display: flex; flex-direction: column; gap: 10px; }
+.sg-note { margin: 0; color: var(--color-text-secondary); }
+.sg-title { margin: 0; font-size: 0.95rem; }
+
+.sg-scroll { overflow-x: auto; }
+.sg-table { border-collapse: collapse; min-inline-size: 100%; }
+.sg-table th,
+.sg-table td {
+  padding-block: 4px;
+  padding-inline: 6px;
+  border: 1px solid var(--color-border);
+  text-align: start;
+  white-space: nowrap;
+}
+.sg-day { min-inline-size: 7rem; font-weight: 500; }
+
+.sg-cell { position: relative; block-size: 28px; min-inline-size: 7rem; }
+.sg-bar {
+  position: absolute;
+  inset-block: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--color-primary);
+  cursor: pointer;
+}
+.sg-break { opacity: 0.4; }
+
+.sg-coverage { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.sg-coverage li { display: grid; grid-template-columns: 8rem 1fr 5rem; gap: 8px; align-items: center; }
+.sg-track { position: relative; block-size: 12px; background: var(--color-bg-alt); border-radius: 4px; }
+.sg-track .sg-required { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 4px; }
+.sg-track .sg-scheduled { position: absolute; inset-block: 20%; inset-inline-start: 0; border-radius: 4px; }
+.sg-required { background: var(--color-border); }
+.sg-scheduled { background: var(--color-primary); opacity: 0.8; }
+.sg-short .sg-numbers { color: var(--color-danger, #b91c1c); }
+.sg-legend { margin: 0; color: var(--color-text-secondary); font-size: 0.85rem; }
+.sg-key { display: inline-block; inline-size: 10px; block-size: 10px; border-radius: 2px; }

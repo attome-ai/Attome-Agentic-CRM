@@ -1,0 +1,136 @@
+<section class="wf-page" data-testid="workforce-page">
+  <header class="wf-head">
+    <h2 class="wf-title">{{ 'xrm.workforce.title' | translate }}</h2>
+    <label class="wf-field">
+      <span>{{ 'xrm.workforce.group' | translate }}</span>
+      <select [value]="group()" (change)="pickGroup($any($event.target).value)" data-testid="workforce-group">
+        @for (g of groups(); track g.id) { <option [value]="g.id">{{ g.label }}</option> }
+      </select>
+    </label>
+  </header>
+
+  <nav class="wf-tabs" role="tablist">
+    @for (t of tabs; track t) {
+      <button type="button" role="tab" class="wf-tab" [class.wf-active]="tab() === t"
+              [attr.aria-selected]="tab() === t" (click)="pickTab(t)">{{ tabKey(t) | translate }}</button>
+    }
+  </nav>
+
+  @if (error(); as message) {
+    <p class="wf-error" role="alert" data-testid="workforce-error">{{ message }}</p>
+  }
+  @if (notice(); as message) {
+    <p class="wf-note" role="status">{{ message }}</p>
+  }
+
+  @switch (tab()) {
+    @case ('schedules') {
+      <div class="wf-bar">
+        <label class="wf-field">
+          <span>{{ 'xrm.workforce.from' | translate }}</span>
+          <input type="date" [value]="buildFrom()" (input)="buildFrom.set($any($event.target).value)" />
+        </label>
+        <label class="wf-field">
+          <span>{{ 'xrm.workforce.to' | translate }}</span>
+          <input type="date" [value]="buildTo()" (input)="buildTo.set($any($event.target).value)" />
+        </label>
+        <button type="button" class="wf-btn" (click)="build()" [disabled]="busy()">{{ 'xrm.workforce.build' | translate }}</button>
+      </div>
+
+      <ul class="wf-list">
+        @for (s of schedules(); track s.id) {
+          <li>
+            <button type="button" class="wf-link" (click)="open(s.id)" [attr.data-schedule]="s.id">
+              {{ s.period_from | localDate: { dateStyle: 'medium', timeZone: 'UTC' } : 'both' }}
+              <span aria-hidden="true">–</span>
+              {{ s.period_to | localDate: { dateStyle: 'medium', timeZone: 'UTC' } : 'both' }}
+              <span class="wf-status">{{ s.status }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="wf-note">{{ 'xrm.workforce.noSchedules' | translate }}</li>
+        }
+      </ul>
+
+      @if (detail(); as d) {
+        @if (isDraft()) {
+          <div class="wf-bar">
+            @if (confirmPublish()) {
+              <span>{{ 'xrm.workforce.confirmPublish' | translate }}</span>
+            }
+            <button type="button" class="wf-btn wf-primary" (click)="publish()" [disabled]="busy()"
+                    data-testid="workforce-publish">
+              {{ (confirmPublish() ? 'xrm.workforce.publishConfirm' : 'xrm.workforce.publish') | translate }}
+            </button>
+          </div>
+        }
+        <xrm-workforce-schedule-grid [schedule]="d" [users]="users()" (selectAssignment)="edit($event)" />
+        @if (editing(); as a) {
+          <aside class="wf-panel" data-testid="workforce-edit">
+            <h4>{{ 'xrm.workforce.editTitle' | translate }}</h4>
+            <p>{{ a.start_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</p>
+            <label class="wf-field">
+              <span>{{ 'xrm.workforce.person' | translate }}</span>
+              <select [value]="moveTo()" (change)="moveTo.set($any($event.target).value)">
+                @for (u of users(); track u.id) { <option [value]="u.id">{{ u.label }}</option> }
+              </select>
+            </label>
+            <div class="wf-bar">
+              <button type="button" class="wf-btn wf-primary" (click)="saveMove()" [disabled]="busy()">{{ 'xrm.workforce.save' | translate }}</button>
+              <button type="button" class="wf-btn" (click)="editing.set(null)">{{ 'xrm.workforce.cancel' | translate }}</button>
+            </div>
+          </aside>
+        }
+      }
+    }
+    @case ('swaps') {
+      <ul class="wf-list" data-testid="workforce-swaps">
+        @for (s of swaps(); track s.id) {
+          <li class="wf-row">
+            <span>{{ userName(s.to_user_ref) }}</span>
+            <span class="wf-status">{{ s.status }}</span>
+            <button type="button" class="wf-btn wf-primary" (click)="decide(s, true)" [disabled]="busy()">{{ 'xrm.workforce.approve' | translate }}</button>
+            <button type="button" class="wf-btn" (click)="decide(s, false)" [disabled]="busy()">{{ 'xrm.workforce.reject' | translate }}</button>
+          </li>
+        } @empty {
+          <li class="wf-note">{{ 'xrm.workforce.noSwaps' | translate }}</li>
+        }
+      </ul>
+    }
+    @case ('intraday') {
+      <ul class="wf-list" data-testid="workforce-proposals">
+        @for (o of proposals(); track o.id) {
+          <li class="wf-row">
+            <span>{{ o.kind }}</span>
+            <span>{{ o.start_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</span>
+            <span>{{ o.reason }}</span>
+            <button type="button" class="wf-btn wf-primary" (click)="send(o)" [disabled]="busy()">{{ 'xrm.workforce.send' | translate }}</button>
+          </li>
+        } @empty {
+          <li class="wf-note">{{ 'xrm.workforce.noProposals' | translate }}</li>
+        }
+      </ul>
+    }
+    @case ('adherence') {
+      <p class="wf-note">{{ 'xrm.workforce.inAdherence' | translate: { count: inAdherence(), total: live().length } }}</p>
+      <table class="wf-table" data-testid="workforce-live">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'xrm.workforce.person' | translate }}</th>
+            <th scope="col">{{ 'xrm.workforce.scheduled' | translate }}</th>
+            <th scope="col">{{ 'xrm.workforce.actual' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of live(); track r.user_id) {
+            <tr [class.wf-out]="!r.in_adherence">
+              <td>{{ userName(r.user_id) }}</td>
+              <td>{{ r.scheduled }}</td>
+              <td>{{ r.actual }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</section>

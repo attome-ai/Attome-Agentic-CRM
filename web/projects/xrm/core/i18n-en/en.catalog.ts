@@ -3482,6 +3482,30 @@ export const xrmEn = {
         loadFailed: 'Could not load the splits.',
       },
     },
+    // ── G17-T13: the workforce screens ──
+    workforce: {
+      title: 'Workforce',
+      group: 'Planning group',
+      tabs: { schedules: 'Schedules', swaps: 'Swaps', intraday: 'Intraday', adherence: 'Adherence' },
+      from: 'From', to: 'To', build: 'Build a draft',
+      buildNeedsDates: 'Choose a planning group and the first and last day.',
+      buildQueued: 'The build has started; the draft appears here when it is done.',
+      noSchedules: 'No schedules yet for this group.',
+      publish: 'Publish', publishConfirm: 'Yes, publish',
+      confirmPublish: 'Publishing books every shift and tells everyone scheduled. Publish?',
+      published: 'The schedule is published.',
+      conflict: 'This changed since you loaded it. Reload and try again.',
+      editTitle: 'Move this shift', person: 'Person', save: 'Save', cancel: 'Cancel',
+      approve: 'Approve', reject: 'Reject', noSwaps: 'No swaps are waiting.',
+      send: 'Send', noProposals: 'No intraday proposals are waiting.',
+      inAdherence: '{{count}} of {{total}} in adherence now.',
+      scheduled: 'Scheduled', actual: 'Doing now',
+      grid: {
+        empty: 'Nobody is scheduled in this period.', person: 'Person',
+        coverage: 'Coverage per day', required: 'Required', scheduled: 'Scheduled',
+      },
+      activity: { work: 'Work', break: 'Break', meal: 'Meal', training: 'Training' },
+    },
   },
   // ── D17-T2: sales sequences ──
   sequences: {

@@ -1,0 +1,69 @@
+:host { display: block; padding: 16px; }
+
+.wf-page { display: flex; flex-direction: column; gap: 12px; }
+.wf-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; justify-content: space-between; }
+.wf-title { margin: 0; font-size: 1.25rem; }
+.wf-field { display: flex; flex-direction: column; gap: 4px; }
+.wf-field select,
+.wf-field input {
+  padding-block: 6px;
+  padding-inline: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.wf-tabs { display: flex; gap: 4px; border-block-end: 1px solid var(--color-border); }
+.wf-tab {
+  padding-block: 8px;
+  padding-inline: 12px;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.wf-active { border-block-end-color: var(--color-primary); color: var(--color-text-primary); }
+
+.wf-error { margin: 0; color: var(--color-danger, #b91c1c); }
+.wf-note { margin: 0; color: var(--color-text-secondary); }
+.wf-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.wf-list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.wf-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.wf-link { border: 0; background: none; color: var(--color-primary); cursor: pointer; text-align: start; }
+.wf-status { color: var(--color-text-secondary); }
+.wf-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-alt);
+}
+.wf-panel h4 { margin: 0; }
+.wf-table { border-collapse: collapse; }
+.wf-table th,
+.wf-table td {
+  padding-block: 4px;
+  padding-inline: 8px;
+  border-block-end: 1px solid var(--color-border);
+  text-align: start;
+}
+.wf-out td { color: var(--color-danger, #b91c1c); }
+
+.wf-btn {
+  padding-block: 6px;
+  padding-inline: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.wf-primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-accent, #fff);
+}

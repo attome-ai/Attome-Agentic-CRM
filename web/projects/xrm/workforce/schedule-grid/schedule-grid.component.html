@@ -1,0 +1,55 @@
+<section class="sg-wrap" data-testid="schedule-grid">
+  @if (rows().length === 0) {
+    <p class="sg-note">{{ 'xrm.workforce.grid.empty' | translate }}</p>
+  } @else {
+    <div class="sg-scroll">
+      <table class="sg-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'xrm.workforce.grid.person' | translate }}</th>
+            @for (day of days(); track day) {
+              <th scope="col" class="sg-day">{{ day | localDate: { dateStyle: 'medium', timeZone: 'UTC' } : 'both' }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.userId) {
+            <tr [attr.data-user]="row.userId">
+              <th scope="row">{{ row.label }}</th>
+              @for (bars of row.days; track $index) {
+                <td class="sg-cell">
+                  @for (bar of bars; track bar.id) {
+                    <button type="button" class="sg-bar" [class.sg-break]="bar.activity !== 'work'"
+                            [style.inset-inline-start.%]="bar.start" [style.inline-size.%]="bar.width"
+                            [attr.aria-label]="activityKey(bar.activity) | translate"
+                            [attr.data-assignment]="bar.id" (click)="selectAssignment.emit(bar.assignment)"></button>
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (totals().length) {
+    <h4 class="sg-title">{{ 'xrm.workforce.grid.coverage' | translate }}</h4>
+    <ul class="sg-coverage" data-testid="schedule-coverage">
+      @for (t of totals(); track t.day) {
+        <li [class.sg-short]="t.under > 0">
+          <span class="sg-label">{{ t.day | localDate: { dateStyle: 'medium', timeZone: 'UTC' } }}</span>
+          <span class="sg-track">
+            <span class="sg-required" [style.inline-size.%]="share(t.required)"></span>
+            <span class="sg-scheduled" [style.inline-size.%]="share(t.scheduled)"></span>
+          </span>
+          <span class="sg-numbers" dir="ltr">{{ t.scheduled }} / {{ t.required }}</span>
+        </li>
+      }
+    </ul>
+    <p class="sg-legend">
+      <span class="sg-key sg-required"></span> {{ 'xrm.workforce.grid.required' | translate }}
+      <span class="sg-key sg-scheduled"></span> {{ 'xrm.workforce.grid.scheduled' | translate }}
+    </p>
+  }
+</section>
