@@ -23,7 +23,7 @@
 //! 0240); `GET` on the same path lists them, newest first, to compare.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json,
@@ -298,7 +298,7 @@ pub struct CleanupItem {
 )]
 pub(crate) async fn simulate_rule(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Simulation>, AppError> {
     simulate(&state, id).await.map(Json)
@@ -322,7 +322,7 @@ pub(crate) async fn simulate_rule(
 )]
 pub(crate) async fn cleanup_queue(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<CleanupItem>>, AppError> {
@@ -530,7 +530,7 @@ pub async fn run_scenario_simulation(
 /// result is stored against the scenario; nothing else is written.
 pub(crate) async fn run_scenario(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Json(body): Json<ScenarioSimulationBody>,
 ) -> Result<(StatusCode, Json<ScenarioSimulation>), AppError> {
@@ -560,7 +560,7 @@ pub(crate) async fn run_scenario(
 /// the same rule or flow can be compared.
 pub(crate) async fn list_scenario(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<ScenarioSimulation>>, AppError> {

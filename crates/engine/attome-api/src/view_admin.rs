@@ -6,7 +6,7 @@ use attome_core::changeset::{Op, RecordedOp, Recording, RecordingCtx};
 use attome_core::filter::{FieldCastError, FilterSchema};
 use attome_core::{EngineState, Filter};
 use attome_metadata::provision::{ReconcileOutcome, ReconcilePolicy};
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PageWindow, PaginatedResponse};
@@ -415,7 +415,7 @@ const VIEW_SELECT: &str = "SELECT v.id, v.name, v.icon, v.entity_logical_name, e
 )]
 async fn list_views(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<ViewDetail>>, AppError> {
     let PageWindow {
@@ -547,7 +547,7 @@ async fn list_available_views(
 )]
 async fn get_view(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ViewDetail>, AppError> {
     let sql =
@@ -580,7 +580,7 @@ async fn get_view(
 )]
 async fn create_view(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Json(body): Json<ViewBody>,
 ) -> Result<(StatusCode, Json<ViewDetail>), AppError> {
@@ -832,7 +832,7 @@ fn view_patch_op(before: &ViewDetail, after: &ViewDetail) -> Result<RecordedOp, 
 )]
 async fn update_view(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<ViewBody>,
@@ -892,7 +892,7 @@ async fn update_view(
 )]
 async fn delete_view(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
@@ -1670,7 +1670,7 @@ pub(crate) struct ViewImpact {
 )]
 async fn view_impact(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ViewImpact>, AppError> {
     let db = &state.base.db;

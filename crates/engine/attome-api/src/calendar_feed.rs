@@ -21,7 +21,7 @@ use std::collections::BTreeMap;
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -248,7 +248,7 @@ fn configuration_event(
 )]
 async fn create_feed(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Json(body): Json<CalendarFeedBody>,
 ) -> Result<(StatusCode, Json<CalendarFeed>), AppError> {
     let url = check_url(&body.url).await?;
@@ -307,7 +307,7 @@ async fn create_feed(
 )]
 async fn delete_feed(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

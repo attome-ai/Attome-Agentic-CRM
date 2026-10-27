@@ -30,7 +30,7 @@ use attome_audit::{AuditOperation, audit_service};
 use attome_core::EngineState;
 use attome_model::store::{self, ObjectSpec};
 use attome_model::{Issue, Kind, KindRegistry, Layer, ObjectId, ObjectRef};
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -407,7 +407,9 @@ fn object_ref(kind: &dyn Kind, id: Uuid) -> ObjectRef {
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-async fn list_kinds(_ctx: Authorized<Admin>) -> Json<PaginatedResponse<KindView>> {
+async fn list_kinds(
+    _ctx: Authorized<Privilege<area::DataModel>>,
+) -> Json<PaginatedResponse<KindView>> {
     let items: Vec<KindView> = kinds()
         .iter()
         .map(|kind| KindView {
@@ -445,7 +447,7 @@ async fn list_kinds(_ctx: Authorized<Admin>) -> Json<PaginatedResponse<KindView>
 )]
 async fn list_objects(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(kind_name): Path<String>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<ObjectSummaryView>>, AppError> {
@@ -518,7 +520,7 @@ async fn read_checked(
 )]
 async fn get_object(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((kind_name, id)): Path<(String, Uuid)>,
 ) -> Result<Json<ObjectVersionView>, AppError> {
     Ok(Json(version_view(
@@ -549,7 +551,7 @@ async fn get_object(
 )]
 async fn get_version(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((kind_name, id, version)): Path<(String, Uuid, i64)>,
 ) -> Result<Json<ObjectVersionView>, AppError> {
     Ok(Json(version_view(
@@ -575,7 +577,7 @@ async fn get_version(
 )]
 async fn get_history(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((kind_name, id)): Path<(String, Uuid)>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<VersionSummaryView>>, AppError> {
@@ -618,7 +620,7 @@ async fn get_history(
 )]
 async fn get_diff(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((kind_name, id)): Path<(String, Uuid)>,
     Query(query): Query<DiffQuery>,
 ) -> Result<Json<PaginatedResponse<PatchOpView>>, AppError> {
@@ -660,7 +662,7 @@ async fn get_diff(
 )]
 async fn get_references(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((kind_name, id)): Path<(String, Uuid)>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<ReferenceView>>, AppError> {
@@ -710,7 +712,7 @@ async fn get_references(
 )]
 async fn validate(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((kind_name, _id)): Path<(String, Uuid)>,
     Json(request): Json<ValidateRequest>,
 ) -> Result<Json<ModelValidateResponse>, AppError> {
@@ -759,7 +761,7 @@ fn a11y_warnings(kind: &str, doc: &serde_json::Value) -> Vec<String> {
 )]
 async fn apply_commands(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path((kind_name, id)): Path<(String, Uuid)>,
     Json(request): Json<CommandsRequest>,
 ) -> Result<Json<CommandsResponse>, AppError> {
@@ -909,7 +911,7 @@ async fn provision_dependency(state: &EngineState, id: Uuid, doc: &Value) -> Res
 )]
 async fn publish(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path((kind_name, id)): Path<(String, Uuid)>,
 ) -> Result<Json<ModelPublishResponse>, AppError> {
     let kind = kind(&kind_name)?;
@@ -1180,7 +1182,7 @@ async fn form_plan(
 )]
 async fn default_form_plan(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity): Path<String>,
 ) -> Result<Json<FormPlan>, AppError> {
     let entity_id: Uuid = sqlx::query_scalar(
@@ -1343,7 +1345,7 @@ fn read_blueprint(request: &ModelFiles) -> Result<Vec<BlueprintObject>, AppError
 )]
 async fn blueprint_plan(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Json(request): Json<ModelFiles>,
 ) -> Result<Json<BlueprintPlan>, AppError> {
     let objects = read_blueprint(&request)?;
@@ -1403,7 +1405,7 @@ async fn blueprint_plan(
 )]
 async fn blueprint_apply(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(request): Json<ModelFiles>,
 ) -> Result<Json<BlueprintApplied>, AppError> {
     let objects = read_blueprint(&request)?;
@@ -1512,7 +1514,7 @@ async fn blueprint_apply(
 )]
 async fn blueprint_rollback(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(request): Json<BlueprintRollback>,
 ) -> Result<Json<BlueprintApplied>, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -1818,7 +1820,7 @@ fn dependency_pairs(doc: &Value) -> (Vec<String>, Vec<String>, Vec<String>) {
 )]
 async fn dependency_impact(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DependencyImpact>, AppError> {
     let version = store::read(&state.base.db, id, None).await?;
@@ -1894,7 +1896,7 @@ async fn dependency_impact(
 )]
 async fn menu_usage(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     axum::extract::Query(query): axum::extract::Query<MenuUsageQuery>,
 ) -> Result<Json<attome_types::PaginatedResponse<MenuItemUsage>>, AppError> {
@@ -1983,7 +1985,7 @@ const MAX_IMPORT_FILES: usize = 5_000;
 )]
 async fn export_files(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
 ) -> Result<Json<ModelFiles>, AppError> {
     let stored: Vec<String> = kinds()
         .iter()
@@ -2040,7 +2042,7 @@ async fn export_files(
 )]
 async fn import_files(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(request): Json<ModelFiles>,
 ) -> Result<Json<ImportResponse>, AppError> {
     if request.files.len() > MAX_IMPORT_FILES {
@@ -2521,7 +2523,7 @@ async fn finish_switch(
 )]
 async fn switch_version(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(version): Path<i64>,
 ) -> Result<Json<VersionSwitchResponse>, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -2550,7 +2552,7 @@ async fn switch_version(
 )]
 async fn rollback_version(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
 ) -> Result<Json<VersionSwitchResponse>, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let switched = attome_model::switch::rollback(&mut tx).await?;
@@ -2594,7 +2596,7 @@ pub(crate) struct MetadataVersionView {
 )]
 async fn list_versions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<MetadataVersionView>>, AppError> {
     let page = attome_model::switch::versions(&state.base.db, &page).await?;
@@ -2657,7 +2659,7 @@ pub struct VersionDocQuery {
 )]
 async fn version_docs(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(version): Path<i64>,
     Query(query): Query<VersionDocQuery>,
 ) -> Result<Json<attome_ai::builder::docs::VersionDoc>, AppError> {
@@ -2690,7 +2692,7 @@ async fn version_docs(
 )]
 async fn version_nodes(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(version): Path<i64>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<NodeSwitchView>>, AppError> {

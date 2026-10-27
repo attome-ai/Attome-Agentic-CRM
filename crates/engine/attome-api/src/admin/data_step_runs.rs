@@ -19,7 +19,7 @@ use attome_audit::{
 };
 use attome_core::EngineState;
 use attome_metadata::provision::field_change as fc;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -178,7 +178,7 @@ async fn transition(
 )]
 pub(super) async fn get_data_step_run(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataStepRunStatus>, AppError> {
     load(&state, id).await.map(Json)
@@ -204,7 +204,7 @@ pub(super) async fn get_data_step_run(
 )]
 pub(super) async fn pause_data_step_run(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataStepRunStatus>, AppError> {
     transition(
@@ -243,7 +243,7 @@ pub(super) async fn pause_data_step_run(
 )]
 pub(super) async fn resume_data_step_run(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataStepRunStatus>, AppError> {
     transition(
@@ -282,7 +282,7 @@ pub(super) async fn resume_data_step_run(
 )]
 pub(super) async fn cancel_data_step_run(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataStepRunStatus>, AppError> {
     let run = load(&state, id).await?;

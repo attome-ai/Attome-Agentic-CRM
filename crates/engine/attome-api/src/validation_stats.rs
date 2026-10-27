@@ -12,7 +12,7 @@
 use std::collections::BTreeMap;
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json,
@@ -97,7 +97,7 @@ pub struct StatsQuery {
 )]
 pub(crate) async fn validation_stats(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(q): Query<StatsQuery>,
 ) -> Result<Json<ValidationStats>, AppError> {
     stats(&state, q.days.unwrap_or(DEFAULT_DAYS))

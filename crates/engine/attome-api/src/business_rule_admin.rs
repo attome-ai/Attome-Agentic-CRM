@@ -17,7 +17,7 @@ use attome_core::business_rules::{
 use attome_core::changeset::{Op, RecordingCtx};
 use attome_records::query_admin::resolve_live_entity_id;
 use attome_records::rule_engine;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -136,7 +136,7 @@ struct RuleFilter {
 )]
 async fn list_rules(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(filter): Query<RuleFilter>,
     Query(paging): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<BusinessRule>>, AppError> {
@@ -202,7 +202,7 @@ async fn list_rules(
 )]
 async fn get_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<BusinessRule>, AppError> {
     let mut rule = read_or_404(&state, id).await?;
@@ -233,7 +233,7 @@ async fn get_rule(
 )]
 async fn create_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Json(body): Json<BusinessRuleBody>,
 ) -> Result<Response, AppError> {
@@ -312,7 +312,7 @@ async fn create_rule(
 )]
 async fn update_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
@@ -383,7 +383,7 @@ async fn update_rule(
 )]
 async fn delete_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
@@ -448,7 +448,7 @@ struct ValidateResponse {
 )]
 async fn validate_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Json(body): Json<BusinessRuleBody>,
 ) -> Result<Json<ValidateResponse>, AppError> {
     let input = match store::input_from_body(body) {
@@ -581,7 +581,7 @@ fn outcome_label(o: &ConditionOutcome) -> &'static str {
 )]
 async fn test_rule(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Json(req): Json<RuleTestRequest>,
 ) -> Result<Json<RuleTestResponse>, AppError> {
@@ -647,7 +647,7 @@ struct ExplainQuery {
 )]
 async fn explain_rules(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Query(query): Query<ExplainQuery>,
 ) -> Result<Json<RulesExplained>, AppError> {
     let record =
@@ -1018,7 +1018,7 @@ async fn failing_cases(state: &EngineState, rule: &BusinessRule) -> Result<Vec<S
 )]
 async fn publish_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
 ) -> Result<Json<BusinessRule>, AppError> {

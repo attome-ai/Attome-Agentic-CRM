@@ -28,7 +28,7 @@ use attome_audit::audit_service;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::{EngineState, FieldType};
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse};
 use axum::{
@@ -521,7 +521,7 @@ async fn apply_template(
 )]
 async fn save_as_template(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<SaveAsTemplate>,
 ) -> Result<(StatusCode, Json<SavedTemplate>), AppError> {
     if body.name.trim().is_empty() || body.label_en.trim().is_empty() {

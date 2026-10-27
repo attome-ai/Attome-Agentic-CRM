@@ -16,7 +16,7 @@ use attome_core::EngineState;
 use attome_core::calendar::InvalidCalendarDefinition;
 use attome_core::changeset::{Layer, Op, RecordedOp, Recording, RecordingCtx};
 use attome_metadata::provision::{ReconcileOutcome, ReconcilePolicy};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
@@ -114,7 +114,7 @@ const CALENDAR_SELECT: &str = "SELECT id, name, description, tz, working_days, h
 )]
 async fn list_calendars(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<CalendarDetail>>, AppError> {
     let PageWindow {
@@ -156,7 +156,7 @@ async fn list_calendars(
 )]
 async fn get_calendar(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CalendarFull>, AppError> {
     let sql = format!("{CALENDAR_SELECT} WHERE id = $1 AND is_active = true");
@@ -215,7 +215,7 @@ pub(crate) struct CalendarFull {
 )]
 async fn create_calendar(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Json(body): Json<CalendarBody>,
 ) -> Result<(StatusCode, Json<CalendarDetail>), AppError> {
@@ -381,7 +381,7 @@ fn calendar_op(op: Op, row: &CalendarDetail) -> Result<RecordedOp, AppError> {
 )]
 async fn update_calendar(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<CalendarBody>,
@@ -427,7 +427,7 @@ async fn update_calendar(
 )]
 async fn delete_calendar(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
@@ -752,7 +752,7 @@ const HOLIDAY_SELECT: &str =
 )]
 async fn list_holidays(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(calendar_id): Path<Uuid>,
 ) -> Result<Json<Vec<HolidayDetail>>, AppError> {
     let sql = format!(
@@ -789,7 +789,7 @@ async fn list_holidays(
 )]
 async fn create_holiday(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(calendar_id): Path<Uuid>,
     Json(body): Json<HolidayBody>,
@@ -876,7 +876,7 @@ async fn create_holiday(
 )]
 async fn create_hijri_recurring_holidays(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(calendar_id): Path<Uuid>,
     Json(body): Json<HijriRecurringBody>,
@@ -1100,7 +1100,7 @@ async fn holiday_op(
 )]
 async fn delete_holiday(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path((calendar_id, holiday_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
@@ -1211,7 +1211,7 @@ const EXCEPTION_SELECT: &str = "SELECT id, calendar_id, name, exception_date, ra
 )]
 async fn list_exceptions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(calendar_id): Path<Uuid>,
 ) -> Result<Json<Vec<CalendarExceptionDetail>>, AppError> {
     let sql = format!(
@@ -1247,7 +1247,7 @@ async fn list_exceptions(
 )]
 async fn create_exception(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(calendar_id): Path<Uuid>,
     Json(body): Json<CalendarExceptionBody>,
@@ -1418,7 +1418,7 @@ async fn exception_op(
 )]
 async fn delete_exception(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path((calendar_id, exception_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
@@ -1756,7 +1756,7 @@ async fn season_op(
 )]
 async fn create_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(calendar_id): Path<Uuid>,
     Json(body): Json<HolidayRuleDef>,
@@ -1803,7 +1803,7 @@ async fn create_rule(
 )]
 async fn delete_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path((calendar_id, rule_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
@@ -1851,7 +1851,7 @@ async fn delete_rule(
 )]
 async fn create_season(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(calendar_id): Path<Uuid>,
     Json(body): Json<SeasonDef>,
@@ -1897,7 +1897,7 @@ async fn create_season(
 )]
 async fn delete_season(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path((calendar_id, season_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
@@ -2004,7 +2004,7 @@ fn expected_starts(
 )]
 async fn confirm_sighting(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Json(body): Json<SightingBody>,
 ) -> Result<Json<SightingRow>, AppError> {
     let rule: Option<(Uuid, String, Value, bool)> = sqlx::query_as(
@@ -2104,7 +2104,7 @@ async fn confirm_sighting(
 )]
 async fn list_sightings(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(query): Query<SightingQuery>,
 ) -> Result<Json<Vec<SightingRow>>, AppError> {
     let year = query.year.unwrap_or_else(this_year);
@@ -2193,7 +2193,7 @@ fn check_subject_type(subject_type: &str) -> Result<(), AppError> {
 )]
 async fn get_assignment(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path((subject_type, subject_id)): Path<(String, Uuid)>,
 ) -> Result<Json<AssignmentRow>, AppError> {
     check_subject_type(&subject_type)?;
@@ -2234,7 +2234,7 @@ async fn get_assignment(
 )]
 async fn put_assignment(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path((subject_type, subject_id)): Path<(String, Uuid)>,
     Json(body): Json<AssignmentBody>,
 ) -> Result<Json<AssignmentRow>, AppError> {
@@ -2320,7 +2320,7 @@ async fn put_assignment(
 )]
 async fn delete_assignment(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path((subject_type, subject_id)): Path<(String, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     check_subject_type(&subject_type)?;
@@ -3232,7 +3232,7 @@ struct HijriYearQuery {
 )]
 async fn list_hijri_months(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(query): Query<HijriYearQuery>,
 ) -> Result<Json<PaginatedResponse<attome_core::hijri_store::HijriMonthRow>>, AppError> {
     let months = attome_core::hijri_store::year_months(&state.base.db, query.year).await?;
@@ -3278,7 +3278,7 @@ struct HijriCorrection {
 )]
 async fn correct_hijri_month(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path((year, month)): Path<(u16, u8)>,
     Json(body): Json<HijriCorrection>,
 ) -> Result<Json<PaginatedResponse<attome_core::hijri_store::HijriMonthRow>>, AppError> {

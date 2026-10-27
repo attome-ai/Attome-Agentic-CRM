@@ -19,7 +19,7 @@
 use std::collections::{BTreeMap, HashSet};
 
 use attome_core::{EngineState, EntityMeta, FieldType};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::get};
 use serde::Serialize;
@@ -127,7 +127,7 @@ pub fn registry_findings(meta: &EntityMeta, known: &HashSet<uuid::Uuid>) -> Vec<
 )]
 async fn model_health(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
 ) -> Result<Json<ModelHealth>, AppError> {
     let (entities, mut findings, filterable) = {
         let registry = state.entities.load();

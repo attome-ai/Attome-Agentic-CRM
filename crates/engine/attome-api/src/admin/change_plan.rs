@@ -8,7 +8,7 @@ use attome_metadata::provision::{
     RECONCILE_SCHEMA_CHANGE_INLINE_ROW_LIMIT,
     change_plan::{self, ChangeClass, StructureChange},
 };
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -83,7 +83,7 @@ fn class_name(class: ChangeClass) -> &'static str {
 )]
 pub(super) async fn plan_changes(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_id): Path<Uuid>,
     Json(body): Json<ChangePlanRequest>,
 ) -> Result<Json<ChangePlan>, AppError> {

@@ -30,7 +30,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
 use attome_records::approval_lock::APPROVAL_PROCESS_ACTION;
 use attome_security::RecordAction;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -192,7 +192,7 @@ fn check_body(state: &EngineState, body: &ApprovalProcessBody) -> Result<(), App
 )]
 async fn list_processes(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<ApprovalProcess>>, AppError> {
     let w = page.window();
@@ -238,7 +238,7 @@ async fn list_processes(
 )]
 async fn create_process(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Json(body): Json<ApprovalProcessBody>,
 ) -> Result<(StatusCode, Json<ApprovalProcess>), AppError> {
     check_body(&state, &body)?;
@@ -303,7 +303,7 @@ async fn create_process(
 )]
 async fn get_process(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApprovalProcess>, AppError> {
     load(&state, id).await.map(Json)
@@ -343,7 +343,7 @@ async fn load(state: &EngineState, id: Uuid) -> Result<ApprovalProcess, AppError
 )]
 async fn update_process(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Json(update): Json<ApprovalProcessUpdate>,
 ) -> Result<Json<ApprovalProcess>, AppError> {
@@ -419,7 +419,7 @@ async fn update_process(
 )]
 async fn delete_process(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(

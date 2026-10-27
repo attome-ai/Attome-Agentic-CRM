@@ -15,7 +15,7 @@
 use attome_auth::SessionClaims;
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized, Privilege, PrivilegeKey};
+use attome_server::authz::{Authorized, Privilege, PrivilegeKey, area};
 use attome_server::capability::{Available, BatchJobs};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
@@ -102,7 +102,7 @@ struct ProfileEnqueueResponse {
 )]
 async fn enqueue_profile(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     _jobs: Available<BatchJobs>,
     axum::Extension(claims): axum::Extension<SessionClaims>,
     Json(body): Json<ProfileRequestBody>,
@@ -717,7 +717,7 @@ struct ListProposalsQuery {
 )]
 async fn list_label_proposals(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Query(query): Query<ListProposalsQuery>,
 ) -> Result<Json<PaginatedResponse<LabelProposalRow>>, AppError> {
     let status = query.status.as_deref().unwrap_or("open");

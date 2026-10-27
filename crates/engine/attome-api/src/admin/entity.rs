@@ -3,7 +3,7 @@ use attome_core::changeset::{Op, RecordedOp, Recording, RecordingCtx};
 use attome_core::{ChangeKind, EngineState};
 use attome_metadata::provision;
 use attome_metadata::provision::{EntityDesc, ReconcilePolicy, RecordAs, valid_identifier};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
     Json,
@@ -228,7 +228,7 @@ fn entity_meta_from_row(r: EntityRow) -> EntityMeta {
 )]
 pub(super) async fn list_entities(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<EntityMeta>>, AppError> {
     let PageWindow {
@@ -295,7 +295,7 @@ const RESERVED_ENTITY_NAMES: &[&str] = &[
 )]
 pub(super) async fn create_entity(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Json(body): Json<CreateEntityBody>,
 ) -> Result<(StatusCode, Json<EntityMeta>), AppError> {
@@ -500,7 +500,7 @@ pub(crate) async fn create_entity_core(
 )]
 pub(super) async fn get_entity(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_id): Path<Uuid>,
 ) -> Result<Json<EntityDetail>, AppError> {
     let row: Option<EntityInfoRow> = sqlx::query_as(
@@ -584,7 +584,7 @@ pub(super) async fn get_entity(
 )]
 pub(super) async fn update_entity(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(entity_id): Path<Uuid>,
     Json(body): Json<UpdateEntityBody>,
@@ -963,7 +963,7 @@ struct EntityDeletePending {
 )]
 pub(super) async fn delete_entity(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(entity_id): Path<Uuid>,
     Query(params): Query<DeleteEntityParams>,

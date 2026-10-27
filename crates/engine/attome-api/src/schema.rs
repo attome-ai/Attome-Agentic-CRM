@@ -1,6 +1,6 @@
 use attome_core::business_rules::{ConditionTree, PolicyDef, PolicyType, RuleAudience};
 use attome_core::{EngineState, FieldType};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
 use attome_types::ErrorResponse;
@@ -249,7 +249,7 @@ pub(crate) fn not_modified(if_none_match: Option<&str>, etag: &str) -> bool {
 )]
 async fn get_schema(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(logicalname): Path<String>,
     Query(query): Query<SchemaQuery>,
     headers: axum::http::HeaderMap,

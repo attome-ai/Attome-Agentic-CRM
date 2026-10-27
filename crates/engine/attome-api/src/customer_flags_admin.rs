@@ -10,7 +10,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
 use attome_core::customer_flags::valid_name;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -81,7 +81,7 @@ fn check_name(name: &str) -> Result<(), AppError> {
 )]
 async fn list_flags(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<PaginatedResponse<CustomerFlag>>, AppError> {
     let items: Vec<CustomerFlag> = sqlx::query_as(&format!(
         "SELECT {COLUMNS} FROM customer_flag ORDER BY name LIMIT $1"
@@ -123,7 +123,7 @@ async fn list_flags(
 )]
 async fn set_flag(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(name): Path<String>,
     Json(body): Json<SetCustomerFlag>,
 ) -> Result<Json<CustomerFlag>, AppError> {
@@ -204,7 +204,7 @@ async fn set_flag(
 )]
 async fn emergency_off(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(name): Path<String>,
 ) -> Result<Json<CustomerFlag>, AppError> {
     let mut tx = SecurityTx::begin(

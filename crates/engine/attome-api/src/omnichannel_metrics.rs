@@ -12,7 +12,7 @@
 //! carries none of that module's cross-crate dependency constraint.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::get};
 use serde::Serialize;
@@ -51,7 +51,7 @@ pub struct WebChatMetrics {
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 async fn web_chat_metrics(
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Reports>>,
     State(state): State<EngineState>,
 ) -> Result<Json<WebChatMetrics>, AppError> {
     let conversations_last_30_days: i64 = sqlx::query_scalar(

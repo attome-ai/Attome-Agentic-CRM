@@ -23,7 +23,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
@@ -85,7 +85,7 @@ struct ApiUsageSummaryRow {
 )]
 async fn summary(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Query(q): Query<SummaryQuery>,
 ) -> Result<Json<PaginatedResponse<ApiUsageSummaryRow>>, AppError> {
     let days = q
@@ -179,7 +179,7 @@ struct ApiKeyUsageRow {
 )]
 async fn list_keys(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Query(q): Query<KeysQuery>,
 ) -> Result<Json<PaginatedResponse<ApiKeyUsageRow>>, AppError> {
     let days = q
@@ -263,7 +263,7 @@ fn validate_quota(requested: Option<i32>) -> Result<Option<i32>, AppError> {
 )]
 async fn set_quota(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Json(body): Json<QuotaBody>,
 ) -> Result<Json<QuotaSet>, AppError> {
@@ -348,7 +348,7 @@ struct DeprecatedUsageRow {
 )]
 async fn deprecated_usage(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Query(q): Query<VersionUsageQuery>,
 ) -> Result<Json<PaginatedResponse<DeprecatedUsageRow>>, AppError> {
     let days = q.days.unwrap_or(30).clamp(1, MAX_WINDOW_DAYS);

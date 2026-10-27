@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -215,7 +215,7 @@ pub fn assemble(
 )]
 async fn metrics(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<StageMetrics>, AppError> {
     let row = published(&state, ProcessFilter::Id(id)).await?;

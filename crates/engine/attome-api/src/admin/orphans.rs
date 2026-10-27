@@ -13,7 +13,7 @@ use attome_metadata::provision::{
     self,
     lookup_fk::{self, LookupColumn, OrphanTally},
 };
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -105,7 +105,7 @@ fn counts(
 )]
 pub(super) async fn list_orphans(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_id): Path<Uuid>,
     Query(paging): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<OrphanCount>>, AppError> {
@@ -163,7 +163,7 @@ pub(super) async fn list_orphans(
 )]
 pub(super) async fn queue_orphan_scan(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<OrphanScanRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     let entity_id = body.entity_id;

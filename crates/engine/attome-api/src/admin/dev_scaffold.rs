@@ -24,7 +24,7 @@
 //! directory. Everything else here is string templating.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{
@@ -130,7 +130,7 @@ pub(super) struct DevToolsAvailable {
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 pub(super) async fn dev_tools_available(
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
 ) -> Result<Json<DevToolsAvailable>, AppError> {
     let root = canonical_angular_root().unwrap_or_else(|_| angular_root());
     Ok(Json(DevToolsAvailable {
@@ -308,7 +308,7 @@ fn relative_specifier(from_dir: &std::path::Path, to_path: &std::path::Path) -> 
 )]
 pub(super) async fn scaffold_form_component(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_id): Path<Uuid>,
     Json(body): Json<ScaffoldBody>,
 ) -> Result<(StatusCode, Json<ScaffoldResult>), AppError> {

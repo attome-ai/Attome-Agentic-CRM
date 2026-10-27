@@ -11,7 +11,7 @@
 
 use attome_core::EngineState;
 use attome_core::dead_letter::{DeadLetter, DeadLetterFuture, DeadLetterSource, ReplayOutcome};
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
@@ -79,7 +79,7 @@ struct DeadLetterJobSummary {
 )]
 async fn list_dead_letter(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Query(query): Query<DeadLetterQuery>,
 ) -> Result<Json<PaginatedResponse<DeadLetterJobSummary>>, AppError> {
     let batch = parse_queue(query.queue.as_deref())?;
@@ -155,7 +155,7 @@ struct JobLane {
 )]
 async fn lanes(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<PaginatedResponse<JobLane>>, AppError> {
     let mut items = Vec::with_capacity(2);
     for (queue, batch) in [("fast", false), ("batch", true)] {
@@ -202,7 +202,7 @@ struct ReplayResult {
 )]
 async fn replay(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<String>,
 ) -> Result<(StatusCode, Json<ReplayResult>), AppError> {
     // BJB-6b: the checked form says *why* nothing was replayed. The bare bool
@@ -318,7 +318,7 @@ async fn audit_job_discard(
 )]
 async fn discard(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, AppError> {
     let Some(discarded) = attome_jobs::discard_dead_letter_job(&state.base.db, &id)
@@ -548,7 +548,7 @@ async fn my_batches(
 )]
 async fn pending_timers(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<attome_core::timer::PendingTimer>>, AppError> {
     let window = page.window();

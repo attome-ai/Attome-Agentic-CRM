@@ -22,7 +22,7 @@ use attome_metadata::provision::{
     ReconcileOutcome, ReconcilePolicy, RecordAs, RelationshipDesc, RelationshipDetail,
     reconcile_relationship_recorded, retire_relationship_recorded,
 };
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
@@ -165,7 +165,7 @@ impl From<RelationshipRow> for RelationshipView {
 )]
 async fn list_relationships(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(q): Query<ListRelationshipsQuery>,
 ) -> Result<Json<PaginatedResponse<RelationshipView>>, AppError> {
     let PageWindow {
@@ -219,7 +219,7 @@ async fn list_relationships(
 )]
 async fn get_relationship(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<RelationshipView>, AppError> {
     let row: Option<RelationshipRow> = sqlx::query_as(
@@ -293,7 +293,7 @@ fn default_true() -> bool {
 )]
 async fn create_relationship(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Json(body): Json<CreateRelationshipBody>,
 ) -> Result<(StatusCode, Json<RelationshipView>), AppError> {
@@ -398,7 +398,7 @@ struct UpdateRelationshipBody {
 )]
 async fn update_relationship(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateRelationshipBody>,
@@ -483,7 +483,7 @@ async fn update_relationship(
 )]
 async fn delete_relationship(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {

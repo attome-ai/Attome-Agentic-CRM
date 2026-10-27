@@ -23,7 +23,7 @@ use std::time::Duration;
 
 use attome_core::EngineState;
 use attome_core::dead_letter::{DeadLetter, DeadLetterSource, ReplayOutcome};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse, Warning};
 use axum::{
     Json, Router,
@@ -188,7 +188,7 @@ pub struct InboxQuery {
 )]
 async fn list_groups(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<DeadLetterGroup>>, AppError> {
     let w = page.window();
@@ -229,7 +229,7 @@ async fn list_groups(
 )]
 async fn list_items(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Query(q): Query<InboxQuery>,
 ) -> Result<Json<PaginatedResponse<DeadLetter>>, AppError> {
     let w = OnePageQuery {
@@ -326,7 +326,7 @@ impl From<ReplayOutcome> for ReplayItemResult {
 )]
 async fn replay_item(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path((source, id)): Path<(String, String)>,
 ) -> Result<Json<ReplayItemResult>, AppError> {
     let source = source_named(&source)?;
@@ -379,7 +379,7 @@ fn checked_reason(reason: &str) -> Result<&str, AppError> {
 )]
 async fn discard_item(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path((source, id)): Path<(String, String)>,
     Json(body): Json<DiscardBody>,
 ) -> Result<StatusCode, AppError> {
@@ -447,7 +447,7 @@ pub struct GroupReplayPayload {
 )]
 async fn replay_group(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Json(body): Json<GroupReplayBody>,
 ) -> Result<(StatusCode, Json<GroupReplayStarted>), AppError> {
     let rate = body.rate_per_minute.unwrap_or(DEFAULT_RATE_PER_MINUTE);

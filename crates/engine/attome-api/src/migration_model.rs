@@ -21,7 +21,7 @@ use attome_integration::connector::adapters::migration_mapping::{
     self, ModelMapping, TargetAttribute, TargetEntity,
 };
 use attome_integration::connector::adapters::migration_source::SourceModel;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -202,7 +202,7 @@ async fn audit(
 )]
 pub(crate) async fn draft_model_mapping(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<DraftBody>,
 ) -> Result<Json<MappingDoc>, AppError> {
@@ -280,7 +280,7 @@ pub(crate) async fn draft_model_mapping(
 )]
 pub(crate) async fn get_model_mapping(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<MappingDoc>, AppError> {
     project_exists(&state, id).await?;
@@ -321,7 +321,7 @@ pub(crate) async fn get_model_mapping(
 )]
 pub(crate) async fn save_model_mapping(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<SaveBody>,
 ) -> Result<Json<MappingDoc>, AppError> {
@@ -400,7 +400,7 @@ pub(crate) async fn save_model_mapping(
 )]
 pub(crate) async fn describe_source(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<DescribeBody>,
 ) -> Result<Json<DescribedSource>, AppError> {

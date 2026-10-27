@@ -8,7 +8,7 @@ use std::collections::{BTreeSet, HashMap};
 
 use attome_core::EngineState;
 use attome_metadata::index_advisor::{self, Advice};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -58,7 +58,7 @@ pub struct IndexAdvice {
 )]
 pub(super) async fn index_proposals(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_id): Path<Uuid>,
 ) -> Result<Json<IndexAdvice>, AppError> {
     let (entity, attributes) = {

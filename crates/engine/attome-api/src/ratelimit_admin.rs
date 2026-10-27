@@ -3,7 +3,7 @@
 //! Lifting is a security event.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_server::middleware::rate_limit::{ActiveBan, lift_ban, list_bans};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
@@ -30,7 +30,7 @@ use axum::{
 )]
 async fn bans(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<PaginatedResponse<ActiveBan>>, AppError> {
     let items = list_bans(&state.base.redis_coordination).await?;
     let total = i64::try_from(items.len()).map_err(AppError::internal)?;
@@ -57,7 +57,7 @@ async fn bans(
 )]
 async fn lift(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(bucket): Path<String>,
 ) -> Result<StatusCode, AppError> {
     if !lift_ban(&state.base.redis_coordination, &bucket).await? {

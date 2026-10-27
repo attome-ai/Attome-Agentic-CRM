@@ -4,7 +4,7 @@
 //! ended. Admin only. Written by `attome_metadata`'s `exec_ddl_locked`.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -52,7 +52,7 @@ pub struct DdlLogEntry {
 )]
 pub(super) async fn list_ddl_log(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_id): Path<Uuid>,
     Query(paging): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<DdlLogEntry>>, AppError> {

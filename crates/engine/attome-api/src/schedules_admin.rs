@@ -18,7 +18,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -242,7 +242,7 @@ async fn platform_items(state: &EngineState) -> Result<Vec<ScheduleItem>, AppErr
 )]
 async fn list_schedules(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
 ) -> Result<Json<ScheduleList>, AppError> {
     let mut items = flow_items(&state).await?;
     items.extend(report_items(&state).await?);
@@ -384,7 +384,7 @@ async fn set_paused(
 )]
 async fn pause(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path((kind, id)): Path<(String, String)>,
 ) -> Result<Json<PauseState>, AppError> {
     set_paused(&state, ctx.user_id, &kind, &id, true)
@@ -413,7 +413,7 @@ async fn pause(
 )]
 async fn resume(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path((kind, id)): Path<(String, String)>,
 ) -> Result<Json<PauseState>, AppError> {
     set_paused(&state, ctx.user_id, &kind, &id, false)

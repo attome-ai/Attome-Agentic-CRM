@@ -47,7 +47,7 @@
 //! digest event is a hash-v1 row keeps its pre-v2 check.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -124,7 +124,7 @@ struct SignoffVerifyResponse {
 )]
 async fn verify_decision(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Path(decision_id): Path<Uuid>,
 ) -> Result<Json<SignoffVerifyResponse>, AppError> {
     let grant: GrantRow = sqlx::query_as(

@@ -14,7 +14,7 @@ use attome_records::customer_tests::{
     self as store, CustomerTest, CustomerTestBody, CustomerTestExport, CustomerTestImportResult,
     CustomerTestPatch, CustomerTestRun,
 };
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -103,7 +103,7 @@ pub struct CustomerTestRunAll {
 )]
 async fn list_tests(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Query(paging): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<CustomerTest>>, AppError> {
     let PageWindow {
@@ -135,7 +135,7 @@ async fn list_tests(
 )]
 async fn create_test(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Json(body): Json<CustomerTestBody>,
 ) -> Result<(StatusCode, Json<CustomerTest>), AppError> {
     store::validate(&body.name, &body.definition)?;
@@ -175,7 +175,7 @@ async fn create_test(
 )]
 async fn get_test(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CustomerTest>, AppError> {
     Ok(Json(store::get_test(&state.base.db, id).await?))
@@ -204,7 +204,7 @@ async fn get_test(
 )]
 async fn update_test(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
     Json(patch): Json<CustomerTestPatch>,
@@ -247,7 +247,7 @@ async fn update_test(
 )]
 async fn delete_test(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
 ) -> Result<StatusCode, AppError> {
@@ -286,7 +286,7 @@ async fn delete_test(
 )]
 async fn list_runs(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<CustomerTestRun>>, AppError> {
     let items = store::list_runs(&state.base.db, id, RUN_HISTORY).await?;
@@ -297,7 +297,7 @@ async fn list_runs(
 /// Runs one test and records the run with its event.
 async fn run_one(
     state: &EngineState,
-    ctx: &Authorized<Admin>,
+    ctx: &Authorized<Privilege<area::Deployment>>,
     id: Uuid,
     name: String,
     definition: Result<store::TestDefinition, String>,
@@ -358,7 +358,7 @@ async fn run_one(
 )]
 async fn run_test(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CustomerTestRunResult>, AppError> {
     let test = store::get_test(&state.base.db, id).await?;
@@ -389,7 +389,7 @@ async fn run_test(
 )]
 async fn run_all(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<CustomerTestRunAll>, AppError> {
     let mut results = Vec::new();
     // One at a time: each run holds a transaction for its whole length.
@@ -421,7 +421,7 @@ async fn run_all(
 )]
 async fn export_tests(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<CustomerTestExport>, AppError> {
     Ok(Json(store::export_tests(&state.base.db).await?))
 }
@@ -446,7 +446,7 @@ async fn export_tests(
 )]
 async fn import_tests(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Json(document): Json<CustomerTestExport>,
 ) -> Result<Json<CustomerTestImportResult>, AppError> {
     let mut tx = SecurityTx::begin(

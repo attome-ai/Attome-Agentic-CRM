@@ -15,7 +15,7 @@ use attome_approval::{ApprovalPlan, OnTimeout};
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
@@ -166,7 +166,7 @@ struct ListQuery {
 )]
 async fn list_policies(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(q): Query<ListQuery>,
 ) -> Result<Json<PaginatedResponse<ApprovalPolicyView>>, AppError> {
     let PageWindow {
@@ -245,7 +245,7 @@ fn default_true() -> bool {
 )]
 async fn create_policy(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Json(body): Json<CreatePolicyBody>,
 ) -> Result<(StatusCode, Json<ApprovalPolicyView>), AppError> {
     let name = body.name.trim();
@@ -345,7 +345,7 @@ async fn record_policy_version(
 )]
 async fn get_policy(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApprovalPolicyView>, AppError> {
     let row: PolicyRow = sqlx::query_as(&format!(
@@ -394,7 +394,7 @@ struct UpdatePolicyBody {
 )]
 async fn update_policy(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdatePolicyBody>,
 ) -> Result<Json<ApprovalPolicyView>, AppError> {
@@ -510,7 +510,7 @@ async fn update_policy(
 )]
 async fn delete_policy(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     // D-541 rule 4: approval policy is governance configuration; the event

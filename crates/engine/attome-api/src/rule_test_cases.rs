@@ -22,7 +22,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
 use attome_core::business_rules::BUSINESS_KIND;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -194,7 +194,7 @@ fn event(operation: AuditOperation, actor: Uuid, rule: Uuid, name: &'static str)
 )]
 async fn list_cases(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<RuleTestCase>>, AppError> {
     business_rule_or_404(&state, id).await?;
@@ -228,7 +228,7 @@ async fn list_cases(
 )]
 async fn create_case(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Json(body): Json<RuleTestCaseBody>,
 ) -> Result<(StatusCode, Json<RuleTestCase>), AppError> {
@@ -304,7 +304,7 @@ async fn create_case(
 )]
 async fn delete_case(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path((id, case_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

@@ -18,7 +18,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx, x_aud
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_modules::{MODULE_MAP, ModuleSet};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{Json, Router, extract::State, routing::get};
@@ -65,7 +65,7 @@ struct UsageResponse {
 )]
 async fn usage(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<UsageResponse>, AppError> {
     let (users_active, users_signed_in_30d): (i64, i64) = sqlx::query_as(
         "SELECT COUNT(*) FILTER (WHERE is_active), \
@@ -254,7 +254,7 @@ pub(crate) async fn narrow_by_runtime_configuration(
 )]
 async fn get_module_configuration(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<ModuleConfigurationResponse>, AppError> {
     let (enabled, selected): (bool, Vec<String>) = sqlx::query_as(
         "SELECT enabled, enabled_modules FROM module_configuration WHERE singleton = TRUE",
@@ -291,7 +291,7 @@ async fn get_module_configuration(
 )]
 async fn update_module_configuration(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Json(request): Json<UpdateModuleConfiguration>,
 ) -> Result<Json<ModuleConfigurationResponse>, AppError> {
     // D-778: Module Management is the only module switch; any known module may

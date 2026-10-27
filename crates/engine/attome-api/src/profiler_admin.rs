@@ -18,7 +18,7 @@
 //! other node.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use attome_types::{OnePageQuery, PaginatedResponse};
@@ -81,7 +81,7 @@ struct ApiGroupOut {
 )]
 async fn stats(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<Vec<ApiGroupOut>>, AppError> {
     let rows = attome_profiler::read_stats(&state.base.redis)
         .await
@@ -162,7 +162,7 @@ impl From<attome_profiler::TraceSample> for TraceSampleOut {
 )]
 async fn trace(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Query(q): Query<TraceQuery>,
 ) -> Result<Json<Vec<TraceSampleOut>>, AppError> {
     if q.name.trim().is_empty() {
@@ -211,7 +211,7 @@ async fn trace(
 )]
 async fn reset_stats(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<StatusCode, AppError> {
     let deleted = attome_profiler::reset(&state.base.redis)
         .await
@@ -280,7 +280,7 @@ struct CacheStatsRow {
 )]
 async fn list_caches(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Query(page): Query<OnePageQuery>,
 ) -> Json<PaginatedResponse<CacheStatsRow>> {
     let window = page.window();
@@ -350,7 +350,7 @@ pub(crate) struct CachePurge {
 )]
 async fn purge_cache(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(name): Path<String>,
     body: Option<Json<CachePurge>>,
 ) -> Result<StatusCode, AppError> {

@@ -30,7 +30,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordedOp, Recording, RecordingCtx};
 use attome_metadata::provision::{ReconcileOutcome, ReconcilePolicy};
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
@@ -136,7 +136,7 @@ const APP_SELECT: &str = "SELECT id, name, icon, sidebar_root_ref, default_dashb
 )]
 async fn list_apps(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<AppDetail>>, AppError> {
     let PageWindow {
@@ -181,7 +181,7 @@ async fn list_apps(
 )]
 async fn get_app(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<AppDetail>, AppError> {
     let sql = format!("{APP_SELECT} WHERE id = $1 AND is_deleted = false");
@@ -214,7 +214,7 @@ async fn get_app(
 )]
 async fn create_app(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Json(body): Json<AppBody>,
 ) -> Result<(StatusCode, Json<AppDetail>), AppError> {
@@ -392,7 +392,7 @@ fn app_op(op: Op, row: &AppDetail) -> Result<RecordedOp, AppError> {
 )]
 async fn update_app(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<AppBody>,
@@ -438,7 +438,7 @@ async fn update_app(
 )]
 async fn delete_app(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {

@@ -12,7 +12,7 @@
 //! logic, only decides *when* to call it.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
@@ -177,7 +177,7 @@ struct ListMatchRulesQuery {
 )]
 async fn list_match_rules(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(q): Query<ListMatchRulesQuery>,
 ) -> Result<Json<PaginatedResponse<MatchRuleView>>, AppError> {
     let PageWindow {
@@ -255,7 +255,7 @@ fn default_true() -> bool {
 )]
 async fn create_match_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<CreateMatchRuleBody>,
 ) -> Result<(StatusCode, Json<MatchRuleView>), AppError> {
     let name = body.name.trim();
@@ -376,7 +376,7 @@ struct UpdateMatchRuleBody {
 )]
 async fn update_match_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateMatchRuleBody>,
 ) -> Result<Json<MatchRuleView>, AppError> {
@@ -521,7 +521,7 @@ struct MatchScanStarted {
 )]
 async fn scan_match_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<MatchScanStarted>), AppError> {
     let rule: Option<(String, bool)> = sqlx::query_as(
@@ -587,7 +587,7 @@ async fn scan_match_rule(
 )]
 async fn delete_match_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let entity_logicalname: Option<String> = sqlx::query_scalar(
@@ -699,7 +699,7 @@ struct ListSurvivorshipQuery {
 )]
 async fn list_survivorship_rules(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(q): Query<ListSurvivorshipQuery>,
 ) -> Result<Json<PaginatedResponse<SurvivorshipRuleView>>, AppError> {
     let PageWindow {
@@ -770,7 +770,7 @@ struct CreateSurvivorshipRuleBody {
 )]
 async fn create_survivorship_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<CreateSurvivorshipRuleBody>,
 ) -> Result<(StatusCode, Json<SurvivorshipRuleView>), AppError> {
     if !SURVIVORSHIP_STRATEGIES.contains(&body.strategy.as_str()) {
@@ -866,7 +866,7 @@ async fn create_survivorship_rule(
 )]
 async fn delete_survivorship_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let entity_logicalname: Option<String> = sqlx::query_scalar(
@@ -979,7 +979,7 @@ struct ListCandidatesQuery {
 )]
 async fn list_candidates(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(q): Query<ListCandidatesQuery>,
 ) -> Result<Json<PaginatedResponse<DuplicateCandidateView>>, AppError> {
     if let Some(s) = &q.status
@@ -1041,7 +1041,7 @@ async fn list_candidates(
 )]
 async fn get_candidate(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DuplicateCandidateView>, AppError> {
     let row: Option<DuplicateCandidateView> = sqlx::query_as(&format!(
@@ -1114,7 +1114,7 @@ struct MergeCandidateBody {
 )]
 async fn merge_candidate(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<MergeCandidateBody>,
 ) -> Result<Json<entity_crud::MergeResponse>, AppError> {
@@ -1174,7 +1174,7 @@ struct DismissCandidateBody {
 )]
 async fn dismiss_candidate(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<DismissCandidateBody>,
 ) -> Result<Json<DuplicateCandidateView>, AppError> {
@@ -1429,7 +1429,7 @@ struct CandidateExplanation {
 )]
 async fn explain_candidate(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CandidateExplanation>, AppError> {
     let db = &state.base.db;
@@ -1527,7 +1527,7 @@ struct RulePreviewBody {
 )]
 async fn preview_match_rule(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<RulePreviewBody>,
 ) -> Result<Json<attome_records::duplicate_check::RulePreview>, AppError> {
     if body.threshold <= 0.0 || body.threshold > 1.0 {
@@ -1583,7 +1583,7 @@ struct DuplicateStats {
 )]
 async fn duplicate_stats(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(q): Query<DuplicateStatsQuery>,
 ) -> Result<Json<PaginatedResponse<DuplicateStats>>, AppError> {
     let items: Vec<DuplicateStats> = sqlx::query_as(

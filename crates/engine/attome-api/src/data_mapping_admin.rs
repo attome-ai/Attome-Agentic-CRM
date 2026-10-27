@@ -21,7 +21,7 @@ use attome_core::EngineState;
 use attome_records::data_mapping::DataMappingField;
 use attome_records::entity_crud;
 use attome_records::entity_mutation;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
@@ -157,7 +157,7 @@ struct ListMappingsQuery {
 )]
 async fn create_mapping(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<CreateMappingBody>,
 ) -> Result<(StatusCode, Json<DataMappingRow>), AppError> {
     if body.name.trim().is_empty() {
@@ -237,7 +237,7 @@ async fn create_mapping(
 )]
 async fn list_mappings(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(query): Query<ListMappingsQuery>,
 ) -> Result<Json<PaginatedResponse<DataMappingRow>>, AppError> {
     let PageWindow {
@@ -294,7 +294,7 @@ async fn list_mappings(
 )]
 async fn get_mapping(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataMappingRow>, AppError> {
     let row: Option<DataMappingRow> = sqlx::query_as(
@@ -330,7 +330,7 @@ async fn get_mapping(
 )]
 async fn update_mapping(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateMappingBody>,
 ) -> Result<Json<DataMappingRow>, AppError> {
@@ -431,7 +431,7 @@ async fn update_mapping(
 )]
 async fn delete_mapping(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     // Soft delete only — a mapping already referenced by a past staged

@@ -11,7 +11,7 @@ use attome_core::EngineState;
 use attome_records::expression_check::{ExpressionCheck, check_expression};
 use attome_rules::LanguageVersion;
 use attome_rules::catalog::{FunctionSpec, GRAMMAR_NOTES, catalog};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -69,7 +69,7 @@ fn language_version(raw: Option<&str>) -> Result<LanguageVersion, AppError> {
 )]
 async fn validate_expression(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Json(body): Json<ValidateExpressionRequest>,
 ) -> Result<Json<ExpressionCheck>, AppError> {
     let version = language_version(body.language_version.as_deref())?;
@@ -172,7 +172,7 @@ pub(crate) fn spec(version: LanguageVersion) -> &'static ExpressionSpec {
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 async fn expression_spec(
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(q): Query<SpecQuery>,
 ) -> Result<Json<ExpressionSpec>, AppError> {
     let version = language_version(q.version.as_deref())?;

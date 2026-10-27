@@ -28,7 +28,7 @@ use attome_audit::{
 };
 use attome_core::{AttrInfo, EngineState, OnTargetDelete};
 use attome_security::{RecordAction, SecurityContextExt};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_server::capability::{Available, BatchJobs};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
@@ -170,7 +170,7 @@ async fn validate_mapping_ref(
 )]
 async fn create_project(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<CreateProjectBody>,
 ) -> Result<(StatusCode, Json<MigrationProjectRow>), AppError> {
     if body.name.trim().is_empty() {
@@ -242,7 +242,7 @@ async fn create_project(
 )]
 async fn list_projects(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(query): Query<ListProjectsQuery>,
 ) -> Result<Json<PaginatedResponse<MigrationProjectRow>>, AppError> {
     let PageWindow {
@@ -304,7 +304,7 @@ async fn list_projects(
 )]
 async fn get_project(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<MigrationProjectRow>, AppError> {
     let row = fetch_project(&state.base.db, id)
@@ -334,7 +334,7 @@ async fn get_project(
 )]
 async fn update_project(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateProjectBody>,
 ) -> Result<Json<MigrationProjectRow>, AppError> {
@@ -417,7 +417,7 @@ async fn update_project(
 )]
 async fn delete_project(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -628,7 +628,7 @@ async fn fetch_run_detail(
 )]
 async fn create_run(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(project_id): Path<Uuid>,
     Json(body): Json<CreateRunBody>,
 ) -> Result<(StatusCode, Json<MigrationRunDetail>), AppError> {
@@ -712,7 +712,7 @@ async fn create_run(
 )]
 async fn list_runs(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(project_id): Path<Uuid>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<MigrationRunListItem>>, AppError> {
@@ -761,7 +761,7 @@ async fn list_runs(
 )]
 async fn get_run(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((project_id, run_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<MigrationRunDetail>, AppError> {
     let detail = fetch_run_detail(&state.base.db, project_id, run_id)
@@ -795,7 +795,7 @@ async fn get_run(
 )]
 async fn download_run_errors(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((project_id, run_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Response, AppError> {
     let row: Option<(Value,)> = sqlx::query_as(
@@ -865,7 +865,7 @@ async fn download_run_errors(
 )]
 async fn rollback_run(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     // Same "durable job, not a request-thread loop" contract as
     // `approve_staged_import` — see `bulk.rs`.
     _jobs: Available<BatchJobs>,

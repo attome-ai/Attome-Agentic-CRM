@@ -21,7 +21,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
 use attome_core::lineage::graph::{self, Edge, NodeRef};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json,
@@ -173,7 +173,7 @@ pub struct OpenLineageExport {
 )]
 pub(super) async fn openlineage(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Query(q): Query<OpenLineageQuery>,
 ) -> Result<Json<OpenLineageExport>, AppError> {
     let enabled = attome_core::setting_registry()

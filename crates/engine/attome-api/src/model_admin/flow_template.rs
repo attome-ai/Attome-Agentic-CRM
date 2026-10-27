@@ -9,7 +9,7 @@
 //! record into the open changeset and validate the draft like any other.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json,
@@ -67,7 +67,7 @@ pub(crate) struct InstantiateResponse {
 )]
 pub(crate) async fn instantiate(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<InstantiateRequest>,
 ) -> Result<Json<InstantiateResponse>, AppError> {

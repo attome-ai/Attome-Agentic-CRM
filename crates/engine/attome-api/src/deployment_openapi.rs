@@ -23,7 +23,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::{AttrInfo, EngineState, EntityMetaRegistry, FieldType};
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::get};
 use serde::{Deserialize, Serialize};
@@ -511,7 +511,7 @@ pub struct PutOverlay {
 )]
 async fn get_overlay(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
 ) -> Result<Json<OverlayView>, AppError> {
     let row: Option<(Value, i64)> =
         sqlx::query_as("SELECT overlay, row_version FROM openapi_overlay LIMIT 1")
@@ -553,7 +553,7 @@ async fn get_overlay(
 )]
 async fn put_overlay(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Json(body): Json<PutOverlay>,
 ) -> Result<Json<OverlayView>, AppError> {
     let problems = check_overlay(&body.overlay);

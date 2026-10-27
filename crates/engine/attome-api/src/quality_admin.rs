@@ -22,7 +22,7 @@ use attome_audit::{
 use attome_core::EngineState;
 use attome_records::entity_crud;
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized, Privilege, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
@@ -87,7 +87,7 @@ struct ListScoresQuery {
 )]
 async fn list_scores(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(q): Query<ListScoresQuery>,
 ) -> Result<Json<PaginatedResponse<QualityScoreView>>, AppError> {
     let PageWindow {
@@ -171,7 +171,7 @@ struct ScoreHistoryQuery {
 )]
 async fn score_history(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(q): Query<ScoreHistoryQuery>,
 ) -> Result<Json<PaginatedResponse<QualityScoreView>>, AppError> {
     if !DIMENSIONS.contains(&q.dimension.as_str()) {
@@ -470,7 +470,7 @@ async fn list_issues(
 )]
 async fn resolve_issue(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let row: Option<(String, String)> =
@@ -770,7 +770,7 @@ async fn config_event(
 )]
 async fn list_rules(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(q): Query<ListRulesQuery>,
 ) -> Result<Json<PaginatedResponse<QualityRuleView>>, AppError> {
     let PageWindow {
@@ -819,7 +819,7 @@ async fn list_rules(
 )]
 async fn create_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<CreateRuleBody>,
 ) -> Result<(StatusCode, Json<QualityRuleView>), AppError> {
     if !RULE_DIMENSIONS.contains(&body.dimension.as_str()) {
@@ -895,7 +895,7 @@ async fn create_rule(
 )]
 async fn update_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateRuleBody>,
 ) -> Result<Json<QualityRuleView>, AppError> {
@@ -968,7 +968,7 @@ async fn update_rule(
 )]
 async fn delete_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -1076,7 +1076,7 @@ fn check_target(body: &PutTargetBody) -> Result<(), AppError> {
 )]
 async fn list_targets(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(q): Query<ListRulesQuery>,
 ) -> Result<Json<PaginatedResponse<QualityTargetView>>, AppError> {
     let PageWindow {
@@ -1127,7 +1127,7 @@ async fn list_targets(
 )]
 async fn put_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity): Path<String>,
     Json(body): Json<PutTargetBody>,
 ) -> Result<Json<QualityTargetView>, AppError> {
@@ -1192,7 +1192,7 @@ async fn put_target(
 )]
 async fn delete_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity): Path<String>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -1282,7 +1282,7 @@ impl QualityFixBody {
 /// after. Nothing is written.
 async fn preview_fix(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<QualityFixBody>,
 ) -> Result<Json<attome_records::bulk_edit::BulkEditPreview>, AppError> {
     let plan =
@@ -1325,7 +1325,7 @@ async fn preview_fix(
 /// returns at that rule's next scan.
 async fn apply_fix(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     _jobs: attome_server::capability::Available<attome_server::capability::BatchJobs>,
     Json(body): Json<QualityFixBody>,
 ) -> Result<

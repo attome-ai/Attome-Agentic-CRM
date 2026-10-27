@@ -20,7 +20,7 @@ use attome_core::{
     EngineState, SettingScope, SettingSource, acquire_setting_write_lock,
     append_setting_change_log, load_all_settings, setting_registry, validate_against_schema,
 };
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -277,7 +277,7 @@ fn source_label(source: SettingSource) -> &'static str {
 )]
 async fn list_admin_settings(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<SettingListResponse>, AppError> {
     let snapshot = state.settings.load();
     let items = setting_registry()
@@ -335,7 +335,7 @@ async fn list_admin_settings(
 )]
 async fn put_admin_setting(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(key): Path<String>,
     Json(request): Json<PutSettingRequest>,
 ) -> Result<Json<SettingValueView>, AppError> {
@@ -758,7 +758,7 @@ fn theme_event(operation: AuditOperation, actor: Uuid, id: Uuid, name: &str) -> 
 )]
 async fn list_themes(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     axum::extract::Query(page): axum::extract::Query<attome_types::OnePageQuery>,
 ) -> Result<Json<attome_types::PaginatedResponse<ThemeRow>>, AppError> {
     let window = page.window();
@@ -791,7 +791,7 @@ async fn list_themes(
 )]
 async fn create_theme(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     recording: RecordingCtx,
     Json(body): Json<ThemeDraftBody>,
 ) -> Result<(axum::http::StatusCode, Json<ThemeRow>), AppError> {
@@ -837,7 +837,7 @@ async fn create_theme(
 )]
 async fn get_theme(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ThemeRow>, AppError> {
     Ok(Json(theme_store::get(&state.base.db, id).await?))
@@ -865,7 +865,7 @@ async fn get_theme(
 )]
 async fn update_theme(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     headers: axum::http::HeaderMap,
@@ -910,7 +910,7 @@ async fn update_theme(
 )]
 async fn publish_theme(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     headers: axum::http::HeaderMap,
@@ -961,7 +961,7 @@ struct ThemeRollbackBody {
 )]
 async fn rollback_theme(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     recording: RecordingCtx,
     Json(body): Json<ThemeRollbackBody>,
 ) -> Result<Json<ThemeRow>, AppError> {
@@ -1008,7 +1008,7 @@ async fn rollback_theme(
 )]
 async fn diff_theme(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<attome_types::PaginatedResponse<theme_store::TokenChange>>, AppError> {
     let changes = theme_store::diff(&state.base.db, id).await?;
@@ -1042,7 +1042,7 @@ async fn diff_theme(
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 async fn preview_theme(
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Json(body): Json<ThemeTokensBody>,
 ) -> Json<ContrastReport> {
     Json(attome_core::theme_tokens::check(&body.tokens))
@@ -1160,7 +1160,7 @@ struct AssetKindQuery {
 )]
 async fn upload_theme_asset(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     axum::extract::Query(query): axum::extract::Query<AssetKindQuery>,
@@ -1237,7 +1237,7 @@ async fn upload_theme_asset(
 )]
 async fn list_theme_assets(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<attome_types::PaginatedResponse<theme_store::BrandAsset>>, AppError> {
     let items = theme_store::list_assets(&state.base.db, id).await?;
@@ -1377,7 +1377,7 @@ struct BackupStatus {
 )]
 async fn backup_status(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<BackupStatus>, AppError> {
     let config = &state.base.config;
     let section = &config.backup;
@@ -1642,7 +1642,7 @@ async fn region_setup_view(state: &EngineState) -> RegionSetupView {
 )]
 async fn get_region_setup(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<RegionSetupView>, AppError> {
     Ok(Json(region_setup_view(&state).await))
 }
@@ -1671,7 +1671,7 @@ async fn get_region_setup(
 )]
 async fn post_region_setup(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Json(request): Json<RegionSetupRequest>,
 ) -> Result<Json<RegionSetupView>, AppError> {
     if !SETUP_LANGUAGES.contains(&request.language.as_str()) {

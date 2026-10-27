@@ -42,7 +42,7 @@ use attome_integration::connector::adapters::migration_waves::{
     MetadataStep, OWNER, SOURCE_ID, Wave, import_mapping, import_row, key_attribute, load_order,
     metadata_steps, next_wave, owner_of,
 };
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -297,7 +297,9 @@ async fn set_status(
 /// Runs wave `wave_id` (the job's body). A failure marks the wave `failed`
 /// with the reason and is returned to the queue.
 pub async fn run_wave(state: &EngineState, wave_id: Uuid) -> Result<(), AppError> {
-    let claimed: Option<(Uuid, String, Option<DateTime<Utc>>, Uuid, String)> = sqlx::query_as(
+    // project_id, system, since, created_by, kind
+    type Claimed = (Uuid, String, Option<DateTime<Utc>>, Uuid, String);
+    let claimed: Option<Claimed> = sqlx::query_as(
         "UPDATE migration_wave SET status = 'running', started_at = now() \
           WHERE id = $1 AND status IN ('queued', 'running') \
           RETURNING project_id, system, since, created_by, kind",
@@ -473,7 +475,7 @@ async fn project_exists(state: &EngineState, id: Uuid) -> Result<(), AppError> {
 )]
 pub(crate) async fn start_wave(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(body): Json<StartWaveBody>,
 ) -> Result<(StatusCode, Json<WaveRow>), AppError> {
@@ -583,7 +585,7 @@ pub(crate) async fn start_wave(
 )]
 pub(crate) async fn list_waves(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<WaveRow>>, AppError> {
     project_exists(&state, id).await?;
@@ -756,7 +758,7 @@ async fn wave_of(
 )]
 pub(crate) async fn compare_wave(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((id, wave_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<WaveCompare>, AppError> {
     project_exists(&state, id).await?;
@@ -882,7 +884,7 @@ pub(crate) async fn compare_wave(
 )]
 pub(crate) async fn rollback_wave(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path((id, wave_id)): Path<(Uuid, Uuid)>,
 ) -> Result<(StatusCode, Json<WaveRollback>), AppError> {
     project_exists(&state, id).await?;

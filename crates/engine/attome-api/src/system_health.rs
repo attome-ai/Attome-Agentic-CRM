@@ -17,7 +17,7 @@
 //! on.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::ErrorResponse;
 use axum::{Json, Router, extract::State, routing::get};
 use serde_json::{Value, json};
@@ -36,7 +36,10 @@ use serde_json::{Value, json};
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-async fn dependencies(State(state): State<EngineState>, _ctx: Authorized<Admin>) -> Json<Value> {
+async fn dependencies(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
+) -> Json<Value> {
     let (storage, email) = tokio::join!(
         attome_storage::health_check(&state.base.storage),
         attome_email::health_check_with_timeout(
@@ -352,7 +355,7 @@ struct MetricPoint {
 )]
 async fn metric_query(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     axum::extract::Query(query): axum::extract::Query<MetricQuery>,
 ) -> Result<Json<attome_types::PaginatedResponse<MetricPoint>>, attome_types::AppError> {
     use attome_types::AppError;
@@ -454,7 +457,7 @@ const MAX_TRAIL: i64 = 100;
 )]
 async fn request_trail(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     axum::extract::Path(request_id): axum::extract::Path<String>,
 ) -> Result<Json<RequestTrail>, attome_types::AppError> {
     use attome_types::AppError;
@@ -591,7 +594,7 @@ struct OpsNode {
 )]
 async fn ops_nodes(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<attome_types::PaginatedResponse<OpsNode>>, attome_types::AppError> {
     use attome_types::AppError;
     let nodes: Vec<OpsNode> = sqlx::query_as(
@@ -633,7 +636,7 @@ async fn ops_nodes(
 )]
 async fn deploys(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<
     Json<attome_types::PaginatedResponse<attome_server::deploy_event::DeployEvent>>,
     attome_types::AppError,
@@ -676,7 +679,7 @@ struct ConflictsQuery {
 )]
 async fn conflicts(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     axum::extract::Query(query): axum::extract::Query<ConflictsQuery>,
 ) -> Result<
     Json<attome_types::PaginatedResponse<attome_records::entity_crud::history::ConflictCount>>,
@@ -712,7 +715,7 @@ async fn conflicts(
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 async fn metric_catalogue(
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Json<attome_types::PaginatedResponse<attome_server::metrics_catalogue::MetricInfo>> {
     let items = attome_server::metrics_catalogue::CATALOGUE.to_vec();
     let total = items.len() as i64;
@@ -740,7 +743,7 @@ async fn metric_catalogue(
 )]
 async fn metric_names(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<attome_types::PaginatedResponse<String>>, attome_types::AppError> {
     let names: Vec<String> = sqlx::query_scalar(
         "SELECT DISTINCT name FROM ops_metric_sample WHERE ts >= now() - interval '1 hour' ORDER BY name",
@@ -782,7 +785,7 @@ struct LatencyReport {
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
+async fn latency(_ctx: Authorized<Privilege<area::Deployment>>) -> Json<LatencyReport> {
     let text = attome_server::metrics::render_current();
     Json(LatencyReport {
         enabled: text.is_some(),

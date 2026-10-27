@@ -5,7 +5,7 @@
 //! sample per table (`table_health_sample`) for the growth figure.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -144,7 +144,7 @@ pub async fn sample_all(state: &EngineState) -> Result<u64, AppError> {
 )]
 async fn get_entity_health(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_id): Path<Uuid>,
 ) -> Result<Json<TableHealth>, AppError> {
     let entity = state
@@ -173,7 +173,7 @@ async fn get_entity_health(
 )]
 async fn get_table_health(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<TableHealth>>, AppError> {
     let window = page.window();

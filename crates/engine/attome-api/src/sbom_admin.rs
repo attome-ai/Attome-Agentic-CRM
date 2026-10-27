@@ -5,7 +5,7 @@
 //! ledger. Administrators only; reads, changes nothing.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::get};
 use serde::Serialize;
@@ -59,7 +59,7 @@ fn release_bom() -> Value {
 )]
 async fn get_sbom(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<SbomResponse>, AppError> {
     let packs: Vec<InstalledPack> = sqlx::query_as(
         "SELECT scope AS name, MAX(seq) AS version, layer FROM changeset_apply \

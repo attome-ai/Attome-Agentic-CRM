@@ -51,7 +51,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent};
 use attome_core::EngineState;
 use attome_integration::inbound;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -336,7 +336,7 @@ async fn audit(
 )]
 async fn list_hooks(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<InboundHookView>>, AppError> {
     let w = page.window();
@@ -382,10 +382,13 @@ async fn list_hooks(
 )]
 async fn create_hook(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Json(body): Json<InboundHookBody>,
 ) -> Result<(StatusCode, Json<InboundHookView>), AppError> {
     check_body(&state, &body, true).await?;
+    // Q12-T2: an Integrations-only administrator never makes a hook run as
+    // someone holding `system.admin`.
+    attome_security::delegation::require_not_above(&state.base.db, &ctx, body.run_as).await?;
     let id = Uuid::now_v7();
     let secret = body.secret.as_deref().unwrap_or_default();
     let sealed = inbound::seal_secret(&state, id, secret)?;
@@ -460,12 +463,15 @@ async fn create_hook(
 )]
 async fn update_hook(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Json(update): Json<InboundHookUpdate>,
 ) -> Result<Json<InboundHookView>, AppError> {
     let body = &update.body;
     check_body(&state, body, false).await?;
+    // Q12-T2: an Integrations-only administrator never makes a hook run as
+    // someone holding `system.admin`.
+    attome_security::delegation::require_not_above(&state.base.db, &ctx, body.run_as).await?;
     let sealed = body
         .secret
         .as_deref()
@@ -567,7 +573,7 @@ async fn update_hook(
 )]
 async fn delete_hook(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

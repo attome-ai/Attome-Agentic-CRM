@@ -17,7 +17,7 @@ use attome_audit::security::{
 use attome_audit::{AuditOperation, AuditService};
 use attome_core::EngineState;
 use attome_email::delivery::EmailDeliveryKind;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_server::capability::{Available, Email, FastJobs};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, PaginatedResponse};
@@ -103,7 +103,7 @@ impl From<attome_email::delivery::EmailDeliveryRow> for DeliverySummary {
 )]
 async fn list_deliveries(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Query(query): Query<DeliveryQuery>,
 ) -> Result<Json<PaginatedResponse<DeliverySummary>>, AppError> {
     let PageWindow {
@@ -158,7 +158,7 @@ async fn list_deliveries(
 )]
 async fn get_delivery(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DeliverySummary>, AppError> {
     let row = attome_email::delivery::get_by_id(&state.base.db, id)
@@ -193,7 +193,7 @@ struct ResendResult {
 )]
 async fn resend_delivery(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     // D-344 — both halves, because a resend needs both and either one being
     // down produces the same silent nothing. `SendEmail` is a fast-queue job
     // (`EngineJob::is_batch` is false for it), so a reachable relay with a
@@ -429,7 +429,7 @@ impl From<attome_email::suppression::SuppressionRow> for SuppressionSummary {
 )]
 async fn list_suppressions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<SuppressionSummary>>, AppError> {
     let PageWindow {
@@ -474,7 +474,7 @@ struct AddSuppressionBody {
 )]
 async fn add_suppression(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Json(body): Json<AddSuppressionBody>,
 ) -> Result<StatusCode, AppError> {
     if body.email.trim().is_empty() {
@@ -526,7 +526,7 @@ async fn add_suppression(
 )]
 async fn remove_suppression(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let removed = attome_email::suppression::unsuppress(&state.base.db, id)

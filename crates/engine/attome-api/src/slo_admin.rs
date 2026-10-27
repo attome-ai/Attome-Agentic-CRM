@@ -16,7 +16,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_server::slo::{self, SloClass, Targets};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
@@ -171,7 +171,7 @@ fn validate_targets(class: &SloClass, profile: &str, body: &SloTargetBody) -> Re
 )]
 async fn get_overview(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<SloOverview>, AppError> {
     let profile = profile(&state);
     let overrides: Vec<(String, i32, i32, i64, Uuid, DateTime<Utc>)> = sqlx::query_as(
@@ -240,7 +240,7 @@ async fn get_overview(
 )]
 async fn set_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(class_id): Path<String>,
     Json(body): Json<SloTargetBody>,
 ) -> Result<Json<SloOverride>, AppError> {
@@ -326,7 +326,7 @@ async fn set_target(
 )]
 async fn clear_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(class_id): Path<String>,
 ) -> Result<StatusCode, AppError> {
     find_class(&class_id)?;
@@ -568,7 +568,7 @@ pub async fn burn_check(
 )]
 async fn list_reports(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Query(paging): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<SloReport>>, AppError> {
     let PageWindow {
@@ -621,7 +621,7 @@ fn parse_period(period: &str) -> Result<NaiveDate, AppError> {
 )]
 async fn get_report(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Path(period): Path<String>,
 ) -> Result<Json<SloReport>, AppError> {
     let start = parse_period(&period)?;

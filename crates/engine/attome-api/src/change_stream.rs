@@ -35,7 +35,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_ev
 use attome_core::EngineState;
 use attome_core::change_feed::{CursorPosition, horizon};
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
@@ -249,7 +249,7 @@ async fn audit(
 )]
 async fn list_subscriptions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
 ) -> Result<Json<PaginatedResponse<Subscription>>, AppError> {
     let items: Vec<Subscription> = sqlx::query_as(&format!(
         "SELECT {COLUMNS} FROM change_stream_subscription WHERE NOT is_deleted \
@@ -283,7 +283,7 @@ async fn list_subscriptions(
 )]
 async fn create_subscription(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Json(body): Json<SubscriptionBody>,
 ) -> Result<(StatusCode, Json<Subscription>), AppError> {
     check(
@@ -354,7 +354,7 @@ async fn create_subscription(
 )]
 async fn update_subscription(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Json(body): Json<SubscriptionPatch>,
 ) -> Result<Json<Subscription>, AppError> {
@@ -432,7 +432,7 @@ async fn update_subscription(
 )]
 async fn delete_subscription(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Query(q): Query<RowVersionQuery>,
 ) -> Result<StatusCode, AppError> {

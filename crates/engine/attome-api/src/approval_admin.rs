@@ -73,7 +73,7 @@ use attome_audit::security::{AuditHook, HookEvent, MandatoryCategory, SecurityEv
 use attome_audit::{AuditOperation, audit_service};
 use attome_core::EngineState;
 use attome_security::MetadataRollout;
-use attome_server::authz::{Admin, Authorized, Privilege, RecordScoped, SelfService};
+use attome_server::authz::{Authorized, Privilege, RecordScoped, SelfService, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
@@ -1613,7 +1613,7 @@ struct ListQuery {
 )]
 async fn list_approvals(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(q): Query<ListQuery>,
 ) -> Result<Json<PaginatedResponse<ApprovalRequestView>>, AppError> {
     // Absent or empty means `pending`, exactly what this route always
@@ -1726,7 +1726,7 @@ struct CancelBody {
 )]
 async fn cancel_approval(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Json(body): Json<CancelBody>,
 ) -> Result<Json<ApprovalRequestView>, AppError> {
@@ -1839,7 +1839,7 @@ struct DecideResponse {
 )]
 async fn decide_approval(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Path(id): Path<Uuid>,
     Json(body): Json<DecideBody>,
@@ -1927,7 +1927,7 @@ struct BatchDecideResponse {
 )]
 async fn batch_decide(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Json(body): Json<BatchDecideBody>,
 ) -> Result<Json<BatchDecideResponse>, AppError> {
@@ -2785,7 +2785,7 @@ struct RetryExecutionParams {
 )]
 async fn retry_execution(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Query(params): Query<RetryExecutionParams>,
 ) -> Result<Json<DecideResponse>, AppError> {
@@ -2964,7 +2964,7 @@ struct DelegateResponse {
 )]
 async fn delegate_approval(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
     Json(body): Json<DelegateBody>,
 ) -> Result<Json<DelegateResponse>, AppError> {

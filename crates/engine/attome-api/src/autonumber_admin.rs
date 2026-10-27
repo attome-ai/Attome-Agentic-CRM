@@ -6,7 +6,7 @@
 //! fast-mode rule may.
 
 use attome_core::{EngineState, quote_ident};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -99,7 +99,7 @@ pub fn routes() -> Router<EngineState> {
 )]
 async fn gaps(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((entity, attribute)): Path<(String, String)>,
 ) -> Result<Json<AutonumberGapReport>, AppError> {
     gap_report(&state, &entity, &attribute).await.map(Json)

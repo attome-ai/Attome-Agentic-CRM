@@ -17,7 +17,7 @@ use attome_core::{
     EngineState, acquire_label_write_lock, append_label_change_log, is_valid_locale_tag,
     load_all_labels,
 };
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{
@@ -206,7 +206,7 @@ async fn resolve_entity_logicalname(
 )]
 async fn list_labels(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_id): Path<Uuid>,
 ) -> Result<Json<Vec<LabelDetail>>, AppError> {
     let logicalname = resolve_entity_logicalname(&state.base.db_migrator, entity_id).await?;
@@ -249,7 +249,7 @@ async fn list_labels(
 )]
 async fn create_label(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(entity_id): Path<Uuid>,
     Json(body): Json<LabelBody>,
@@ -293,7 +293,7 @@ async fn create_label(
 )]
 async fn update_label(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path((entity_id, label_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<LabelBody>,
@@ -425,7 +425,7 @@ async fn update_label(
 )]
 async fn delete_label(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path((entity_id, label_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
@@ -945,7 +945,7 @@ struct WorkbenchQuery {
 )]
 async fn label_workbench(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     axum::extract::Query(query): axum::extract::Query<WorkbenchQuery>,
 ) -> Result<Json<attome_types::PaginatedResponse<WorkbenchRow>>, AppError> {
     if !is_valid_locale_tag(&query.locale) {
@@ -1133,7 +1133,7 @@ struct XliffImportResult {
 )]
 async fn export_xliff(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     axum::extract::Query(query): axum::extract::Query<XliffQuery>,
 ) -> Result<axum::response::Response, AppError> {
     use axum::response::IntoResponse;
@@ -1178,7 +1178,7 @@ async fn export_xliff(
 )]
 async fn import_xliff(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     body: String,
 ) -> Result<Json<XliffImportResult>, AppError> {
@@ -1369,7 +1369,7 @@ struct UiTextOverride {
 )]
 async fn put_ui_text_override(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Json(body): Json<UiTextOverride>,
 ) -> Result<StatusCode, AppError> {
@@ -1461,7 +1461,7 @@ struct UiTextKeyQuery {
 )]
 async fn delete_ui_text_override(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     axum::extract::Query(query): axum::extract::Query<UiTextKeyQuery>,
 ) -> Result<StatusCode, AppError> {

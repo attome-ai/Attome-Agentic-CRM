@@ -18,7 +18,7 @@ use attome_core::{
     feature_flag_registry, validate_flag_dependencies,
 };
 use attome_modules::MODULE_MAP;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -95,7 +95,7 @@ fn view_for(state: &EngineState, key: &str) -> Option<FeatureFlagView> {
 )]
 async fn list_features(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<FeatureFlagListResponse>, AppError> {
     let items = feature_flag_registry()
         .iter()
@@ -129,13 +129,18 @@ async fn list_features(
 )]
 async fn put_feature_flag(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(key): Path<String>,
     Json(policy): Json<FeatureFlagPolicy>,
 ) -> Result<Json<FeatureFlagView>, AppError> {
     let flag = feature_flag_registry()
         .get(&key)
         .ok_or(AppError::NotFound)?;
+    // Q12-T2: a `security.*` switch changes access control, so the Deployment
+    // area alone does not turn it; the Security area (or `system.admin`) does.
+    if key.starts_with("security.") && !attome_server::authz::AdminArea::Security.held_by(&ctx) {
+        return Err(AppError::Forbidden);
+    }
 
     policy.validate().map_err(AppError::Validation)?;
 
@@ -191,7 +196,7 @@ struct ExpiredFlagsResponse {
 )]
 async fn expired_features(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Json<ExpiredFlagsResponse> {
     let snapshot = state.settings.load();
     Json(ExpiredFlagsResponse {

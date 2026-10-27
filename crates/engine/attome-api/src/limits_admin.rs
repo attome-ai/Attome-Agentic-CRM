@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 use attome_config::limits::{LIMITS, LimitScope, LimitSpec};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{Json, Router, extract::State, routing::get};
 use serde::Serialize;
@@ -251,7 +251,7 @@ pub async fn limit_warning_check(
 /// limit with `PUT /api/v1/admin/settings/limits.{key}`.
 async fn list_limits(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<PaginatedResponse<LimitView>>, AppError> {
     let items = limit_views(&state, chrono::Utc::now().date_naive()).await?;
     let total = items.len() as i64;

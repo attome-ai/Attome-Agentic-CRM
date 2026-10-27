@@ -55,7 +55,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_ev
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::recovery_archive::{self, ARCHIVE_ROW_COLUMNS, ArchiveRow};
 use attome_core::{EngineState, FieldType};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -168,7 +168,7 @@ fn value_readable(
 )]
 pub(super) async fn list_archive(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(filter): Query<ArchiveFilter>,
     Query(paging): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<ArchiveRow>>, AppError> {
@@ -234,7 +234,7 @@ pub(super) async fn list_archive(
 )]
 pub(super) async fn get_archive_value(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(archive_id): Path<Uuid>,
 ) -> Result<Json<ArchiveValue>, AppError> {
     let ring = ring(&state)?;
@@ -537,7 +537,7 @@ pub(super) fn tally(counts: &mut RestoreCounts, one: RestoreOne) {
 )]
 pub(super) async fn restore_one(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(archive_id): Path<Uuid>,
 ) -> Result<Json<RestoreCounts>, AppError> {
     let one = restore_row(&state, &ctx, ctx.user_id, archive_id).await?;
@@ -575,7 +575,7 @@ pub(super) async fn restore_one(
 )]
 pub(super) async fn restore_field(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<RestoreFieldBody>,
 ) -> Result<Json<RestoreCounts>, AppError> {
     ring(&state)?;

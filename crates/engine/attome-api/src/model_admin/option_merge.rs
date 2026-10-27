@@ -19,7 +19,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_ev
 use attome_audit::{AuditOperation, audit_service};
 use attome_core::{EngineState, quote_ident};
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json,
@@ -87,7 +87,7 @@ pub struct MergePayload {
 )]
 pub(crate) async fn merge_values(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
     Json(request): Json<MergeValuesRequest>,
 ) -> Result<(axum::http::StatusCode, Json<MergeValuesQueued>), AppError> {

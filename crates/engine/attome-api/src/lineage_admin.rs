@@ -34,7 +34,7 @@ use attome_core::EngineState;
 use attome_core::lineage::graph::{self, Cleanup, Comparison, Direction, Graph, NodeRef};
 use attome_core::lineage::manual::{self, LinkFrom, ManualLink};
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse};
 use axum::{
@@ -157,7 +157,7 @@ pub struct CompareQuery {
 )]
 async fn compare(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Query(q): Query<CompareQuery>,
 ) -> Result<Json<Comparison>, AppError> {
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
@@ -181,7 +181,7 @@ async fn compare(
 )]
 async fn cleanup(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
 ) -> Result<Json<Cleanup>, AppError> {
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
     Ok(Json(graph::cleanup(&mut conn).await?))

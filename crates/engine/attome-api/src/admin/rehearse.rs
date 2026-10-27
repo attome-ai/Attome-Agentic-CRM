@@ -7,7 +7,7 @@
 
 use attome_core::{EngineState, FieldType};
 use attome_metadata::provision::{self, rehearse};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -76,7 +76,7 @@ pub struct RehearsalReportDto {
 )]
 async fn rehearse_field(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_id): Path<Uuid>,
     Json(body): Json<RehearseRequest>,
 ) -> Result<Json<RehearsalReportDto>, AppError> {

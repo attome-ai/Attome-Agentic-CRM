@@ -11,7 +11,7 @@
 
 use attome_core::EngineState;
 use attome_email::domain_check::{self, DnsTxtResolver, DomainSettings};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -116,7 +116,7 @@ fn resolver(state: &EngineState) -> Result<DnsTxtResolver, AppError> {
 )]
 async fn check(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(domain): Path<String>,
 ) -> Result<Json<SendingDomainCheck>, AppError> {
     let domain = domain.trim().trim_end_matches('.').to_ascii_lowercase();

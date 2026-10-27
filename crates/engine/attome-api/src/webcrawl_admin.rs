@@ -13,7 +13,7 @@
 
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use attome_webcrawl::model::{
     CreateTargetBody, ImportBody, ImportResult, PageListItem, SelectionBody, TARGET_COLUMNS,
@@ -55,7 +55,7 @@ fn require_enabled(state: &EngineState) -> Result<(), AppError> {
 )]
 async fn list_targets(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<TargetListItem>>, AppError> {
     let PageWindow {
@@ -107,7 +107,7 @@ async fn list_targets(
 )]
 async fn create_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Json(body): Json<CreateTargetBody>,
 ) -> Result<(StatusCode, Json<TargetListItem>), AppError> {
     require_enabled(&state)?;
@@ -298,7 +298,7 @@ async fn create_target(
 )]
 async fn recrawl_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<TargetListItem>, AppError> {
     require_enabled(&state)?;
@@ -360,7 +360,7 @@ async fn recrawl_target(
 )]
 async fn delete_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let result = sqlx::query(
@@ -406,7 +406,7 @@ async fn delete_target(
 )]
 async fn list_target_pages(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<PageListItem>>, AppError> {
     let items = sqlx::query_as::<_, PageListItem>(
@@ -444,7 +444,7 @@ async fn list_target_pages(
 )]
 async fn update_selection(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Json(body): Json<SelectionBody>,
 ) -> Result<StatusCode, AppError> {
@@ -588,7 +588,7 @@ async fn ensure_data_source_for_target(
 )]
 async fn import_pages(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Json(body): Json<ImportBody>,
 ) -> Result<Json<ImportResult>, AppError> {

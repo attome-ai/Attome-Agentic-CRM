@@ -15,7 +15,7 @@
 //! warning is a prompt to look, never an automatic change.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -98,7 +98,7 @@ pub fn rubber_stamp(decisions: i64, approved: i64, median_seconds: Option<f64>) 
 )]
 async fn approval_metrics(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(query): Query<MetricsQuery>,
 ) -> Result<Json<ApprovalMetrics>, AppError> {
     let days = query.days.unwrap_or(30).clamp(1, 365);

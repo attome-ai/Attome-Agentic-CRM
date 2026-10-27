@@ -31,7 +31,7 @@
 use attome_core::{EngineState, change_feed};
 use attome_db::DbPool;
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::ErrorResponse;
 use attome_types::{
@@ -509,7 +509,7 @@ struct ImpactQuery {
 )]
 async fn lineage_impact(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Query(q): Query<ImpactQuery>,
 ) -> Result<Json<attome_core::lineage::impact::ImpactReport>, AppError> {
     use attome_core::lineage::impact::{ChangeKind, DEFAULT_DEPTH, MAX_DEPTH, MetadataChange};
@@ -723,7 +723,7 @@ async fn patch_description(
 )]
 async fn approve_description(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
 ) -> Result<Json<catalog_index::CatalogAssetSummary>, AppError> {
@@ -829,7 +829,7 @@ async fn decide_access_request(
 )]
 async fn export_catalog(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<catalog_index::CatalogExportAsset>>, AppError> {
     let window = query.window();

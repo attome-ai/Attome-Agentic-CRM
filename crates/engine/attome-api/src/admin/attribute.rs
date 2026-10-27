@@ -6,7 +6,7 @@ use attome_metadata::provision::{
     AttributeDesc, RECONCILE_SCHEMA_CHANGE_INLINE_ROW_LIMIT, ReconcilePolicy, RecordAs,
     valid_identifier,
 };
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use axum::{
     Json,
@@ -524,7 +524,7 @@ struct SchemaChangePending {
 )]
 pub(super) async fn create_attribute(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path(entity_id): Path<Uuid>,
     Json(raw_body): Json<Value>,
@@ -1179,7 +1179,7 @@ async fn resolve_lookup_target(
 )]
 pub(super) async fn update_attribute(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     Json(raw_body): Json<Value>,
@@ -1828,7 +1828,7 @@ pub(crate) async fn do_update_attribute_recorded(
 )]
 pub(super) async fn attribute_index_status(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<AttributeIndexStatus>, AppError> {
     let attribute: Option<(String, String, bool)> = sqlx::query_as(
@@ -1938,7 +1938,7 @@ pub(super) async fn attribute_index_status(
 )]
 pub(super) async fn attribute_schema_change_status(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<SchemaChangeStatus>, AppError> {
     let exists: bool = sqlx::query_scalar(
@@ -2019,7 +2019,7 @@ pub(super) async fn attribute_schema_change_status(
 )]
 pub(super) async fn delete_attribute(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     axum::extract::Query(query): axum::extract::Query<DryRunQuery>,
@@ -2149,7 +2149,7 @@ pub(crate) fn structure_response(result: crate::field_changes::FieldChangeResult
 /// (a dry run is never gated), then the change.
 async fn structure_route(
     state: &EngineState,
-    ctx: &Authorized<Admin>,
+    ctx: &Authorized<Privilege<area::DataModel>>,
     recording: &RecordingCtx,
     entity_id: Uuid,
     attr_id: Uuid,
@@ -2497,7 +2497,7 @@ async fn audit_structure_change(
 )]
 pub(super) async fn rename_attribute(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<Value>,
@@ -2554,7 +2554,7 @@ pub(super) async fn rename_attribute(
 )]
 pub(super) async fn change_attribute_type(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<Value>,
@@ -2606,7 +2606,7 @@ pub(super) async fn change_attribute_type(
 )]
 pub(super) async fn add_attribute_choice(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<Value>,
@@ -2659,7 +2659,7 @@ pub(super) async fn add_attribute_choice(
 )]
 pub(super) async fn remove_attribute_choice(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     recording: RecordingCtx,
     Path((entity_id, attr_id, value)): Path<(Uuid, Uuid, String)>,
     axum::extract::Query(query): axum::extract::Query<DryRunQuery>,
@@ -2726,7 +2726,7 @@ pub(crate) struct ChoiceUsage {
 )]
 pub(super) async fn choice_usage(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<ChoiceUsage>, AppError> {
     use attome_metadata::provision::field_change as fc;
@@ -2856,7 +2856,7 @@ const LABEL_ABANDON_RULES_STAY_OFF: &str = "customer business rules turned off w
 )]
 pub(super) async fn abandon_field_run(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path((entity_id, attr_id, run_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<Json<AbandonedFieldRun>, AppError> {
     do_abandon_field_run(&state, ctx.user_id, entity_id, attr_id, run_id)

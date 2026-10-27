@@ -13,7 +13,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
 use attome_model::kinds::environment_variable::{ENVIRONMENT_VARIABLE, value_fits};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -126,7 +126,7 @@ struct StoredValue {
 )]
 async fn list_variables(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
 ) -> Result<Json<PaginatedResponse<EnvVariable>>, AppError> {
     let stored: Vec<StoredValue> = sqlx::query_as(
         "SELECT name, value, row_version, updated_by, updated_at FROM environment_variable_value",
@@ -192,7 +192,7 @@ async fn list_variables(
 )]
 async fn set_variable(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(name): Path<String>,
     Json(body): Json<SetEnvVariable>,
 ) -> Result<StatusCode, AppError> {
@@ -307,7 +307,7 @@ async fn set_variable(
 )]
 async fn clear_variable(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     Path(name): Path<String>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(
@@ -364,7 +364,7 @@ async fn clear_variable(
 )]
 async fn variable_history(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     Path(name): Path<String>,
 ) -> Result<Json<PaginatedResponse<EnvVariableChange>>, AppError> {
     let items: Vec<EnvVariableChange> = sqlx::query_as(

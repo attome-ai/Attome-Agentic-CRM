@@ -102,7 +102,7 @@
 
 use attome_core::EngineState;
 use attome_db::DbPool;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, CursorPage, DEFAULT_PAGE_SIZE, ErrorResponse, MAX_PAGE_SIZE};
 use axum::{
     Json, Router,
@@ -832,7 +832,7 @@ async fn fetch_kind(db: &DbPool, kind: ChangeKind, w: &Window) -> Result<Vec<Fee
 )]
 async fn list_changes(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Query(q): Query<ChangeFeedQuery>,
 ) -> Result<Json<CursorPage<ChangeFeedEntry>>, AppError> {
     let page_size = q
@@ -919,7 +919,7 @@ async fn list_changes(
 )]
 async fn list_consumers(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
 ) -> Result<Json<attome_types::PaginatedResponse<attome_core::change_feed::ConsumerHealth>>, AppError>
 {
     let consumers = attome_core::change_feed::consumer_health(&state.base.db).await?;
@@ -964,7 +964,7 @@ pub struct RewindBody {
 )]
 async fn rewind_consumer(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     axum::extract::Path(name): axum::extract::Path<String>,
     Json(body): Json<RewindBody>,
 ) -> Result<axum::http::StatusCode, AppError> {
