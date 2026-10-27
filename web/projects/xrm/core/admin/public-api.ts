@@ -40,3 +40,5 @@ export { DuplicatesManagerComponent } from './duplicates-manager/duplicates-mana
 export { RulesManagerComponent }      from './rules-manager/rules-manager.component';
 // Y14-T4: this screen's own catalogue.
 export { businessRulesAr, businessRulesEn } from './rules-manager.i18n';
+// Y14-T4: this screen's own catalogue.
+export { duplicatesManagerAr, duplicatesManagerEn } from './duplicates-manager.i18n';

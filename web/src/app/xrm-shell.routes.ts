@@ -184,7 +184,11 @@ export const xrmShellRoutes: Routes = [
           {
             // D-432 / M13 — the duplicate-candidate steward queue.
             path: 'duplicates',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/core/admin').then(m => m.duplicatesManagerEn),
+              () => import('@attome/xrm/core/admin').then(m => m.duplicatesManagerAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/core/admin').then(m => m.DuplicatesManagerComponent),
           },
           // Basic Units U19 — governance screens over existing admin-only
@@ -1127,7 +1131,11 @@ export const xrmShellRoutes: Routes = [
           {
             // N9-T2: the agent designer (define, save as draft, publish).
             path: 'model/agents',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/model').then(m => m.agentDesignerEn),
+              () => import('@attome/xrm/model').then(m => m.agentDesignerAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () =>
               import('@attome/xrm/model').then(m => m.AgentDesignerComponent),
           },

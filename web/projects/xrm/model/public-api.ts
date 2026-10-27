@@ -14,3 +14,5 @@ export { AppMenuComponent, linkFor } from './app-menu/app-menu.component';
 export type { MenuLink } from './app-menu/app-menu.component';
 export { OptionSetEditorComponent } from './option-set-editor/option-set-editor.component';
 export { DependencyEditorComponent } from './dependency-editor/dependency-editor.component';
+// Y14-T4: this screen's own catalogue.
+export { agentDesignerAr, agentDesignerEn } from './agent-designer.i18n';
