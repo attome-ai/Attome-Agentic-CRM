@@ -233,7 +233,7 @@ export class EmailDesignerComponent {
   /** Where a new block goes: into the selected column, into the selected columns row's first column, or the email. */
   private targetList(doc: DesignDoc, type: PaletteType): string {
     const path = this.selectedPath();
-    let node: DesignNode | null = null;
+    let node: DesignNode | null;
     try {
       node = path ? (valueAt(doc, path) as DesignNode) : null;
     } catch {

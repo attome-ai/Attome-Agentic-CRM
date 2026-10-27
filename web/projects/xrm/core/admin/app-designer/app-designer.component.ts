@@ -282,7 +282,7 @@ export class AppDesignerComponent {
       const groups = doc.root.children ?? [];
       return groups.length ? `/root/children/${groups.length - 1}/children` : null;
     }
-    let node: AppNode | null = null;
+    let node: AppNode;
     try {
       node = valueAt(doc, path) as AppNode;
     } catch {
