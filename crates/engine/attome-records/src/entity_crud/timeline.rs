@@ -25,7 +25,11 @@
 //!   status and step; never its payload);
 //! - `flow_run` — `workflow_instance` runs correlated with the record;
 //! - `agent_run` — one entry per agent session that changed the record, from
-//!   the audit rows it wrote (`initiator = 1`).
+//!   the audit rows it wrote (`initiator = 1`);
+//! - `web_visit` (E14-T8) — one entry per website visit of a contact, lead
+//!   or account, from `marketing_visit_summary` (its `contact_ref`,
+//!   `lead_ref` or `account_ref`), read only when that entity is registered,
+//!   under the same `{source}.read` and row-security rule as the children.
 //!
 //! **Provenance.** Every entry carries `actor` (the user who acted, or for
 //! whom an agent acted), `actor_kind` (`person`, `agent`, `flow`, `system`),
@@ -171,7 +175,7 @@ pub struct SourceRecord {
 /// The source an entry came from. Entries sort by their wire name within one
 /// timestamp, so the order is stable and documented: `activity`,
 /// `agent_run`, `approval`, `audit_event`, `communication`, `decision`,
-/// `flow_run`, `note`, `state_transition`.
+/// `flow_run`, `note`, `state_transition`, `web_visit`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TimelineEntryKind {
@@ -184,10 +188,12 @@ pub enum TimelineEntryKind {
     Approval,
     FlowRun,
     AgentRun,
+    /// E14-T8: a website visit (one per session, not per page).
+    WebVisit,
 }
 
 impl TimelineEntryKind {
-    pub const ALL: [TimelineEntryKind; 9] = [
+    pub const ALL: [TimelineEntryKind; 10] = [
         TimelineEntryKind::AuditEvent,
         TimelineEntryKind::StateTransition,
         TimelineEntryKind::Communication,
@@ -197,6 +203,7 @@ impl TimelineEntryKind {
         TimelineEntryKind::Approval,
         TimelineEntryKind::FlowRun,
         TimelineEntryKind::AgentRun,
+        TimelineEntryKind::WebVisit,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -210,6 +217,7 @@ impl TimelineEntryKind {
             Self::Approval => "approval",
             Self::FlowRun => "flow_run",
             Self::AgentRun => "agent_run",
+            Self::WebVisit => "web_visit",
         }
     }
 
@@ -229,7 +237,7 @@ pub struct TimelineQuery {
     pub page_size: Option<i64>,
     /// Comma-separated kinds to include (`audit_event`, `state_transition`,
     /// `communication`, `note`, `activity`, `decision`, `approval`,
-    /// `flow_run`, `agent_run`). Omitted or empty means every kind. An unknown
+    /// `flow_run`, `agent_run`, `web_visit`). Omitted or empty means every kind. An unknown
     /// kind is a 422.
     pub kinds: Option<String>,
     /// Only entries this user made (or an agent or flow made for them).
@@ -687,6 +695,9 @@ pub async fn record_timeline(
             if opts.wants(source.kind) {
                 rows.extend(fetch_child_source(state, ctx, source, target, opts, limit).await?);
             }
+        }
+        if opts.wants(TimelineEntryKind::WebVisit) {
+            rows.extend(fetch_web_visits(state, ctx, target, opts, limit).await?);
         }
         if opts.wants(TimelineEntryKind::Approval) {
             rows.extend(fetch_approvals(state, target, opts, limit).await?);
@@ -1580,6 +1591,7 @@ fn child_summary(kind: TimelineEntryKind, detail: &Value) -> String {
                 .unwrap_or_else(|| "(untitled)".to_owned());
             format!("Note: {text}")
         }
+        TimelineEntryKind::WebVisit => web_visit_summary(detail),
         TimelineEntryKind::Activity => {
             let subject = text_of(detail, "subject").unwrap_or("(no subject)");
             match text_of(detail, "activity_type") {
@@ -1680,6 +1692,145 @@ async fn fetch_child_source(
         (target.entity.as_str(), target.ids[0]),
         |_| ActorKind::Person,
         |detail| child_summary(source.kind, detail),
+    ))
+}
+
+// ── Website visits (E14-T8) ──────────────────────────────────────────────────
+
+/// The visit summaries' entity (marketing pack 0005).
+const WEB_VISIT_ENTITY: &str = "marketing_visit_summary";
+
+/// The visit summary's lookup to a record of `entity`, if it has one.
+fn web_visit_lookup(entity: &str) -> Option<&'static str> {
+    match entity {
+        "contact" => Some("contact_ref"),
+        "lead" => Some("lead_ref"),
+        "account" => Some("account_ref"),
+        _ => None,
+    }
+}
+
+/// A visit's one-line summary: pages, minutes, key pages. Pure.
+fn web_visit_summary(detail: &Value) -> String {
+    let pages = detail
+        .get("pages_viewed")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0) as i64;
+    let minutes = detail
+        .get("duration_seconds")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0)
+        / 60.0;
+    let mut text = format!(
+        "Website visit: {pages} pages, {} min",
+        minutes.round() as i64
+    );
+    if let Some(keys) = text_of(detail, "key_pages") {
+        text.push_str(&format!(" (key pages: {keys})"));
+    }
+    text
+}
+
+async fn fetch_web_visits(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    target: &Target,
+    opts: &TimelineOptions,
+    limit: i64,
+) -> Result<Vec<(i64, TimelineEntry)>, AppError> {
+    let Some(column) = web_visit_lookup(&target.entity) else {
+        return Ok(Vec::new());
+    };
+    if ctx.require(WEB_VISIT_ENTITY, "read").is_err() {
+        return Ok(Vec::new());
+    }
+    let Some(meta) = state.entities.load().get(WEB_VISIT_ENTITY).cloned() else {
+        return Ok(Vec::new());
+    };
+    let has = |c: &str| meta.attrs.iter().any(|a| a.logicalname == c);
+    if !has(column) {
+        return Ok(Vec::new());
+    }
+    let readable = |c: &str| readable_attr(ctx, WEB_VISIT_ENTITY, &meta.attrs, c).is_some();
+    let occ = if has("started_at") {
+        "COALESCE(t.started_at, t.created_at)".to_owned()
+    } else {
+        "t.created_at".to_owned()
+    };
+    let detail = detail_object_sql(
+        ctx,
+        WEB_VISIT_ENTITY,
+        &meta.attrs,
+        &[
+            "pages_viewed",
+            "duration_seconds",
+            "key_pages",
+            "source",
+            "campaign",
+        ],
+    );
+    let live = attome_core::live_row_predicate("t", meta.is_append_only)
+        .map(|p| format!("AND {p}"))
+        .unwrap_or_default();
+    let mut binds = Vec::new();
+    let entity = ph(&mut binds, SourceBind::Text(target.entity.clone()));
+    let own = record_match(
+        &format!("t.{}", quote_ident(column)),
+        &target.ids,
+        false,
+        &mut binds,
+    );
+    let lim = ph(&mut binds, SourceBind::Int(limit));
+    let keyset = keyset_sql(
+        opts.cursor.as_ref(),
+        TimelineEntryKind::WebVisit,
+        &occ,
+        "t.id",
+        &mut binds,
+    )?;
+    let text: Vec<String> = ["key_pages", "source", "campaign"]
+        .iter()
+        .filter(|c| has(c) && readable(c))
+        .map(|c| format!("t.{}", quote_ident(c)))
+        .collect();
+    let mut filter = filter_sql(&opts.filter, &occ, Some("t.created_by"), &text, &mut binds);
+    if opts.filter.channel.is_some() {
+        filter.push_str(" AND false");
+    }
+    let pins = pin_sql(
+        &opts.filter,
+        TimelineEntryKind::WebVisit,
+        "t.id",
+        &mut binds,
+    );
+    let table = quote_ident(WEB_VISIT_ENTITY);
+    let sql = format!(
+        "SELECT jsonb_build_object('id', t.id, 'micros', {micros}, \
+                'record_entity', {entity}::text, 'record', t.{col}, \
+                'actor', t.created_by, 'created_by', t.created_by, 'detail', {detail}) \
+         FROM {table} t \
+         WHERE {own} AND {occ} IS NOT NULL {live} {keyset} {filter}{pins} {{rls}} \
+         ORDER BY {occ} DESC, t.id DESC LIMIT {lim}",
+        micros = micros_sql(&occ),
+        col = quote_ident(column),
+    );
+    let rows = run_source_query(
+        state,
+        ctx,
+        WEB_VISIT_ENTITY,
+        meta.entity_id,
+        &meta.attrs,
+        &sql,
+        binds,
+    )
+    .await?;
+    Ok(entries(
+        &rows,
+        TimelineEntryKind::WebVisit,
+        WEB_VISIT_ENTITY,
+        (target.entity.as_str(), target.ids[0]),
+        |_| ActorKind::System,
+        web_visit_summary,
     ))
 }
 

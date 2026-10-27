@@ -3103,6 +3103,8 @@ const DEDUP_KEY_FULFILMENT_SPLIT: &str = "fulfilment-split";
 const DEDUP_KEY_FULFILMENT_BILLING: &str = "fulfilment-billing";
 /// D4-T1: new leads assigned by the rule set (a registered job type).
 const DEDUP_KEY_LEAD_ASSIGNMENT: &str = "lead-assignment";
+/// E14-T8: closed web sessions summarised onto timelines (a registered job type).
+const DEDUP_KEY_WEB_VISIT_SUMMARY: &str = "web-visit-summary";
 /// F6-T14: late and stuck fulfilment orders (a registered job type).
 const DEDUP_KEY_FULFILMENT_EXCEPTIONS: &str = "fulfilment-exceptions";
 /// F6-T10: the carrier tracking poll (a registered job type).
@@ -3459,6 +3461,10 @@ pub const FULFILMENT_BILLING: attome_jobs::JobType =
 /// D4-T1: new leads given an owner by the lead assignment rule set.
 pub const LEAD_ASSIGNMENT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_workflow::lead_assignment::JOB, 1);
+
+/// E14-T8: one visit summary per closed, identified web session.
+pub const WEB_VISIT_SUMMARY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::tracking::summary::JOB, 1);
 
 /// O1-T2: active prediction models checked for feature drift.
 pub const PREDICT_DRIFT: attome_jobs::JobType =
@@ -4600,6 +4606,23 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WEB_VISIT_SUMMARY,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let written = attome_marketing::tracking::summary::summarise_closed_sessions(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if written > 0 {
+                    tracing::info!(written, "web visits summarised");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CONTENT_SITEMAP,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let counts = attome_content::seo::sitemap::regenerate_all(&state.base.db)
@@ -5507,6 +5530,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_FULFILMENT_BILLING
         }
         EngineJob::Registered(job) if job.name == LEAD_ASSIGNMENT.name => DEDUP_KEY_LEAD_ASSIGNMENT,
+        EngineJob::Registered(job) if job.name == WEB_VISIT_SUMMARY.name => {
+            DEDUP_KEY_WEB_VISIT_SUMMARY
+        }
         EngineJob::Registered(job) if job.name == FULFILMENT_EXCEPTIONS.name => {
             DEDUP_KEY_FULFILMENT_EXCEPTIONS
         }
@@ -6761,6 +6787,21 @@ pub fn spawn_lead_assignment_scheduler(db: DbPool, interval: std::time::Duration
             "lead assignment",
         ),
         Err(error) => tracing::error!(%error, "lead assignment: not scheduled"),
+    }
+}
+
+/// E14-T8: every ten minutes, closed web sessions summarised onto timelines.
+pub fn spawn_web_visit_summary_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(WEB_VISIT_SUMMARY.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_WEB_VISIT_SUMMARY,
+            "web visit summary",
+        ),
+        Err(error) => tracing::error!(%error, "web visit summary: not scheduled"),
     }
 }
 

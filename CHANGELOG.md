@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Website visits on timelines (E14-T8, migration `0303`): the `marketing_web_visit_summary` job (every
+  ten minutes) writes one `marketing_visit_summary` per closed, identified web session (pages, minutes,
+  key pages reached, source, campaign, account), and record timelines show them as `web_visit` entries
+  on the contact, lead or account, one per visit.
 - Ads codecs (E19-T1, `connector::adapters::ads_meta` and `ads_google`): Meta lead ads (the
   `leadgen` webhook and form answers mapped to a lead), Google lead forms (checked by `google_key`),
   audiences of consenting people only, hashed the way each platform matches (SHA-256 of the normalised

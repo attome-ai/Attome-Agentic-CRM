@@ -23,6 +23,7 @@ const KIND_ICONS: Record<string, string> = {
   approval:         'las la-check-circle',
   flow_run:         'las la-project-diagram',
   agent_run:        'las la-robot',
+  web_visit:        'las la-globe',
 };
 
 /** Entries fetched per page. */

@@ -1043,7 +1043,7 @@ export const xrmEn = {
     kinds: {
       audit_event: 'Changes', state_transition: 'Status', communication: 'Communications',
       note: 'Notes', activity: 'Activities', decision: 'Decisions',
-      approval: 'Approvals', flow_run: 'Flow runs', agent_run: 'Agent runs',
+      approval: 'Approvals', flow_run: 'Flow runs', agent_run: 'Agent runs', web_visit: 'Website visits',
     },
     empty: 'Nothing has happened on this record yet.',
     error: 'The timeline could not be loaded.',
