@@ -38,6 +38,11 @@ export const xrmAr = {
     pasteCancel: 'إلغاء',
     paste_invalid: 'هذه القيمة لا تناسب نوع العمود.',
     paste_readonly: 'لا يُحرَّر هذا العمود في الشبكة.',
+    required: 'مطلوب.',
+    ruleError: 'رفضته القاعدة {rule}.',
+    locked: 'القاعدة {rule} تقفل هذا الحقل.',
+    held: '{count, plural, one {صف واحد فيه مشكلات} two {صفان فيهما مشكلات} other {# صفوف فيها مشكلات}} ولن يُحفظ حتى تُصلَح.',
+    resolve: 'حل التعارض',
   },
   entityList: {
     filterOpNotEquals: 'لا يساوي', filterOpIsEmpty: 'فارغ',

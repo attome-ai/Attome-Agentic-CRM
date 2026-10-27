@@ -1,6 +1,7 @@
 <div class="grid-bar">
   <span class="grid-count" aria-live="polite">
     {{ 'editableGrid.pending' | translate: { cells: changedCells(), rows: changedRows() } }}
+    @if (heldRows()) { {{ 'editableGrid.held' | translate: { count: heldRows() } }} }
   </span>
   <button type="button" class="btn-primary" data-testid="grid-save" [disabled]="!changedRows() || saving()" (click)="saveAll()">
     {{ (saving() ? 'editableGrid.saving' : 'editableGrid.saveAll') | translate }}
@@ -16,6 +17,11 @@
   </button>
   <button type="button" class="btn-secondary" (click)="closed.emit()">{{ 'editableGrid.close' | translate }}</button>
 </div>
+
+@if (openConflict(); as c) {
+  <xrm-conflict-dialog [details]="c.details" [mine]="c.mine" [labelOf]="labelOf"
+                       (resolve)="resolveConflict($event)" (cancelled)="dismissConflict()" />
+}
 
 @if (pastePlan(); as plan) {
   <section class="paste-preview" data-testid="paste-preview" [attr.aria-label]="'editableGrid.pasteTitle' | translate">
@@ -64,13 +70,16 @@
     </thead>
     <tbody>
       @for (row of rows(); track row.id; let r = $index) {
-        <tr [class.row-error]="errors()[row.id]" [class.row-new]="isNew(row)">
+        <tr [class.row-error]="errors()[row.id] || issues()[row.id]" [class.row-new]="isNew(row)">
           @for (col of columns(); track col.name; let c = $index) {
             <td role="gridcell"
                 [class.active]="active().row === r && active().col === c"
                 [class.pending]="isPending(row, col)"
                 [class.readonly]="!isEditable(col)"
                 [class.in-fill]="inFill(r, c)"
+                [class.cell-error]="cellIssue(row, col)"
+                [attr.title]="cellIssue(row, col)"
+                [attr.aria-invalid]="cellIssue(row, col) ? true : null"
                 [attr.aria-readonly]="!isEditable(col)"
                 [attr.data-cell]="r + ':' + c"
                 tabindex="-1"
@@ -119,9 +128,17 @@
             </td>
           }
         </tr>
-        @if (errors()[row.id]) {
+        @if (errors()[row.id] || hiddenIssues(row).length) {
           <tr class="row-message">
-            <td [attr.colspan]="columns().length" role="alert">{{ errors()[row.id] }}</td>
+            <td [attr.colspan]="columns().length" role="alert">
+              {{ errors()[row.id] }}
+              @for (text of hiddenIssues(row); track text) { <span class="hidden-issue">{{ text }}</span> }
+              @if (conflicts()[row.id]) {
+                <button type="button" class="btn-secondary" data-testid="grid-resolve" (click)="openConflictFor(row.id)">
+                  {{ 'editableGrid.resolve' | translate }}
+                </button>
+              }
+            </td>
           </tr>
         }
       }

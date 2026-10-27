@@ -63,7 +63,9 @@ describe('grid paste (B6-T3)', () => {
     TestBed.configureTestingModule({
       imports: [EditableGridComponent],
       providers: [
-        { provide: EntityService, useValue: { update: vi.fn(() => of({})), newDefaults: vi.fn(() => of({})) } },
+        { provide: EntityService, useValue: {
+          update: vi.fn(() => of({})), newDefaults: vi.fn(() => of({})), getSchema: () => of(null),
+        } },
         { provide: LangService, useValue: { translate: (k: string) => k, errorText: () => 'e', isRtl: signal(false) } },
       ],
     });

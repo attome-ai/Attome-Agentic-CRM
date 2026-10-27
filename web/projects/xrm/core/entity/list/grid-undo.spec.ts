@@ -39,7 +39,10 @@ describe('grid undo (B6-T4)', () => {
       providers: [
         {
           provide: EntityService,
-          useValue: { create, update, newDefaults: vi.fn(() => of({ status: 'open', employees: 5 })) },
+          useValue: {
+            create, update, getSchema: () => of(null),
+            newDefaults: vi.fn(() => of({ status: 'open', employees: 5 })),
+          },
         },
         { provide: LangService, useValue: { translate: (k: string) => k, errorText: () => 'e', isRtl: signal(false) } },
       ],

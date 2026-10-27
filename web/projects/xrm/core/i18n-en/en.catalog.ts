@@ -42,6 +42,11 @@ export const xrmEn = {
     pasteCancel: 'Cancel',
     paste_invalid: 'This value does not fit the column's type.',
     paste_readonly: 'This column is not edited in the grid.',
+    required: 'Required.',
+    ruleError: 'Refused by the rule {rule}.',
+    locked: 'The rule {rule} locks this field.',
+    held: '{count, plural, one {# row has} other {# rows have}} problems and will not be saved until fixed.',
+    resolve: 'Resolve conflict',
   },
   entityList: {
     filterOpNotEquals: 'Does not equal', filterOpIsEmpty: 'Is empty',

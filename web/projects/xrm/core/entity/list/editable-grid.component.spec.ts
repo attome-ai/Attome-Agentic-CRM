@@ -64,7 +64,7 @@ describe('EditableGridComponent (B6-T1)', () => {
     TestBed.configureTestingModule({
       imports: [EditableGridComponent],
       providers: [
-        { provide: EntityService, useValue: { update } },
+        { provide: EntityService, useValue: { update, getSchema: () => of(null) } },
         {
           provide: LangService,
           useValue: {

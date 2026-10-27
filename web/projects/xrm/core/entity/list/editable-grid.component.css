@@ -111,3 +111,9 @@
 .paste-preview .grid-bar { margin-block: 0.5rem 0; }
 
 .grid td.paste-error { color: var(--color-danger); text-decoration: underline wavy var(--color-danger); }
+
+.grid td.cell-error { box-shadow: inset 0 -2px 0 var(--color-danger); }
+
+.row-message .hidden-issue { display: block; }
+
+.row-message .btn-secondary { margin-inline-start: 0.5rem; }
