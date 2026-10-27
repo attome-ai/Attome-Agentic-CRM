@@ -15,9 +15,9 @@
     @if (backlog(); as b) {
       <div class="search-settings__panel" data-status>
         <h2>{{ 'searchSettings.status' | translate }}</h2>
-        <p>{{ 'searchSettings.backlog' | translate: { count: b.pending } }}</p>
-        @if (b.oldest) {
-          <p class="search-settings__note">{{ 'searchSettings.oldest' | translate: { at: b.oldest } }}</p>
+        <p>{{ 'searchSettings.backlog' | translate: { count: b.events } }}</p>
+        @if (b.lag_seconds > 0) {
+          <p class="search-settings__note">{{ 'searchSettings.oldest' | translate: { minutes: minutes(b.lag_seconds) } }}</p>
         }
       </div>
     }

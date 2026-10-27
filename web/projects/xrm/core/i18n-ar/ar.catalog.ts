@@ -1522,7 +1522,7 @@ export const xrmAr = {
   searchSettings: {
     title: 'إعدادات البحث', size: 'حجم الفهرس', sizeLine: '{rows} صف، {size}',
     status: 'الفهرسة', backlog: '{count, plural, =0 {محدّث} one {تغيير واحد بالانتظار} other {# تغييرات بالانتظار}}',
-    oldest: 'أقدمها بالانتظار منذ {at}',
+    oldest: 'أقدمها ينتظر منذ {minutes, plural, =0 {أقل من دقيقة} one {دقيقة واحدة} two {دقيقتين} few {# دقائق} other {# دقيقة}}',
     quality: 'جودة البحث', qualityLine: '{searches} عملية بحث خلال {days} يوم',
     zeroResults: 'بلا نتائج: {rate}٪', refinements: 'أعيد البحث: {rate}٪',
     attributes: 'الحقول', entity: 'الكيان', chooseEntity: 'اختر كياناً',

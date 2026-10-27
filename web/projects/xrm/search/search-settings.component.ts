@@ -91,6 +91,10 @@ export class SearchSettingsComponent implements OnInit {
     return formatBytes(n);
   }
 
+  protected minutes(seconds: number): number {
+    return Math.floor(seconds / 60);
+  }
+
   protected percent(value: number): string {
     return `${Math.round(value * 1000) / 10}`;
   }

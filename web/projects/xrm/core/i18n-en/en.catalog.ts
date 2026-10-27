@@ -1563,7 +1563,7 @@ export const xrmEn = {
   searchSettings: {
     title: 'Search settings', size: 'Index size', sizeLine: '{rows} rows, {size}',
     status: 'Indexing', backlog: '{count, plural, =0 {Up to date} one {1 change waiting} other {# changes waiting}}',
-    oldest: 'Oldest waiting since {at}',
+    oldest: 'The oldest has waited {minutes, plural, =0 {under a minute} one {1 minute} other {# minutes}}',
     quality: 'Search quality', qualityLine: '{searches} searches in {days} days',
     zeroResults: 'No results: {rate}%', refinements: 'Searched again: {rate}%',
     attributes: 'Attributes', entity: 'Entity', chooseEntity: 'Choose an entity',
