@@ -174828,14 +174828,16 @@
         "description": "A confirmed order.",
         "required": [
           "order_id",
-          "status",
-          "invoice_request_id"
+          "status"
         ],
         "properties": {
           "invoice_request_id": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid",
-            "description": "The billing invoice request it handed off."
+            "description": "The billing invoice request it handed off; `None` when the order's\n`billing_rule` is `on_shipment` or `on_delivery` (F6-T13: fulfilment\nasks billing per shipment line instead)."
           },
           "order_id": {
             "type": "string",
@@ -223052,6 +223054,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -223104,6 +223107,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
   "x-version-adapters": []
 }

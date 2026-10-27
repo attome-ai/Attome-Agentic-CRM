@@ -41894,9 +41894,11 @@ export interface components {
         OrderConfirmed: {
             /**
              * Format: uuid
-             * @description The billing invoice request it handed off.
+             * @description The billing invoice request it handed off; `None` when the order's
+             *     `billing_rule` is `on_shipment` or `on_delivery` (F6-T13: fulfilment
+             *     asks billing per shipment line instead).
              */
-            invoice_request_id: string;
+            invoice_request_id?: string | null;
             /** Format: uuid */
             order_id: string;
             status: string;
