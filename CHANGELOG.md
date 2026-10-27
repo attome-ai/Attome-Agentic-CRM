@@ -45,6 +45,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Migration waves can be compared and rolled back (A24-T5). `GET /api/v1/admin/migration-projects/{id}/waves/{wave_id}/compare`
+  reports, per target entity, the rows sent, refused, created and updated, how many created records
+  are still live, and for a sample of applied rows the fields whose stored value differs from the
+  source. `POST .../waves/{wave_id}/rollback` takes the newest wave back: its imports are undone
+  (created records deleted, updated ones restored unless changed since) or cancelled before they
+  apply. A wave can now be `rolled_back` (migration 0309).
 - Queues over any record (V7-T1): a `queue_item` puts a record of any entity in a `queue`, with a
   priority, a status (waiting, picked, done), an assignee and when it entered. The record is a
   polymorphic pair whose new `"any": true` option admits every entity. At boot every service work

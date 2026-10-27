@@ -52,6 +52,7 @@ export class MappingComponent implements OnInit {
     running: 'modelMapping.wave.running',
     loaded: 'modelMapping.wave.loaded',
     failed: 'modelMapping.wave.failed',
+    rolled_back: 'modelMapping.wave.rolledBack',
   };
   /** A wave is queued or running: another cannot start. */
   readonly waveBusy = computed(() => this.waves().some(w => w.status === 'queued' || w.status === 'running'));

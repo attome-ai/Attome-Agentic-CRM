@@ -1644,6 +1644,87 @@ pub fn rows_csv(header: &[String], rows: &[Vec<String>]) -> String {
 /// entity's live attributes. Answers the job's id; the same rows for the
 /// same entity answer the job already made for them.
 #[allow(clippy::too_many_arguments)]
+/// What [`withdraw_import`] did with one import.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Withdrawn {
+    /// Applied (or failed part way): its undo is queued.
+    UndoQueued,
+    /// Not yet applying: cancelled.
+    Cancelled,
+    /// Already undone, cancelled or failed before writing: nothing to do.
+    Nothing,
+    /// Applying, undoing or waiting for approval: left alone.
+    Busy,
+}
+
+/// A24-T5: takes back an import a migration wave queued, as `actor`: an
+/// applied (or failed) import is undone, which deletes the records it
+/// created and restores the ones it updated unless they changed since
+/// (A23-T8); one not yet applying is cancelled. Idempotent.
+pub async fn withdraw_import(
+    state: &EngineState,
+    job_id: Uuid,
+    actor: Uuid,
+) -> Result<Withdrawn, AppError> {
+    let status: Option<String> = sqlx::query_scalar("SELECT status FROM import_job WHERE id = $1")
+        .bind(job_id)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    let Some(status) = status else {
+        return Ok(Withdrawn::Nothing);
+    };
+    let outcome = match status.as_str() {
+        "applied" | "failed" => Withdrawn::UndoQueued,
+        "uploaded" | "staged" | "validated" => Withdrawn::Cancelled,
+        "undone" | "cancelled" => return Ok(Withdrawn::Nothing),
+        _ => return Ok(Withdrawn::Busy),
+    };
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    if outcome == Withdrawn::Cancelled {
+        let cancelled = sqlx::query(
+            "UPDATE import_job SET status = 'cancelled', finished_at = now(), \
+                    row_version = row_version + 1 \
+              WHERE id = $1 AND status IN ('uploaded', 'staged', 'validated')",
+        )
+        .bind(job_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+        .rows_affected();
+        if cancelled == 0 {
+            return Ok(Withdrawn::Busy);
+        }
+    }
+    let (name, comment) = match outcome {
+        Withdrawn::Cancelled => ("import.cancel", "cancel by migration rollback"),
+        _ => ("import.undo", "undo by migration rollback"),
+    };
+    import_event(
+        &mut tx,
+        state,
+        actor,
+        job_id,
+        AuditOperation::Update,
+        name,
+        comment.to_owned(),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    if outcome == Withdrawn::UndoQueued {
+        import_jobs::enqueue(
+            &state.base.db,
+            Phase::Undo,
+            &PhaseJob {
+                job_id,
+                dry_run: false,
+            },
+        )
+        .await?;
+    }
+    Ok(outcome)
+}
+
 pub async fn create_rows_import(
     state: &EngineState,
     entity: &str,

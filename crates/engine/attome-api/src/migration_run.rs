@@ -21,9 +21,21 @@
 //! The imports validate and apply on their own queue; the wave is `loaded`
 //! once every page is queued. Not yet: keeping the source's created-by,
 //! created-at and owner values (a migration write mode), and copying files.
+//!
+//! A24-T5: each import a wave queues is recorded (`migration_wave_import`,
+//! migration 0309). `GET .../waves/{wave_id}/compare` reports, per target
+//! entity, the rows sent, refused, created and updated, how many created
+//! records are still live, and for a sample of applied rows the fields whose
+//! stored value differs from what the source sent. `POST
+//! .../waves/{wave_id}/rollback` takes the newest wave back: each of its
+//! imports is undone (records it created are deleted and records it updated
+//! restored, unless they changed since) or, if not yet applying, cancelled.
+//! Not yet: a dry run of a sample into a Develop workspace (no Develop
+//! workspace exists to load into).
 
 use attome_core::EngineState;
 use attome_core::changeset::{Recording, RecordingMode, RequestContext};
+use attome_document::import_routes::{Withdrawn, withdraw_import};
 use attome_integration::connector::adapters::migration_connect::NamedSource;
 use attome_integration::connector::adapters::migration_mapping::{MapAction, ModelMapping};
 use attome_integration::connector::adapters::migration_waves::{
@@ -36,7 +48,7 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::StatusCode,
-    routing::post,
+    routing::{get, post},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -76,7 +88,7 @@ pub(crate) struct WaveRow {
     kind: String,
     /// What changed after this was read; `null` for a full load.
     since: Option<DateTime<Utc>>,
-    /// `queued`, `running`, `loaded` or `failed`.
+    /// `queued`, `running`, `loaded`, `failed` or `rolled_back`.
     status: String,
     #[schema(value_type = Object)]
     counts: Value,
@@ -396,7 +408,7 @@ async fn load(
                             .collect()
                     })
                     .collect();
-                attome_document::import_routes::create_rows_import(
+                let job_id = attome_document::import_routes::create_rows_import(
                     state,
                     &entity.target,
                     &page_file_name(&entity.source, wave_id, page_no),
@@ -408,6 +420,7 @@ async fn load(
                     actor,
                 )
                 .await?;
+                record_import(state, wave_id, job_id, &entity.target, counts).await?;
                 bump(counts, "rows", rows.len() as u64);
                 bump(counts, "imports", 1);
             }
@@ -591,15 +604,386 @@ pub(crate) async fn list_waves(
     )))
 }
 
-pub(crate) fn routes() -> Router<EngineState> {
-    Router::new().route(
-        "/api/v1/admin/migration-projects/{id}/waves",
-        post(start_wave).get(list_waves),
+/// Records that `wave_id` queued import `job_id`, in load order. An import
+/// an earlier wave already queued stays that wave's.
+async fn record_import(
+    state: &EngineState,
+    wave_id: Uuid,
+    job_id: Uuid,
+    entity: &str,
+    counts: &Value,
+) -> Result<(), AppError> {
+    let seq = counts.get("imports").and_then(Value::as_i64).unwrap_or(0) as i32;
+    sqlx::query(
+        "INSERT INTO migration_wave_import (import_job_id, wave_id, entity, seq) \
+         VALUES ($1, $2, $3, $4) ON CONFLICT (import_job_id) DO NOTHING",
     )
+    .bind(job_id)
+    .bind(wave_id)
+    .bind(entity)
+    .bind(seq)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+// ── A24-T5: compare and rollback ────────────────────────────────────────────
+
+/// Applied rows compared value by value, per entity.
+pub const COMPARE_SAMPLE: i64 = 5;
+
+/// A value as text for comparing what the source sent with what is stored:
+/// trimmed, a list joined with `;`, a number in its shortest form. Pure.
+pub fn comparable(value: &Value) -> String {
+    match value {
+        Value::Null => String::new(),
+        Value::String(s) => {
+            let t = s.trim();
+            match t.parse::<f64>() {
+                Ok(n) if n.is_finite() && !t.is_empty() => n.to_string(),
+                _ => t.to_owned(),
+            }
+        }
+        Value::Number(n) => n.as_f64().map_or_else(|| n.to_string(), |f| f.to_string()),
+        Value::Bool(b) => b.to_string(),
+        Value::Array(items) => items.iter().map(comparable).collect::<Vec<_>>().join(";"),
+        Value::Object(_) => value.to_string(),
+    }
+}
+
+/// Whether a stored value matches what was sent: equal as text, or a date
+/// the store keeps as a timestamp starting with it. Pure.
+pub fn same_value(sent: &Value, stored: &Value) -> bool {
+    let (a, b) = (comparable(sent), comparable(stored));
+    a == b || (a.len() == 10 && a.as_bytes().get(4) == Some(&b'-') && b.starts_with(&a))
+}
+
+/// The fields of `sent` (the mapped row) whose stored value differs, among
+/// `fields`, sorted. Pure.
+pub fn mismatched(sent: &Value, stored: &Value, fields: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = fields
+        .iter()
+        .filter_map(|f| {
+            let s = sent.get(f)?;
+            let st = stored.get(f).unwrap_or(&Value::Null);
+            (!same_value(s, st)).then(|| f.clone())
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+/// One applied row whose stored values were compared.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct SampleCompare {
+    record_id: Uuid,
+    /// Fields whose stored value differs from what the source sent (names only).
+    mismatched: Vec<String>,
+}
+
+/// One target entity of a wave.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct EntityCompare {
+    entity: String,
+    /// Rows the source sent.
+    sent: i64,
+    /// Rows refused by validation.
+    invalid: i64,
+    created: i64,
+    updated: i64,
+    /// Created records still live.
+    live: i64,
+    samples: Vec<SampleCompare>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct WaveCompare {
+    wave_id: Uuid,
+    status: String,
+    entities: Vec<EntityCompare>,
+}
+
+/// What a rollback did.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct WaveRollback {
+    wave_id: Uuid,
+    status: String,
+    /// Imports whose undo was queued.
+    undone: u64,
+    /// Imports cancelled before applying.
+    cancelled: u64,
+    /// Imports still applying, left alone; roll back again once they finish.
+    busy: u64,
+}
+
+async fn wave_of(
+    state: &EngineState,
+    project: Uuid,
+    wave: Uuid,
+) -> Result<(String, DateTime<Utc>), AppError> {
+    sqlx::query_as(
+        "SELECT status, created_at FROM migration_wave WHERE id = $1 AND project_id = $2",
+    )
+    .bind(wave)
+    .bind(project)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)
+}
+
+/// Compare a wave with its source
+///
+/// Per target entity: rows sent, refused, created and updated, created
+/// records still live, and for a sample of applied rows the fields whose
+/// stored value differs from what the source sent. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/migration-projects/{id}/waves/{wave_id}/compare",
+    tag = "admin",
+    params(
+        ("id" = Uuid, Path, description = "The migration project"),
+        ("wave_id" = Uuid, Path, description = "The wave"),
+    ),
+    responses(
+        (status = 200, description = "The comparison", body = WaveCompare),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such project or wave", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn compare_wave(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path((id, wave_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<WaveCompare>, AppError> {
+    project_exists(&state, id).await?;
+    let (status, _) = wave_of(&state, id, wave_id).await?;
+    let groups: Vec<(String, Vec<Uuid>)> = sqlx::query_as(
+        "SELECT entity, array_agg(import_job_id ORDER BY seq) FROM migration_wave_import \
+          WHERE wave_id = $1 GROUP BY entity ORDER BY min(seq)",
+    )
+    .bind(wave_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut entities = Vec::with_capacity(groups.len());
+    for (entity, jobs) in groups {
+        let (sent, invalid): (i64, i64) = sqlx::query_as(
+            "SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'invalid') \
+               FROM import_stage WHERE job_id = ANY($1)",
+        )
+        .bind(&jobs)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        let (created, updated): (i64, i64) = sqlx::query_as(
+            "SELECT COUNT(*) FILTER (WHERE action = 'created'), \
+                    COUNT(*) FILTER (WHERE action = 'updated') \
+               FROM import_row WHERE job_id = ANY($1)",
+        )
+        .bind(&jobs)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        let Ok((_, table, attrs, _)) =
+            attome_records::entity_crud::resolve_entity_from_db(&state.base.db, &entity).await
+        else {
+            // The entity is gone: nothing of it is live.
+            entities.push(EntityCompare {
+                entity,
+                sent,
+                invalid,
+                created,
+                updated,
+                live: 0,
+                samples: Vec::new(),
+            });
+            continue;
+        };
+        let quoted = attome_core::quote_ident(&table);
+        let live: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {quoted} t \
+              WHERE t.is_active = true AND t.id IN \
+                    (SELECT record_id FROM import_row WHERE job_id = ANY($1) AND action = 'created')"
+        ))
+        .bind(&jobs)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        // Plain values only: a lookup is stored resolved, not as sent.
+        let fields: Vec<String> = attrs
+            .iter()
+            .filter(|a| a.field_type() != attome_core::FieldType::Lookup)
+            .map(|a| a.logicalname.clone())
+            .collect();
+        let rows: Vec<(Uuid, Value, Value)> = sqlx::query_as(&format!(
+            "SELECT s.record_id, s.mapped, to_jsonb(t) FROM import_stage s \
+               JOIN {quoted} t ON t.id = s.record_id \
+              WHERE s.job_id = ANY($1) AND s.status = 'applied' AND s.mapped IS NOT NULL \
+              ORDER BY s.job_id, s.row_no LIMIT $2"
+        ))
+        .bind(&jobs)
+        .bind(COMPARE_SAMPLE)
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        let samples = rows
+            .into_iter()
+            .map(|(record_id, sent, stored)| SampleCompare {
+                record_id,
+                mismatched: mismatched(&sent, &stored, &fields),
+            })
+            .collect();
+        entities.push(EntityCompare {
+            entity,
+            sent,
+            invalid,
+            created,
+            updated,
+            live,
+            samples,
+        });
+    }
+    Ok(Json(WaveCompare {
+        wave_id,
+        status,
+        entities,
+    }))
+}
+
+/// Roll back a migration wave
+///
+/// Takes back the project's newest wave: each of its imports is undone
+/// (records it created are deleted and records it updated restored, unless
+/// they changed since) or, if not yet applying, cancelled. An import still
+/// applying is left alone and counted as busy; roll back again once it
+/// finishes. Refused while a wave is queued or running, and for any but the
+/// newest wave. Administrators only. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/migration-projects/{id}/waves/{wave_id}/rollback",
+    tag = "admin",
+    params(
+        ("id" = Uuid, Path, description = "The migration project"),
+        ("wave_id" = Uuid, Path, description = "The wave"),
+    ),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Delete)])))),
+    responses(
+        (status = 202, description = "The rollback, queued", body = WaveRollback),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such project or wave", body = ErrorResponse),
+        (status = 409, description = "A wave is queued or running, or a later wave exists", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn rollback_wave(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path((id, wave_id)): Path<(Uuid, Uuid)>,
+) -> Result<(StatusCode, Json<WaveRollback>), AppError> {
+    project_exists(&state, id).await?;
+    let (status, created_at) = wave_of(&state, id, wave_id).await?;
+    if !matches!(status.as_str(), "loaded" | "failed" | "rolled_back") {
+        return Err(AppError::Conflict(
+            "only a loaded or failed wave can be rolled back",
+        ));
+    }
+    let blocked: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM migration_wave \
+                        WHERE project_id = $1 AND id <> $2 \
+                          AND (status IN ('queued', 'running') \
+                               OR (created_at > $3 AND status <> 'rolled_back')))",
+    )
+    .bind(id)
+    .bind(wave_id)
+    .bind(created_at)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if blocked {
+        return Err(AppError::Conflict(
+            "a wave is queued or running, or a later wave must be rolled back first",
+        ));
+    }
+    // Children first: the reverse of the load order.
+    let jobs: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT import_job_id FROM migration_wave_import WHERE wave_id = $1 ORDER BY seq DESC",
+    )
+    .bind(wave_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (mut undone, mut cancelled, mut busy) = (0u64, 0u64, 0u64);
+    for job in jobs {
+        match withdraw_import(&state, job, ctx.user_id).await? {
+            Withdrawn::UndoQueued => undone += 1,
+            Withdrawn::Cancelled => cancelled += 1,
+            Withdrawn::Busy => busy += 1,
+            Withdrawn::Nothing => {}
+        }
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let status: String = sqlx::query_scalar(
+        "UPDATE migration_wave SET status = 'rolled_back', \
+                counts = jsonb_set(counts, '{rollback}', $2) \
+          WHERE id = $1 RETURNING status",
+    )
+    .bind(wave_id)
+    .bind(json!({ "undone": undone, "cancelled": cancelled, "busy": busy }))
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_audit::security::write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(&state),
+        attome_audit::security::SecurityEvent::new(
+            attome_audit::security::MandatoryCategory::Configuration,
+            attome_audit::AuditOperation::Delete,
+            ctx.user_id,
+            "migration_wave",
+            Some(wave_id),
+        )
+        .named("migration_wave.rollback"),
+    )
+    .await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(WaveRollback {
+            wave_id,
+            status,
+            undone,
+            cancelled,
+            busy,
+        }),
+    ))
+}
+
+pub(crate) fn routes() -> Router<EngineState> {
+    Router::new()
+        .route(
+            "/api/v1/admin/migration-projects/{id}/waves",
+            post(start_wave).get(list_waves),
+        )
+        .route(
+            "/api/v1/admin/migration-projects/{id}/waves/{wave_id}/compare",
+            get(compare_wave),
+        )
+        .route(
+            "/api/v1/admin/migration-projects/{id}/waves/{wave_id}/rollback",
+            post(rollback_wave),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(start_wave, list_waves))]
+#[openapi(
+    paths(start_wave, list_waves, compare_wave, rollback_wave),
+    components(schemas(WaveCompare, EntityCompare, SampleCompare, WaveRollback))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -619,5 +1003,30 @@ mod tests {
         assert_eq!(cell_text(&json!(["won", "lost"])), "won;lost");
         let name = page_file_name("res.partner", Uuid::nil(), 2);
         assert_eq!(name, "migration-res_partner-000000000000-2.csv");
+    }
+
+    #[test]
+    fn compare_rollback_values_match_as_the_store_keeps_them() {
+        assert!(same_value(&json!("10"), &json!(10.0)));
+        assert!(same_value(&json!(" Acme "), &json!("Acme")));
+        assert!(same_value(&json!("شركة النور"), &json!("شركة النور")));
+        assert!(same_value(
+            &json!("2026-01-05"),
+            &json!("2026-01-05T00:00:00+00:00")
+        ));
+        assert!(same_value(&json!(["won", "lost"]), &json!(["won", "lost"])));
+        assert!(same_value(&json!(""), &Value::Null));
+        assert!(!same_value(&json!("Acme"), &json!("Acme Ltd")));
+        assert!(!same_value(&json!("10"), &json!(11)));
+    }
+
+    #[test]
+    fn compare_rollback_names_only_the_fields_that_differ() {
+        let sent = json!({ "name": "Acme", "city": "Riyadh", "employees": "40", "owner_ref": "x" });
+        let stored = json!({ "name": "Acme", "city": "Jeddah", "employees": 40, "owner_ref": "y" });
+        let fields = vec!["employees".to_owned(), "city".to_owned(), "name".to_owned()];
+        // `owner_ref` is not compared (a lookup), and a field not sent is skipped.
+        assert_eq!(mismatched(&sent, &stored, &fields), vec!["city".to_owned()]);
+        assert!(mismatched(&json!({}), &stored, &fields).is_empty());
     }
 }

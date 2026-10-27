@@ -54,7 +54,7 @@ export interface MigrationWave {
   system: string;
   kind: 'full' | 'catch_up' | 'cut_over';
   since: string | null;
-  status: 'queued' | 'running' | 'loaded' | 'failed';
+  status: 'queued' | 'running' | 'loaded' | 'failed' | 'rolled_back';
   counts: { metadata_steps?: number; entities?: number; rows?: number; imports?: number };
   error: string | null;
   created_at: string;
