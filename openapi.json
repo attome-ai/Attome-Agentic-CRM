@@ -48496,6 +48496,255 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/impersonation": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "List my impersonation sessions",
+        "description": "The caller's own sessions, newest first. Administrators only.",
+        "operationId": "list_my_impersonation_sessions",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ImpersonationSessionItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Start an impersonation session",
+        "description": "Starts a 30-minute view-as (read only) or act-as session as another person, with a reason and a fresh step-up (`impersonation`). Act-as needs the person's live consent. Never as an administrator or a machine identity, and one live session at a time. Administrators only; audited.",
+        "operationId": "start_impersonation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpersonationSessionItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials, or no fresh step-up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator, not a browser session, or the person is an administrator or a machine identity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A session is already live",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason, an unknown mode, yourself, or act-as without consent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/impersonation/{id}": {
+      "delete": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "End an impersonation session",
+        "description": "Ends the caller's own session at once. Administrators only; audited.",
+        "operationId": "end_impersonation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ended"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live session of yours with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/invitations": {
       "get": {
         "tags": [
@@ -94364,6 +94613,287 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "high"
+      }
+    },
+    "/api/v1/me/impersonation-consents": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "My impersonation consents",
+        "description": "The signed-in person's consents, newest first.",
+        "operationId": "list_impersonation_consents",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ImpersonationConsentItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Let an administrator act as me",
+        "description": "Lets one administrator start act-as sessions as the signed-in person until the time given (1 to 72 hours). Withdraw it at any time. Audited.",
+        "operationId": "grant_impersonation_consent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The consent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpersonationConsentItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Hours out of range, yourself, or not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "grant"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/me/impersonation-consents/{id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Withdraw a consent",
+        "description": "Ends a consent at once; a live act-as session it allowed ends with it. Audited.",
+        "operationId": "revoke_impersonation_consent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The consent",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Withdrawn"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live consent of yours with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "revoke"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/me/impersonation-sessions": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sessions about me",
+        "description": "Every view-as or act-as session about the signed-in person: who, how, why and when, newest first.",
+        "operationId": "list_impersonation_sessions_about_me",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ImpersonationSessionItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/me/mail-connections": {
@@ -150934,18 +151464,29 @@
       },
       "ConsentBody": {
         "type": "object",
+        "required": [
+          "hours"
+        ],
         "properties": {
-          "privacy_version": {
+          "actor_email": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "The administrator's email, when the id is not known."
           },
-          "terms_version": {
+          "actor_id": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "format": "uuid",
+            "description": "The administrator who may act as you, by id or (below) by email."
+          },
+          "hours": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How long, 1 to 72 hours."
           }
         }
       },
@@ -165392,6 +165933,95 @@
             "type": "integer",
             "description": "Affected definitions the caller may not see, counted only.",
             "minimum": 0
+          }
+        }
+      },
+      "ImpersonationConsentItem": {
+        "type": "object",
+        "description": "One consent.",
+        "required": [
+          "id",
+          "actor_id",
+          "granted_at",
+          "expires_at"
+        ],
+        "properties": {
+          "actor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "granted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revoked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "ImpersonationSessionItem": {
+        "type": "object",
+        "description": "One session.",
+        "required": [
+          "id",
+          "actor_id",
+          "subject_id",
+          "mode",
+          "reason",
+          "started_at",
+          "expires_at",
+          "header"
+        ],
+        "properties": {
+          "actor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "header": {
+            "type": "string",
+            "description": "Send the session id in this header to work in the session."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": "string",
+            "description": "`view` or `act`."
+          },
+          "reason": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -184977,6 +185607,163 @@
                 },
                 "source": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_ImpersonationConsentItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One consent.",
+              "required": [
+                "id",
+                "actor_id",
+                "granted_at",
+                "expires_at"
+              ],
+              "properties": {
+                "actor_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "granted_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "revoked_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_ImpersonationSessionItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One session.",
+              "required": [
+                "id",
+                "actor_id",
+                "subject_id",
+                "mode",
+                "reason",
+                "started_at",
+                "expires_at",
+                "header"
+              ],
+              "properties": {
+                "actor_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "ended_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "header": {
+                  "type": "string",
+                  "description": "Send the session id in this header to work in the session."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "mode": {
+                  "type": "string",
+                  "description": "`view` or `act`."
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "started_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "subject_id": {
+                  "type": "string",
+                  "format": "uuid"
                 }
               }
             }
@@ -213436,6 +214223,28 @@
           "total": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "StartBody": {
+        "type": "object",
+        "required": [
+          "subject_id",
+          "mode",
+          "reason"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "`view` (read only) or `act` (needs the person's consent)."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why, kept with the session."
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },

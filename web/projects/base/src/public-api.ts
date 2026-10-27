@@ -15,6 +15,11 @@ export type {
 
 export { ATTOME_CONFIG, AttomeBaseConfig } from './lib/config';
 export { ApiService, MAX_ALL_PAGES_ITEMS } from './lib/api.service';
+// Q13-T2: the view-as / act-as session this tab works in.
+export {
+  IMPERSONATION_HEADER, IMPERSONATION_ROUTES, ImpersonationService, impersonationInterceptor,
+} from './lib/impersonation.service';
+export type { ImpersonationSession } from './lib/impersonation.service';
 export type { Page } from './lib/api.service';
 export { ConditionalCache } from './lib/conditional-cache';
 export type { ConditionalEntry } from './lib/conditional-cache';

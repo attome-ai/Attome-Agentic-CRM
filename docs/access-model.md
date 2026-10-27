@@ -131,6 +131,30 @@ when the grant would complete the pair:
 
 `GET /api/v1/admin/security/role-conflicts/current` lists who holds a pair today.
 
+## Seeing and acting as someone
+
+An administrator can start a session as another person (`POST /api/v1/admin/security/impersonation`
+with the person, `view` or `act`, and a reason), after a fresh step-up (`impersonation`). The session lasts
+30 minutes, is never refreshed, and is ended early with `DELETE .../impersonation/{id}`; an administrator
+holds one at a time. Nobody is impersonated who is an administrator or a machine identity.
+
+The administrator then sends the session id in the `x-attome-impersonation` header from their own signed-in
+browser (never an API key or a machine), and each request runs with the person's access:
+
+- **View as** changes nothing: every request but a read (and running a query or a search) is refused with
+  `impersonation_read_only`.
+- **Act as** needs the person's consent: the person allows one administrator, for 1 to 72 hours
+  (`POST /api/v1/me/impersonation-consents`), and can withdraw it at any time, which also ends the session.
+  Their credentials, second factors, keys, sessions and consents, approval decisions and administration are
+  never done as them (`impersonation_refused`).
+
+Every request in a session is logged before it runs (`impersonation_request`), and refused if it cannot be.
+A request naming an unknown, ended or expired session is refused with 422 `impersonation_ended` (not 401, so
+the browser does not take it for an expired sign-in), and the banner closes.
+Every audit row it writes names both people: the person's access was used (`acting_user_id`), by whom
+(initiator `impersonation`, the session, and `impersonator:<administrator id>`), all in the v2 hash. The
+person sees every session about them at `GET /api/v1/me/impersonation-sessions`.
+
 ## Explaining access
 
 - `GET /api/v1/{entity}/{id}/access/explain?user=&action=` explains one record: every source the filter

@@ -9,6 +9,7 @@ import {
 } from '@jsverse/transloco';
 import { ATTOME_CONFIG, AttomeBaseConfig } from './config';
 import { authInterceptor } from './auth.interceptor';
+import { impersonationInterceptor } from './impersonation.service';
 import { AuthService } from './auth.service';
 import { InMemoryTranslocoLoader } from './i18n/transloco.loader';
 import { WarnOnceMissingHandler } from './i18n/missing-handler';
@@ -111,7 +112,9 @@ export function provideAttomeI18n(languages: readonly LanguageDef[] = DEFAULT_LA
  */
 export function provideAttomeBase(config: AttomeBaseConfig): EnvironmentProviders {
   return makeEnvironmentProviders([
-    provideHttpClient(withInterceptors([...(config.interceptors ?? []), authInterceptor, metadataVersionInterceptor])),
+    provideHttpClient(withInterceptors([
+      ...(config.interceptors ?? []), impersonationInterceptor, authInterceptor, metadataVersionInterceptor,
+    ])),
     { provide: ATTOME_CONFIG, useValue: config },
     provideAppInitializer(() => { inject(AuthService).sessionReady().subscribe(); }),
     provideAttomeI18n(config.languages),

@@ -1298,6 +1298,10 @@ impl EngineSystemBuilder {
         // trait object `state.base.security` holds.
         let security_resolver_concrete = security_resolver.clone();
         state.base.security.store(security_resolver);
+        // Q13-T1: view-as and act-as sessions, checked by the authz middleware.
+        attome_server::impersonation::install(std::sync::Arc::new(
+            attome_security::impersonation::PgImpersonationStore::new(state.base.db.clone()),
+        ));
 
         // Hourly reload — fully re-verifies from license every tick
         // (rather than only checking expiry against the cached value), so

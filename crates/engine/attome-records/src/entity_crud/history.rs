@@ -439,6 +439,8 @@ pub fn actor_label(initiator: Option<i32>) -> &'static str {
         Some(1) => "agent",
         Some(2) => "system",
         Some(3) => "portal_user",
+        // Q13-T1: an administrator using the person's access.
+        Some(4) => "impersonation",
         _ => "user",
     }
 }
@@ -893,7 +895,9 @@ async fn values_before(
         let Some(attr) = readable.get(field.as_str()) else {
             continue;
         };
-        if attr.is_read_gated() || row_sensitive.unwrap_or(false) || value_withheld(state, value_mode)
+        if attr.is_read_gated()
+            || row_sensitive.unwrap_or(false)
+            || value_withheld(state, value_mode)
         {
             return Err(AppError::Validation(format!(
                 "{field}: a withheld value cannot be restored"
@@ -1319,7 +1323,9 @@ pub async fn values_at(
         let Some(attr) = readable_attr(ctx, &entity_name, &attrs, &field) else {
             continue;
         };
-        if attr.is_read_gated() || row_sensitive.unwrap_or(false) || value_withheld(state, value_mode)
+        if attr.is_read_gated()
+            || row_sensitive.unwrap_or(false)
+            || value_withheld(state, value_mode)
         {
             values.remove(&field);
             withheld.push(field);

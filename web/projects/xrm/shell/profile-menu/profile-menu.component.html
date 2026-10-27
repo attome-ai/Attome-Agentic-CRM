@@ -41,6 +41,12 @@
       <i class="las la-bell" aria-hidden="true"></i>
       {{ 'shell.notificationSettings' | translate }}
     </a>
+    <!-- Q13-T2 — who has seen or acted as me, and who may. -->
+    <a class="pp-link" routerLink="/xrm/me/impersonation" (click)="isOpen.set(false)"
+       data-testid="profile-impersonation">
+      <i class="las la-user-secret" aria-hidden="true"></i>
+      {{ 'impersonationAccess.title' | translate }}
+    </a>
   </nav>
   <div class="pp-settings">
     <div class="pp-setting-row">

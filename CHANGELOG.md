@@ -32,6 +32,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Impersonation banner and controls (Q13-T2): a banner on every page while a tab works in a view-as or
+  act-as session, with the minutes left and End; View as and Act as on the user access page; and
+  "Who can see or act as me" (`/xrm/me/impersonation`, in the profile menu) to allow or withdraw an
+  administrator and see every session about you. `x-attome-impersonation` is a CORS-allowed header.
+- View-as and act-as (Q13-T1): an administrator starts a 30-minute session as a person (fresh step-up,
+  reason, one at a time, never as an administrator or machine) and sends its id in `x-attome-impersonation`;
+  view-as refuses every write, act-as needs the person's consent (`/api/v1/me/impersonation-consents`,
+  naming the administrator by `actor_id` or `actor_email`).
+  Every request is logged first (migration `0300`) and every audit row carries both identities (initiator
+  `4`, `impersonation`).
 - Tree access (A17-T3): a role's entity access takes `read_owner_subtree`, `write_owner_subtree` and
   `delete_owner_subtree` (migration `0299`, off by default): the operation also reaches the records owned
   by the person and everyone under them in the position hierarchy. The security cache key moves to

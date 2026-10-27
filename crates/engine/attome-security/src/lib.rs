@@ -16,6 +16,7 @@ pub mod field_gate;
 pub mod grant_expiry;
 /// Q12-T3: a delegated administrator cannot grant more than they hold.
 pub mod grants;
+pub mod impersonation;
 pub mod mfa;
 pub mod mfa_policy;
 pub mod model;

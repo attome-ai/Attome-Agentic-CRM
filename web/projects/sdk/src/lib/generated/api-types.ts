@@ -9366,6 +9366,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/impersonation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my impersonation sessions
+         * @description The caller's own sessions, newest first. Administrators only.
+         */
+        get: operations["list_my_impersonation_sessions"];
+        put?: never;
+        /**
+         * Start an impersonation session
+         * @description Starts a 30-minute view-as (read only) or act-as session as another person, with a reason and a fresh step-up (`impersonation`). Act-as needs the person's live consent. Never as an administrator or a machine identity, and one live session at a time. Administrators only; audited.
+         */
+        post: operations["start_impersonation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/impersonation/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * End an impersonation session
+         * @description Ends the caller's own session at once. Administrators only; audited.
+         */
+        delete: operations["end_impersonation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/invitations": {
         parameters: {
             query?: never;
@@ -18803,6 +18847,70 @@ export interface paths {
          * @description B9-T2: deletes one of the caller's own lists.
          */
         delete: operations["delete_my_list"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/impersonation-consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My impersonation consents
+         * @description The signed-in person's consents, newest first.
+         */
+        get: operations["list_impersonation_consents"];
+        put?: never;
+        /**
+         * Let an administrator act as me
+         * @description Lets one administrator start act-as sessions as the signed-in person until the time given (1 to 72 hours). Withdraw it at any time. Audited.
+         */
+        post: operations["grant_impersonation_consent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/impersonation-consents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Withdraw a consent
+         * @description Ends a consent at once; a live act-as session it allowed ends with it. Audited.
+         */
+        delete: operations["revoke_impersonation_consent"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/impersonation-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sessions about me
+         * @description Every view-as or act-as session about the signed-in person: who, how, why and when, newest first.
+         */
+        get: operations["list_impersonation_sessions_about_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -32562,8 +32670,18 @@ export interface components {
             right_ref: string;
         };
         ConsentBody: {
-            privacy_version?: string | null;
-            terms_version?: string | null;
+            /** @description The administrator's email, when the id is not known. */
+            actor_email?: string | null;
+            /**
+             * Format: uuid
+             * @description The administrator who may act as you, by id or (below) by email.
+             */
+            actor_id?: string | null;
+            /**
+             * Format: int64
+             * @description How long, 1 to 72 hours.
+             */
+            hours: number;
         };
         ConsentRow: {
             /** Format: uuid */
@@ -38395,6 +38513,39 @@ export interface components {
             breaking: components["schemas"]["Breaking"][];
             /** @description Affected definitions the caller may not see, counted only. */
             hidden: number;
+        };
+        /** @description One consent. */
+        ImpersonationConsentItem: {
+            /** Format: uuid */
+            actor_id: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            granted_at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            revoked_at?: string | null;
+        };
+        /** @description One session. */
+        ImpersonationSessionItem: {
+            /** Format: uuid */
+            actor_id: string;
+            /** Format: date-time */
+            ended_at?: string | null;
+            /** Format: date-time */
+            expires_at: string;
+            /** @description Send the session id in this header to work in the session. */
+            header: string;
+            /** Format: uuid */
+            id: string;
+            /** @description `view` or `act`. */
+            mode: string;
+            reason: string;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: uuid */
+            subject_id: string;
         };
         /** @description A queued phase. */
         ImportAccepted: {
@@ -45820,6 +45971,65 @@ export interface components {
                 /** Format: date-time */
                 linked_at: string;
                 source: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ImpersonationConsentItem: {
+            items: {
+                /** Format: uuid */
+                actor_id: string;
+                /** Format: date-time */
+                expires_at: string;
+                /** Format: date-time */
+                granted_at: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                revoked_at?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ImpersonationSessionItem: {
+            items: {
+                /** Format: uuid */
+                actor_id: string;
+                /** Format: date-time */
+                ended_at?: string | null;
+                /** Format: date-time */
+                expires_at: string;
+                /** @description Send the session id in this header to work in the session. */
+                header: string;
+                /** Format: uuid */
+                id: string;
+                /** @description `view` or `act`. */
+                mode: string;
+                reason: string;
+                /** Format: date-time */
+                started_at: string;
+                /** Format: uuid */
+                subject_id: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -56744,6 +56954,14 @@ export interface components {
             status: string;
             /** Format: int32 */
             total: number;
+        };
+        StartBody: {
+            /** @description `view` (read only) or `act` (needs the person's consent). */
+            mode: string;
+            /** @description Why, kept with the session. */
+            reason: string;
+            /** Format: uuid */
+            subject_id: string;
         };
         /** @description Body of `POST /api/v1/ai/conversations`. */
         StartConversationRequest: {
@@ -89551,6 +89769,163 @@ export interface operations {
             };
         };
     };
+    list_my_impersonation_sessions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ImpersonationSessionItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_impersonation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartBody"];
+            };
+        };
+        responses: {
+            /** @description The session */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpersonationSessionItem"];
+                };
+            };
+            /** @description Missing or invalid credentials, or no fresh step-up */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator, not a browser session, or the person is an administrator or a machine identity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A session is already live */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason, an unknown mode, yourself, or act-as without consent */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    end_impersonation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The session */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No live session of yours with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_invitations: {
         parameters: {
             query?: {
@@ -117525,6 +117900,167 @@ export interface operations {
             };
             /** @description No such list of the caller's */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_impersonation_consents: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ImpersonationConsentItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    grant_impersonation_consent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentBody"];
+            };
+        };
+        responses: {
+            /** @description The consent */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpersonationConsentItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Hours out of range, yourself, or not an administrator */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revoke_impersonation_consent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The consent */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No live consent of yours with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_impersonation_sessions_about_me: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ImpersonationSessionItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -64,6 +64,11 @@ pub enum Initiator {
     /// user. Hashed like the other initiators (v2 field 10), so it cannot be
     /// flipped without failing verification.
     PortalUser = 3,
+    /// Q13-T1: an administrator acting as `acting_user_id` in a view-as or
+    /// act-as session. `agent_session_id` is the impersonation session and
+    /// `agent_action_id` is `impersonator:{administrator id}`, so both
+    /// identities are hashed (v2 fields 10-12).
+    Impersonation = 4,
 }
 
 impl Initiator {
@@ -85,6 +90,7 @@ impl Initiator {
             1 => Initiator::Agent,
             2 => Initiator::System,
             3 => Initiator::PortalUser,
+            4 => Initiator::Impersonation,
             _ => Initiator::User,
         }
     }
@@ -141,6 +147,30 @@ impl Attribution {
         }
     }
 
+    /// Q13-T1: `subject_id`'s access, used by administrator `actor_id` in
+    /// impersonation session `session_id`. Both people are named.
+    pub fn impersonated(subject_id: Uuid, session_id: Uuid, actor_id: Uuid) -> Self {
+        Self {
+            acting_user_id: subject_id,
+            initiator: Initiator::Impersonation,
+            agent_session_id: Some(session_id),
+            agent_action_id: Some(format!("impersonator:{actor_id}")),
+        }
+    }
+
+    /// The attribution a write in the current task carries when its caller
+    /// names none: an agent's (AK3-T1), an impersonation session's (Q13-T1),
+    /// or `user_id`'s own.
+    pub fn ambient(user_id: Uuid) -> Self {
+        if let Some(agent) = attome_core::agent_scope::current() {
+            return Self::agent(user_id, agent.session_id, agent.action_id);
+        }
+        match attome_server::impersonation::current() {
+            Some(session) => Self::impersonated(user_id, session.session_id, session.actor_id),
+            None => Self::user(user_id),
+        }
+    }
+
     pub fn is_agent(&self) -> bool {
         self.initiator == Initiator::Agent
     }
@@ -168,6 +198,14 @@ impl Attribution {
             },
             // Said outright, so a portal user is never read as staff.
             Initiator::PortalUser => format!("Web portal user {user_display_name}"),
+            // Both people: the one whose access was used, and who used it.
+            Initiator::Impersonation => match &self.agent_action_id {
+                Some(actor) => format!(
+                    "{user_display_name}, impersonated by {}",
+                    actor.trim_start_matches("impersonator:")
+                ),
+                None => format!("{user_display_name}, impersonated"),
+            },
         }
     }
 }

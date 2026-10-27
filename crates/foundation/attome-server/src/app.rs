@@ -194,6 +194,8 @@ const ALLOWED_METHODS: [Method; 7] = [
 ///   a record a business-rule check refuses (A3-T4, `middleware::request_meta`).
 /// - `if-match-merge` — asks a stale PATCH to merge over attributes it does
 ///   not send (A16-T2); the record form sends it on every save (A16-T3).
+/// - `x-attome-impersonation` — names the view-as or act-as session a request
+///   runs in (Q13-T1, `crate::impersonation::HEADER`).
 ///
 /// A header added to a middleware or handler without being added here fails
 /// only in a real browser, never in a Rust test — so treat this list as part
@@ -203,7 +205,7 @@ const ALLOWED_METHODS: [Method; 7] = [
 /// `signed_header_coverage.rs` checks every header here is classified against
 /// the S2S canonical message. A copy of this list would drift, and a drifted
 /// copy is a test that silently stops testing.
-pub fn allowed_request_headers() -> [HeaderName; 12] {
+pub fn allowed_request_headers() -> [HeaderName; 13] {
     [
         header::ACCEPT,
         header::ACCEPT_LANGUAGE,
@@ -217,6 +219,7 @@ pub fn allowed_request_headers() -> [HeaderName; 12] {
         HeaderName::from_static("x-request-id"),
         HeaderName::from_static("x-attome-changeset"),
         HeaderName::from_static("x-override-reason"),
+        HeaderName::from_static(crate::impersonation::HEADER),
     ]
 }
 

@@ -6,6 +6,8 @@ export { WebPushService }             from './services/web-push.service';
 export { ModuleComingSoonComponent }  from './module-coming-soon/module-coming-soon.component';
 // B11-T2 — the signed-in person's own settings, applied live.
 export { PersonalSettingsPageComponent } from './settings/personal-settings-page.component';
+// Q13-T2: who has seen or acted as me, and who may.
+export { ImpersonationAccessPageComponent } from './impersonation-access/impersonation-access-page.component';
 export { PersonalSettingsService }       from './settings/personal-settings.service';
 // AA12-T1 — page speed (LCP, INP) to the metrics store.
 export { WebVitals, vitalArea }             from './services/web-vitals.service';

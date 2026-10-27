@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, TranslatePipe } from '@attome/base';
+import { ApiError, ImpersonationService, LangService, TranslatePipe } from '@attome/base';
+import { Router } from '@angular/router';
 import { DialogService } from '@attome/base/dialog';
 import { FeatureFlagsService } from '@attome/xrm/core/admin/data';
 
@@ -87,6 +88,23 @@ interface UserLookupResult {
           }
         </h3>
         <p class="cell-mono cell-muted">{{ p.user_id }}</p>
+        <!-- Q13-T2: see or act as this person, with a reason. -->
+        <div class="form-row-2 inline-form-panel">
+          <div class="field">
+            <label for="ua-imp-reason">{{ 'impersonation.reason' | translate }}</label>
+            <input id="ua-imp-reason" [(ngModel)]="impersonationReason">
+          </div>
+          <div class="btn-row">
+            <button class="btn-sm" (click)="impersonate(p, 'view')" [disabled]="impersonating()">
+              {{ 'impersonation.viewAs' | translate }}
+            </button>
+            <button class="btn-sm" (click)="impersonate(p, 'act')" [disabled]="impersonating()">
+              {{ 'impersonation.actAs' | translate }}
+            </button>
+          </div>
+        </div>
+        <p class="hint">{{ 'impersonation.hint' | translate }}</p>
+        @if (impersonationError()) { <p class="error-msg" role="alert">{{ impersonationError() }}</p> }
       </div>
 
       <div class="card">
@@ -253,6 +271,14 @@ export class UserAccessComponent {
   private readonly svc = inject(SecurityAdminService);
   private readonly dialogSvc = inject(DialogService);
   private readonly flags = inject(FeatureFlagsService);
+  private readonly impersonation = inject(ImpersonationService);
+  private readonly router = inject(Router);
+  private readonly lang = inject(LangService);
+
+  /** Q13-T2: why, kept with the session. */
+  impersonationReason = '';
+  readonly impersonating = signal(false);
+  readonly impersonationError = signal<string | null>(null);
 
   searchEmail = '';
 
@@ -386,6 +412,28 @@ export class UserAccessComponent {
     this.svc.removeOrganizationMember(o.id, p.user_id).subscribe({
       next:  () => this.loadPreview(p.user_id),
       error: (e: ApiError) => { void this.dialogSvc.error(e.message); },
+    });
+  }
+
+  /** Q13-T2: starts a session as the person and opens the app as them. */
+  impersonate(p: EffectiveAccessPreview, mode: 'view' | 'act'): void {
+    const reason = this.impersonationReason.trim();
+    if (!reason) {
+      this.impersonationError.set(this.lang.translate('impersonation.reasonRequired'));
+      return;
+    }
+    this.impersonating.set(true);
+    this.impersonationError.set(null);
+    this.impersonation.start(p.user_id, mode, reason, p.user_email ?? undefined).subscribe({
+      next: () => {
+        this.impersonating.set(false);
+        this.impersonationReason = '';
+        void this.router.navigate(['/xrm']);
+      },
+      error: (e: ApiError) => {
+        this.impersonating.set(false);
+        this.impersonationError.set(this.lang.errorText(e));
+      },
     });
   }
 }

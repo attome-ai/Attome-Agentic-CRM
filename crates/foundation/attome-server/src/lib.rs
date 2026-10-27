@@ -12,6 +12,7 @@ mod csp_report;
 /// AB7-T8: the deploy and restart history.
 pub mod deploy_event;
 pub mod health;
+pub mod impersonation;
 pub mod isolation;
 /// AA9-T5 — how often each limit is hit, and by whom.
 pub mod limit_usage;

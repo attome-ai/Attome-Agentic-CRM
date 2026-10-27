@@ -147,6 +147,11 @@ const CLASSIFIED: &[(&str, Coverage, &str)] = &[
          as usual: fail-closed",
     ),
     (
+        "x-attome-impersonation",
+        UnsignedButInert,
+        "names a view-as or act-as session (Q13-T1). The authz middleware          accepts it only on a browser cookie session and refuses it on any          other request, so on the S2S path it is rejected, never honoured.",
+    ),
+    (
         "x-request-id",
         UnsignedButInert,
         "client-supplied correlation id, echoed back; no authorization effect",

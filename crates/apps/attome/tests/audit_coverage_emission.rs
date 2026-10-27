@@ -2558,6 +2558,62 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             );
             request("DELETE", &format!("{S}/role-conflicts/rules/{id}"), t, None)
         }
+        // ── impersonation (Q13-T1) ──────────────────────────────────────────
+        "POST /api/v1/admin/security/impersonation" => {
+            end_impersonation(fx).await;
+            let (subject, _) = seed_user(&fx.base, "imp-subject").await;
+            request(
+                "POST",
+                &format!("{S}/impersonation"),
+                t,
+                Some(json!({"subject_id": subject, "mode": "view", "reason": "ticket 41"})),
+            )
+        }
+        "DELETE /api/v1/admin/security/impersonation/{id}" => {
+            end_impersonation(fx).await;
+            let (subject, _) = seed_user(&fx.base, "imp-subject").await;
+            let id = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("{S}/impersonation"),
+                    Some(json!({"subject_id": subject, "mode": "view", "reason": "ticket 41"})),
+                )
+                .await,
+            );
+            request("DELETE", &format!("{S}/impersonation/{id}"), t, None)
+        }
+        "POST /api/v1/me/impersonation-consents" => {
+            let (subject, _) = seed_user(&fx.base, "imp-consent").await;
+            let token = session_token(&fx.base, subject, false).await;
+            request(
+                "POST",
+                "/api/v1/me/impersonation-consents",
+                Some(&token),
+                Some(json!({"actor_id": fx.admin_id, "hours": 2})),
+            )
+        }
+        "DELETE /api/v1/me/impersonation-consents/{id}" => {
+            let (subject, _) = seed_user(&fx.base, "imp-consent").await;
+            let token = session_token(&fx.base, subject, false).await;
+            let granted = call(
+                fx,
+                request(
+                    "POST",
+                    "/api/v1/me/impersonation-consents",
+                    Some(&token),
+                    Some(json!({"actor_id": fx.admin_id, "hours": 2})),
+                ),
+            )
+            .await;
+            let id = id_of(&granted);
+            request(
+                "DELETE",
+                &format!("/api/v1/me/impersonation-consents/{id}"),
+                Some(&token),
+                None,
+            )
+        }
         // ── permission sets (Q10-T5) ────────────────────────────────────────
         "POST /api/v1/admin/security/permission-sets" => request(
             "POST",
@@ -7436,6 +7492,18 @@ fn changeset_open_body() -> Value {
     })
 }
 
+/// Q13-T1: ends the fixture administrator's live impersonation sessions, so
+/// a driver can start one (an administrator holds one at a time).
+async fn end_impersonation(fx: &Fx) {
+    sqlx::query(
+        "UPDATE impersonation_session SET ended_at = now() WHERE actor_ref = $1 AND ended_at IS NULL",
+    )
+    .bind(fx.admin_id)
+    .execute(&fx.base.db)
+    .await
+    .expect("end live impersonation sessions");
+}
+
 /// A fresh `system.admin` user's session token, for the changeset drivers.
 async fn changeset_author(fx: &Fx) -> String {
     let (user_id, _) = seed_user(&fx.base, "changeset-author").await;
@@ -8417,4 +8485,156 @@ async fn migration_project(fx: &Fx) -> Uuid {
         )
         .await,
     )
+}
+
+/// Q13-T1, through the whole middleware stack: view-as reads as the person
+/// and refuses a write; act-as is refused without the person's consent; with
+/// it, a write runs as the person and its audit row names both people; every
+/// request in a session is logged.
+#[test]
+fn impersonation_view_reads_act_needs_consent_and_names_both() {
+    std::thread::Builder::new()
+        .name("impersonation_view_reads_act_needs_consent_and_names_both".into())
+        .stack_size(16 * 1024 * 1024)
+        .spawn(|| {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("build the test runtime")
+                .block_on(impersonation_flow());
+        })
+        .expect("spawn the large-stack test thread")
+        .join()
+        .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
+}
+
+async fn impersonation_flow() {
+    // A failing step's server-side error, in the test output.
+    let _ = tracing_subscriber::fmt()
+        .with_test_writer()
+        .with_max_level(tracing::Level::ERROR)
+        .try_init();
+    let fx = skip_if_no_db!(fixture().await);
+    const S: &str = "/api/v1/admin/security";
+    let (subject, _) = seed_user(&fx.base, "imp-flow").await;
+    for action in ["read", "update"] {
+        sqlx::query(
+            "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+             SELECT $1, $2, id, true, NOW() FROM privilege WHERE key = $3",
+        )
+        .bind(Uuid::now_v7())
+        .bind(subject)
+        .bind(format!("{}.{action}", fx.entity))
+        .execute(&fx.base.db)
+        .await
+        .expect("grant the subject a privilege");
+    }
+    let record = format!("/api/v1/{}/{}", fx.entity, fx.record_id);
+    let with_session = |mut req: Request<Body>, id: Uuid| {
+        req.headers_mut().insert(
+            "x-attome-impersonation",
+            id.to_string().parse().expect("session header"),
+        );
+        req
+    };
+    let status = |req: Request<Body>| {
+        let app = fx.app.clone();
+        async move { app.oneshot(req).await.expect("send").status() }
+    };
+
+    // View as: the read works, the write is refused.
+    end_impersonation(&fx).await;
+    let view = id_of(
+        &admin(
+            &fx,
+            "POST",
+            &format!("{S}/impersonation"),
+            Some(json!({"subject_id": subject, "mode": "view", "reason": "ticket 41"})),
+        )
+        .await,
+    );
+    let read = call(
+        &fx,
+        with_session(request("GET", &record, Some(&fx.admin_token), None), view),
+    )
+    .await;
+    let row_version = read["row_version"].as_i64().expect("row_version");
+    let patch = |id: Uuid| {
+        with_session(
+            with_if_match(
+                request(
+                    "PATCH",
+                    &record,
+                    Some(&fx.admin_token),
+                    Some(json!({"title": "changed as the person"})),
+                ),
+                row_version,
+            ),
+            id,
+        )
+    };
+    assert_eq!(status(patch(view)).await, StatusCode::UNPROCESSABLE_ENTITY);
+    let logged: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM impersonation_request WHERE session_ref = $1")
+            .bind(view)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("count logged requests");
+    assert_eq!(logged, 1, "the read is logged; the refused write never ran");
+    admin(&fx, "DELETE", &format!("{S}/impersonation/{view}"), None).await;
+    assert_eq!(
+        status(with_session(
+            request("GET", &record, Some(&fx.admin_token), None),
+            view
+        ))
+        .await,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "an ended session is refused as impersonation_ended, not as a lost sign-in"
+    );
+
+    // Act as: refused without consent.
+    let act = json!({"subject_id": subject, "mode": "act", "reason": "fix their record"});
+    assert_eq!(
+        status(request(
+            "POST",
+            &format!("{S}/impersonation"),
+            Some(&fx.admin_token),
+            Some(act.clone())
+        ))
+        .await,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+
+    // With consent, the write runs as the person and names both.
+    let subject_token = session_token(&fx.base, subject, false).await;
+    call(
+        &fx,
+        request(
+            "POST",
+            "/api/v1/me/impersonation-consents",
+            Some(&subject_token),
+            Some(json!({"actor_id": fx.admin_id, "hours": 1})),
+        ),
+    )
+    .await;
+    let acting = id_of(&admin(&fx, "POST", &format!("{S}/impersonation"), Some(act)).await);
+    assert!(status(patch(acting)).await.is_success());
+    let marker = format!("impersonator:{}", fx.admin_id);
+    let attributed: i64 = sqlx::query_scalar(
+        "SELECT (SELECT COUNT(*) FROM audit_header \
+                 WHERE record_id = $1 AND initiator = 4 AND agent_action_id = $2 \
+                   AND agent_session_id = $3) \
+              + (SELECT COUNT(*) FROM audit_ingest \
+                 WHERE payload->>'record_id' = $1::text \
+                   AND payload->'attribution'->>'agent_action_id' = $2 \
+                   AND payload->'attribution'->>'agent_session_id' = $3::text)",
+    )
+    .bind(fx.record_id)
+    .bind(&marker)
+    .bind(acting)
+    .fetch_one(&fx.base.db)
+    .await
+    .expect("count attributed audit rows");
+    assert!(attributed >= 1, "the write's audit row names both people");
+    admin(&fx, "DELETE", &format!("{S}/impersonation/{acting}"), None).await;
 }

@@ -423,18 +423,94 @@ pub async fn authz(State(state): State<AppState>, mut req: Request, next: Next) 
         return AppError::Unauthorized.into_response();
     };
 
-    match state.security.resolve(claims.sub).await {
+    // Q13-T1: a view-as or act-as session runs the request as its subject.
+    let requested = req
+        .headers()
+        .get(crate::impersonation::HEADER)
+        .map(|v| v.to_str().map(str::to_owned).unwrap_or_default());
+    let cookie_session = req.extensions().get::<CookieSession>().is_some();
+    let (method, path) = (req.method().clone(), req.uri().path().to_owned());
+    let session = match impersonation(requested, cookie_session, &method, &path, claims.sub).await {
+        Ok(session) => session,
+        Err(e) => return e.into_response(),
+    };
+    let user = session.as_ref().map_or(claims.sub, |s| s.subject_id);
+
+    match state.security.resolve(user).await {
         Ok(ctx) => {
+            if session.is_some() && (ctx.is_admin || ctx.service_principal) {
+                // Never as an administrator or a machine identity; the start
+                // route refuses this too, and the subject may have changed.
+                return AppError::Forbidden.into_response();
+            }
             // D-766: a delegated caller's entity ceiling narrows the context
             // before any handler or policy can read it.
             let ctx = AuthorizedContext::for_request(req.extensions(), ctx);
             // AA1-T5: `observability.server_timing = "admins"` reads this.
             attome_types::server_timing::note_admin(ctx.get().is_admin);
             req.extensions_mut().insert(ctx);
-            next.run(req).await
+            match session {
+                Some(session) => {
+                    req.extensions_mut().insert(session.clone());
+                    crate::impersonation::scope(session, next.run(req)).await
+                }
+                None => next.run(req).await,
+            }
         }
         Err(e) => e.into_response(),
     }
+}
+
+/// Q13-T1: the live session the request names in
+/// [`crate::impersonation::HEADER`], checked and logged, or `None` when it
+/// names none. See [`crate::impersonation`] for the rules.
+async fn impersonation(
+    requested: Option<String>,
+    cookie_session: bool,
+    method: &axum::http::Method,
+    path: &str,
+    actor_id: Uuid,
+) -> Result<Option<crate::impersonation::Impersonation>, AppError> {
+    use crate::impersonation::{
+        ImpersonationMode, MANAGEMENT_PREFIX, act_allows, store, view_allows,
+    };
+    let Some(raw) = requested else {
+        return Ok(None);
+    };
+    if path.starts_with(MANAGEMENT_PREFIX) {
+        return Ok(None);
+    }
+    // A browser session only: an API key or a machine never impersonates.
+    if !cookie_session {
+        return Err(AppError::Forbidden);
+    }
+    // An unknown or ended session is its own answer, not a 401: the client
+    // must not read it as an expired sign-in and refresh.
+    let ended =
+        || AppError::Validation("impersonation_ended: the impersonation session has ended".into());
+    let session_id = Uuid::parse_str(raw.trim()).map_err(|_| ended())?;
+    let store = store().ok_or(AppError::Forbidden)?;
+    let session = store
+        .active(session_id, actor_id)
+        .await?
+        .filter(|s| s.expires_at > Utc::now())
+        .ok_or_else(ended)?;
+    let allowed = match session.mode {
+        ImpersonationMode::View => view_allows(method, path),
+        ImpersonationMode::Act => act_allows(path),
+    };
+    if !allowed {
+        return Err(AppError::Validation(match session.mode {
+            ImpersonationMode::View => {
+                "impersonation_read_only: viewing as someone changes nothing".into()
+            }
+            ImpersonationMode::Act => {
+                "impersonation_refused: this is never done as someone else".into()
+            }
+        }));
+    }
+    store.log_request(&session, method.as_str(), path).await?;
+    Ok(Some(session))
 }
 
 /// P-account-lifecycle: `resolve_api_key` is private to this module, so its

@@ -356,7 +356,13 @@ pub async fn write_security_event(
 
     let attribution = event
         .attribution
-        .unwrap_or_else(|| Attribution::user(event.actor_user_id));
+        // Q13-T1: inside an impersonation session, both identities.
+        .unwrap_or_else(|| match attome_server::impersonation::current() {
+            Some(session) => {
+                Attribution::impersonated(event.actor_user_id, session.session_id, session.actor_id)
+            }
+            None => Attribution::user(event.actor_user_id),
+        });
 
     let audit_event = AuditEvent {
         organization_ref,

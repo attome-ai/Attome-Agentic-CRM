@@ -130,14 +130,8 @@ impl<'a> AuditService<'a> {
         // therefore unaffected.
         // AK3-T1: inside an agent action (`attome_core::agent_scope`), the
         // write is the agent's, acting for the person.
-        let attribution = match attome_core::agent_scope::current() {
-            Some(agent) => Attribution::agent(
-                event.user_context.user_id,
-                agent.session_id,
-                agent.action_id,
-            ),
-            None => Attribution::user(event.user_context.user_id),
-        };
+        // Q13-T1: inside an impersonation session, both identities.
+        let attribution = Attribution::ambient(event.user_context.user_id);
         self.write_in_tx_attributed(tx, event, attribution).await
     }
 

@@ -70,6 +70,8 @@ pub enum Operation {
     PlatformUpgrade,
     /// Q5-T7: granting or removing a user's role.
     RoleChange,
+    /// Q13-T1: starting a view-as or act-as session.
+    Impersonation,
 }
 
 /// Where an operation's freshness comes from.
@@ -83,7 +85,7 @@ pub enum Freshness {
 }
 
 impl Operation {
-    pub const ALL: [Operation; 8] = [
+    pub const ALL: [Operation; 9] = [
         Operation::MfaDisable,
         Operation::RecoveryCodesRegenerate,
         Operation::IdentityLink,
@@ -92,6 +94,7 @@ impl Operation {
         Operation::ApprovalDecision,
         Operation::PlatformUpgrade,
         Operation::RoleChange,
+        Operation::Impersonation,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -104,6 +107,7 @@ impl Operation {
             Operation::ApprovalDecision => "approval_decision",
             Operation::PlatformUpgrade => "platform_upgrade",
             Operation::RoleChange => "role_change",
+            Operation::Impersonation => "impersonation",
         }
     }
 
@@ -117,7 +121,8 @@ impl Operation {
             | Operation::IdentityLink
             | Operation::AdminMfaReset
             | Operation::ApprovalDecision
-            | Operation::RoleChange => 5 * 60,
+            | Operation::RoleChange
+            | Operation::Impersonation => 5 * 60,
         }
     }
 
@@ -131,7 +136,8 @@ impl Operation {
             | Operation::AdminMfaReset
             | Operation::ApprovalDecision
             | Operation::PlatformUpgrade
-            | Operation::RoleChange => Freshness::Elevation,
+            | Operation::RoleChange
+            | Operation::Impersonation => Freshness::Elevation,
         }
     }
 

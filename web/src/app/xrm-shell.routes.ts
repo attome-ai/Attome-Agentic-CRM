@@ -843,6 +843,14 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/shell').then(m => m.PersonalSettingsPageComponent),
           },
           {
+            // Q13-T2 — who has seen or acted as the signed-in person, and
+            // their consents. Literal segments, ahead of the entity wildcard.
+            path: 'me/impersonation',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/shell').then(m => m.ImpersonationAccessPageComponent),
+          },
+          {
             // B11-T2 — the signed-in person's own settings, from the profile
             // menu. Literal segments, ahead of the entity wildcard below.
             path: 'me/notifications',

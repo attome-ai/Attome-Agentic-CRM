@@ -30,6 +30,7 @@ mod effective_access;
 mod field_security;
 mod grants;
 mod identity_links;
+mod impersonation;
 mod invitations;
 mod mfa;
 mod mfa_coverage;
@@ -97,6 +98,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         account_state::openapi_fragment(),
         invitations::openapi_fragment(),
         identity_links::openapi_fragment(),
+        impersonation::openapi_fragment(),
         organizations::openapi_fragment(),
         permission_sets::openapi_fragment(),
         effective_access::openapi_fragment(),
@@ -134,6 +136,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(account_state::routes())
         .merge(invitations::routes())
         .merge(identity_links::routes())
+        .merge(impersonation::routes())
         .merge(organizations::routes())
         .merge(permission_sets::routes())
         .merge(effective_access::routes())
