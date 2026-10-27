@@ -80,8 +80,10 @@ pub struct OrderMade {
 pub struct OrderConfirmed {
     pub order_id: Uuid,
     pub status: String,
-    /// The billing invoice request it handed off.
-    pub invoice_request_id: Uuid,
+    /// The billing invoice request it handed off; `None` when the order's
+    /// `billing_rule` is `on_shipment` or `on_delivery` (F6-T13: fulfilment
+    /// asks billing per shipment line instead).
+    pub invoice_request_id: Option<Uuid>,
 }
 
 /// One line to copy onto an order.
@@ -558,20 +560,36 @@ async fn confirm_locked(
         }
     }
     let label = number_text.unwrap_or_else(|| order.to_string());
-    let request = attome_billing::requests::InvoiceRequest {
-        source_kind: INVOICE_SOURCE.to_owned(),
-        source_ref: order.to_string(),
-        idempotency_key: order.to_string(),
-        account_ref: account,
-        currency,
-        request_date: None,
-        lines: copies
-            .iter()
-            .enumerate()
-            .map(|(i, line)| request_line(&label, i, line))
-            .collect::<Result<_, _>>()?,
+    let lines = copies
+        .iter()
+        .enumerate()
+        .map(|(i, line)| request_line(&label, i, line))
+        .collect::<Result<Vec<_>, _>>()?;
+    // F6-T13: an order billed on shipment or delivery asks nothing here.
+    let rule: Option<String> =
+        sqlx::query_scalar("SELECT to_jsonb(o) ->> 'billing_rule' FROM \"order\" o WHERE id = $1")
+            .bind(order)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let requested = if bills_at_confirm(rule.as_deref()) {
+        let request = attome_billing::requests::InvoiceRequest {
+            source_kind: INVOICE_SOURCE.to_owned(),
+            source_ref: order.to_string(),
+            idempotency_key: order.to_string(),
+            account_ref: account,
+            currency,
+            request_date: None,
+            lines,
+        };
+        Some(
+            attome_billing::requests::submit_request(state, ctx, &request)
+                .await?
+                .request_id,
+        )
+    } else {
+        None
     };
-    let requested = attome_billing::requests::submit_request(state, ctx, &request).await?;
     attome_records::entity_crud::update_record_for(
         state,
         ctx,
@@ -593,16 +611,26 @@ async fn confirm_locked(
             "sales.order.confirmed",
             ctx.user_id,
         )
-        .comment(format!("invoice request {}", requested.request_id)),
+        .comment(match requested {
+            Some(id) => format!("invoice request {id}"),
+            None => "billed per shipment".to_owned(),
+        }),
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    tracing::info!(%order, request = %requested.request_id, "order confirmed");
+    tracing::info!(%order, request = ?requested, "order confirmed");
     Ok(OrderConfirmed {
         order_id: order,
         status: "confirmed".to_owned(),
-        invoice_request_id: requested.request_id,
+        invoice_request_id: requested,
     })
+}
+
+/// Whether an order with this `billing_rule` asks billing at confirm: every
+/// rule but `on_shipment` and `on_delivery`, which fulfilment bills per
+/// shipment line (F6-T13). Pure.
+pub fn bills_at_confirm(rule: Option<&str>) -> bool {
+    !matches!(rule.map(str::trim), Some("on_shipment" | "on_delivery"))
 }
 
 /// One order line as an invoice request line. A line's net unit price is

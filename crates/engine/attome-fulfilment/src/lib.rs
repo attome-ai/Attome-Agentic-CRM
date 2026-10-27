@@ -8,6 +8,8 @@
 pub mod atp;
 /// F6-T7: backorders and partial shipments.
 pub mod backorder;
+/// F6-T13: billing requests for what shipped or arrived.
+pub mod billing_trigger;
 /// F6-T9: booking and tracking shipments with a carrier.
 pub mod carrier;
 /// F6-T11: delivery by the own fleet with proof, a delivery code and cash on delivery.

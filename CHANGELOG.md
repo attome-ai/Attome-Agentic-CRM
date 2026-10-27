@@ -32,6 +32,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Billing on shipment or delivery (F6-T13, sales pack `0027`, `attome_fulfilment::billing_trigger`):
+  an order's `billing_rule` is `on_confirm` (the default, unchanged), `on_shipment` or `on_delivery`.
+  For the last two the confirm asks billing for nothing and the `fulfilment_billing` job (every
+  minute, change-feed consumer `attome-fulfilment/billing`) asks for each shipment line once the
+  shipment has left or arrived: the shipped quantity at the line's net price, keyed
+  `ship:{shipment_line_id}:{rule}` (`source_kind = shipment_line`), so it is asked once.
+- Metric definition versions (P9-T9, migration `0301`): every snapshot stores the fingerprint of the
+  definition fields it was computed with and its `definition_version`; a changed definition starts
+  the next version. `GET` snapshot rows carry `definition_version` and `definition_fingerprint`.
 - Impersonation banner and controls (Q13-T2): a banner on every page while a tab works in a view-as or
   act-as session, with the minutes left and End; View as and Act as on the user access page; and
   "Who can see or act as me" (`/xrm/me/impersonation`, in the profile menu) to allow or withdraw an
@@ -3921,6 +3930,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- `POST /api/v1/sales/orders/{id}/confirm`: `invoice_request_id` is null when the order's
+  `billing_rule` is `on_shipment` or `on_delivery` (F6-T13); fulfilment asks billing per shipment line.
 - `contact.reports_to` and `contact.dotted_line_ref` are engine-managed (D23-T4): a create or
   `PATCH /api/v1/contact/{id}` naming them is refused; set them with
   `PUT /api/v1/sales/contacts/{id}/manager`.
