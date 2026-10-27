@@ -22,7 +22,7 @@ export const migrationEn = {
     merged: 'Several source fields go into this attribute.',
     mismatch: 'The source values may not fit this type.',
     choices: '{count, plural, one {# choice} other {# choices}}, {unmatched} to add',
-    draftIntro: 'Load the source system's model (the JSON its connector describes) to draft a mapping. Every entity and field gets a proposal you can change here.',
+    draftIntro: 'Load the model of the source system (the JSON its connector describes) to draft a mapping. Every entity and field gets a proposal you can change here.',
     sourceFile: 'Model file',
     sourceText: 'Or paste the model',
     draft: 'Draft mapping',

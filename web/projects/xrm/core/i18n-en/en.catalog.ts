@@ -40,7 +40,7 @@ export const xrmEn = {
     pasteUnmatched: 'No column matches: {headers}.',
     pasteApply: 'Fill cells',
     pasteCancel: 'Cancel',
-    paste_invalid: 'This value does not fit the column's type.',
+    paste_invalid: 'This value does not fit the column\'s type.',
     paste_readonly: 'This column is not edited in the grid.',
     required: 'Required.',
     ruleError: 'Refused by the rule {rule}.',
