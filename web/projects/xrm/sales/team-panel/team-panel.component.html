@@ -1,0 +1,82 @@
+<section class="tp-wrap" data-testid="team-panel">
+  @if (on() === false) {
+    <p class="tp-note" data-testid="team-panel-off">{{ 'xrm.sales.team.off' | translate }}</p>
+  } @else if (on() === null) {
+    <p class="tp-note">{{ 'xrm.sales.team.loading' | translate }}</p>
+  } @else {
+    <h3 class="tp-title">{{ 'xrm.sales.team.title' | translate }}</h3>
+    @if (error(); as message) {
+      <p class="tp-error" role="alert" data-testid="team-panel-error">{{ message }}</p>
+    }
+    @if (notice(); as message) {
+      <p class="tp-note" role="status">{{ message }}</p>
+    }
+
+    @if (members().length === 0) {
+      <p class="tp-note">{{ 'xrm.sales.team.empty' | translate }}</p>
+    } @else {
+      <table class="tp-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'xrm.sales.team.member' | translate }}</th>
+            <th scope="col">{{ 'xrm.sales.team.role' | translate }}</th>
+            <th scope="col">{{ 'xrm.sales.team.access' | translate }}</th>
+            <th scope="col"><span class="tp-sr">{{ 'xrm.sales.team.actions' | translate }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of members(); track m.id) {
+            <tr [attr.data-member]="m.id">
+              <td>{{ userLabel(m) }}</td>
+              <td>{{ roleLabel(m) }}</td>
+              <td>{{ accessKey(m.access_level) | translate }}</td>
+              <td>
+                <button type="button" class="tp-btn" (click)="remove(m)" [disabled]="busy()"
+                        [attr.aria-label]="'xrm.sales.team.remove' | translate">
+                  <i class="las la-trash" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <fieldset class="tp-add">
+      <legend>{{ 'xrm.sales.team.addTitle' | translate }}</legend>
+      <label>
+        <span>{{ 'xrm.sales.team.member' | translate }}</span>
+        <select [value]="newUser()" (change)="newUser.set($any($event.target).value)" data-testid="team-panel-user">
+          <option value="">{{ 'xrm.sales.team.choose' | translate }}</option>
+          @for (u of users(); track u.id) { <option [value]="u.id">{{ u.label }}</option> }
+        </select>
+      </label>
+      <label>
+        <span>{{ 'xrm.sales.team.role' | translate }}</span>
+        <select [value]="newRole()" (change)="newRole.set($any($event.target).value)" data-testid="team-panel-role">
+          <option value="">{{ 'xrm.sales.team.choose' | translate }}</option>
+          @for (r of roles(); track r.id) { <option [value]="r.id">{{ r.label }}</option> }
+        </select>
+      </label>
+      <label>
+        <span>{{ 'xrm.sales.team.access' | translate }}</span>
+        <select [value]="newAccess()" (change)="newAccess.set($any($event.target).value)">
+          @for (a of accessLevels; track a) { <option [value]="a">{{ accessKey(a) | translate }}</option> }
+        </select>
+      </label>
+      <button type="button" class="tp-btn tp-primary" (click)="add()" [disabled]="busy()"
+              data-testid="team-panel-add">{{ 'xrm.sales.team.add' | translate }}</button>
+    </fieldset>
+
+    <fieldset class="tp-add">
+      <legend>{{ 'xrm.sales.team.copyTitle' | translate }}</legend>
+      <label>
+        <span>{{ 'xrm.sales.team.copyRoles' | translate }}</span>
+        <input type="text" dir="ltr" [value]="copyRoles()" (input)="copyRoles.set($any($event.target).value)" />
+      </label>
+      <button type="button" class="tp-btn" (click)="copy()" [disabled]="busy()">
+        <i class="las la-copy" aria-hidden="true"></i> {{ 'xrm.sales.team.copy' | translate }}
+      </button>
+    </fieldset>
+  }
+</section>

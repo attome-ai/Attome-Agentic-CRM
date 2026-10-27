@@ -13,12 +13,12 @@ import type { XrmFormTabDef } from '../base/xrm-form.base';
  */
 export type RecordTabId =
   'documents' | 'communications' | 'notes' | 'activities' | 'tags' | 'consent' | 'relationships'
-  | 'timeline' | 'history' | 'approvals' | 'sharing' | 'golden' | 'fulfilment' | 'lines';
+  | 'timeline' | 'history' | 'approvals' | 'sharing' | 'golden' | 'fulfilment' | 'lines' | 'team' | 'splits';
 
 /** Every record tab, in the order the generic form has always shown them. */
 export const RECORD_TAB_IDS: readonly RecordTabId[] = [
   'documents', 'communications', 'notes', 'activities', 'tags', 'consent', 'relationships', 'timeline', 'history',
-  'approvals', 'sharing', 'fulfilment', 'lines',
+  'approvals', 'sharing', 'fulfilment', 'lines', 'team', 'splits',
 ];
 
 const ICONS: Record<RecordTabId, string> = {
@@ -36,6 +36,8 @@ const ICONS: Record<RecordTabId, string> = {
   golden:         'las la-fingerprint',
   fulfilment:     'las la-truck',
   lines:          'las la-list',
+  team:           'las la-users',
+  splits:         'las la-chart-pie',
 };
 
 const LABEL_KEYS: Record<RecordTabId, string> = {
@@ -53,6 +55,8 @@ const LABEL_KEYS: Record<RecordTabId, string> = {
   golden:         'xrmForm.tabs.golden',
   fulfilment:     'xrmForm.tabs.fulfilment',
   lines:          'xrmForm.tabs.lines',
+  team:           'xrmForm.tabs.team',
+  splits:         'xrmForm.tabs.splits',
 };
 
 /**
@@ -73,6 +77,9 @@ function hiddenOn(tab: RecordTabId, entityName: string): boolean {
     case 'fulfilment': return entityName !== 'order';
     // D6-T10: an opportunity's lines.
     case 'lines':      return entityName !== 'opportunity';
+    // D7-T7: an opportunity's team and credit splits.
+    case 'team':       return entityName !== 'opportunity';
+    case 'splits':     return entityName !== 'opportunity';
     default:          return false;
   }
 }

@@ -13,8 +13,11 @@ const echo = (key: string) => key;
 describe('recordTabDefs', () => {
   it('returns every record tab, in the generic form order, for an ordinary entity', () => {
     // F6-T17 and D6-T10: the Fulfilment tab is a sales order's only, Lines an opportunity's.
-    expect(recordTabDefs('contact', echo).map(t => t.id)).toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && id !== 'lines'));
-    expect(recordTabDefs('order', echo).map(t => t.id)).toEqual(RECORD_TAB_IDS.filter(id => id !== 'lines'));
+    // D7-T7: Team and Splits are an opportunity's too.
+    const opportunityOnly = ['lines', 'team', 'splits'];
+    expect(recordTabDefs('contact', echo).map(t => t.id))
+      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && !opportunityOnly.includes(id)));
+    expect(recordTabDefs('order', echo).map(t => t.id)).toEqual(RECORD_TAB_IDS.filter(id => !opportunityOnly.includes(id)));
     // D6-T10: the Lines tab is an opportunity's only.
     expect(recordTabDefs('opportunity', echo).map(t => t.id)).toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment'));
   });

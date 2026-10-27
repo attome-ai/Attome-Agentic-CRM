@@ -1,0 +1,87 @@
+<section class="sp-wrap" data-testid="splits-panel">
+  @if (on() === false) {
+    <p class="sp-note" data-testid="splits-panel-off">{{ 'xrm.sales.splits.off' | translate }}</p>
+  } @else if (on() === null) {
+    <p class="sp-note">{{ 'xrm.sales.splits.loading' | translate }}</p>
+  } @else {
+    <h3 class="sp-title">{{ 'xrm.sales.splits.title' | translate }}</h3>
+    @if (error(); as message) {
+      <p class="sp-error" role="alert" data-testid="splits-panel-error">{{ message }}</p>
+    }
+    @if (notice(); as message) {
+      <p class="sp-note" role="status" data-testid="splits-panel-notice">{{ message }}</p>
+    }
+    @if (won()) {
+      <p class="sp-note">{{ 'xrm.sales.splits.wonNote' | translate }}</p>
+    }
+
+    <table class="sp-table">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'xrm.sales.splits.member' | translate }}</th>
+          <th scope="col">{{ 'xrm.sales.splits.type' | translate }}</th>
+          <th scope="col">{{ 'xrm.sales.splits.percent' | translate }}</th>
+          @if (showAmount()) {
+            <th scope="col" data-testid="splits-panel-amount">{{ 'xrm.sales.splits.amount' | translate }}</th>
+          }
+          <th scope="col"><span class="sp-sr">{{ 'xrm.sales.splits.actions' | translate }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track $index; let i = $index) {
+          <tr>
+            <td>
+              <select [value]="row.member_ref" (change)="setRow(i, { member_ref: $any($event.target).value })"
+                      [attr.aria-label]="'xrm.sales.splits.member' | translate">
+                @for (m of members(); track m.id) { <option [value]="m.id">{{ memberLabel(m.id) }}</option> }
+              </select>
+            </td>
+            <td>
+              <select [value]="row.split_type_ref" (change)="setRow(i, { split_type_ref: $any($event.target).value })"
+                      [attr.aria-label]="'xrm.sales.splits.type' | translate">
+                @for (t of types(); track t.id) { <option [value]="t.id">{{ t.name }}</option> }
+              </select>
+            </td>
+            <td>
+              <input class="sp-num" dir="ltr" inputmode="decimal" [value]="row.percent"
+                     (input)="setRow(i, { percent: $any($event.target).value })"
+                     [attr.aria-label]="'xrm.sales.splits.percent' | translate" data-field="percent" />
+            </td>
+            @if (showAmount()) {
+              <td dir="ltr">{{ row.amount ?? '' }}</td>
+            }
+            <td>
+              <button type="button" class="sp-btn" (click)="removeRow(i)"
+                      [attr.aria-label]="'xrm.sales.splits.remove' | translate">
+                <i class="las la-trash" aria-hidden="true"></i>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <ul class="sp-totals" data-testid="splits-panel-totals">
+      @for (t of totals(); track t.type.id) {
+        <li [class.sp-bad]="isUnbalanced(t.type.id)" [attr.data-type]="t.type.id">
+          {{ t.type.name }}: <span dir="ltr">{{ t.total }}%</span>
+          @if (isUnbalanced(t.type.id)) { <span>{{ 'xrm.sales.splits.mustTotal' | translate }}</span> }
+        </li>
+      }
+    </ul>
+
+    @if (won()) {
+      <label class="sp-reason">
+        <span>{{ 'xrm.sales.splits.reason' | translate }}</span>
+        <input type="text" [value]="reason()" (input)="reason.set($any($event.target).value)" />
+      </label>
+    }
+
+    <div class="sp-actions">
+      <button type="button" class="sp-btn" (click)="addRow()" [disabled]="busy() || members().length === 0"
+              data-testid="splits-panel-add">{{ 'xrm.sales.splits.add' | translate }}</button>
+      <button type="button" class="sp-btn sp-primary" (click)="save()" [disabled]="busy()"
+              data-testid="splits-panel-save">{{ 'xrm.sales.splits.save' | translate }}</button>
+    </div>
+  }
+</section>

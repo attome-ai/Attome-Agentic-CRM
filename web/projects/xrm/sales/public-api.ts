@@ -8,3 +8,8 @@ export {
   LineGridComponent, draftTotal, formatMoney, lineTotal, minorUnits,
 } from './line-grid/line-grid.component';
 export type { LineDraft } from './line-grid/line-grid.component';
+// D7-T7: the opportunity's Team and Splits tabs.
+export { SalesTeamApiService } from './team-api';
+export type { PickOption, SplitRow, SplitType, SplitsOutcome, TeamAccess, TeamMember } from './team-api';
+export { TEAM_FLAG, TeamPanelComponent } from './team-panel/team-panel.component';
+export { SPLITS_FLAG, SplitsPanelComponent, typeTotals, unbalancedTypes } from './splits-panel/splits-panel.component';

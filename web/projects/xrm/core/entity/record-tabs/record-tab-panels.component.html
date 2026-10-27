@@ -213,3 +213,39 @@
     }
   </div>
 }
+
+@if (has('team')) {
+  <div [id]="panelId('team')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('team')" [hidden]="activeTab() !== 'team'"
+       data-testid="team-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'team') {
+        @if (sales(); as m) {
+          <ng-container *ngComponentOutlet="m.TeamPanelComponent; inputs: activityInputs()" />
+        } @else if (salesLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'xrm.sales.team.loadFailed' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrm.sales.team.saveFirst' | translate }}</p>
+    }
+  </div>
+}
+
+@if (has('splits')) {
+  <div [id]="panelId('splits')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('splits')" [hidden]="activeTab() !== 'splits'"
+       data-testid="splits-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'splits') {
+        @if (sales(); as m) {
+          <ng-container *ngComponentOutlet="m.SplitsPanelComponent; inputs: activityInputs()" />
+        } @else if (salesLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'xrm.sales.splits.loadFailed' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrm.sales.splits.saveFirst' | translate }}</p>
+    }
+  </div>
+}

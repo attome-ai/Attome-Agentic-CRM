@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Team and Splits tabs on the opportunity (D7-T7, `@attome/xrm/sales`): the team with role and access,
+  add a person, remove one and copy the account team (flag `sales.deal_teams`); credit splits per
+  member and type with a live total per type, a revenue type held to 100%, a reason and approval on a
+  won deal, and amounts only when field security sends them (flag `sales.splits`). English and Arabic.
 - Lead qualification (D3-T1, crm pack `0005`): leads are audited, and moving a lead to
   `disqualified` needs a `disqualify_reason` (the lead lifecycle's status reason, M8-T2); the lead
   form shows it, and a call outcome rule that disqualifies a lead sets a matching reason.
