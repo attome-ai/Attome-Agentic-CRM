@@ -19,6 +19,12 @@
 //! caller who can read the record, so a result is never a list of anonymous
 //! rows.
 //!
+//! A1-T2: inside an agent action (`attome_core::agent_scope`), a field
+//! labelled Secret (confirmed) is never readable, grant or not, unless its
+//! options say `allow_ai: true`: no prompt, tool result or answer an agent
+//! builds through the record engine carries it. Search never indexes a
+//! read-gated field, so it is in no embedding either.
+//!
 //! A surface decides with [`readable`] (or [`field_readable`] when it has no
 //! [`AttrInfo`] at hand) and projects with [`bulk_columns`]. The guard test in
 //! `crates/engine/attome-security/tests/field_gate_guard.rs` fails when a bulk
@@ -61,6 +67,9 @@ pub fn projection(
 ) -> ColumnAccess {
     if readable(ctx, entity, attr, primary_name, surface) {
         ColumnAccess::Full
+    } else if attome_core::agent_scope::current().is_some() && hidden_from_ai(attr) {
+        // A1-T2: not even masked for an agent.
+        ColumnAccess::Hidden
     } else if surface == Surface::Interactive
         && attr.is_read_gated()
         && let Some(format) = field_mask(ctx, entity, &attr.logicalname)
@@ -71,6 +80,19 @@ pub fn projection(
     }
 }
 
+/// A1-T2: whether `attr` is kept from AI: a confirmed Secret label without
+/// `allow_ai: true` in its options. Pure.
+pub fn hidden_from_ai(attr: &AttrInfo) -> bool {
+    attr.sensitivity == attome_core::Sensitivity::Secret
+        && attr.sensitivity_confirmed
+        && !attr
+            .options
+            .as_ref()
+            .and_then(|o| o.get("allow_ai"))
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false)
+}
+
 /// Whether `ctx` may see `attr` of `entity` on `surface`.
 pub fn readable(
     ctx: &SecurityContext,
@@ -79,6 +101,9 @@ pub fn readable(
     primary_name: Option<&str>,
     surface: Surface,
 ) -> bool {
+    if attome_core::agent_scope::current().is_some() && hidden_from_ai(attr) {
+        return false;
+    }
     field_readable(
         ctx,
         entity,
@@ -176,6 +201,62 @@ mod tests {
             sensitivity_confirmed: false,
             options: None,
         }
+    }
+
+    /// A1-T2: a confirmed Secret field is never readable inside an agent
+    /// action, even to a holder of its grant or an administrator, unless it
+    /// allows AI; outside one the grant decides as before.
+    #[tokio::test]
+    async fn secret_attribute_never_in_prompt() {
+        use attome_core::Sensitivity;
+        let secret = AttrInfo {
+            is_sensitive: false,
+            sensitivity: Sensitivity::Secret,
+            sensitivity_confirmed: true,
+            ..sensitive_attr("api_key")
+        };
+        let allowed = AttrInfo {
+            options: Some(serde_json::json!({ "allow_ai": true })),
+            ..secret.clone()
+        };
+        let mut granted = ctx(BulkFields::Legacy, &["vault.api_key"]);
+        assert!(readable(
+            &granted,
+            "vault",
+            &secret,
+            None,
+            Surface::Interactive
+        ));
+        let agent = attome_core::agent_scope::AgentScope {
+            session_id: Uuid::now_v7(),
+            action_id: "record.get".into(),
+        };
+        attome_core::agent_scope::scope(agent, async {
+            for surface in [Surface::Interactive, Surface::Bulk] {
+                assert!(
+                    !readable(&granted, "vault", &secret, None, surface),
+                    "{surface:?}"
+                );
+                assert_eq!(
+                    projection(&granted, "vault", &secret, None, surface),
+                    ColumnAccess::Hidden
+                );
+                assert!(readable(&granted, "vault", &allowed, None, surface));
+            }
+            granted.is_admin = true;
+            assert!(!readable(
+                &granted,
+                "vault",
+                &secret,
+                None,
+                Surface::Interactive
+            ));
+        })
+        .await;
+        assert!(!hidden_from_ai(&AttrInfo {
+            sensitivity_confirmed: false,
+            ..secret.clone()
+        }));
     }
 
     /// Q15-T2: a field labelled Financial (confirmed) is hidden from a role

@@ -111,6 +111,29 @@ fn classification_rank(c: DataClassification) -> u8 {
     }
 }
 
+/// A1-T2: an attribute's classification for the export transfer gate, its
+/// confirmed sensitivity label counted too: Personal and Financial as
+/// personal data, Health and Secret as special category. Pure.
+fn effective_classification(attr: &attome_core::AttrInfo) -> DataClassification {
+    use attome_core::Sensitivity;
+    let from_label = if attr.sensitivity_confirmed {
+        match attr.sensitivity {
+            Sensitivity::Personal | Sensitivity::Financial => DataClassification::Personal,
+            Sensitivity::Health | Sensitivity::Secret => {
+                DataClassification::SensitiveSpecialCategory
+            }
+            Sensitivity::Public | Sensitivity::Internal => DataClassification::General,
+        }
+    } else {
+        DataClassification::General
+    };
+    if classification_rank(from_label) > classification_rank(attr.data_classification) {
+        from_label
+    } else {
+        attr.data_classification
+    }
+}
+
 // ── Request tracking ───────────────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams)]
@@ -578,7 +601,7 @@ async fn do_fulfill_export(
         let classification = meta
             .attrs
             .iter()
-            .map(|a| a.data_classification)
+            .map(effective_classification)
             .max_by_key(|c| classification_rank(*c))
             .unwrap_or_default();
         check_export_transfer(
@@ -1431,4 +1454,60 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(crate::dsr_restriction::openapi_fragment());
     doc
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use attome_core::{AttrInfo, Sensitivity};
+
+    fn attr(
+        sensitivity: Sensitivity,
+        confirmed: bool,
+        classification: DataClassification,
+    ) -> AttrInfo {
+        AttrInfo {
+            logicalname: "f".into(),
+            field_type_int: 0,
+            is_required: false,
+            max_length: None,
+            is_sensitive: false,
+            is_write_restricted: false,
+            is_sortable: false,
+            is_filterable: false,
+            lookup_entity_ref: None,
+            on_target_delete: Default::default(),
+            data_classification: classification,
+            sensitivity,
+            sensitivity_confirmed: confirmed,
+            options: None,
+        }
+    }
+
+    /// A1-T2: a confirmed label raises the export gate's classification; an
+    /// unconfirmed one or a lower one never lowers it.
+    #[test]
+    fn labels_count_in_the_export_transfer_gate() {
+        let g = DataClassification::General;
+        assert_eq!(
+            effective_classification(&attr(Sensitivity::Health, true, g)),
+            DataClassification::SensitiveSpecialCategory
+        );
+        assert_eq!(
+            effective_classification(&attr(Sensitivity::Financial, true, g)),
+            DataClassification::Personal
+        );
+        assert_eq!(
+            effective_classification(&attr(Sensitivity::Health, false, g)),
+            g
+        );
+        assert_eq!(
+            effective_classification(&attr(
+                Sensitivity::Public,
+                true,
+                DataClassification::Personal
+            )),
+            DataClassification::Personal
+        );
+    }
 }

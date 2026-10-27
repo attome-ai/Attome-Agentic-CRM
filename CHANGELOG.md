@@ -21,6 +21,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Changed
+- Sensitivity labels (A1-T2): a field labelled Secret is never readable inside an agent action, grant
+  or administrator or not, unless its options set `allow_ai: true`; DSR exports count confirmed labels
+  in the cross-border transfer gate (Health and Secret as special category, Personal and Financial as
+  personal data). Financial and Health reads were already gated and view-logged (Q15-T2, Q15-T5).
 - The read replica lag breaker is on by default (AA8-T1): `database.replica_max_lag_secs` defaults
   to 30 seconds (was off), so reads fall back to the primary while the replica is more than 30
   seconds behind; `null` turns it off. `loadtest/scripts/run-pooler-100-nodes.ps1` load-tests 100
