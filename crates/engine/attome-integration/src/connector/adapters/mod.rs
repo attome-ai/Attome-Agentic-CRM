@@ -42,5 +42,7 @@ pub mod voice;
 /// AJ4-T1: Wathq commercial registration lookups mapped to accounts.
 pub mod wathq;
 pub mod webchat;
+/// J5-T1: WhatsApp Cloud API messages, the 24-hour window and webhooks.
+pub mod whatsapp;
 /// AJ3-T1: Yakeen identity checks with consent, keeping only the outcome.
 pub mod yakeen;

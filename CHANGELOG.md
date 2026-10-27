@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- WhatsApp Cloud API adapter (J5-T1, `attome_integration::connector::adapters::whatsapp`): text,
+  approved templates, media (link or uploaded id) and interactive buttons and lists as Cloud API
+  bodies; the 24-hour window (outside it only a template goes); send answers, and inbound messages
+  and delivery statuses read from webhooks. Inbound hooks take the `whatsapp` preset (Meta's
+  signature and subscription check).
 - Portal pages from CMS pages (T2-T4): the page kind takes `audience` (`public`, `portal`,
   `internal`), `seo_title` and `seo_description`; `GET /api/v1/admin/content/pages/{id}/as-page`
   (`?audience=`) maps a CMS page's draft blocks onto the page palette (`attome_content::page_import`),

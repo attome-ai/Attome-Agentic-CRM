@@ -30,6 +30,9 @@
 //!     delivery id, so the body's digest guards replay, kept a day. Its
 //!     subscription check (`hub.mode`, `hub.verify_token`, `hub.challenge`)
 //!     is answered by [`meta_handshake`].
+//!   - `whatsapp` (J5-T1): the WhatsApp Cloud API's webhooks, signed and
+//!     subscribed exactly as `meta` (`connector::adapters::whatsapp` reads
+//!     the body).
 //!   - `salla` (M14-T2): `X-Salla-Signature` is the hex HMAC-SHA256 of the
 //!     body; the body's digest guards replay, kept a day.
 //!   - `moyasar` (M14-T2): Moyasar signs nothing; the body's `secret_token`
@@ -87,9 +90,9 @@ pub const UNTIMED_NONCE_TTL_SECS: i64 = 24 * 3600;
 pub const MTLS_VERIFIED_HEADER: &str = "x-client-cert-verified";
 
 /// The hook presets.
-pub const PRESETS: [&str; 10] = [
-    "github", "stripe", "standard", "docusign", "shopify", "meta", "salla", "moyasar", "slack",
-    "custom",
+pub const PRESETS: [&str; 11] = [
+    "github", "stripe", "standard", "docusign", "shopify", "meta", "whatsapp", "salla", "moyasar",
+    "slack", "custom",
 ];
 
 /// Why a call was refused before anything ran.
@@ -305,9 +308,9 @@ pub fn verify(
                     ttl_secs: UNTIMED_NONCE_TTL_SECS,
                 })
             }
-            "meta" | "salla" => {
+            "meta" | "whatsapp" | "salla" => {
                 let preset = auth["preset"].as_str().unwrap_or_default();
-                let sig = if preset == "meta" {
+                let sig = if preset != "salla" {
                     header(headers, "x-hub-signature-256").and_then(|v| v.strip_prefix("sha256="))
                 } else {
                     header(headers, "x-salla-signature")
@@ -770,6 +773,16 @@ mod inbound_endpoints {
         assert_eq!(
             verify(&shopify, "wrong", &h, body, NOW),
             Err(Refusal::BadCredential)
+        );
+
+        let whatsapp = json!({ "kind": "hmac", "preset": "whatsapp" });
+        let signed = headers(&[(
+            "x-hub-signature-256",
+            format!("sha256={}", hex::encode(&mac)),
+        )]);
+        assert_eq!(
+            verify(&whatsapp, SECRET, &signed, body, NOW).unwrap().nonce,
+            format!("whatsapp:{}", digest_hex(body))
         );
 
         let meta = json!({ "kind": "hmac", "preset": "meta" });
