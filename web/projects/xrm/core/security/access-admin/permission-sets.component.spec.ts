@@ -13,7 +13,7 @@ import {
   SECURITY_FLAGS,
   SecurityAdminService,
   endOfDay,
-} from './security-admin.service';
+} from '@attome/xrm/core/security';
 
 const SET: PermissionSetItem = {
   id: 's1', name: 'Exports', name_ar: 'التصدير', description: null, row_version: 1, owner_layer: 'customer',

@@ -188,6 +188,7 @@ export const xrmEn = {
     saveBeforeRelationships: 'Save the record before exploring relationships.',
     // U3/U6 (D-601) — the record timeline and history tabs.
     saveBeforeTimeline: 'Save the record to see its timeline.',
+    saveBeforeSharing: 'Save the record to share it.',
     saveBeforeHistory: 'Save the record to see its change history.',
     saveBeforeApprovals: 'Save the record to see its approvals.',
     saveBeforeGolden: 'Save the record to see its golden record.',
@@ -197,7 +198,7 @@ export const xrmEn = {
       details: 'Details',
       documents: 'Documents', communications: 'Communications', notes: 'Notes', activities: 'Activities',
       tags: 'Tags', consent: 'Consent', relationships: 'Relationships',
-      timeline: 'Timeline', history: 'History', approvals: 'Approvals', golden: 'Golden record',
+      timeline: 'Timeline', history: 'History', approvals: 'Approvals', sharing: 'Sharing', golden: 'Golden record',
       fulfilment: 'Fulfilment', lines: 'Lines',
     },
     entity: {
@@ -1822,6 +1823,26 @@ export const xrmEn = {
     childUnitsColumn: 'Own units only',
     childUnitsAll: 'Child units included',
     childRead: 'Read', childWrite: 'Write', childDelete: 'Delete', childAssign: 'Assign', childShare: 'Share',
+  },
+  sharingPanel: {
+    title: 'Sharing',
+    owner: 'Owner', unit: 'Business unit', none: 'None',
+    shares: 'Shared with', loading: 'Loading shares…', noShares: 'Not shared with anyone.',
+    forbidden: 'You cannot manage this record\'s sharing.',
+    loadFailed: 'The sharing panel could not be loaded.',
+    remove: 'Remove', removeFor: 'Remove the share with {name}',
+    add: 'Share the record', kind: 'With a', user: 'User', team: 'Team', search: 'Search',
+    who: 'Who', choose: 'Choose…', access: 'Access', share: 'Share',
+    capability: { view: 'Can view', action: 'Can view and change', deny: 'Denied' },
+    explain: 'Why can they see this?', person: 'Person', operation: 'To', explainButton: 'Explain',
+    action: { read: 'See it', update: 'Change it', delete: 'Delete it' },
+    allowed: 'They can.', denied: 'They cannot.', deciding: 'Decides',
+    effect: { grants: 'Grants', denies: 'Denies', not_applicable: 'Does not apply' },
+    source: {
+      admin: 'Administrator', privilege: 'Privilege', role_level: 'Role level', business_unit: 'Business unit',
+      ownership: 'Ownership', user_share: 'Shared with them', team_share: 'Shared with their team',
+      default_share: 'Shared by default', sharing_rule: 'Sharing rule', deny: 'Denied share',
+    },
   },
   permissionSets: {
     title: 'Permission sets',

@@ -8,7 +8,7 @@ import {
   InstalledRole,
   RoleTemplateItem,
   SecurityAdminService,
-} from './security-admin.service';
+} from '@attome/xrm/core/security';
 
 /**
  * Q10-T12 — the roles the licensed modules suggest (Q10-T7). Installing one
@@ -21,7 +21,7 @@ import {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, RouterLink, TranslatePipe],
-  styleUrls: ['../../styles/admin-page.css'],
+  styleUrls: ['../../../styles/admin-page.css'],
   template: `
     <div class="page-header">
       <div>

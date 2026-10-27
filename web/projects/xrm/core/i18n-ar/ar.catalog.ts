@@ -167,6 +167,7 @@ export const xrmAr = {
     saveBeforeRelationships: 'احفظ السجل قبل استكشاف العلاقات.',
     // U3/U6 (D-601) — انظر en.catalog.ts
     saveBeforeTimeline: 'احفظ السجل لعرض الخط الزمني.',
+    saveBeforeSharing: 'احفظ السجل لمشاركته.',
     saveBeforeHistory: 'احفظ السجل لعرض سجل التغييرات.',
     saveBeforeApprovals: 'احفظ السجل لعرض موافقاته.',
     saveBeforeGolden: 'احفظ السجل لعرض سجله الذهبي.',
@@ -174,7 +175,7 @@ export const xrmAr = {
       details: 'التفاصيل',
       documents: 'المستندات', communications: 'المراسلات', notes: 'الملاحظات', activities: 'الأنشطة',
       tags: 'الوسوم', consent: 'الموافقة', relationships: 'العلاقات',
-      timeline: 'الخط الزمني', history: 'سجل التغييرات', approvals: 'الموافقات', golden: 'السجل الذهبي',
+      timeline: 'الخط الزمني', history: 'سجل التغييرات', approvals: 'الموافقات', sharing: 'المشاركة', golden: 'السجل الذهبي',
       fulfilment: 'التنفيذ', lines: 'البنود',
     },
     entity: {
@@ -1761,6 +1762,26 @@ export const xrmAr = {
     childUnitsColumn: 'الوحدات الخاصة فقط',
     childUnitsAll: 'الوحدات الفرعية مضمّنة',
     childRead: 'القراءة', childWrite: 'الكتابة', childDelete: 'الحذف', childAssign: 'الإسناد', childShare: 'المشاركة',
+  },
+  sharingPanel: {
+    title: 'المشاركة',
+    owner: 'المالك', unit: 'وحدة العمل', none: 'لا يوجد',
+    shares: 'مُشارك مع', loading: 'جارٍ تحميل المشاركات…', noShares: 'غير مُشارك مع أحد.',
+    forbidden: 'لا يمكنك إدارة مشاركة هذا السجل.',
+    loadFailed: 'تعذّر تحميل لوحة المشاركة.',
+    remove: 'إزالة', removeFor: 'إزالة المشاركة مع {name}',
+    add: 'مشاركة السجل', kind: 'مع', user: 'مستخدم', team: 'فريق', search: 'بحث',
+    who: 'مَن', choose: 'اختر…', access: 'الوصول', share: 'مشاركة',
+    capability: { view: 'يمكنه العرض', action: 'يمكنه العرض والتعديل', deny: 'ممنوع' },
+    explain: 'لماذا يستطيع رؤية هذا؟', person: 'الشخص', operation: 'أن', explainButton: 'اشرح',
+    action: { read: 'يراه', update: 'يعدّله', delete: 'يحذفه' },
+    allowed: 'يستطيع.', denied: 'لا يستطيع.', deciding: 'الحاسم',
+    effect: { grants: 'يمنح', denies: 'يمنع', not_applicable: 'لا ينطبق' },
+    source: {
+      admin: 'مسؤول', privilege: 'الصلاحية', role_level: 'مستوى الدور', business_unit: 'وحدة العمل',
+      ownership: 'الملكية', user_share: 'مُشارك معه', team_share: 'مُشارك مع فريقه',
+      default_share: 'مشاركة افتراضية', sharing_rule: 'قاعدة مشاركة', deny: 'مشاركة ممنوعة',
+    },
   },
   permissionSets: {
     title: 'مجموعات الصلاحيات',

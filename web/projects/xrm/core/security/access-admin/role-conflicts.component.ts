@@ -13,7 +13,7 @@ import {
   SECURITY_FLAGS,
   SecurityAdminService,
   UserListItem,
-} from './security-admin.service';
+} from '@attome/xrm/core/security';
 
 /** What one side of a conflict rule names. */
 export type ConflictKind = 'role' | 'privilege' | 'set';
@@ -29,7 +29,7 @@ export type ConflictKind = 'role' | 'privilege' | 'set';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, TranslatePipe],
-  styleUrls: ['../../styles/admin-page.css'],
+  styleUrls: ['../../../styles/admin-page.css'],
   template: `
     <div class="page-header">
       <div>

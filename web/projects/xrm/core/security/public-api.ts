@@ -56,11 +56,9 @@ export type {
   EffectiveAccessPreview, ConfiguredAccess, EffectiveAccess,
   EffectiveAccessRoleRef, EffectiveAccessTeamRef, EffectiveAccessOrgRef,
 } from './security-admin.service';
-export { ACCESS_LEVELS, SECURITY_FLAGS } from './security-admin.service';
-// Q10-T12: permission sets, conflict rules and role templates.
-export { PermissionSetsComponent }        from './permission-sets.component';
-export { RoleConflictsComponent }         from './role-conflicts.component';
-export { RoleTemplatesComponent }         from './role-templates.component';
+export { ACCESS_LEVELS, SECURITY_FLAGS, endOfDay, operationLevelsOf } from './security-admin.service';
+// Q10-T12: the types the access-admin entry point's pages use; the pages
+// themselves are `@attome/xrm/core/security/access-admin`.
 export type {
   PermissionSetItem, PermissionSetDetail, SetEntityAccessItem, PermissionSetAssignment,
   ConflictRule, CurrentConflict, RoleTemplateItem, InstalledRole,

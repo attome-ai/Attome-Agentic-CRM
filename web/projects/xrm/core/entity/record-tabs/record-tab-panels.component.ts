@@ -34,6 +34,7 @@ import { TagsPanelComponent } from '../tags/tags-panel.component';
  * `EntityFormComponent`'s template.
  */
 type RecordActivityModule = typeof import('@attome/xrm/core/entity/record-activity');
+type SharingModule = typeof import('@attome/xrm/core/entity/sharing-panel');
 type ApprovalsModule = typeof import('@attome/xrm/core/approvals');
 type MasterDataModule = typeof import('@attome/xrm/core/admin/governance/master-data');
 type FulfilmentModule = typeof import('@attome/xrm/fulfilment');
@@ -71,6 +72,11 @@ export class RecordTabPanelsComponent {
   /** Inputs for whichever record-activity panel is showing. */
   readonly activityInputs = computed(() => ({ entityName: this.entityName(), recordId: this.recordId() }));
 
+  /** Q14-T6: the sharing panel's entry point, once the Sharing tab has asked for it. */
+  readonly sharing = signal<SharingModule | null>(null);
+  readonly sharingLoadFailed = signal(false);
+  private sharingRequested = false;
+
   /** M9-T4: the approvals entry point, once the Approvals tab has asked for it. */
   readonly approvals = signal<ApprovalsModule | null>(null);
   readonly approvalsLoadFailed = signal(false);
@@ -98,6 +104,15 @@ export class RecordTabPanelsComponent {
         import('@attome/xrm/core/entity/record-activity').then(
           m => this.activity.set(m),
           () => this.activityLoadFailed.set(true),
+        );
+      }
+    });
+    effect(() => {
+      if (this.activeTab() === 'sharing' && this.recordId() && !this.sharingRequested) {
+        this.sharingRequested = true;
+        import('@attome/xrm/core/entity/sharing-panel').then(
+          m => this.sharing.set(m),
+          () => this.sharingLoadFailed.set(true),
         );
       }
     });

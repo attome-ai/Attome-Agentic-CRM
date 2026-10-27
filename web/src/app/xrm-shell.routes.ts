@@ -325,17 +325,17 @@ export const xrmShellRoutes: Routes = [
             // Q10-T12: permission sets, conflict rules and role templates.
             path: 'security/permission-sets',
             canActivate: [authGuard],
-            loadComponent: () => import('@attome/xrm/core/security').then(m => m.PermissionSetsComponent),
+            loadComponent: () => import('@attome/xrm/core/security/access-admin').then(m => m.PermissionSetsComponent),
           },
           {
             path: 'security/role-conflicts',
             canActivate: [authGuard],
-            loadComponent: () => import('@attome/xrm/core/security').then(m => m.RoleConflictsComponent),
+            loadComponent: () => import('@attome/xrm/core/security/access-admin').then(m => m.RoleConflictsComponent),
           },
           {
             path: 'security/role-templates',
             canActivate: [authGuard],
-            loadComponent: () => import('@attome/xrm/core/security').then(m => m.RoleTemplatesComponent),
+            loadComponent: () => import('@attome/xrm/core/security/access-admin').then(m => m.RoleTemplatesComponent),
           },
           {
             path: 'security/users/list',

@@ -28,6 +28,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- A Sharing tab on every record (Q14-T6): the owner and business unit, the record's shares (added and
+  removed by anyone holding `{entity}.share`), and "Why can they see this?", which explains a chosen
+  person's access through the access explainer. The permission sets, conflict rules and role templates
+  pages moved to their own lazily loaded entry point, `@attome/xrm/core/security/access-admin`.
 - Access screens (Q10-T12): role access levels show and set the create, assign, share, export and
   bulk levels and, behind `security.child_units`, the include-child-units choice;
   `POST /api/v1/admin/security/role-entity-access` and its list carry those columns, and bundles and

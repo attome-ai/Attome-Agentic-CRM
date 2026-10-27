@@ -16,7 +16,7 @@ import {
   TeamItem,
   UserListItem,
   endOfDay,
-} from './security-admin.service';
+} from '@attome/xrm/core/security';
 
 /** The levels a new entity row in a set starts with: the table defaults. */
 export function defaultSetAccess(entity: string): SetEntityAccessItem {
@@ -51,7 +51,7 @@ export function defaultSetAccess(entity: string): SetEntityAccessItem {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, LocalDatePipe, TranslatePipe],
-  styleUrls: ['../../styles/admin-page.css'],
+  styleUrls: ['../../../styles/admin-page.css'],
   template: `
     <div class="page-header">
       <div>
