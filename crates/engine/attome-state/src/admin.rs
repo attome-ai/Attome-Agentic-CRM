@@ -26,7 +26,7 @@
 
 use attome_core::EngineState;
 use attome_core::changeset::{Layer, Op, RecordedOp, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -554,7 +554,7 @@ async fn validate_transition_states(
 )]
 async fn list_state_models(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
 ) -> Result<Json<PaginatedResponse<StateModelListItem>>, AppError> {
     let rows: Vec<ModelRow> = sqlx::query_as(&format!(
         "SELECT {MODEL_COLUMNS} \
@@ -624,7 +624,7 @@ async fn fetch_detail(state: &EngineState, id: Uuid) -> Result<StateModelDetail,
 )]
 async fn get_state_model(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<StateModelDetail>, AppError> {
     Ok(Json(fetch_detail(&state, id).await?))
@@ -647,7 +647,7 @@ async fn get_state_model(
 )]
 async fn create_state_model(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Json(body): Json<CreateStateModelBody>,
 ) -> Result<(StatusCode, Json<StateModelDetail>), AppError> {
@@ -771,7 +771,7 @@ async fn create_state_model(
 )]
 async fn update_state_model(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateStateModelBody>,
@@ -882,7 +882,7 @@ async fn update_state_model(
 )]
 async fn delete_state_model(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
@@ -949,7 +949,7 @@ async fn delete_state_model(
 )]
 async fn create_transition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<CreateTransitionBody>,
@@ -1067,7 +1067,7 @@ async fn create_transition(
 )]
 async fn update_transition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path((id, transition_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<UpdateTransitionBody>,
@@ -1211,7 +1211,7 @@ async fn update_transition(
 )]
 async fn delete_transition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path((id, transition_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
