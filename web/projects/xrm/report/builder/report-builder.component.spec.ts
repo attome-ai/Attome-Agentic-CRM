@@ -90,9 +90,9 @@ describe('ReportBuilderComponent (P1-T1)', () => {
     cmp.setGroup('across', { field: 'owner_ref' });
     cmp.run();
     fixture.detectChanges();
-    const won = el.querySelector('[data-matrix-row="won"]') as HTMLElement;
-    expect(won.textContent?.replace(/\s+/g, ' ')).toContain('won 1 2 3');
-    expect(el.querySelector('[data-matrix] [data-total]')?.textContent?.replace(/\s+/g, ' ')).toContain('1 6 7');
+    const cells = (row: Element | null) => [...(row?.querySelectorAll('td') ?? [])].map(td => td.textContent?.trim());
+    expect(cells(el.querySelector('[data-matrix-row="won"]'))).toEqual(['1', '2', '3']);
+    expect(cells(el.querySelector('[data-matrix] [data-total]'))).toEqual(['1', '6', '7']);
   });
 
   it('runs the preview by itself after a change when live', async () => {
