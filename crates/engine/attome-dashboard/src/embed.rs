@@ -21,7 +21,7 @@ use std::collections::BTreeMap;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event, x_audit};
 use attome_audit::{AuditCategory, AuditOperation, audit_service};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -190,7 +190,7 @@ fn config_event(actor: Uuid, op: AuditOperation, id: Uuid, name: &str) -> Securi
 )]
 async fn create_embed(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Reports>>,
     Path(dashboard): Path<Uuid>,
     Json(body): Json<NewEmbed>,
 ) -> Result<(StatusCode, Json<DashboardEmbed>), AppError> {
@@ -257,7 +257,7 @@ async fn create_embed(
 )]
 async fn revoke_embed(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Reports>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -314,7 +314,7 @@ async fn revoke_embed(
 )]
 async fn issue_token(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Reports>>,
     Path(id): Path<Uuid>,
     Json(body): Json<NewToken>,
 ) -> Result<Json<EmbedToken>, AppError> {
