@@ -37174,6 +37174,409 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/migration-projects/{id}/model-mapping": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A project's model mapping",
+        "description": "The project's model mapping and what in it cannot run now.\nAdministrators only.",
+        "operationId": "get_mapping",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The migration project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The mapping",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingDoc"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project, or no mapping drafted yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Save a model mapping",
+        "description": "Saves the person's edits to the project's mapping. Refused with 409 when\nthe mapping changed since `row_version`. A mapping that cannot run yet\nis saved too; its problems come back with it. Administrators only.\nAudited.",
+        "operationId": "save_mapping",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The migration project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The saved mapping",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingDoc"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project, or no mapping drafted yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Saved by someone else since `row_version`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/migration-projects/{id}/model-mapping/draft": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Draft a model mapping",
+        "description": "Proposes the mapping of a source model onto this deployment's entities\nand stores it as the project's mapping, replacing an earlier one.\nAdministrators only. Audited.",
+        "operationId": "draft_mapping",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The migration project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The drafted mapping",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingDoc"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/migration-projects/{id}/source-model": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Describe a migration source",
+        "description": "Reads the model of the source system named by `system` (its entities and\nfields, with each field's Attome type), to draft a mapping from. Writes\nnothing. Administrators only.",
+        "operationId": "describe_source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The migration project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DescribeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The source's model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescribedSource"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project or system",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The system is not a migration source, or the source refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "reads the source system's model; writes nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/migration-projects/{project_id}/runs": {
       "get": {
         "tags": [
@@ -142892,6 +143295,58 @@
           }
         }
       },
+      "AttributeMapping": {
+        "type": "object",
+        "description": "One source field.",
+        "required": [
+          "source",
+          "source_label",
+          "source_type",
+          "action",
+          "target",
+          "field_type"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/MapAction"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValueMapping"
+            }
+          },
+          "field_type": {
+            "type": "string",
+            "description": "The Attome field type: the attribute's own for `map`, the proposed\none for `create` (which the person may change)."
+          },
+          "lookup_target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A lookup's target, by source entity name."
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_label": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string",
+            "description": "The source's own type name."
+          },
+          "target": {
+            "type": "string",
+            "description": "The attribute's logical name (existing for `map`, new for `create`)."
+          },
+          "type_mismatch": {
+            "type": "boolean",
+            "description": "A `map` whose source type does not fit the attribute's type."
+          }
+        }
+      },
       "AttributeMeta": {
         "type": "object",
         "required": [
@@ -158073,6 +158528,18 @@
           }
         }
       },
+      "DescribeBody": {
+        "type": "object",
+        "required": [
+          "system"
+        ],
+        "properties": {
+          "system": {
+            "type": "string",
+            "description": "The integration system that is the source; its `config.migration`\nnames the source's kind."
+          }
+        }
+      },
       "DescribeQueryBody": {
         "type": "object",
         "required": [
@@ -158096,6 +158563,23 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "DescribedSource": {
+        "type": "object",
+        "description": "A source's model, as its connector describes it.",
+        "required": [
+          "kind",
+          "source_model"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`salesforce`, `dynamics`, `hubspot`, `zoho` or `odoo`."
+          },
+          "source_model": {
+            "$ref": "#/components/schemas/SourceModel"
           }
         }
       },
@@ -159414,6 +159898,18 @@
             "type": "integer",
             "format": "int64",
             "minimum": 0
+          }
+        }
+      },
+      "DraftBody": {
+        "type": "object",
+        "required": [
+          "source_model"
+        ],
+        "properties": {
+          "source_model": {
+            "$ref": "#/components/schemas/SourceModel",
+            "description": "The source's model, as its connector describes it."
           }
         }
       },
@@ -160797,6 +161293,38 @@
           },
           "entity_name": {
             "type": "string"
+          }
+        }
+      },
+      "EntityMapping": {
+        "type": "object",
+        "description": "One source entity.",
+        "required": [
+          "source",
+          "source_label",
+          "action",
+          "target",
+          "attributes"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/MapAction"
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttributeMapping"
+            }
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_label": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string",
+            "description": "The entity's logical name (existing for `map`, new for `create`)."
           }
         }
       },
@@ -170367,6 +170895,54 @@
           }
         }
       },
+      "MapAction": {
+        "type": "string",
+        "description": "What happens to one source entity or field.",
+        "enum": [
+          "map",
+          "create",
+          "skip"
+        ]
+      },
+      "MappingDoc": {
+        "type": "object",
+        "description": "A project's model mapping.",
+        "required": [
+          "project_id",
+          "row_version",
+          "source_model",
+          "mapping",
+          "problems",
+          "updated_at"
+        ],
+        "properties": {
+          "mapping": {
+            "$ref": "#/components/schemas/ModelMapping"
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What in the mapping cannot run against this deployment's entities\nnow; empty when it can."
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "source_model": {
+            "$ref": "#/components/schemas/SourceModel"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "MarketingCancelled": {
         "type": "object",
         "required": [
@@ -173022,6 +173598,33 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Finding"
+            }
+          }
+        }
+      },
+      "ModelMapping": {
+        "type": "object",
+        "description": "A whole migration's mapping. `users` and `roles` map the source's\npeople and roles to this deployment's; the drafts leave them empty, as\nthe source connectors do not list people yet, and the person fills them.",
+        "required": [
+          "entities"
+        ],
+        "properties": {
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntityMapping"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValueMapping"
+            }
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValueMapping"
             }
           }
         }
@@ -210251,6 +210854,23 @@
           }
         }
       },
+      "SaveBody": {
+        "type": "object",
+        "required": [
+          "mapping",
+          "row_version"
+        ],
+        "properties": {
+          "mapping": {
+            "$ref": "#/components/schemas/ModelMapping"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The version the edits were made on."
+          }
+        }
+      },
       "SavePreferences": {
         "type": "object",
         "description": "`POST /api/v1/consents/preferences`.",
@@ -214815,6 +215435,100 @@
           "key_asc",
           "key_desc"
         ]
+      },
+      "SourceEntity": {
+        "type": "object",
+        "description": "One entity of the source.",
+        "required": [
+          "name",
+          "label",
+          "custom",
+          "fields"
+        ],
+        "properties": {
+          "custom": {
+            "type": "boolean",
+            "description": "Whether the source marks it as its own customisation."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceField"
+            }
+          },
+          "label": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "The source's API name (`Account`, `account`)."
+          }
+        }
+      },
+      "SourceField": {
+        "type": "object",
+        "description": "One field of a source entity.",
+        "required": [
+          "name",
+          "label",
+          "source_type",
+          "attome_type",
+          "required",
+          "choices",
+          "multi"
+        ],
+        "properties": {
+          "attome_type": {
+            "type": "string",
+            "description": "The Attome field type it becomes (`text`, `number`, `currency`,\n`date`, `date_time`, `time`, `bool`, `choice`, `lookup`, `file`,\n`image`, `rich_text`)."
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A choice field's values."
+          },
+          "label": {
+            "type": "string"
+          },
+          "lookup_target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A lookup's target entity, by its source name."
+          },
+          "multi": {
+            "type": "boolean",
+            "description": "A choice field that holds several values."
+          },
+          "name": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "source_type": {
+            "type": "string",
+            "description": "The source's own type name."
+          }
+        }
+      },
+      "SourceModel": {
+        "type": "object",
+        "description": "The source's model.",
+        "required": [
+          "entities"
+        ],
+        "properties": {
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceEntity"
+            }
+          }
+        }
       },
       "SourcePosting": {
         "type": "object",
@@ -222276,6 +222990,24 @@
             "type": "string",
             "format": "date-time",
             "description": "The start of the rejection window."
+          }
+        }
+      },
+      "ValueMapping": {
+        "type": "object",
+        "description": "A source value and what it becomes; `target: None` for a value to add.",
+        "required": [
+          "source"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

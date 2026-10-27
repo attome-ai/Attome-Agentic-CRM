@@ -7096,6 +7096,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/migration-projects/{id}/model-mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A project's model mapping
+         * @description The project's model mapping and what in it cannot run now.
+         *     Administrators only.
+         */
+        get: operations["get_mapping"];
+        /**
+         * Save a model mapping
+         * @description Saves the person's edits to the project's mapping. Refused with 409 when
+         *     the mapping changed since `row_version`. A mapping that cannot run yet
+         *     is saved too; its problems come back with it. Administrators only.
+         *     Audited.
+         */
+        put: operations["save_mapping"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/migration-projects/{id}/model-mapping/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft a model mapping
+         * @description Proposes the mapping of a source model onto this deployment's entities
+         *     and stores it as the project's mapping, replacing an earlier one.
+         *     Administrators only. Audited.
+         */
+        post: operations["draft_mapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/migration-projects/{id}/source-model": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Describe a migration source
+         * @description Reads the model of the source system named by `system` (its entities and
+         *     fields, with each field's Attome type), to draft a mapping from. Writes
+         *     nothing. Administrators only.
+         */
+        post: operations["describe_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/migration-projects/{project_id}/runs": {
         parameters: {
             query?: never;
@@ -29251,6 +29323,26 @@ export interface components {
              */
             status: string;
         };
+        /** @description One source field. */
+        AttributeMapping: {
+            action: components["schemas"]["MapAction"];
+            choices?: components["schemas"]["ValueMapping"][];
+            /**
+             * @description The Attome field type: the attribute's own for `map`, the proposed
+             *     one for `create` (which the person may change).
+             */
+            field_type: string;
+            /** @description A lookup's target, by source entity name. */
+            lookup_target?: string | null;
+            source: string;
+            source_label: string;
+            /** @description The source's own type name. */
+            source_type: string;
+            /** @description The attribute's logical name (existing for `map`, new for `create`). */
+            target: string;
+            /** @description A `map` whose source type does not fit the attribute's type. */
+            type_mismatch?: boolean;
+        };
         AttributeMeta: {
             /**
              * @description P-data-protection-governance §4: `"general" | "personal" |
@@ -35200,12 +35292,25 @@ export interface components {
             request_count: number;
             route_template: string;
         };
+        DescribeBody: {
+            /**
+             * @description The integration system that is the source; its `config.migration`
+             *     names the source's kind.
+             */
+            system: string;
+        };
         DescribeQueryBody: {
             sql_query: string;
         };
         DescribedColumn: {
             data_type: string;
             name: string;
+        };
+        /** @description A source's model, as its connector describes it. */
+        DescribedSource: {
+            /** @description `salesforce`, `dynamics`, `hubspot`, `zoho` or `odoo`. */
+            kind: string;
+            source_model: components["schemas"]["SourceModel"];
         };
         DevToolsAvailable: {
             /**
@@ -35702,6 +35807,10 @@ export interface components {
             download_url: string;
             /** Format: int64 */
             expires_in_secs: number;
+        };
+        DraftBody: {
+            /** @description The source's model, as its connector describes it. */
+            source_model: components["schemas"]["SourceModel"];
         };
         /** @description The answer to a draft request. */
         DraftQueued: {
@@ -36221,6 +36330,15 @@ export interface components {
             /** Format: int64 */
             document_count: number;
             entity_name: string;
+        };
+        /** @description One source entity. */
+        EntityMapping: {
+            action: components["schemas"]["MapAction"];
+            attributes: components["schemas"]["AttributeMapping"][];
+            source: string;
+            source_label: string;
+            /** @description The entity's logical name (existing for `map`, new for `create`). */
+            target: string;
         };
         /**
          * @description Response shape for [`QueryDetail::entity_mappings`] — echoes the input
@@ -40138,6 +40256,27 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
+        /**
+         * @description What happens to one source entity or field.
+         * @enum {string}
+         */
+        MapAction: "map" | "create" | "skip";
+        /** @description A project's model mapping. */
+        MappingDoc: {
+            mapping: components["schemas"]["ModelMapping"];
+            /**
+             * @description What in the mapping cannot run against this deployment's entities
+             *     now; empty when it can.
+             */
+            problems: string[];
+            /** Format: uuid */
+            project_id: string;
+            /** Format: int32 */
+            row_version: number;
+            source_model: components["schemas"]["SourceModel"];
+            /** Format: date-time */
+            updated_at: string;
+        };
         MarketingCancelled: {
             /**
              * Format: uuid
@@ -41097,6 +41236,16 @@ export interface components {
         ModelHealth: {
             entities: number;
             findings: components["schemas"]["Finding"][];
+        };
+        /**
+         * @description A whole migration's mapping. `users` and `roles` map the source's
+         *     people and roles to this deployment's; the drafts leave them empty, as
+         *     the source connectors do not list people yet, and the person fills them.
+         */
+        ModelMapping: {
+            entities: components["schemas"]["EntityMapping"][];
+            roles?: components["schemas"]["ValueMapping"][];
+            users?: components["schemas"]["ValueMapping"][];
         };
         ModelPublishResponse: {
             /** Format: uuid */
@@ -55317,6 +55466,14 @@ export interface components {
             /** @description The new template's name. */
             name: string;
         };
+        SaveBody: {
+            mapping: components["schemas"]["ModelMapping"];
+            /**
+             * Format: int32
+             * @description The version the edits were made on.
+             */
+            row_version: number;
+        };
         /** @description `POST /api/v1/consents/preferences`. */
         SavePreferences: {
             changes: components["schemas"]["PreferenceChange"][];
@@ -57106,6 +57263,39 @@ export interface components {
         };
         /** @enum {string} */
         SortOrder: "value_desc" | "value_asc" | "key_asc" | "key_desc";
+        /** @description One entity of the source. */
+        SourceEntity: {
+            /** @description Whether the source marks it as its own customisation. */
+            custom: boolean;
+            fields: components["schemas"]["SourceField"][];
+            label: string;
+            /** @description The source's API name (`Account`, `account`). */
+            name: string;
+        };
+        /** @description One field of a source entity. */
+        SourceField: {
+            /**
+             * @description The Attome field type it becomes (`text`, `number`, `currency`,
+             *     `date`, `date_time`, `time`, `bool`, `choice`, `lookup`, `file`,
+             *     `image`, `rich_text`).
+             */
+            attome_type: string;
+            /** @description A choice field's values. */
+            choices: string[];
+            label: string;
+            /** @description A lookup's target entity, by its source name. */
+            lookup_target?: string | null;
+            /** @description A choice field that holds several values. */
+            multi: boolean;
+            name: string;
+            required: boolean;
+            /** @description The source's own type name. */
+            source_type: string;
+        };
+        /** @description The source's model. */
+        SourceModel: {
+            entities: components["schemas"]["SourceEntity"][];
+        };
         /** @description A source document to post through its rule. */
         SourcePosting: {
             /** @description A decimal string; negative posts the rule the other way round. */
@@ -59882,6 +60072,11 @@ export interface components {
              * @description The start of the rejection window.
              */
             since: string;
+        };
+        /** @description A source value and what it becomes; `target: None` for a value to add. */
+        ValueMapping: {
+            source: string;
+            target?: string | null;
         };
         VapidKey: {
             /** @description The application server key for `PushManager.subscribe`, base64url. */
@@ -83171,6 +83366,254 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_mapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The migration project */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mapping */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MappingDoc"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project, or no mapping drafted yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    save_mapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The migration project */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveBody"];
+            };
+        };
+        responses: {
+            /** @description The saved mapping */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MappingDoc"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project, or no mapping drafted yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Saved by someone else since `row_version` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    draft_mapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The migration project */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftBody"];
+            };
+        };
+        responses: {
+            /** @description The drafted mapping */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MappingDoc"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    describe_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The migration project */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DescribeBody"];
+            };
+        };
+        responses: {
+            /** @description The source's model */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DescribedSource"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project or system */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The system is not a migration source, or the source refused */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
