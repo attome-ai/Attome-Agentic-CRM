@@ -17085,6 +17085,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/graph/paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * How two records are connected
+         * @description A7-T5: the shortest connections (at most 3 hops, 10 paths) between two
+         *     records, over lookups, hierarchies and record relationships the caller
+         *     can see at every hop.
+         */
+        post: operations["paths_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/graph/traverse": {
         parameters: {
             query?: never;
@@ -26440,6 +26462,31 @@ export interface paths {
          *     and audit run as for any edit.
          */
         post: operations["restore_history_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview an action's impact
+         * @description A7-T2: what deleting, merging away or reassigning this record would
+         *     touch: per entity and path, how many records and the first 20, whether a
+         *     restrict rule would refuse it, at every depth of a delete's cascade.
+         *     Nothing is changed. A delete's whole cascade is undone as one unit by
+         *     restoring the record (`POST .../{id}/restore` brings back everything the
+         *     cascade took, level by level).
+         */
+        post: operations["preview_impact"];
         delete?: never;
         options?: never;
         head?: never;
@@ -38821,6 +38868,44 @@ export interface components {
             /** Format: uuid */
             user_ref: string;
         };
+        /** @description What an action on one record would touch. */
+        Impact: {
+            /** @description `delete`, `merge` or `reassign`. */
+            action: string;
+            /** @description A restrict rule would refuse the action. */
+            blocked: boolean;
+            groups: components["schemas"]["ImpactGroup"][];
+            /**
+             * @description Entities the caller cannot read hold records the action touches; they
+             *     are not listed (a restrict rule there still sets `blocked`).
+             */
+            hidden_dependents: boolean;
+            /**
+             * @description The walk stopped at [`CASCADE_TREE_LIMIT`] records or
+             *     [`MAX_CASCADE_DEPTH`] levels; deeper records are not counted.
+             */
+            truncated: boolean;
+        };
+        /** @description One group of records an action would touch. */
+        ImpactGroup: {
+            /** Format: int64 */
+            count: number;
+            /** @description `deactivated`, `blocks`, `orphaned`, `repointed`, `unlinked` or `reassigned`. */
+            effect: string;
+            /** @description The entity the records are in. */
+            entity: string;
+            /**
+             * @description The lookup field through which they point at the record above them;
+             *     `null` for a many-to-many group.
+             */
+            field?: string | null;
+            /** @description The first records (at most 20); none for a link group. */
+            first: string[];
+            /** @description How they are reached from the record (`account -> contact.account_ref`). */
+            path: string;
+            /** @description The many-to-many relationship, for a link group. */
+            relationship?: string | null;
+        };
         /** @description The impact of a set of changes. */
         ImpactReport: {
             affected: components["schemas"]["Affected"][];
@@ -39992,11 +40077,25 @@ export interface components {
         /** @enum {string} */
         LineageRelation: "root" | "child" | "formula_input";
         LinkBody: {
+            /** @description A7-T4: the link's further values, a JSON object of at most 50 keys. */
+            attributes?: Record<string, never> | null;
             /**
              * Format: uuid
              * @description The other side's record id to link/unlink.
              */
             id: string;
+            /** @description A7-T4: the link's role (`decision_maker`), at most 100 characters. */
+            role?: string | null;
+            /**
+             * Format: date
+             * @description A7-T4: the first day the link holds; open when absent.
+             */
+            valid_from?: string | null;
+            /**
+             * Format: date
+             * @description A7-T4: the last day the link holds; open when absent.
+             */
+            valid_to?: string | null;
         };
         LinkCreated: {
             /** Format: date-time */
@@ -50892,6 +50991,28 @@ export interface components {
             op: string;
             path: string;
             value?: Record<string, never> | null;
+        };
+        PathsRequest: {
+            edge_types?: string[] | null;
+            from: components["schemas"]["NodeRefInput"];
+            /**
+             * Format: int32
+             * @description At most 3 (the default).
+             */
+            max_hops?: number;
+            to: components["schemas"]["NodeRefInput"];
+        };
+        PathsResponse: {
+            /**
+             * @description The shortest connections first, each the edges from `from` to `to`
+             *     in walking order (an edge may be walked against its direction).
+             */
+            paths: components["schemas"]["GraphEdge"][][];
+            /**
+             * @description The walk from `from` hit a bound; a longer or wider connection may
+             *     exist.
+             */
+            truncated: boolean;
         };
         PauseClockRequest: {
             reason: components["schemas"]["PauseReason"];
@@ -113773,6 +113894,57 @@ export interface operations {
             };
         };
     };
+    paths_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PathsRequest"];
+            };
+        };
+        responses: {
+            /** @description The connections found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathsResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The start record does not exist or is not visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     traverse_route: {
         parameters: {
             query?: never;
@@ -141466,6 +141638,70 @@ export interface operations {
             };
         };
     };
+    preview_impact: {
+        parameters: {
+            query?: {
+                /** @description `delete` (the default), `merge` or `reassign`. */
+                action?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the action would touch */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Impact"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not take this action on the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not delete, merge or reassign */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     notify_record_mentions: {
         parameters: {
             query?: never;
@@ -141715,6 +141951,10 @@ export interface operations {
                  *     `DEFAULT_PAGE_SIZE`.
                  */
                 page_size?: number;
+                /** @description Links valid on this day (default today, UTC). */
+                as_of?: string;
+                /** @description Only links with this role. */
+                role?: string;
             };
             header?: never;
             path: {

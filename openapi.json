@@ -86527,6 +86527,87 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/graph/paths": {
+      "post": {
+        "tags": [
+          "graph"
+        ],
+        "summary": "How two records are connected",
+        "description": "A7-T5: the shortest connections (at most 3 hops, 10 paths) between two\nrecords, over lookups, hierarchies and record relationships the caller\ncan see at every hop.",
+        "operationId": "paths_route",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PathsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The connections found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PathsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The start record does not exist or is not visible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a bounded, permission-filtered path search; persists nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/graph/traverse": {
       "post": {
         "tags": [
@@ -132516,6 +132597,117 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/{entity}/{id}/impact": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Preview an action's impact",
+        "description": "A7-T2: what deleting, merging away or reassigning this record would\ntouch: per entity and path, how many records and the first 20, whether a\nrestrict rule would refuse it, at every depth of a delete's cascade.\nNothing is changed. A delete's whole cascade is undone as one unit by\nrestoring the record (`POST .../{id}/restore` brings back everything the\ncascade took, level by level).",
+        "operationId": "preview_impact",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "description": "`delete` (the default), `merge` or `reassign`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the action would touch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Impact"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not take this action on the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not delete, merge or reassign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "walks what the action would touch and writes nothing",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/{entity}/{id}/mentions": {
       "post": {
         "tags": [
@@ -132999,6 +133191,25 @@
             "schema": {
               "type": "integer",
               "format": "int64"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "description": "Links valid on this day (default today, UTC).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "description": "Only links with this role.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -167264,6 +167475,92 @@
           }
         }
       },
+      "Impact": {
+        "type": "object",
+        "description": "What an action on one record would touch.",
+        "required": [
+          "action",
+          "groups",
+          "blocked",
+          "truncated",
+          "hidden_dependents"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "`delete`, `merge` or `reassign`."
+          },
+          "blocked": {
+            "type": "boolean",
+            "description": "A restrict rule would refuse the action."
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImpactGroup"
+            }
+          },
+          "hidden_dependents": {
+            "type": "boolean",
+            "description": "Entities the caller cannot read hold records the action touches; they\nare not listed (a restrict rule there still sets `blocked`)."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "The walk stopped at [`CASCADE_TREE_LIMIT`] records or\n[`MAX_CASCADE_DEPTH`] levels; deeper records are not counted."
+          }
+        }
+      },
+      "ImpactGroup": {
+        "type": "object",
+        "description": "One group of records an action would touch.",
+        "required": [
+          "entity",
+          "path",
+          "effect",
+          "count",
+          "first"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "effect": {
+            "type": "string",
+            "description": "`deactivated`, `blocks`, `orphaned`, `repointed`, `unlinked` or `reassigned`."
+          },
+          "entity": {
+            "type": "string",
+            "description": "The entity the records are in."
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The lookup field through which they point at the record above them;\n`null` for a many-to-many group."
+          },
+          "first": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The first records (at most 20); none for a link group."
+          },
+          "path": {
+            "type": "string",
+            "description": "How they are reached from the record (`account -> contact.account_ref`)."
+          },
+          "relationship": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The many-to-many relationship, for a link group."
+          }
+        }
+      },
       "ImpactReport": {
         "type": "object",
         "description": "The impact of a set of changes.",
@@ -170313,10 +170610,40 @@
           "id"
         ],
         "properties": {
+          "attributes": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "A7-T4: the link's further values, a JSON object of at most 50 keys."
+          },
           "id": {
             "type": "string",
             "format": "uuid",
             "description": "The other side's record id to link/unlink."
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A7-T4: the link's role (`decision_maker`), at most 100 characters."
+          },
+          "valid_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A7-T4: the first day the link holds; open when absent."
+          },
+          "valid_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A7-T4: the last day the link holds; open when absent."
           }
         }
       },
@@ -199167,6 +199494,59 @@
           }
         }
       },
+      "PathsRequest": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "edge_types": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "from": {
+            "$ref": "#/components/schemas/NodeRefInput"
+          },
+          "max_hops": {
+            "type": "integer",
+            "format": "int32",
+            "description": "At most 3 (the default).",
+            "minimum": 0
+          },
+          "to": {
+            "$ref": "#/components/schemas/NodeRefInput"
+          }
+        }
+      },
+      "PathsResponse": {
+        "type": "object",
+        "required": [
+          "paths",
+          "truncated"
+        ],
+        "properties": {
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/GraphEdge"
+              }
+            },
+            "description": "The shortest connections first, each the edges from `from` to `to`\nin walking order (an edge may be walked against its direction)."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "The walk from `from` hit a bound; a longer or wider connection may\nexist."
+          }
+        }
+      },
       "PauseClockRequest": {
         "type": "object",
         "required": [
@@ -225317,6 +225697,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -225369,6 +225750,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }
