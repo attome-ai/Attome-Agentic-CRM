@@ -320,6 +320,57 @@ async fn get_page(
     Ok(Json(load_page(&state.base.db, id).await?))
 }
 
+/// T2-T4: `?audience=` of the page document.
+#[derive(Debug, serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct AsPageQuery {
+    /// `public` (default), `portal` or `internal`.
+    pub audience: Option<String>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/content/pages/{id}/as-page",
+    operation_id = "get_content_page_as_page",
+    tag = "admin-content",
+    params(("id" = Uuid, Path, description = "The CMS page"), AsPageQuery),
+    responses(
+        (status = 200, description = "The page document the page designer opens", body = Object),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege, or Content Management is not licensed", body = ErrorResponse),
+        (status = 404, description = "Page not found", body = ErrorResponse),
+        (status = 422, description = "An audience other than public, portal or internal", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// A CMS page as a page document.
+///
+/// The page's draft blocks mapped onto the page palette (T2-T4), with its
+/// title and SEO title and description, for the page designer to open.
+async fn get_page_as_page(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    axum::extract::Query(q): axum::extract::Query<AsPageQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let audience = q.audience.as_deref().unwrap_or("public");
+    if !crate::page_import::AUDIENCES.contains(&audience) {
+        return Err(AppError::Validation(
+            "audience is public, portal or internal".into(),
+        ));
+    }
+    let page = load_page(&state.base.db, id).await?;
+    let blocks: Vec<crate::model::Block> =
+        serde_json::from_value(page.blocks_draft.clone()).unwrap_or_default();
+    Ok(Json(crate::page_import::cms_to_page(
+        &page.title,
+        page.seo_title.as_deref(),
+        page.seo_description.as_deref(),
+        audience,
+        &blocks,
+    )))
+}
+
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/content/pages/{id}",
@@ -1171,6 +1222,10 @@ pub fn routes() -> Router<EngineState> {
             post(publish_page),
         )
         .route(
+            "/api/v1/admin/content/pages/{id}/as-page",
+            get(get_page_as_page),
+        )
+        .route(
             "/api/v1/admin/content/pages/{id}/schedule",
             put(schedule_page),
         )
@@ -1201,6 +1256,7 @@ pub fn routes() -> Router<EngineState> {
     list_pages,
     create_page,
     get_page,
+    get_page_as_page,
     update_page,
     delete_page,
     publish_page,

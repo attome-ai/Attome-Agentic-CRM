@@ -37,6 +37,7 @@ uuid.workspace                = true
 [dev-dependencies]
 attome-cache.workspace   = true
 attome-config.workspace  = true
+attome-model.workspace   = true
 attome-storage.workspace = true
 attome-testkit = { workspace = true, features = ["app-config"] }
 tokio                    = { workspace = true, features = ["macros", "rt-multi-thread"] }

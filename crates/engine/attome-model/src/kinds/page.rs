@@ -55,6 +55,9 @@ pub const NODE_TYPES: [&str; 12] = [
     "custom",
 ];
 
+/// T2-T4: who a page is for.
+pub const AUDIENCES: [&str; 3] = ["public", "portal", "internal"];
+
 /// What starts an event.
 pub const TRIGGERS: [&str; 5] = ["load", "click", "select", "submit", "change"];
 
@@ -66,13 +69,17 @@ const MAX_DEPTH: usize = 12;
 const MAX_EVENTS: usize = 10;
 const MAX_TEXT_CHARS: usize = 500;
 
-const KEYS: [&str; 6] = [
+const KEYS: [&str; 9] = [
     "page_type",
     "entity",
     "title_en",
     "title_ar",
     "root",
     "description_en",
+    // T2-T4: who the page is for, and its search-engine title and summary.
+    "audience",
+    "seo_title",
+    "seo_description",
 ];
 const NODE_KEYS: [&str; 7] = [
     "id",
@@ -375,6 +382,9 @@ impl Kind for PageKind {
                 "title_en": { "type": "string", "maxLength": MAX_TEXT_CHARS },
                 "title_ar": { "type": "string", "maxLength": MAX_TEXT_CHARS },
                 "description_en": { "type": "string", "maxLength": MAX_TEXT_CHARS },
+                "audience": { "enum": AUDIENCES },
+                "seo_title": { "type": "string", "maxLength": MAX_TEXT_CHARS },
+                "seo_description": { "type": "string", "maxLength": MAX_TEXT_CHARS },
                 "root": { "$ref": "#/$defs/node" }
             },
             "$defs": {
@@ -447,7 +457,23 @@ impl Kind for PageKind {
                 "only a record page names an entity",
             )),
         }
-        for key in ["title_en", "title_ar", "description_en"] {
+        if object
+            .get("audience")
+            .is_some_and(|a| a.as_str().is_none_or(|a| !AUDIENCES.contains(&a)))
+        {
+            walk.issues.push(Issue::new(
+                "/audience",
+                "invalid",
+                "audience is public, portal or internal",
+            ));
+        }
+        for key in [
+            "title_en",
+            "title_ar",
+            "description_en",
+            "seo_title",
+            "seo_description",
+        ] {
             if object.get(key).is_some_and(|t| {
                 t.as_str()
                     .is_none_or(|t| t.chars().count() > MAX_TEXT_CHARS)

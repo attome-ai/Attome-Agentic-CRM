@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Portal pages from CMS pages (T2-T4): the page kind takes `audience` (`public`, `portal`,
+  `internal`), `seo_title` and `seo_description`; `GET /api/v1/admin/content/pages/{id}/as-page`
+  (`?audience=`) maps a CMS page's draft blocks onto the page palette (`attome_content::page_import`),
+  so the page designer opens an existing CMS page.
 - `attome cluster plan --profile solo|team|ha|scale [--target native|compose|helm]` (U2-T1,
   `deploy/profiles/`): prints a deployment profile's systemd units and `config.json` overlay, a
   `docker-compose.yml`, or values for `deploy/helm/attome`, with each service's replicas and limits.

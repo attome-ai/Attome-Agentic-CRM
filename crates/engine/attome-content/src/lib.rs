@@ -37,6 +37,8 @@ pub mod blocks;
 pub mod hierarchy;
 pub mod landing;
 pub mod model;
+/// T2-T4: a CMS page as a page-kind document for the page designer.
+pub mod page_import;
 pub mod redirect;
 pub mod render_html;
 pub mod scheduling;
