@@ -386,6 +386,71 @@ async fn running_the_snapshot_twice_for_the_same_period_produces_one_row_not_two
     );
 }
 
+/// P9-T9: a change to a definition field starts a new definition version;
+/// the earlier snapshot keeps the version it was computed under. The test
+/// changes `period` (the governance attributes such as `filter_expression`
+/// are not provisioned by this suite's seed; every definition field feeds
+/// the same fingerprint).
+#[tokio::test]
+async fn changing_the_definition_starts_a_new_version() {
+    let state = skip_if_no_db!(test_state(None).await);
+    let db = state.base.db.clone();
+    seed_once(&db).await;
+
+    let metric_id = insert_manual_metric(&db, "higher_is_better").await;
+    let period_start = NaiveDate::from_ymd_opt(2026, 7, 1).unwrap();
+    let compute = |actual: f64| {
+        attome_metric::metric::compute_and_record(
+            &state,
+            metric_id,
+            Some(period_start),
+            Some(actual),
+            true,
+            None,
+        )
+    };
+
+    let first = compute(10.0).await.expect("first compute");
+    assert_eq!(first.snapshot.definition_version, 1);
+    assert!(first.snapshot.definition_fingerprint.is_some());
+
+    let unchanged = compute(11.0)
+        .await
+        .expect("recompute, definition unchanged");
+    assert_eq!(
+        unchanged.snapshot.definition_version, 1,
+        "a recompute under the same definition keeps the version"
+    );
+
+    sqlx::query("UPDATE dashboard_metric_definition SET period = 'quarter' WHERE id = $1")
+        .bind(metric_id)
+        .execute(&db)
+        .await
+        .expect("change the definition");
+    let changed = compute(12.0).await.expect("compute after the change");
+    assert_eq!(
+        changed.snapshot.definition_version, 2,
+        "a changed definition starts version 2"
+    );
+    assert_ne!(
+        changed.snapshot.definition_fingerprint,
+        first.snapshot.definition_fingerprint
+    );
+
+    let first_now: (i32, Option<String>) = sqlx::query_as(
+        "SELECT definition_version, definition_fingerprint FROM metric_snapshot WHERE id = $1",
+    )
+    .bind(first.snapshot.id)
+    .fetch_one(&db)
+    .await
+    .expect("read the first snapshot");
+    assert_eq!(
+        first_now,
+        (1, first.snapshot.definition_fingerprint.clone()),
+        "the first snapshot is never rewritten"
+    );
+}
+
 #[tokio::test]
 async fn a_forced_recompute_writes_a_new_row_chained_by_superseded_ref_and_leaves_the_old_row_untouched()
  {

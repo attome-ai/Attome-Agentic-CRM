@@ -86,6 +86,7 @@ use axum::{
 };
 use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -553,11 +554,16 @@ pub struct SnapshotRow {
     pub dimension_attribute: Option<String>,
     /// The member's value (several dimensions' values comma-separated).
     pub dimension_value: Option<String>,
+    /// P9-T9: the definition version the value was computed under.
+    pub definition_version: i32,
+    /// P9-T9: [`definition_fingerprint`] of the definition fields at compute
+    /// time; `None` on rows written before P9-T9.
+    pub definition_fingerprint: Option<String>,
 }
 
 const SNAPSHOT_COLUMNS: &str = "id, metric_ref, period_start, actual, computed_at, \
      source_version, status, superseded_ref, evaluated_by, error_message, \
-     dimension_attribute, dimension_value";
+     dimension_attribute, dimension_value, definition_version, definition_fingerprint";
 
 /// P9-T5: the most members a dimensioned metric stores per period.
 pub const MAX_MEMBERS: usize = 1_000;
@@ -569,12 +575,18 @@ pub struct MemberValue {
     pub value: f64,
 }
 
-/// A metric's dimensions, aggregate and definition version, read without
-/// assuming the governance columns exist (P9-T4 adds them as attributes).
-async fn metric_dimensions(
-    db: &DbPool,
-    metric_id: Uuid,
-) -> Result<(Vec<String>, Option<String>, Option<i32>), AppError> {
+/// A metric's dimensions, aggregate, declared definition version and
+/// definition fingerprint.
+struct DefinitionShape {
+    dimensions: Vec<String>,
+    aggregate: Option<String>,
+    declared_version: Option<i32>,
+    fingerprint: String,
+}
+
+/// Read without assuming the governance columns exist (P9-T4 adds them as
+/// attributes).
+async fn metric_dimensions(db: &DbPool, metric_id: Uuid) -> Result<DefinitionShape, AppError> {
     let row: Option<serde_json::Value> =
         sqlx::query_scalar("SELECT to_jsonb(d) FROM dashboard_metric_definition d WHERE id = $1")
             .bind(metric_id)
@@ -582,16 +594,96 @@ async fn metric_dimensions(
             .await
             .map_err(AppError::internal)?;
     let row = row.unwrap_or_default();
-    let dims = parse_dimensions(row.get("dimension_attributes").and_then(|v| v.as_str()));
+    let dimensions = parse_dimensions(row.get("dimension_attributes").and_then(|v| v.as_str()));
     let aggregate = row
         .get("aggregate")
         .and_then(|v| v.as_str())
         .map(str::to_owned);
-    let version = row
+    let declared_version = row
         .get("definition_version")
         .and_then(serde_json::Value::as_f64)
         .map(|v| v as i32);
-    Ok((dims, aggregate, version))
+    Ok(DefinitionShape {
+        dimensions,
+        aggregate,
+        declared_version,
+        fingerprint: definition_fingerprint(&row),
+    })
+}
+
+/// P9-T9: the definition fields a metric's value depends on. A change to any
+/// of them starts a new definition version.
+pub const DEFINITION_FIELDS: &[&str] = &[
+    "source_kind",
+    "query_ref",
+    "formula",
+    "period",
+    "entity_logicalname",
+    "aggregate",
+    "measure_attribute",
+    "date_attribute",
+    "filter_expression",
+    "dimension_attributes",
+    "calendar_kind",
+    "week_start",
+];
+
+/// P9-T9: hex SHA-256 over [`DEFINITION_FIELDS`] of a definition row (its
+/// `to_jsonb` form). An absent field, a null and a blank string are the same
+/// value, so adding an attribute to the entity does not change any metric's
+/// fingerprint. Pure.
+pub fn definition_fingerprint(row: &serde_json::Value) -> String {
+    let mut canonical = String::new();
+    for field in DEFINITION_FIELDS {
+        let value = match row.get(*field) {
+            None | Some(serde_json::Value::Null) => String::new(),
+            Some(serde_json::Value::String(s)) if s.trim().is_empty() => String::new(),
+            Some(serde_json::Value::String(s)) => s.trim().to_owned(),
+            Some(other) => other.to_string(),
+        };
+        canonical.push_str(field);
+        canonical.push('=');
+        canonical.push_str(&serde_json::Value::String(value).to_string());
+        canonical.push('\n');
+    }
+    hex::encode(Sha256::digest(canonical.as_bytes()))
+}
+
+/// P9-T9: the version a new snapshot records. The metric's last snapshot
+/// (any period) carries the version and fingerprint it was computed with; a
+/// different fingerprint now means the definition changed, so the version
+/// moves up by one. A last snapshot without a fingerprint (written before
+/// P9-T9) keeps its version. The definition's own `definition_version`
+/// attribute is a floor an administrator can raise by hand. Pure.
+pub fn next_definition_version(
+    declared: Option<i32>,
+    last: Option<(i32, Option<&str>)>,
+    fingerprint: &str,
+) -> i32 {
+    let floor = declared.unwrap_or(1).max(1);
+    match last {
+        None => floor,
+        Some((version, Some(previous))) if previous != fingerprint => {
+            version.saturating_add(1).max(floor)
+        }
+        Some((version, _)) => version.max(floor),
+    }
+}
+
+/// P9-T9: the version and fingerprint of the metric's newest total snapshot.
+async fn last_definition_version(
+    db: &DbPool,
+    metric_id: Uuid,
+) -> Result<Option<(i32, Option<String>)>, AppError> {
+    sqlx::query_as(
+        "SELECT definition_version, definition_fingerprint FROM metric_snapshot \
+         WHERE metric_ref = $1 AND dimension_attribute IS NULL \
+         ORDER BY computed_at DESC, id DESC LIMIT 1",
+    )
+    .bind(metric_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)
 }
 
 /// A metric's dimension attributes: a JSON list or a comma-separated list.
@@ -677,12 +769,9 @@ async fn insert_snapshot(
     members: &[MemberValue],
     member_statuses: &[SnapshotStatus],
     dimension_attribute: Option<&str>,
-    definition_version: Option<i32>,
+    definition_version: i32,
+    definition_fingerprint: &str,
 ) -> Result<SnapshotRow, AppError> {
-    // `metric_snapshot.definition_version` is NOT NULL DEFAULT 1 (0086): a
-    // definition that carries no version (the P9-T4 attribute absent or
-    // empty) is at version 1, never NULL, which would refuse the write.
-    let definition_version = definition_version.unwrap_or(1);
     let mut tx = attome_db::tx::begin(db).await?;
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
         .bind(crate::ADVISORY_LOCK_NAMESPACE)
@@ -713,8 +802,8 @@ async fn insert_snapshot(
     let row: SnapshotRow = sqlx::query_as(&format!(
         "INSERT INTO metric_snapshot \
          (id, metric_ref, period_start, actual, source_version, status, superseded_ref, \
-          evaluated_by, error_message, definition_version) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
+          evaluated_by, error_message, definition_version, definition_fingerprint) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) \
          RETURNING {SNAPSHOT_COLUMNS}"
     ))
     .bind(id)
@@ -727,6 +816,7 @@ async fn insert_snapshot(
     .bind(evaluated_by)
     .bind(error_message)
     .bind(definition_version)
+    .bind(definition_fingerprint)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -742,13 +832,14 @@ async fn insert_snapshot(
             sqlx::query(
                 "INSERT INTO metric_snapshot \
                  (id, metric_ref, period_start, actual, source_version, status, superseded_ref, \
-                  evaluated_by, dimension_attribute, dimension_value, definition_version) \
+                  evaluated_by, dimension_attribute, dimension_value, definition_version, \
+                  definition_fingerprint) \
                  SELECT $1, $2, $3, $4, $5, $6, \
                         (SELECT p.id FROM metric_snapshot p \
                           WHERE p.metric_ref = $2 AND p.period_start = $3 \
                             AND p.dimension_attribute = $8 AND p.dimension_value = $9 \
                           ORDER BY p.computed_at DESC, p.id DESC LIMIT 1), \
-                        $7, $8, $9, $10",
+                        $7, $8, $9, $10, $11",
             )
             .bind(Uuid::now_v7())
             .bind(metric_id)
@@ -760,6 +851,7 @@ async fn insert_snapshot(
             .bind(attribute)
             .bind(&value)
             .bind(definition_version)
+            .bind(definition_fingerprint)
             .execute(&mut *tx)
             .await
             .map_err(AppError::internal)?;
@@ -1137,7 +1229,18 @@ pub async fn compute_and_record(
         });
     }
 
-    let (dimensions, aggregate, definition_version) = metric_dimensions(db, metric_id).await?;
+    let DefinitionShape {
+        dimensions,
+        aggregate,
+        declared_version,
+        fingerprint,
+    } = metric_dimensions(db, metric_id).await?;
+    let last = last_definition_version(db, metric_id).await?;
+    let definition_version = next_definition_version(
+        declared_version,
+        last.as_ref().map(|(v, fp)| (*v, fp.as_deref())),
+        &fingerprint,
+    );
     let mut members: Vec<MemberValue> = Vec::new();
     let mut member_statuses: Vec<SnapshotStatus> = Vec::new();
     let (actual, source_version, status, error_message): (
@@ -1269,6 +1372,7 @@ pub async fn compute_and_record(
             .then(|| dimensions.join(","))
             .as_deref(),
         definition_version,
+        &fingerprint,
     )
     .await?;
     // P11-T1: a worse status than the last one notifies the owner, once.
@@ -1896,6 +2000,42 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fingerprint_ignores_blank_and_unknown_fields_but_not_a_filter() {
+        let base =
+            serde_json::json!({ "source_kind": "query", "query_ref": "q1", "period": "month" });
+        let same = serde_json::json!({
+            "source_kind": "query", "query_ref": "q1", "period": "month",
+            "filter_expression": "  ", "formula": null, "name": "Renamed"
+        });
+        let filtered = serde_json::json!({
+            "source_kind": "query", "query_ref": "q1", "period": "month",
+            "filter_expression": "status == 'won'"
+        });
+        assert_eq!(definition_fingerprint(&base), definition_fingerprint(&same));
+        assert_ne!(
+            definition_fingerprint(&base),
+            definition_fingerprint(&filtered)
+        );
+        assert_eq!(definition_fingerprint(&base).len(), 64);
+    }
+
+    #[test]
+    fn version_moves_only_when_the_fingerprint_changes() {
+        assert_eq!(next_definition_version(None, None, "a"), 1);
+        assert_eq!(next_definition_version(Some(3), None, "a"), 3);
+        assert_eq!(next_definition_version(None, Some((1, Some("a"))), "a"), 1);
+        assert_eq!(next_definition_version(None, Some((1, Some("a"))), "b"), 2);
+        // A pre-P9-T9 row has no fingerprint: record one, keep the version.
+        assert_eq!(next_definition_version(None, Some((4, None)), "b"), 4);
+        // The declared attribute is a floor.
+        assert_eq!(
+            next_definition_version(Some(7), Some((2, Some("a"))), "b"),
+            7
+        );
+        assert_eq!(next_definition_version(Some(0), None, "a"), 1);
+    }
 
     fn member(dim: Option<&str>, value: f64) -> MemberValue {
         MemberValue {
