@@ -25,6 +25,8 @@ pub mod mailbox;
 pub mod migration_mapping;
 /// A24-T1: the migration source-connector trait.
 pub mod migration_source;
+/// A24-T4 (part): the waves a migration runs in, planned from its mapping.
+pub mod migration_waves;
 /// AJ5-T1: SPL National Address lookups and standardisation.
 pub mod national_address;
 /// S12-T2: Odoo over JSON-RPC.
