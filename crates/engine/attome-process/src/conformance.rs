@@ -22,7 +22,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -80,12 +80,12 @@ pub struct ConformanceReport {
     pub deviations: Vec<Deviation>,
 }
 
+/// One case: its id and its `(activity, at)` events in time order.
+pub type CaseEvents = (Uuid, Vec<(String, DateTime<Utc>)>);
+
 /// Replays `cases` (each case's events in time order) against `model`.
 /// Repeating the same activity (no move) is not a step. Pure.
-pub fn check(
-    cases: &[(Uuid, Vec<(String, DateTime<Utc>)>)],
-    model: &DesignedModel,
-) -> ConformanceReport {
+pub fn check(cases: &[CaseEvents], model: &DesignedModel) -> ConformanceReport {
     let mut conforming = 0u64;
     let mut counts: BTreeMap<(Option<String>, String), u64> = BTreeMap::new();
     let mut deviations = Vec::new();
@@ -122,7 +122,7 @@ pub fn check(
         .into_iter()
         .map(|((from, to), count)| DeviationCount { from, to, count })
         .collect();
-    by_step.sort_by(|a, b| b.count.cmp(&a.count));
+    by_step.sort_by_key(|d| std::cmp::Reverse(d.count));
     ConformanceReport {
         cases: total,
         conforming,
@@ -291,7 +291,7 @@ pub async fn conformance(
         });
         list.push((activity, at));
     }
-    let cases: Vec<(Uuid, Vec<(String, DateTime<Utc>)>)> = order
+    let cases: Vec<CaseEvents> = order
         .into_iter()
         .filter_map(|c| by_case.remove(&c).map(|e| (c, e)))
         .collect();
@@ -319,7 +319,7 @@ pub async fn conformance(
 /// reports the share that conform and every step the model does not allow.
 async fn get_conformance(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ConformanceReport>, AppError> {
     conformance(&state, id).await.map(Json)
