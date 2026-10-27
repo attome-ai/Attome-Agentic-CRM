@@ -615,6 +615,7 @@ pub struct MembersBody {
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = StaticListImportBody)]
 pub struct ImportBody {
     /// The CSV document (`attome_document`) to import.
     pub document_id: Uuid,

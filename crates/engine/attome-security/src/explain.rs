@@ -23,6 +23,7 @@ use crate::sharing_rules::{RuleSource, SharingRule};
 
 /// What one source does for the record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
+#[schema(as = AccessExplainEffect)]
 #[serde(rename_all = "snake_case")]
 pub enum Effect {
     Grants,

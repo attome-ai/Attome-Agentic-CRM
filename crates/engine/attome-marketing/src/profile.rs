@@ -82,6 +82,7 @@ pub struct RejectedEvent {
 
 /// What a batch did.
 #[derive(Debug, Serialize, ToSchema)]
+#[schema(as = MarketingProfileBatchResult)]
 pub struct BatchResult {
     pub accepted: usize,
     pub rejected: Vec<RejectedEvent>,

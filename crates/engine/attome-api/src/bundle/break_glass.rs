@@ -215,6 +215,7 @@ pub(crate) async fn do_close_break_glass(
 // ── HTTP surface ─────────────────────────────────────────────────────────────
 
 #[derive(Deserialize, ToSchema, Default)]
+#[schema(as = BundleBreakGlassBody)]
 pub struct BreakGlassBody {
     /// Window length in minutes. Default 60, maximum 240.
     pub ttl_minutes: Option<u32>,

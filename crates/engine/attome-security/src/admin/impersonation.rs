@@ -307,6 +307,7 @@ async fn sessions_page(
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = ImpersonationConsentBody)]
 pub(super) struct ConsentBody {
     /// The administrator who may act as you, by id or (below) by email.
     #[serde(default)]

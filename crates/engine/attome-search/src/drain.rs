@@ -53,6 +53,7 @@ pub const PRUNE_LIMIT: i64 = 50_000;
 
 /// A25-T5: how far the drain is behind.
 #[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, utoipa::ToSchema)]
+#[schema(as = SearchDrainBacklog)]
 pub struct Backlog {
     /// Events after this consumer's cursor, counted up to
     /// [`attome_core::change_feed::LAG_COUNT_CAP`].

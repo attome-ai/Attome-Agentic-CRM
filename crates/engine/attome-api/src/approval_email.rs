@@ -312,6 +312,7 @@ async fn mail_step(state: &EngineState, request_id: Uuid) -> Result<usize, AppEr
 
 /// A presented link.
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = ApprovalEmailLinkBody)]
 pub struct LinkBody {
     /// The token from the emailed link.
     pub token: String,

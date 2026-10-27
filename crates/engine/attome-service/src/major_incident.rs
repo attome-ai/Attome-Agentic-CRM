@@ -208,6 +208,7 @@ pub struct ChildrenLinked {
 
 /// How it was resolved.
 #[derive(Debug, Default, Deserialize, ToSchema)]
+#[schema(as = MajorIncidentResolveBody)]
 pub struct ResolveBody {
     /// The last status update; a standard text when absent.
     pub message: Option<String>,
@@ -215,6 +216,7 @@ pub struct ResolveBody {
 
 /// The resolution.
 #[derive(Debug, Clone, Serialize, ToSchema)]
+#[schema(as = MajorIncidentResolved)]
 pub struct Resolved {
     pub ticket_id: Uuid,
     pub restored_at: DateTime<Utc>,

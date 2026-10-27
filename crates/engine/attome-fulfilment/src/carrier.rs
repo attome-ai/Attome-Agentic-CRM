@@ -70,6 +70,7 @@ pub struct BookBody {
 
 /// A booked shipment.
 #[derive(Debug, Serialize, ToSchema)]
+#[schema(as = ShipmentBooked)]
 pub struct Booked {
     pub shipment_id: Uuid,
     pub carrier: String,
