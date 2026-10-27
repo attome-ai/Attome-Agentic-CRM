@@ -7,6 +7,8 @@ import { provideXrmI18n } from '@attome/xrm/core/i18n';
 import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { xrmAr } from '@attome/xrm/core/i18n-ar';
 import { reportBuilderAr, reportBuilderEn } from '@attome/xrm/report/builder';
+import { emailDesignerAr, emailDesignerEn } from '@attome/xrm/marketing/email-designer';
+import { appDesignerAr, appDesignerEn } from '@attome/xrm/core/admin/app-designer';
 import { describe, expect, it } from 'vitest';
 import { hostAr } from './ar.catalog';
 import { hostEn } from './en.catalog';
@@ -89,6 +91,8 @@ const LAYERS = [
   ['xrm', xrmEn, xrmAr],
   ['host', hostEn, hostAr],
   ['reportBuilder', reportBuilderEn, reportBuilderAr],
+  ['emailDesigner', emailDesignerEn, emailDesignerAr],
+  ['appDesigner', appDesignerEn, appDesignerAr],
 ] as const;
 
 describe('i18n catalog coverage — all layers', () => {
@@ -101,6 +105,8 @@ describe('i18n catalog coverage — all layers', () => {
         provideHostI18n(),
         // Y14-T4: screen layers, registered on their routes in the app.
         provideLayerCatalog(reportBuilderEn, () => Promise.resolve(reportBuilderAr)),
+        provideLayerCatalog(emailDesignerEn, () => Promise.resolve(emailDesignerAr)),
+        provideLayerCatalog(appDesignerEn, () => Promise.resolve(appDesignerAr)),
       ],
     });
     const lang = TestBed.inject(LangService);

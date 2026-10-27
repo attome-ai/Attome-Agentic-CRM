@@ -3,6 +3,7 @@
 export { AppDesignerComponent, PICKABLE_KINDS } from './app-designer.component';
 export type { Dependency, SourceObject } from './app-designer.component';
 export { AppListComponent } from './app-list.component';
+export { appDesignerAr, appDesignerEn } from './app-designer.i18n';
 export {
   ITEM_KINDS, cleanSettings, groupNode, groupsOf, itemNode, itemPaths, navProblems, navigationOf, saveCommands, toCanvas, uuidv7,
 } from './app-design.model';

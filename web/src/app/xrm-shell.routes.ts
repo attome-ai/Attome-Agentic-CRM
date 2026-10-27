@@ -206,12 +206,20 @@ export const xrmShellRoutes: Routes = [
           {
             // A21-T3 — the apps, and the app designer on the shared canvas (`new` starts one).
             path: 'apps',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/core/admin/app-designer').then(m => m.appDesignerEn),
+              () => import('@attome/xrm/core/admin/app-designer').then(m => m.appDesignerAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/core/admin/app-designer').then(m => m.AppListComponent),
           },
           {
             path: 'apps/:id/design',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/core/admin/app-designer').then(m => m.appDesignerEn),
+              () => import('@attome/xrm/core/admin/app-designer').then(m => m.appDesignerAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/core/admin/app-designer').then(m => m.AppDesignerComponent),
           },
           {
@@ -967,12 +975,20 @@ export const xrmShellRoutes: Routes = [
           {
             // E2-T1: the email designer: saved designs, or one (`new` for a fresh one).
             path: 'marketing/email-designer',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/marketing/email-designer').then(m => m.emailDesignerEn),
+              () => import('@attome/xrm/marketing/email-designer').then(m => m.emailDesignerAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/marketing/email-designer').then(m => m.EmailDesignerComponent),
           },
           {
             path: 'marketing/email-designer/:id',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/marketing/email-designer').then(m => m.emailDesignerEn),
+              () => import('@attome/xrm/marketing/email-designer').then(m => m.emailDesignerAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/marketing/email-designer').then(m => m.EmailDesignerComponent),
           },
           {
