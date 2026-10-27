@@ -56,6 +56,14 @@ pub enum AppError {
     #[error("conflict: {0}")]
     Conflict(&'static str),
 
+    /// A7-T1: a delete refused because a restrict-mode lookup somewhere in
+    /// the tree it would cascade through still references a record it
+    /// would remove. Carries the blocking path
+    /// (`account -> contact.account_ref -> case.contact_ref`).
+    /// `409 cascade_restricted`.
+    #[error("cannot delete: a restrict-mode lookup blocks the cascade at {0}")]
+    CascadeRestricted(String),
+
     #[error("version conflict")]
     VersionConflict,
 
@@ -428,6 +436,7 @@ impl IntoResponse for AppError {
             AppError::RequestRejected(_) => (StatusCode::BAD_REQUEST, "request_rejected"),
             AppError::InvalidCursor => (StatusCode::BAD_REQUEST, "invalid_cursor"),
             AppError::ResyncNeeded => (StatusCode::GONE, "resync_needed"),
+            AppError::CascadeRestricted(_) => (StatusCode::CONFLICT, "cascade_restricted"),
             AppError::IdempotencyOutcomeUnknown => {
                 (StatusCode::CONFLICT, "idempotency_outcome_unknown")
             }
@@ -1420,6 +1429,7 @@ mod tests {
             AppError::RequestRejected(_) => 31,
             AppError::InvalidCursor => 32,
             AppError::ResyncNeeded => 33,
+            AppError::CascadeRestricted(_) => 34,
         }
     }
 
@@ -1499,6 +1509,7 @@ mod tests {
             AppError::RequestRejected("x"),
             AppError::InvalidCursor,
             AppError::ResyncNeeded,
+            AppError::CascadeRestricted("account -> contact.account_ref".to_string()),
             AppError::IdempotencyOutcomeUnknown,
             AppError::IdempotencyReplayUnavailable,
             AppError::Internal("x".to_string()),

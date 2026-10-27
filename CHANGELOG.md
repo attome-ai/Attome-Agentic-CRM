@@ -7,6 +7,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 
 ## [Unreleased]
 
+### Changed
+- A delete's lookup rules now apply at every depth (A7-T1). A record that a cascade deactivates has its own dependents' rules applied in turn, and a restrict lookup anywhere below refuses the whole delete with `409 cascade_restricted`, whose message names the blocking path. Restoring the deleted record brings back what the cascade took, at every level. Before, a cascade stopped one level down.
+
 ### Fixed
 - The OpenAPI document gave two routes each the operation ids `list_rules`, `create_rule`,
   `delete_rule` and `list_templates`, which broke the generated `api-types.ts` and the Angular build.

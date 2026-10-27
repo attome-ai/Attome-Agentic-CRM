@@ -161,6 +161,11 @@ pub const ERROR_CODES: &[ErrorCode] = &[
         false,
     ),
     code(
+        "cascade_restricted",
+        "The delete would cascade to a record a restrict-mode lookup still references; the message names the path.",
+        false,
+    ),
+    code(
         "idempotency_outcome_unknown",
         "An earlier attempt with this key did not finish; its outcome is unknown.",
         false,

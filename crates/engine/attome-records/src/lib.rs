@@ -39,6 +39,8 @@ pub mod bulk;
 pub mod bulk_edit;
 mod bulk_graph;
 pub mod business_rules;
+/// A7-T1: a delete's rule at every depth, and its restore.
+pub(crate) mod cascade;
 /// AA7-T4: `POST /api/v1/query/changes`, what changed since a cursor.
 pub mod changes;
 pub mod composite;

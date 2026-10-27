@@ -143,7 +143,7 @@ pub struct ErrorResponse {
     /// `metadata_authoring_locked`, `transition_not_allowed`,
     /// `rule_violation`, `field_locked`, `field_locked_required`,
     /// `reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,
-    /// `request_rejected`, `invalid_cursor`, `resync_needed`,
+    /// `request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,
     /// `idempotency_outcome_unknown`, `idempotency_replay_unavailable`,
     /// `method_not_allowed`, or
     /// `internal_error` — one per `AppError` variant (`FieldLocked` answers

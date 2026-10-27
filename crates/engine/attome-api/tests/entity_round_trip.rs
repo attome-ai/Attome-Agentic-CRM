@@ -10855,3 +10855,127 @@ fn install_template_creates_independent_role() {
         assert_eq!(res.status(), StatusCode::NOT_FOUND);
     })
 }
+
+/// A7-T1: one request through the app, its status and JSON body (`null`
+/// when it has none).
+async fn cascade_call(
+    app: &axum::Router,
+    cookie: &str,
+    method: &str,
+    uri: String,
+    body: Option<String>,
+) -> (StatusCode, serde_json::Value) {
+    let mut req = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("cookie", cookie);
+    if body.is_some() {
+        req = req.header("content-type", "application/json");
+    }
+    let res = app
+        .clone()
+        .oneshot(req.body(Body::from(body.unwrap_or_default())).unwrap())
+        .await
+        .expect("request");
+    let status = res.status();
+    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .expect("body");
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
+}
+
+/// A7-T1: a three-entity chain, `top <- mid.top_ref <- leaf.mid_ref`, with
+/// `mid_ref`'s rule given.
+async fn cascade_chain(
+    app: &axum::Router,
+    cookie: &str,
+    state: &EngineState,
+    leaf_rule: &str,
+) -> [String; 3] {
+    let (top, top_id) = create_entity(app, cookie, "a7_top").await;
+    create_field(app, cookie, &top_id, r#"{"logicalname":"title","name":"Title","field_type":"text"}"#).await;
+    let (mid, mid_id) = create_entity(app, cookie, "a7_mid").await;
+    create_field(
+        app,
+        cookie,
+        &mid_id,
+        &format!(r#"{{"logicalname":"top_ref","name":"Top","field_type":"lookup","lookup_entity_ref":"{top_id}","on_target_delete":"cascade-deactivate"}}"#),
+    )
+    .await;
+    let (leaf, leaf_id) = create_entity(app, cookie, "a7_leaf").await;
+    create_field(
+        app,
+        cookie,
+        &leaf_id,
+        &format!(r#"{{"logicalname":"mid_ref","name":"Mid","field_type":"lookup","lookup_entity_ref":"{mid_id}","on_target_delete":"{leaf_rule}"}}"#),
+    )
+    .await;
+    sync_registry(state).await;
+    [top, mid, leaf]
+}
+
+async fn cascade_record(app: &axum::Router, cookie: &str, entity: &str, body: String) -> String {
+    let (status, json) = cascade_call(app, cookie, "POST", format!("/api/v1/{entity}"), Some(body)).await;
+    assert_eq!(status, StatusCode::CREATED, "{json:?}");
+    json["id"].as_str().expect("id").to_owned()
+}
+
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore, GET /api/v1/{entity}/{id}
+#[test]
+fn cascade_depth_three_levels_delete_and_restore() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let cookie = seed_admin(&system).await;
+        let state = system.state().clone();
+        let app = full_app(system);
+        let [top, mid, leaf] = cascade_chain(&app, &cookie, &state, "cascade-deactivate").await;
+        let t = cascade_record(&app, &cookie, &top, r#"{"title":"t"}"#.into()).await;
+        let m = cascade_record(&app, &cookie, &mid, format!(r#"{{"top_ref":"{t}"}}"#)).await;
+        let l = cascade_record(&app, &cookie, &leaf, format!(r#"{{"mid_ref":"{m}"}}"#)).await;
+
+        let (status, _) = cascade_call(&app, &cookie, "DELETE", format!("/api/v1/{top}/{t}"), None).await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        for (entity, id) in [(&mid, &m), (&leaf, &l)] {
+            let (status, _) = cascade_call(&app, &cookie, "GET", format!("/api/v1/{entity}/{id}"), None).await;
+            assert_eq!(status, StatusCode::NOT_FOUND, "{entity} must be deactivated two levels down");
+        }
+
+        let (status, body) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{top}/{t}/restore"), None).await;
+        assert!(status.is_success(), "{body:?}");
+        for (entity, id) in [(&mid, &m), (&leaf, &l)] {
+            let (status, _) = cascade_call(&app, &cookie, "GET", format!("/api/v1/{entity}/{id}"), None).await;
+            assert_eq!(status, StatusCode::OK, "{entity} must come back with the restore");
+        }
+    })
+}
+
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, GET /api/v1/{entity}/{id}
+#[test]
+fn cascade_depth_restrict_at_level_two_blocks_the_delete() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let cookie = seed_admin(&system).await;
+        let state = system.state().clone();
+        let app = full_app(system);
+        let [top, mid, leaf] = cascade_chain(&app, &cookie, &state, "restrict").await;
+        let t = cascade_record(&app, &cookie, &top, r#"{"title":"t"}"#.into()).await;
+        let m = cascade_record(&app, &cookie, &mid, format!(r#"{{"top_ref":"{t}"}}"#)).await;
+        cascade_record(&app, &cookie, &leaf, format!(r#"{{"mid_ref":"{m}"}}"#)).await;
+
+        let (status, body) = cascade_call(&app, &cookie, "DELETE", format!("/api/v1/{top}/{t}"), None).await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body:?}");
+        assert_eq!(body["error"], "cascade_restricted");
+        assert!(
+            body["message"].as_str().unwrap_or_default().contains(&format!("{leaf}.mid_ref")),
+            "the message names the blocking path: {body:?}"
+        );
+        // Nothing moved: the delete rolled back whole.
+        for (entity, id) in [(&top, &t), (&mid, &m)] {
+            let (status, _) = cascade_call(&app, &cookie, "GET", format!("/api/v1/{entity}/{id}"), None).await;
+            assert_eq!(status, StatusCode::OK, "{entity} must still be live");
+        }
+    })
+}

@@ -3516,7 +3516,7 @@ pub(crate) const CASCADE_INLINE_ROW_LIMIT: i64 = 5_000;
 /// below and `run_cascade_deactivate_job`'s async batches, so both write to
 /// the same durable ledger regardless of which one ran. No-op on an empty
 /// batch (the caller's own `RETURNING` already found nothing to cascade).
-async fn record_cascade_batch(
+pub(crate) async fn record_cascade_batch(
     conn: &mut PgConnection,
     parent_entity: &str,
     parent_record_id: Uuid,
@@ -3645,6 +3645,7 @@ pub(crate) async fn apply_dependents_on_delete(
     .await?;
 
     let mut cascade_summary = Vec::new();
+    let mut tree_budget = crate::cascade::CASCADE_TREE_LIMIT;
     for (dep_entity, dep_field, mode) in &dependents {
         if *mode != OnTargetDelete::CascadeDeactivate {
             continue;
@@ -3729,6 +3730,17 @@ pub(crate) async fn apply_dependents_on_delete(
             )
             .await?;
             cascade_summary.push(format!("{dep_entity}.{dep_field}: {affected}"));
+            // A7-T1: the rule applies below this group too.
+            let below = crate::cascade::cascade_below(
+                tx,
+                dep_entity,
+                ids,
+                user_id,
+                format!("{target_entity_name} -> {dep_entity}.{dep_field}"),
+                &mut tree_budget,
+            )
+            .await?;
+            cascade_summary.extend(below);
         }
     }
 
@@ -3806,6 +3818,8 @@ pub(crate) async fn reactivate_dependents_on_restore(
             )
             .await?;
             cascade_summary.push(format!("{dep_entity}.{dep_field}: {affected}"));
+            // A7-T1: and what the delete took below them.
+            cascade_summary.extend(crate::cascade::restore_below(&mut *tx, ids, user_id).await?);
         }
 
         // B16/T2-3 — consume this dependent group's ledger slice regardless
@@ -3907,6 +3921,18 @@ pub async fn run_cascade_deactivate_job(
             dependent_entity,
             dependent_field,
             &ids,
+        )
+        .await?;
+        // A7-T1: and below this batch, in the same transaction; a restrict
+        // lookup down there rolls the batch back and fails the job.
+        let mut budget = crate::cascade::CASCADE_TREE_LIMIT;
+        crate::cascade::cascade_below(
+            &mut tx,
+            dependent_entity,
+            ids,
+            deactivated_by,
+            format!("{target_entity} -> {dependent_entity}.{dependent_field}"),
+            &mut budget,
         )
         .await?;
         attome_db::tx::commit(tx).await?;

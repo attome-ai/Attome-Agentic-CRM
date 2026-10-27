@@ -30,9 +30,11 @@ pub enum OnTargetDelete {
     /// is left pointing at the now-inactive target (a dangling reference).
     #[default]
     Orphan,
-    /// The delete proceeds and cascades exactly one level: every live
-    /// dependent referencing the target through this lookup field is
-    /// soft-deleted too (no transitive cascade beyond that one level).
+    /// The delete proceeds and cascades: every live dependent referencing
+    /// the target through this lookup field is soft-deleted too, and each
+    /// dependent's own lookups' rules apply in turn, at every depth (A7-T1,
+    /// `attome_records::cascade`): a restrict lookup anywhere below refuses
+    /// the whole delete.
     CascadeDeactivate,
 }
 
