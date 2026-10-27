@@ -407,6 +407,18 @@ pub(crate) async fn read_record_projection(
         .map_err(AppError::internal)?;
 
     let row = row.ok_or(AppError::NotFound)?;
+    // Q15-T5: a full read of a Financial or Health value is logged.
+    attome_security::view_log::record(
+        &state.base.db,
+        attome_security::view_log::full_reads(
+            ctx,
+            entity_name,
+            attrs,
+            std::slice::from_ref(&row),
+            chrono::Utc::now(),
+        ),
+    )
+    .await?;
     let lookups = resolve_lookup_meta(state, ctx, &row, attrs).await;
     Ok(build_response(
         entity_id,

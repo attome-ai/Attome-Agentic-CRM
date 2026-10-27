@@ -39,6 +39,7 @@ pub mod sharing_rules;
 pub mod sign_in_rules;
 pub mod strict_authz;
 pub mod usage;
+pub mod view_log;
 pub mod visibility;
 
 pub use cache::SECURITY_VERSION_CHANNEL;

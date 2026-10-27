@@ -7617,6 +7617,20 @@ pub fn spawn_privilege_usage_flush(db: DbPool, interval: std::time::Duration) {
     });
 }
 
+/// Q15-T5: every ten seconds, this node's buffered full reads of Financial
+/// and Health values into `field_view_log`. Per node, like the privilege-use
+/// flush: the buffer lives in this process.
+pub fn spawn_view_log_flush(db: DbPool, interval: std::time::Duration) {
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(interval).await;
+            if let Err(error) = attome_security::view_log::flush(&db).await {
+                tracing::error!(%error, "view log: flush failed; the entries stay buffered for the next one");
+            }
+        }
+    });
+}
+
 /// E7-T4: every hour, the scheduled marketing lists that are due.
 pub fn spawn_segment_refresh_scheduler(db: DbPool, interval: std::time::Duration) {
     spawn_dedup_scheduler(

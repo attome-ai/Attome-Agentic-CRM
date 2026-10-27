@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Financial and Health read log (Q15-T5): every read showing a confirmed Financial or Health value in
+  full is logged in `field_view_log` (migration `0298`), buffered per node and written every ten seconds;
+  a full buffer is written by the read itself rather than dropped.
 - Controlled-by-parent access (Q14-T3): entity settings take
   `"access": { "mode": "controlled_by_parent", "lookup": "<attribute id>" }`, and the entity's records then
   follow the parent record that lookup names (level, unit, owner, shares, rules and deny of the parent;

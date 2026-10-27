@@ -3010,6 +3010,26 @@ pub async fn execute_stored_query_with_definition(
         attach_lookup_display_names(state, ctx, entity_id, &mut records).await;
     }
 
+    // Q15-T5: full reads of Financial and Health values in a single-entity
+    // result (lists, query/execute, reports), logged off the request path.
+    if let Some(entity_id) = qrow.entity_logical_name {
+        let reads = state
+            .entities
+            .load()
+            .get_by_id(entity_id)
+            .map(|meta| {
+                attome_security::view_log::full_reads(
+                    ctx,
+                    &meta.logicalname,
+                    &meta.attrs,
+                    &records,
+                    chrono::Utc::now(),
+                )
+            })
+            .unwrap_or_default();
+        attome_security::view_log::record(&state.base.db, reads).await?;
+    }
+
     // P-stored-query-containment addendum §11(d): a lightweight execution
     // record, not a durable AuditService event — this is the platform's
     // designated hot list-serving path (D-036), and a per-request audit

@@ -1984,3 +1984,40 @@ async fn controlled_by_parent_reader_of_the_account_reads_its_contacts() {
         "only the contact of the readable account"
     );
 }
+
+// ── Q15-T5: the view log ──
+
+/// A full read handed to the view log reaches `field_view_log` on the next
+/// flush, with who, what and when.
+#[tokio::test]
+async fn view_log_read_is_logged_on_flush() {
+    use attome_security::view_log::{ViewEntry, flush, record};
+    let db = skip_if_no_db!(test_db().await);
+    let (user_id, record_id) = (Uuid::now_v7(), Uuid::now_v7());
+    let viewed_at = chrono::Utc::now();
+    record(
+        &db,
+        vec![ViewEntry {
+            user_id,
+            entity: "q15t5_employee".into(),
+            record_id,
+            attribute: "salary".into(),
+            viewed_at,
+        }],
+    )
+    .await
+    .expect("buffer the read");
+    assert!(flush(&db).await.expect("flush") >= 1);
+    let logged: Vec<(Uuid, String, String)> = sqlx::query_as(
+        "SELECT user_ref, entity_logicalname, attribute_logicalname FROM field_view_log \
+         WHERE record_id = $1",
+    )
+    .bind(record_id)
+    .fetch_all(&db)
+    .await
+    .expect("read the log");
+    assert_eq!(
+        logged,
+        vec![(user_id, "q15t5_employee".to_owned(), "salary".to_owned())]
+    );
+}

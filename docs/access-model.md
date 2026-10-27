@@ -98,6 +98,13 @@ masked field cannot be changed. A grant in full from any profile wins over a mas
 Bulk surfaces (export, query, reports, AI context) also need the field listed for the role, unless the
 role is still in D-589 legacy mode.
 
+**Who saw a Financial or Health value.** Every read that shows a confirmed Financial or Health value in
+full (record reads, lists, `query/execute`, reports, AI context and document generation) is logged in
+`field_view_log`: who, which entity, record and field, and when. A masked value is not logged. Each node
+buffers up to 10,000 entries and writes them every ten seconds; a read that finds the buffer full writes
+it before answering, and fails if it cannot, so no entry is dropped. A node that stops between writes
+loses at most ten seconds of entries.
+
 ## Conflicting access
 
 A **conflict rule** names two roles, privileges or permission sets one person must not hold together
