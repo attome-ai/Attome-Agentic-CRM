@@ -153188,6 +153188,14 @@
           "name"
         ],
         "properties": {
+          "extends_entity_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A1-T4: a live entity this one extends. The new entity gets a copy of\nevery field of the base, and fields later added to the base (or\nrenamed, retyped or deleted there) follow on this one. One base only."
+          },
           "is_append_only": {
             "type": "boolean"
           },
@@ -160729,6 +160737,14 @@
               "null"
             ]
           },
+          "extends_entity_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A1-T4: the base entity this one extends; `null`: none."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -160845,6 +160861,14 @@
               "null"
             ],
             "description": "Admin-assigned grouping label (e.g. \"Account Management\"); `None` when uncategorized."
+          },
+          "extends_entity_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A1-T4: the base entity this one extends (its fields are copies of\nthe base's); `null`: none."
           },
           "id": {
             "type": "string",
@@ -184769,6 +184793,14 @@
                     "null"
                   ],
                   "description": "Admin-assigned grouping label (e.g. \"Account Management\"); `None` when uncategorized."
+                },
+                "extends_entity_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "A1-T4: the base entity this one extends (its fields are copies of\nthe base's); `null`: none."
                 },
                 "id": {
                   "type": "string",
@@ -224109,8 +224141,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -224162,5 +224192,7 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }

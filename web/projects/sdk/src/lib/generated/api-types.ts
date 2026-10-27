@@ -33253,6 +33253,13 @@ export interface components {
             subject_reference: string;
         };
         CreateEntityBody: {
+            /**
+             * Format: uuid
+             * @description A1-T4: a live entity this one extends. The new entity gets a copy of
+             *     every field of the base, and fields later added to the base (or
+             *     renamed, retyped or deleted there) follow on this one. One base only.
+             */
+            extends_entity_id?: string | null;
             is_append_only?: boolean;
             logicalname: string;
             name: string;
@@ -36191,6 +36198,11 @@ export interface components {
              */
             business_key_index_state: string;
             category?: string | null;
+            /**
+             * Format: uuid
+             * @description A1-T4: the base entity this one extends; `null`: none.
+             */
+            extends_entity_id?: string | null;
             /** Format: uuid */
             id: string;
             is_active: boolean;
@@ -36238,6 +36250,12 @@ export interface components {
             business_key_index_sync?: string | null;
             /** @description Admin-assigned grouping label (e.g. "Account Management"); `None` when uncategorized. */
             category?: string | null;
+            /**
+             * Format: uuid
+             * @description A1-T4: the base entity this one extends (its fields are copies of
+             *     the base's); `null`: none.
+             */
+            extends_entity_id?: string | null;
             /** Format: uuid */
             id: string;
             is_active: boolean;
@@ -45528,6 +45546,12 @@ export interface components {
                 business_key_index_sync?: string | null;
                 /** @description Admin-assigned grouping label (e.g. "Account Management"); `None` when uncategorized. */
                 category?: string | null;
+                /**
+                 * Format: uuid
+                 * @description A1-T4: the base entity this one extends (its fields are copies of
+                 *     the base's); `null`: none.
+                 */
+                extends_entity_id?: string | null;
                 /** Format: uuid */
                 id: string;
                 is_active: boolean;
