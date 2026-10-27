@@ -8,7 +8,7 @@
 //! data block. Nothing is generated, cached or spent.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::post};
 use serde::{Deserialize, Serialize};
@@ -56,7 +56,7 @@ pub struct PromptPreview {
 )]
 async fn preview_summary(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Json(body): Json<SummaryPreviewRequest>,
 ) -> Result<Json<PromptPreview>, AppError> {
     let facts =

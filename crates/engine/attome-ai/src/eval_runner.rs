@@ -19,7 +19,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse};
 use axum::{
@@ -218,7 +218,7 @@ async fn run_suite(
 )]
 async fn start_run(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(suite): Path<Uuid>,
 ) -> Result<(StatusCode, Json<EvalRunStarted>), AppError> {
     let planned = record_run(&state, suite, ctx.user_id).await?;
@@ -367,7 +367,7 @@ pub(crate) async fn run_as_last_starter(
 )]
 async fn get_run(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<EvalRun>, AppError> {
     sqlx::query_as(

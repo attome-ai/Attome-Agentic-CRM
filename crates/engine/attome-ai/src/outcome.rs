@@ -40,7 +40,7 @@
 
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_CORE, ModuleId};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{
     AppError, DEFAULT_PAGE_SIZE, ErrorResponse, PageBase, PageWindow, PaginatedResponse,
 };
@@ -296,7 +296,7 @@ struct OutcomeListQuery {
 )]
 async fn list_outcomes(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(q): Query<OutcomeListQuery>,
 ) -> Result<Json<PaginatedResponse<OutcomeSummaryRow>>, AppError> {
     let window = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
@@ -389,7 +389,7 @@ pub struct OutcomeSummaryReport {
 )]
 async fn get_outcome_summary(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<OutcomeSummaryReport>, AppError> {
     let rows: Vec<KindSourceCounts> = sqlx::query_as(
         "SELECT kind, source_module, \
@@ -559,7 +559,7 @@ pub async fn quality_by_agent(db: &PgPool, days: i64) -> Result<Vec<OutcomeQuali
 )]
 async fn get_quality_by_model(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(window): Query<QualityWindow>,
 ) -> Result<Json<PaginatedResponse<OutcomeQualityRow>>, AppError> {
     let items = quality_by_model(&state.base.db, window.days()).await?;
@@ -586,7 +586,7 @@ async fn get_quality_by_model(
 )]
 async fn get_quality_by_agent(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(window): Query<QualityWindow>,
 ) -> Result<Json<PaginatedResponse<OutcomeQualityRow>>, AppError> {
     let items = quality_by_agent(&state.base.db, window.days()).await?;

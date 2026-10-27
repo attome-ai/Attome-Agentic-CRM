@@ -31,7 +31,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -689,7 +689,7 @@ const PROPOSAL_COLUMNS: &str = "id, agent_definition_id, action_id, from_level, 
 )]
 async fn list_proposals(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Path(agent_id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<AutonomyProposal>>, AppError> {
     let items: Vec<AutonomyProposal> = sqlx::query_as(&format!(
@@ -822,7 +822,7 @@ pub async fn decide_proposal(
 )]
 async fn accept_proposal(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<AutonomyProposal>, AppError> {
     Ok(Json(decide_proposal(&state, ctx.user_id, id, true).await?))
@@ -846,7 +846,7 @@ async fn accept_proposal(
 )]
 async fn reject_proposal(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<AutonomyProposal>, AppError> {
     Ok(Json(decide_proposal(&state, ctx.user_id, id, false).await?))
@@ -974,7 +974,7 @@ pub fn validate(descriptor: &ActionDescriptor, body: &SetAutonomy) -> Result<(),
 )]
 async fn list_levels(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Path(agent_id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<AutonomyEntry>>, AppError> {
     let rows: Vec<AutonomyRow> = sqlx::query_as(&format!(
@@ -1036,7 +1036,7 @@ async fn list_levels(
 )]
 async fn set_level(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path((agent_id, action_id)): Path<(Uuid, String)>,
     Json(body): Json<SetAutonomy>,
 ) -> Result<Json<AutonomyRow>, AppError> {
@@ -1146,7 +1146,7 @@ async fn set_level(
 )]
 async fn clear_level(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path((agent_id, action_id)): Path<(Uuid, String)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

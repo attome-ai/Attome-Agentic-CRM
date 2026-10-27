@@ -19,7 +19,7 @@
 
 use attome_core::EngineState;
 use attome_core::ai_runtime_switch::{self as switch, SwitchSurface};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -177,7 +177,7 @@ pub async fn set(
 )]
 async fn get_runtime_switch(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<RuntimeSwitchView>, AppError> {
     Ok(Json(view(&state).await?))
 }
@@ -205,7 +205,7 @@ async fn get_runtime_switch(
 )]
 async fn put_runtime_switch(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(surface): Path<String>,
     Json(body): Json<SetSwitchRequest>,
 ) -> Result<Json<RuntimeSwitchView>, AppError> {

@@ -30,7 +30,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_config::ModelPrice;
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 use chrono::{DateTime, NaiveDate, Utc};
@@ -447,7 +447,7 @@ pub async fn run_backfill(state: &EngineState, job: &AgentStatsBackfill) -> Resu
 )]
 async fn post_backfill(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Json(body): Json<AgentStatsBackfill>,
 ) -> Result<(StatusCode, Json<AgentStatsBackfill>), AppError> {
     backfill_days(body.from, body.to)?;

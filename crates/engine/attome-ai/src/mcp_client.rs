@@ -42,7 +42,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
 use attome_modules::MODULE_AI;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -383,7 +383,7 @@ fn audit_event(
 )]
 async fn list_servers(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<PaginatedResponse<McpServerView>>, AppError> {
     let items: Vec<McpServerView> = sqlx::query_as(
         "SELECT id, name, url, allow_external, credential_encrypted IS NOT NULL AS has_credential, \
@@ -420,7 +420,7 @@ async fn list_servers(
 )]
 async fn create_server(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Json(body): Json<NewMcpServer>,
 ) -> Result<(StatusCode, Json<McpServerView>), AppError> {
     let name = body.name.trim();
@@ -493,7 +493,7 @@ async fn create_server(
 )]
 async fn import_tools(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<McpToolView>>, AppError> {
     let server = load_server(&state, id).await?;
@@ -584,7 +584,7 @@ async fn list_tools_of(
 )]
 async fn list_tools(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<McpToolView>>, AppError> {
     list_tools_of(&state, id).await.map(Json)
@@ -612,7 +612,7 @@ async fn list_tools(
 )]
 async fn set_tool(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path((id, tool)): Path<(Uuid, String)>,
     Json(body): Json<McpToolSetting>,
 ) -> Result<StatusCode, AppError> {

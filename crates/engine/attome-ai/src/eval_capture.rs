@@ -13,7 +13,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -110,7 +110,7 @@ pub fn case_value(
 )]
 async fn case_from_message(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(suite): Path<Uuid>,
     Json(body): Json<CaseFromMessage>,
 ) -> Result<Json<CaseAdded>, AppError> {

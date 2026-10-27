@@ -4,7 +4,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -243,7 +243,7 @@ pub struct AiFollowupRunQueued {
 )]
 async fn run_followup_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(rule): Path<Uuid>,
 ) -> Result<(StatusCode, Json<AiFollowupRunQueued>), AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

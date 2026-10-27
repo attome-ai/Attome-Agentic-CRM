@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -386,7 +386,7 @@ async fn report_for(state: &EngineState, agent: Uuid) -> Result<TrialReport, App
 )]
 async fn trial_report(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Path(agent): Path<Uuid>,
 ) -> Result<Json<TrialReport>, AppError> {
     Ok(Json(report_for(&state, agent).await?))
@@ -443,7 +443,7 @@ pub fn go_live_refusal(report: &TrialReport, min: f64) -> Option<String> {
 )]
 async fn go_live(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(agent): Path<Uuid>,
     Json(body): Json<GoLive>,
 ) -> Result<Json<TrialReport>, AppError> {

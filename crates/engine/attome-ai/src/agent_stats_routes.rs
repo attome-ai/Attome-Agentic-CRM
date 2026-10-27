@@ -16,7 +16,7 @@
 //! message text and no record values.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, CursorPage, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -447,7 +447,7 @@ pub async fn runs(
 )]
 async fn get_performance(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(range): Query<PerformanceRange>,
 ) -> Result<Json<PaginatedResponse<AgentPerformance>>, AppError> {
     let items = performance(&state.base.db, &range, None).await?;
@@ -470,7 +470,7 @@ async fn get_performance(
 )]
 async fn get_performance_daily(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Path(agent): Path<Uuid>,
     Query(range): Query<PerformanceRange>,
 ) -> Result<Json<PaginatedResponse<AgentPerformanceDay>>, AppError> {
@@ -499,7 +499,7 @@ async fn get_performance_daily(
 )]
 async fn get_runs(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Path(agent): Path<Uuid>,
     Query(query): Query<RunsQuery>,
 ) -> Result<Json<CursorPage<AgentRun>>, AppError> {

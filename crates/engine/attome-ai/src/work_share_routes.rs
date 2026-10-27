@@ -11,7 +11,7 @@
 
 use attome_audit::AuditOperation;
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, CursorPage, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -94,7 +94,7 @@ pub fn range_of(query: &ShareQuery, today: NaiveDate) -> RebuildRange {
 )]
 pub(crate) async fn get_work_share(
     State(state): State<EngineState>,
-    _admin: Authorized<Admin>,
+    _admin: Authorized<Privilege<area::Ai>>,
     Query(query): Query<ShareQuery>,
 ) -> Result<Json<PaginatedResponse<ProcessShare>>, AppError> {
     let range = range_of(&query, Utc::now().date_naive());
@@ -197,7 +197,7 @@ pub struct ShareEvent {
 )]
 pub(crate) async fn get_work_share_events(
     State(state): State<EngineState>,
-    _admin: Authorized<Admin>,
+    _admin: Authorized<Privilege<area::Ai>>,
     Path(process_key): Path<String>,
     Query(query): Query<EventsQuery>,
 ) -> Result<Json<CursorPage<ShareEvent>>, AppError> {
@@ -275,7 +275,7 @@ pub struct RebuildQueued {
 )]
 pub(crate) async fn post_rebuild(
     State(state): State<EngineState>,
-    admin: Authorized<Admin>,
+    admin: Authorized<Privilege<area::Ai>>,
     Json(range): Json<RebuildRange>,
 ) -> Result<(StatusCode, Json<RebuildQueued>), AppError> {
     check_range(range)?;

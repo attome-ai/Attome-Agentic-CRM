@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use attome_cache::token_window;
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::get};
 use serde::Serialize;
@@ -106,7 +106,7 @@ fn round2(value: f64) -> f64 {
 )]
 async fn spend_report(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<SpendReport>, AppError> {
     let spend = &state.base.config.inference.spend;
     let model = state.base.config.inference.generation.model.clone();

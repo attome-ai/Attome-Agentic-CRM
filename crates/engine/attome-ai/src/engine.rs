@@ -15,7 +15,7 @@ use attome_config::AiSurface;
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_AI, ModuleId};
 use attome_security::record_action::Read;
-use attome_server::authz::{Admin, Authorized, RecordScoped, SelfService};
+use attome_server::authz::{Authorized, Privilege, RecordScoped, SelfService, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -818,7 +818,7 @@ struct PromptListResponse {
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-async fn list_prompts(_ctx: Authorized<Admin>) -> Json<PromptListResponse> {
+async fn list_prompts(_ctx: Authorized<Privilege<area::Ai>>) -> Json<PromptListResponse> {
     let items = prompt_registry::all_versions()
         .into_iter()
         .map(|p| PromptSummary {
@@ -862,7 +862,7 @@ struct PromptDiffResponse {
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 async fn diff_prompts(
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(q): Query<PromptDiffQuery>,
 ) -> Result<Json<PromptDiffResponse>, AppError> {
     let lines = prompt_registry::diff(&q.from, &q.to)?;
@@ -892,7 +892,7 @@ async fn diff_prompts(
 )]
 async fn get_compliance_report(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<ComplianceReport>, AppError> {
     let report = compliance_report::build_report(&state.base.db).await?;
     Ok(Json(report))
@@ -923,7 +923,7 @@ async fn get_compliance_report(
 )]
 async fn get_model_comparison(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(filter): Query<ComparisonFilter>,
 ) -> Result<Json<ComparisonReport>, AppError> {
     let report = comparison_report::build_report(&state.base.db, &filter).await?;

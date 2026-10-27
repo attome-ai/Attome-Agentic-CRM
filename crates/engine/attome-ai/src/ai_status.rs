@@ -8,7 +8,7 @@
 //! enforcement agree.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::get};
 use chrono::{DateTime, Utc};
@@ -89,7 +89,7 @@ pub fn approved(cards: &[ModelCard]) -> bool {
 )]
 async fn ai_status(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<AiStatus>, AppError> {
     let db = &state.base.db;
     let generation_model = state.base.config.inference.generation.model.clone();

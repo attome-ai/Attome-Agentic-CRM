@@ -23,7 +23,7 @@
 use std::collections::BTreeMap;
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -514,7 +514,7 @@ pub struct AnalyticsQuery {
 )]
 async fn get_bot_analytics(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(q): Query<AnalyticsQuery>,
 ) -> Result<Json<BotAnalytics>, AppError> {
     let window = Window::resolve(q.from, q.to, q.surface.as_deref(), Utc::now())?;

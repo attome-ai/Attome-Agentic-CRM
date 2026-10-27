@@ -17,7 +17,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
 use attome_db::DbPool;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -92,7 +92,7 @@ pub struct NewWritePolicy {
 )]
 async fn list_policies(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<PaginatedResponse<WritePolicy>>, AppError> {
     let items: Vec<WritePolicy> = sqlx::query_as(
         "SELECT id, action_id, entity, reason, created_by, created_at \
@@ -131,7 +131,7 @@ async fn list_policies(
 )]
 async fn create_policy(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Json(body): Json<NewWritePolicy>,
 ) -> Result<(StatusCode, Json<WritePolicy>), AppError> {
     let action_id = body.action_id.trim().to_owned();
@@ -210,7 +210,7 @@ async fn create_policy(
 )]
 async fn deactivate_policy(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

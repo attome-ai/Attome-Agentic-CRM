@@ -22,7 +22,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -259,7 +259,7 @@ pub struct ScopeSwitchRequest {
 )]
 async fn list_switches(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<PaginatedResponse<ScopeSwitchView>>, AppError> {
     let items: Vec<ScopeSwitchView> = sqlx::query_as(
         "SELECT scope_kind, scope_key, enabled, cause, reason, changed_by, changed_at \
@@ -301,7 +301,7 @@ async fn list_switches(
 )]
 async fn put_switch(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path((kind, key)): Path<(String, String)>,
     Json(body): Json<ScopeSwitchRequest>,
 ) -> Result<axum::http::StatusCode, AppError> {

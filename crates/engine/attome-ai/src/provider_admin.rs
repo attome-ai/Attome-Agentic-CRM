@@ -13,7 +13,7 @@
 //! gate.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -71,7 +71,7 @@ pub struct FetchModelsResponse {
 /// sends this deployment's credential to it. That is not a read.
 async fn authorized_provider(
     state: &EngineState,
-    ctx: &Authorized<Admin>,
+    ctx: &Authorized<Privilege<area::Ai>>,
     id: Uuid,
 ) -> Result<provider::ProviderRow, AppError> {
     let row = provider::load(&state.base.db, id)
@@ -103,7 +103,7 @@ async fn authorized_provider(
 )]
 async fn set_credential(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
     Json(body): Json<SetCredentialBody>,
 ) -> Result<Json<SetCredentialResponse>, AppError> {
@@ -209,7 +209,7 @@ async fn set_credential(
 )]
 async fn fetch_models(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<FetchModelsResponse>, AppError> {
     let row = authorized_provider(&state, &ctx, id).await?;

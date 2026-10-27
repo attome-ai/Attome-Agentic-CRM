@@ -16,7 +16,7 @@
 //! at most [`MAX_PAGE`] rows of the requested kind; `next_cursor` continues.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, CursorPage, ErrorResponse};
 use axum::{
     Json, Router,
@@ -86,7 +86,7 @@ pub struct EvidenceRow {
 )]
 async fn evidence(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(q): Query<EvidenceQuery>,
 ) -> Result<Json<CursorPage<EvidenceRow>>, AppError> {
     let to = q.to.unwrap_or_else(Utc::now);

@@ -7,7 +7,7 @@
 //! it is audited like any other change and stays a person's step.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -78,7 +78,7 @@ pub struct AgentBehaviour {
 )]
 pub(crate) async fn get_behaviour(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Path(agent): Path<Uuid>,
 ) -> Result<Json<AgentBehaviour>, AppError> {
     let db = &state.base.db;
