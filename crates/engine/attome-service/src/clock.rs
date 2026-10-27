@@ -46,7 +46,7 @@ use uuid::Uuid;
 
 use attome_audit::AuditOperation;
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, Privilege};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use axum::{
     Json, Router,
@@ -899,7 +899,7 @@ async fn recalculate_ticket_route(
 )]
 async fn recalculate_unresolved_route(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Json(body): Json<RecalculateUnresolvedRequest>,
 ) -> Result<Json<UnresolvedRecalculationSummary>, AppError> {
     let summary = recalculate_unresolved(
