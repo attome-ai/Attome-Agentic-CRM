@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ATTOME_CONFIG, provideAttomeI18n } from '@attome/base';
+import { ATTOME_CONFIG, provideAttomeI18n, provideLayerCatalog } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
 import { xrmEn } from '@attome/xrm/core/i18n-en';
+import { portalAdminAr, portalAdminEn } from '../portal-admin.i18n';
 import { AdminService } from '@attome/xrm/core/admin/data';
 
 import { AuthPolicy, PortalAdminService, PortalDetail } from '../portal-admin.service';
@@ -69,6 +70,8 @@ function setup(overrides: Partial<Record<keyof PortalAdminService, unknown>> = {
       { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
       provideAttomeI18n(),
       provideXrmI18n(xrmEn),
+      // Y14-T4: the screen's own catalogue, as its route registers it.
+      provideLayerCatalog(portalAdminEn, () => Promise.resolve(portalAdminAr)),
       { provide: PortalAdminService, useValue: service },
       { provide: AdminService, useValue: admin },
       { provide: DialogService, useValue: { confirm: vi.fn(async () => confirm) } },
