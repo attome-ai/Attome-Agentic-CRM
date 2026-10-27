@@ -693,6 +693,15 @@ async fn enqueue_inner(
         entity_crud::resolve_entity(&state, entity_input).await?;
     // The route's extractor checks this too; a caller in code has none.
     ctx.require(&entity_name, "bulk")?;
+    // Q10-T13: and a bulk level other than None (Q10-T12).
+    attome_security::require_operation_level(
+        &state.base.db,
+        ctx,
+        entity_id,
+        &entity_name,
+        attome_security::RecordAction::Bulk,
+    )
+    .await?;
     validate_request_shape(&body, bulk_cap(&state))?;
     if body.mapping_ref.is_some() {
         return Err(AppError::Validation(

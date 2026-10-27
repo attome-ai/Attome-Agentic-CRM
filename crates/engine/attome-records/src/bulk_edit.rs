@@ -711,6 +711,16 @@ pub async fn submit_bulk_edit(
     if request.quiet {
         ctx.require_key(attome_core::quiet_scope::QUIET_PRIVILEGE)?;
     }
+    // Q10-T13: a bulk change needs a bulk level other than None (Q10-T12).
+    let (entity_id, entity, _, _) = crate::entity_crud::resolve_entity(state, &entity).await?;
+    attome_security::require_operation_level(
+        &state.base.db,
+        ctx,
+        entity_id,
+        &entity,
+        attome_security::RecordAction::Bulk,
+    )
+    .await?;
     let BulkEditPlan {
         items,
         matched,

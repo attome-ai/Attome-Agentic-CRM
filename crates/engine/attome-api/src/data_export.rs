@@ -422,12 +422,22 @@ async fn plan_export(
         params.extend(binds);
     }
 
+    // Q10-T13: an export reaches the records the caller's *export* level
+    // reaches (Q10-T12), and none without one.
+    attome_security::require_operation_level(
+        &state.base.db,
+        ctx,
+        entity_id,
+        entity_name,
+        attome_security::RecordAction::Export,
+    )
+    .await?;
     let access_level = attome_security::resolve_entity_access_level(
         &state.base.db,
         ctx.user_id,
         entity_id,
         entity_name,
-        attome_security::RecordAction::Read,
+        attome_security::RecordAction::Export,
     )
     .await?;
     if let Some(pred) = attome_security::rls_predicate(
@@ -435,7 +445,7 @@ async fn plan_export(
         entity_id,
         "t",
         access_level,
-        attome_security::RecordAction::Read.share_capability(),
+        attome_security::RecordAction::Export.share_capability(),
         params.len() + 1,
     ) {
         conds.push(pred.sql.trim_start_matches("AND ").to_owned());

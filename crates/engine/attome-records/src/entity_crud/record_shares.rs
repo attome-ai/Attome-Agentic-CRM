@@ -226,6 +226,15 @@ pub(super) async fn share_record(
 ) -> Result<(StatusCode, Json<RecordShare>), AppError> {
     let (capability, needs) = requested_capability(body.capability.trim())?;
     let (entity_id, entity_name) = reachable(&state, &ctx, &entity_input, record_id, needs).await?;
+    // Q10-T13: sharing needs a share level other than None (Q10-T12).
+    attome_security::require_operation_level(
+        &state.base.db,
+        &ctx,
+        entity_id,
+        &entity_name,
+        RecordAction::Share,
+    )
+    .await?;
     let (principal_type, principal_id) = principal(&state, &body, ctx.user_id).await?;
 
     let mut tx = SecurityTx::begin(

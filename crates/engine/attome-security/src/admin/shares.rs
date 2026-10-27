@@ -415,6 +415,20 @@ pub(super) async fn reassign_owner(
     ctx: Authorized<Privilege<area::Security>>,
     Json(body): Json<ReassignOwnerBody>,
 ) -> Result<Json<OwnerItem>, AppError> {
+    // Q10-T13: the Security area administers ownership, and reassigning a
+    // record still needs an assign level on its entity (Q10-T12).
+    if !ctx.is_admin {
+        let (entity_ref, entity_name) =
+            resolve_entity_ref_and_name(&state.base.db, &body.entity).await?;
+        crate::require_operation_level(
+            &state.base.db,
+            &ctx,
+            entity_ref,
+            &entity_name,
+            crate::RecordAction::Assign,
+        )
+        .await?;
+    }
     let done = reassign_owner_for(
         &state,
         ctx.user_id,

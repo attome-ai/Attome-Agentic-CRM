@@ -258,14 +258,23 @@ struct BulkTransformApprovalPending {
 )]
 async fn enqueue_bulk_transform(
     State(state): State<EngineState>,
-    _ctx: Authorized<RecordScoped<Update>>,
+    ctx: Authorized<RecordScoped<Update>>,
     _jobs: Available<BatchJobs>,
     Extension(claims): Extension<SessionClaims>,
     Path(entity_input): Path<String>,
     Json(body): Json<BulkTransformRequestBody>,
 ) -> Result<Response, AppError> {
-    let (_entity_id, entity_name, attrs, is_append_only) =
+    let (entity_id, entity_name, attrs, is_append_only) =
         entity_crud::resolve_entity(&state, &entity_input).await?;
+    // Q10-T13: a bulk change needs a bulk level other than None (Q10-T12).
+    attome_security::require_operation_level(
+        &state.base.db,
+        &ctx,
+        entity_id,
+        &entity_name,
+        attome_security::RecordAction::Bulk,
+    )
+    .await?;
     if is_append_only {
         return Err(AppError::Forbidden);
     }

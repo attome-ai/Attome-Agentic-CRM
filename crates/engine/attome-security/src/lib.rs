@@ -47,8 +47,9 @@ pub mod visibility;
 pub use cache::SECURITY_VERSION_CHANNEL;
 pub use context::{SecurityContextExt, record_action};
 pub use db::{
-    RecordAction, allowed_entity_actions, resolve_all_entity_access_levels,
-    resolve_default_share_entities, resolve_entity_access_level, resolve_owner_visible,
+    RecordAction, allowed_entity_actions, require_operation_level,
+    resolve_all_entity_access_levels, resolve_default_share_entities, resolve_entity_access_level,
+    resolve_owner_visible,
 };
 pub use resolver::{EngineSecurityResolver, resolve_uncached};
 pub use rls::{

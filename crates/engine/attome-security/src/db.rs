@@ -875,6 +875,33 @@ pub(crate) fn role_depth_sql(action: &str) -> String {
     )
 }
 
+/// Q10-T13: refuses an operation (export, bulk, assign, share, ...) when the
+/// caller's level for it on `entity_name` is `None`, so a role can allow
+/// reading an entity and still withhold exporting or sharing its records.
+/// `system.admin` is never refused. The record filter still narrows where a
+/// level other than `None` reaches.
+pub async fn require_operation_level(
+    db: &DbPool,
+    ctx: &attome_server::security::SecurityContext,
+    entity_ref: Uuid,
+    entity_name: &str,
+    action: RecordAction,
+) -> Result<(), AppError> {
+    if ctx.is_admin
+        || resolve_entity_access_level(db, ctx.user_id, entity_ref, entity_name, action).await?
+            != AccessLevel::None
+    {
+        return Ok(());
+    }
+    tracing::debug!(
+        user = %ctx.user_id,
+        entity = entity_name,
+        action = action.as_str(),
+        "operation refused: no level for it"
+    );
+    Err(AppError::Forbidden)
+}
+
 /// Q10-T11: the operations `ctx` may perform on `entity_name` somewhere,
 /// decided as the record routes decide them: the operation's privilege
 /// ([`RecordAction::privilege_action`], through
