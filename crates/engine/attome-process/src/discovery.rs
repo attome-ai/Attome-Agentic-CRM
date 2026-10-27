@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use axum::{
     Json, Router,
     extract::{Path, State},
@@ -301,7 +301,7 @@ async fn latest_snapshot(state: &EngineState, case_def_id: Uuid) -> Result<Snaps
 )]
 async fn get_dfg(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DfgSnapshotResponse>, AppError> {
     let row = latest_snapshot(&state, id).await?;
@@ -332,7 +332,7 @@ async fn get_dfg(
 )]
 async fn get_variants(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<VariantsResponse>, AppError> {
     let row = latest_snapshot(&state, id).await?;

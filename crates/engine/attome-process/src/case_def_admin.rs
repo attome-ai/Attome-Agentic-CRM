@@ -15,7 +15,7 @@
 
 use attome_core::EngineState;
 use attome_core::changeset::{Layer, Op, RecordedOp, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -161,7 +161,7 @@ fn validate_body(
 )]
 async fn list_case_defs(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
 ) -> Result<Json<PaginatedResponse<CaseDefListItem>>, AppError> {
     let rows: Vec<CaseDefRow> = sqlx::query_as(&format!(
         "SELECT {CASE_DEF_COLUMNS} FROM process_case_def \
@@ -202,7 +202,7 @@ async fn fetch_detail(state: &EngineState, id: Uuid) -> Result<CaseDefDetail, Ap
 )]
 async fn get_case_def(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CaseDefDetail>, AppError> {
     Ok(Json(fetch_detail(&state, id).await?))
@@ -225,7 +225,7 @@ async fn get_case_def(
 )]
 async fn create_case_def(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Json(body): Json<CreateCaseDefBody>,
 ) -> Result<(StatusCode, Json<CaseDefDetail>), AppError> {
@@ -303,7 +303,7 @@ async fn create_case_def(
 )]
 async fn update_case_def(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateCaseDefBody>,
@@ -399,7 +399,7 @@ async fn update_case_def(
 )]
 async fn delete_case_def(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
