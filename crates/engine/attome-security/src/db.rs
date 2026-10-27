@@ -493,6 +493,11 @@ pub struct OperationLevels {
     pub delete_bu_children: bool,
     pub assign_bu_children: bool,
     pub share_bu_children: bool,
+    /// A17-T3: the operation also reaches the records owned by the person
+    /// and by everyone under them in the position hierarchy.
+    pub read_owner_subtree: bool,
+    pub write_owner_subtree: bool,
+    pub delete_owner_subtree: bool,
 }
 
 impl Default for OperationLevels {
@@ -508,6 +513,9 @@ impl Default for OperationLevels {
             delete_bu_children: true,
             assign_bu_children: true,
             share_bu_children: true,
+            read_owner_subtree: false,
+            write_owner_subtree: false,
+            delete_owner_subtree: false,
         }
     }
 }
@@ -571,9 +579,10 @@ where
               delete_access_level, read_owner_visible, write_owner_visible, \
               delete_owner_visible, owner_layer, create_access_level, assign_access_level, \
               share_access_level, export_access_level, bulk_access_level, read_bu_children, \
-              write_bu_children, delete_bu_children, assign_bu_children, share_bu_children) \
+              write_bu_children, delete_bu_children, assign_bu_children, share_bu_children, \
+              read_owner_subtree, write_owner_subtree, delete_owner_subtree) \
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, \
-                 $17, $18, $19, $20) \
+                 $17, $18, $19, $20, $21, $22, $23) \
          ON CONFLICT (role_ref, entity_ref) DO UPDATE SET \
              read_access_level = EXCLUDED.read_access_level, \
              write_access_level = EXCLUDED.write_access_level, \
@@ -591,6 +600,9 @@ where
              delete_bu_children = EXCLUDED.delete_bu_children, \
              assign_bu_children = EXCLUDED.assign_bu_children, \
              share_bu_children = EXCLUDED.share_bu_children, \
+             read_owner_subtree = EXCLUDED.read_owner_subtree, \
+             write_owner_subtree = EXCLUDED.write_owner_subtree, \
+             delete_owner_subtree = EXCLUDED.delete_owner_subtree, \
              is_deleted = false, updated_at = NOW(), \
              row_version = role_mm_entity_access.row_version + 1 \
          RETURNING id",
@@ -615,6 +627,9 @@ where
     .bind(ops.delete_bu_children)
     .bind(ops.assign_bu_children)
     .bind(ops.share_bu_children)
+    .bind(ops.read_owner_subtree)
+    .bind(ops.write_owner_subtree)
+    .bind(ops.delete_owner_subtree)
     .fetch_one(db)
     .await
     // M01 Core C-23: a bad `role_id`/`entity_ref` FK is now `Validation`
@@ -1418,6 +1433,43 @@ pub async fn any_role_uses_business_unit_scope(
 /// the flag is never read, so it needs no special case here. Create, export
 /// and bulk have no flag and are never listed. Only roles holding the
 /// operation's privilege count, as in [`resolve_entity_access_level`].
+/// A17-T3: the `"{entity_ref}.{action}"` keys (read, update, delete) where
+/// some held role that grants the operation's privilege reaches the caller's
+/// position subtree (`{action}_owner_subtree`). One role is enough, the same
+/// most-permissive rule as the owner-visible flags.
+pub async fn resolve_owner_subtree(
+    db: &DbPool,
+    user_id: Uuid,
+) -> Result<HashSet<String>, AppError> {
+    let sql = format!(
+        r#"
+            {HELD_ROLES_CTE}
+            SELECT DISTINCT ea.entity_ref::text || '.' || a.action
+            FROM held_roles hr
+            JOIN role_mm_entity_access ea
+                ON ea.role_ref = hr.role_id AND ea.is_deleted = false
+            JOIN entity_info ei ON ei.id = ea.entity_ref
+            CROSS JOIN LATERAL (VALUES
+                ('read',   ea.read_owner_subtree),
+                ('update', ea.write_owner_subtree),
+                ('delete', ea.delete_owner_subtree)
+            ) AS a(action, subtree)
+            JOIN role_mm_privilege rp ON rp.role_ref = hr.role_id AND rp.is_deleted = false
+            JOIN privilege p ON p.id = rp.privilege_ref AND p.is_active = true
+              AND p.key = ei.logicalname || '.' || a.action
+            WHERE a.subtree
+            "#
+    );
+    let keys: Vec<String> = tokio::time::timeout(
+        QUERY_TIMEOUT,
+        sqlx::query_scalar(&sql).bind(user_id).fetch_all(db),
+    )
+    .await
+    .map_err(|_| AppError::internal("owner-subtree resolution query timed out"))?
+    .map_err(AppError::internal)?;
+    Ok(keys.into_iter().collect())
+}
+
 pub async fn resolve_own_units_only(
     db: &DbPool,
     user_id: Uuid,

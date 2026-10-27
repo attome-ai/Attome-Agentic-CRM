@@ -21,8 +21,9 @@ const TTL_SECS: u64 = 60;
 /// (Q10-T2): an entry without `unit_scope` would read every business-unit
 /// tier as reaching child units. `v4` (Q15-T1): one without `field_masks`
 /// would show nothing masked, which fails closed, but would not show the
-/// masked fields either until it expired.
-const REDIS_PREFIX: &str = "security:ctx:v4";
+/// masked fields either until it expired. `v5` (A17-T3): one without the
+/// owner subtree would not reach a manager's subtree until it expired.
+const REDIS_PREFIX: &str = "security:ctx:v5";
 /// Cross-node authz-cache invalidation doorbell (D-051) — mirrors the
 /// `meta_version` pattern (`attome-server/src/admin.rs`/`system.rs`), except the
 /// payload itself has to carry the `user_id` being invalidated: unlike

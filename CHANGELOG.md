@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Tree access (A17-T3): a role's entity access takes `read_owner_subtree`, `write_owner_subtree` and
+  `delete_owner_subtree` (migration `0299`, off by default): the operation also reaches the records owned
+  by the person and everyone under them in the position hierarchy. The security cache key moves to
+  `security:ctx:v5`.
 - Rule expressions in privilege conditions and dashboard variables (Z11-T16): a grant condition with
   operator `7` carries a rule expression, translated into the record filter's SQL and refused at save
   (422 `untranslatable_condition`) when it cannot run in the database; a dashboard variable with an

@@ -40,6 +40,7 @@ pub(super) const ENTITY_ACCESS_SNAPSHOT: &str = "SELECT ea.id, ea.role_ref, r.na
      ea.delete_owner_visible, ea.create_access_level, ea.assign_access_level, \
      ea.share_access_level, ea.export_access_level, ea.bulk_access_level, ea.read_bu_children, \
      ea.write_bu_children, ea.delete_bu_children, ea.assign_bu_children, ea.share_bu_children, \
+     ea.read_owner_subtree, ea.write_owner_subtree, ea.delete_owner_subtree, \
      ea.is_deleted, ea.row_version, ea.owner_layer \
      FROM role_mm_entity_access ea \
      JOIN role r ON r.id = ea.role_ref \
@@ -157,7 +158,8 @@ pub(super) async fn list_entity_access_grants(
                ea.create_access_level, ea.assign_access_level, ea.share_access_level,
                ea.export_access_level, ea.bulk_access_level, ea.read_bu_children,
                ea.write_bu_children, ea.delete_bu_children, ea.assign_bu_children,
-               ea.share_bu_children, ea.owner_layer
+               ea.share_bu_children, ea.read_owner_subtree, ea.write_owner_subtree,
+               ea.delete_owner_subtree, ea.owner_layer
         FROM role_mm_entity_access ea
         JOIN entity_info ei ON ei.id = ea.entity_ref
         LEFT JOIN role r ON r.id = ea.role_ref
@@ -312,7 +314,8 @@ pub(super) async fn upsert_entity_access_grant(
                 delete_access_level, read_owner_visible, write_owner_visible, \
                 delete_owner_visible, create_access_level, assign_access_level, \
                 share_access_level, export_access_level, bulk_access_level, read_bu_children, \
-                write_bu_children, delete_bu_children, assign_bu_children, share_bu_children \
+                write_bu_children, delete_bu_children, assign_bu_children, share_bu_children, \
+                read_owner_subtree, write_owner_subtree, delete_owner_subtree \
          FROM role_mm_entity_access WHERE role_ref = $1 AND entity_ref = $2 \
          FOR UPDATE",
     )

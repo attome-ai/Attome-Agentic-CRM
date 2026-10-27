@@ -320,6 +320,7 @@ export class RoleEntityAccessComponent implements OnInit {
       this.createError.set('Both role and entity are required.');
       return;
     }
+    const existing = this.grants().find(g => g.role_id === this.newRoleId && g.entity === this.newEntity);
     const body: UpsertEntityAccessGrantBody = {
       role_id: this.newRoleId,
       entity: this.newEntity,
@@ -336,6 +337,10 @@ export class RoleEntityAccessComponent implements OnInit {
       bulk_access_level: this.newBulk,
       // Without the switch the toggles are hidden and child units stay included.
       ...(this.showChildUnits() ? this.newChildren : allChildUnits()),
+      // A17-T3: kept as the existing grant has them; this page does not set them.
+      read_owner_subtree: existing?.read_owner_subtree ?? false,
+      write_owner_subtree: existing?.write_owner_subtree ?? false,
+      delete_owner_subtree: existing?.delete_owner_subtree ?? false,
     };
     this.creating.set(true);
     this.createError.set(null);

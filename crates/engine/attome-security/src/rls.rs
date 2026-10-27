@@ -488,6 +488,15 @@ fn build_predicate(
     } else {
         None
     };
+    let scope_entity = parent.as_ref().map_or(entity_ref, |link| link.parent);
+    // A17-T3: the owner arm also reaches the caller's position subtree when
+    // a role turns it on for one of these operations. A real table only,
+    // which has the owner columns.
+    let subtree = (allow_bu_tier
+        && operations
+            .iter()
+            .any(|op| ctx.unit_scope.reaches_subtree(scope_entity, op)))
+    .then_some(ctx.unit_scope.subtree_user_ids.as_slice());
     let child_deny = deny_clause_sql(
         "s",
         &record_id_col,
@@ -495,7 +504,7 @@ fn build_predicate(
         &ph.caller,
         &ph.teams,
     );
-    let (sql, scope_entity) = match &parent {
+    let sql = match &parent {
         Some(link) => {
             let alias = "rls_parent";
             let parent_col = |name: &str| format!("{alias}.{name}");
@@ -511,6 +520,7 @@ fn build_predicate(
                 },
                 true,
                 owner_visible,
+                subtree,
                 access_level,
                 required,
                 &ph,
@@ -520,13 +530,10 @@ fn build_predicate(
             } else {
                 format!("{table_alias}.{}", quote_ident(&link.lookup_column))
             };
-            (
-                format!(
-                    "AND EXISTS (SELECT 1 FROM {table} {alias} WHERE {alias}.id = {lookup} \
-                     AND {allow} AND {deny}) AND {child_deny}",
-                    table = quote_ident(&link.parent_name),
-                ),
-                link.parent,
+            format!(
+                "AND EXISTS (SELECT 1 FROM {table} {alias} WHERE {alias}.id = {lookup} \
+                 AND {allow} AND {deny}) AND {child_deny}",
+                table = quote_ident(&link.parent_name),
             )
         }
         None => {
@@ -542,11 +549,12 @@ fn build_predicate(
                 },
                 allow_bu_tier,
                 owner_visible,
+                subtree,
                 access_level,
                 required,
                 &ph,
             );
-            (format!("AND {allow} AND {child_deny}"), entity_ref)
+            format!("AND {allow} AND {child_deny}")
         }
     };
 
@@ -603,6 +611,7 @@ fn allow_and_deny(
     record: &RecordColumns,
     allow_bu_tier: bool,
     owner_visible: bool,
+    subtree: Option<&[Uuid]>,
     access_level: AccessLevel,
     required: Capability,
     ph: &Placeholders,
@@ -653,10 +662,17 @@ fn allow_and_deny(
             // = 1 team matches.
             "FALSE".to_owned()
         },
-        owner_arm = if owner_visible {
-            format!("{owner} = {} AND {owner_type} = 0", ph.caller)
-        } else {
-            "FALSE".to_owned()
+        owner_arm = match (owner_visible, subtree) {
+            // A17-T3: the person's own records and those of everyone under
+            // them; the ids are the resolver's, written by `Uuid`'s own
+            // formatter, never request data.
+            (_, Some(ids)) => format!(
+                "{owner_type} = 0 AND ({owner} = {} OR {owner} = ANY('{}'::uuid[]))",
+                ph.caller,
+                uuid_array_literal(ids)
+            ),
+            (true, None) => format!("{owner} = {} AND {owner_type} = 0", ph.caller),
+            (false, None) => "FALSE".to_owned(),
         },
         rule_arm = rule_arm.as_deref().unwrap_or("FALSE"),
         share_disjunction =
@@ -1083,6 +1099,57 @@ mod tests {
             "only the team the rule targets"
         );
         crate::sharing_rules::install([]);
+    }
+
+    /// A17-T3: an operation with the owner subtree on reaches the records the
+    /// person owns and those owned by everyone under them, inside the deny
+    /// guard; the other operations, and a person without the flag, do not.
+    #[test]
+    fn own_subtree_reaches_the_owners_under_me() {
+        let entity = Uuid::now_v7();
+        let (report_a, report_b) = (Uuid::now_v7(), Uuid::now_v7());
+        let mut manager = ctx(false);
+        manager.unit_scope.owner_subtree = HashSet::from([format!("{entity}.read")]);
+        manager.unit_scope.subtree_user_ids = vec![report_a, report_b];
+
+        let read = rls_predicate(
+            &manager,
+            entity,
+            "t",
+            AccessLevel::None,
+            Capability::View,
+            1,
+        )
+        .expect("a None level filters");
+        let arm = format!(
+            "t.owner_type = 0 AND (t.owner_ref = $2::uuid OR t.owner_ref = ANY('{{{report_a},{report_b}}}'::uuid[]))"
+        );
+        assert!(read.sql.contains(&arm), "{}", read.sql);
+        assert!(
+            read.sql.find(&arm) < read.sql.find("NOT EXISTS"),
+            "inside the deny guard"
+        );
+
+        let update = rls_predicate(
+            &manager,
+            entity,
+            "t",
+            AccessLevel::None,
+            Capability::Action,
+            1,
+        )
+        .expect("a None level filters");
+        assert!(!update.sql.contains("ANY('{"), "read only: {}", update.sql);
+        let other = rls_predicate(
+            &ctx(false),
+            entity,
+            "t",
+            AccessLevel::None,
+            Capability::View,
+            1,
+        )
+        .expect("a None level filters");
+        assert!(!other.sql.contains("owner_ref"), "{}", other.sql);
     }
 
     /// Q14-T3: a record controlled by its parent is filtered through one

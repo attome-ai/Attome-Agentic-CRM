@@ -41694,6 +41694,8 @@ export interface components {
             create_access_level: number | null;
             /** @default true */
             delete_bu_children: boolean;
+            /** @default false */
+            delete_owner_subtree: boolean;
             /**
              * Format: int32
              * @default 0
@@ -41701,6 +41703,12 @@ export interface components {
             export_access_level: number;
             /** @default true */
             read_bu_children: boolean;
+            /**
+             * @description A17-T3: the operation also reaches the records owned by the person
+             *     and by everyone under them in the position hierarchy.
+             * @default false
+             */
+            read_owner_subtree: boolean;
             /**
              * Format: int32
              * @description Null: the write level.
@@ -41711,6 +41719,8 @@ export interface components {
             share_bu_children: boolean;
             /** @default true */
             write_bu_children: boolean;
+            /** @default false */
+            write_owner_subtree: boolean;
         };
         /** @description One node, from its heartbeat in the metrics store. */
         OpsNode: {

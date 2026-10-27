@@ -247,7 +247,7 @@ mod tests {
             role_ids: Some(Vec::new()),
             unit_scope: attome_server::security::UnitScope {
                 own_org_ids: units.to_vec(),
-                own_units_only: Default::default(),
+                ..Default::default()
             },
             field_masks: Default::default(),
             service_principal: false,

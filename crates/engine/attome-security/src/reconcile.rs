@@ -352,7 +352,8 @@ async fn fetch_role_entity_access(db: &DbPool, role_id: Uuid) -> Result<EntityAc
                 ea.delete_owner_visible, ea.create_access_level, ea.assign_access_level, \
                 ea.share_access_level, ea.export_access_level, ea.bulk_access_level, \
                 ea.read_bu_children, ea.write_bu_children, ea.delete_bu_children, \
-                ea.assign_bu_children, ea.share_bu_children \
+                ea.assign_bu_children, ea.share_bu_children, ea.read_owner_subtree, \
+                ea.write_owner_subtree, ea.delete_owner_subtree \
          FROM role_mm_entity_access ea \
          JOIN entity_info ei ON ei.id = ea.entity_ref \
          WHERE ea.role_ref = $1 AND ea.is_deleted = false",

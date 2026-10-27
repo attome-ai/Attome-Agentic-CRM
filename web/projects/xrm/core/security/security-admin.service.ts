@@ -174,6 +174,7 @@ export function operationLevelsOf(g?: RoleEntityAccessItem | null): Pick<
   | 'export_access_level' | 'bulk_access_level'
   | 'read_bu_children' | 'write_bu_children' | 'delete_bu_children'
   | 'assign_bu_children' | 'share_bu_children'
+  | 'read_owner_subtree' | 'write_owner_subtree' | 'delete_owner_subtree'
 > {
   return {
     create_access_level: g?.create_access_level ?? null,
@@ -186,6 +187,10 @@ export function operationLevelsOf(g?: RoleEntityAccessItem | null): Pick<
     delete_bu_children:  g?.delete_bu_children ?? true,
     assign_bu_children:  g?.assign_bu_children ?? true,
     share_bu_children:   g?.share_bu_children ?? true,
+    // A17-T3: no screen sets these yet; an existing grant keeps its own.
+    read_owner_subtree:   g?.read_owner_subtree ?? false,
+    write_owner_subtree:  g?.write_owner_subtree ?? false,
+    delete_owner_subtree: g?.delete_owner_subtree ?? false,
   };
 }
 

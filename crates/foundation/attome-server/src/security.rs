@@ -159,9 +159,27 @@ pub struct UnitScope {
     /// [`Self::own_org_ids`] rather than
     /// [`SecurityContext::accessible_org_ids`].
     pub own_units_only: HashSet<String>,
+    /// A17-T3: `"{entity_ref}.{action}"` keys whose owner arm also reaches
+    /// [`Self::subtree_user_ids`]. `#[serde(default)]`: a context cached
+    /// before this field existed reaches no subtree.
+    #[serde(default)]
+    pub owner_subtree: HashSet<String>,
+    /// A17-T3: everyone under the caller in the position hierarchy. Empty
+    /// unless [`Self::owner_subtree`] lists a key.
+    #[serde(default)]
+    pub subtree_user_ids: Vec<Uuid>,
 }
 
 impl UnitScope {
+    /// A17-T3: whether `entity_ref`'s owner arm for `action` reaches the
+    /// caller's subtree.
+    pub fn reaches_subtree(&self, entity_ref: Uuid, action: &str) -> bool {
+        !self.owner_subtree.is_empty()
+            && self
+                .owner_subtree
+                .contains(&format!("{entity_ref}.{action}"))
+    }
+
     /// True when `entity_ref`'s `BusinessUnit` tier for `action` excludes
     /// child units.
     pub fn excludes_children(&self, entity_ref: Uuid, action: &str) -> bool {

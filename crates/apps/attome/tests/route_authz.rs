@@ -782,6 +782,15 @@ fn matching(chars: &[char], start: usize, open: char, close: char) -> Option<usi
             if c == '"' {
                 in_string = false;
             }
+        } else if c == '\'' && chars.get(i + 2) == Some(&'\'') {
+            // A one-character literal such as `'"'` (an `If-Match` parser's
+            // `trim_matches('"')`) is not the start of a string.
+            i += 3;
+            continue;
+        } else if c == '\'' && chars.get(i + 1) == Some(&'\\') && chars.get(i + 3) == Some(&'\'') {
+            // An escaped one, such as `'\\'` or `'\n'`.
+            i += 4;
+            continue;
         } else if c == '"' {
             in_string = true;
         } else if c == open {

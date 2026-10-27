@@ -91,6 +91,17 @@ pub(crate) async fn resolve_record_level_context(
     } else {
         Vec::new()
     };
+    // A17-T3: the subtree a role's owner arm reaches, only when some role
+    // turns it on. Kept apart from `subordinate_user_ids`, which also widens
+    // shares (F138) and stays tied to `position_hierarchy_enabled`.
+    let owner_subtree = crate::db::resolve_owner_subtree(db, user_id).await?;
+    let subtree_user_ids = if owner_subtree.is_empty() {
+        Vec::new()
+    } else if position_hierarchy_enabled {
+        subordinate_user_ids.clone()
+    } else {
+        crate::db::resolve_subordinate_user_ids(db, user_id).await?
+    };
     Ok(RecordLevelContext {
         accessible_org_ids,
         team_ids,
@@ -100,6 +111,8 @@ pub(crate) async fn resolve_record_level_context(
         unit_scope: attome_server::security::UnitScope {
             own_org_ids,
             own_units_only,
+            owner_subtree,
+            subtree_user_ids,
         },
     })
 }

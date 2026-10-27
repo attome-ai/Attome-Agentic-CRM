@@ -40,6 +40,12 @@ several roles give business-unit level, child units count when any of them inclu
 **Ownership.** A role can let owners see the records they own (`{operation}_owner_visible`), whatever
 its level.
 
+**My records and everything under me.** A role can also reach, per operation, the records owned by the
+person and by everyone under them in the position hierarchy (`{operation}_owner_subtree` for read, write
+and delete), whatever its level: a manager with no level of their own sees their team's records. The
+subtree is resolved with the rest of the person's access and is separate from the position-hierarchy
+switch that widens shares.
+
 **Conditional grants.** A role's privilege may carry up to three conditions that narrow which records it
 reaches (D-369): a field compared with a value, or (operator 7) a rule expression such as
 `amount > 100 and status == "open"` over the entity's filterable, ungated fields. An expression runs in the
