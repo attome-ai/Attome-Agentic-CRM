@@ -355,6 +355,28 @@ fn validate_attribute_options(
     };
     let ft = FieldType::try_from(field_type)
         .map_err(|e| AppError::Validation(format!("invalid field_type: {e}")))?;
+    // A8-T1: a polymorphic id attribute is text, names its entity attribute
+    // and what it may point at.
+    if let Some(raw) = options.get("polymorphic") {
+        let poly: attome_records::polymorphic::PolymorphicOptions =
+            serde_json::from_value(raw.clone())
+                .map_err(|e| AppError::Validation(format!("invalid polymorphic options: {e}")))?;
+        if ft != FieldType::Text {
+            return Err(AppError::Validation(
+                "a polymorphic lookup's id attribute is a text field".into(),
+            ));
+        }
+        if !valid_identifier(&poly.pair) {
+            return Err(AppError::Validation(
+                "polymorphic.pair must name the entity attribute".into(),
+            ));
+        }
+        if poly.targets.is_empty() && poly.extends.is_none() {
+            return Err(AppError::Validation(
+                "polymorphic needs targets or extends".into(),
+            ));
+        }
+    }
     attome_field::validate_options(&ft, options)
 }
 

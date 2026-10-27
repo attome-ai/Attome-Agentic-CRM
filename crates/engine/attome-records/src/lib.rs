@@ -74,6 +74,8 @@ pub mod mutation_ring;
 pub mod note_replies;
 /// S7-T1: the read-only OData v4 feed.
 pub mod odata;
+/// A8-T1: polymorphic lookups (a target entity and record id pair).
+pub mod polymorphic;
 /// L2-T5: the data-quality fix transforms bulk edit's `fix` applies.
 pub mod quality_fix;
 pub mod query_admin;

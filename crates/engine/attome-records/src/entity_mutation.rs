@@ -2033,6 +2033,8 @@ pub async fn create_one_as(
     if mode.enforce_lookup_liveness() {
         lock_lookup_targets(tx, state, attrs, obj).await?;
     }
+    // A8-T1: a polymorphic pair points at a live, allowed, readable record.
+    crate::polymorphic::check_writes(state, principal, attrs, obj).await?;
     lock_file_fields_for(tx, principal, entity_name, None, attrs, obj, mode).await?;
 
     // D-137: owner_ref/owner_type are set unconditionally to the creator here
@@ -3192,6 +3194,8 @@ pub async fn update_one_as(
     if mode.enforce_lookup_liveness() {
         lock_lookup_targets(tx, state, attrs, obj).await?;
     }
+    // A8-T1: a polymorphic pair points at a live, allowed, readable record.
+    crate::polymorphic::check_writes(state, principal, attrs, obj).await?;
     lock_file_fields_for(
         tx,
         principal,
