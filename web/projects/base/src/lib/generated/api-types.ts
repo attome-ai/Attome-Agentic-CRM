@@ -7195,6 +7195,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/migration-projects/{id}/waves/{wave_id}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare a wave with its source
+         * @description Per target entity: rows sent, refused, created and updated, created
+         *     records still live, and for a sample of applied rows the fields whose
+         *     stored value differs from what the source sent. Administrators only.
+         */
+        get: operations["compare_wave"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/migration-projects/{id}/waves/{wave_id}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Roll back a migration wave
+         * @description Takes back the project's newest wave: each of its imports is undone
+         *     (records it created are deleted and records it updated restored, unless
+         *     they changed since) or, if not yet applying, cancelled. An import still
+         *     applying is left alone and counted as busy; roll back again once it
+         *     finishes. Refused while a wave is queued or running, and for any but the
+         *     newest wave. Administrators only. Audited.
+         */
+        post: operations["rollback_wave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/migration-projects/{project_id}/runs": {
         parameters: {
             query?: never;
@@ -21170,6 +21217,152 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/queue-items/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A queue item's history
+         * @description Its picks, releases and transfers, oldest first (at most 200).
+         */
+        get: operations["item_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/queue-items/{id}/pick": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pick a queue item
+         * @description The caller takes a waiting item, which they may update and whose record
+         *     they may read. Recorded in the item's history. Audited.
+         */
+        post: operations["pick_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/queue-items/{id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Release a queue item
+         * @description Puts a picked item back to waiting, unassigned: its assignee, or an
+         *     administrator. Recorded in the item's history. Audited.
+         */
+        post: operations["release_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/queue-items/{id}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer a queue item
+         * @description Moves an item to another queue, waiting and unassigned. Recorded in the
+         *     item's history. Audited.
+         */
+        post: operations["transfer_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/queue-offers/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My open work offers
+         * @description The caller's offers still open, soonest to expire first (at most 50).
+         */
+        get: operations["my_offers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/queue-offers/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a work offer
+         * @description The caller takes the queue item offered to them: it is picked for them,
+         *     and a service ticket it holds with no assignee is assigned to them.
+         *     Audited.
+         */
+        post: operations["accept_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/queue-offers/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline a work offer
+         * @description The caller refuses the queue item offered to them; it is offered to the
+         *     next available agent. Audited.
+         */
+        post: operations["decline_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/queues/{id}/assign": {
         parameters: {
             query?: never;
@@ -24484,6 +24677,31 @@ export interface paths {
          * @description Recrawl a target. Administrators only. Audited.
          */
         post: operations["recrawl_target"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/whatsapp/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * WhatsApp's subscription check
+         * @description Meta's subscription check for a WhatsApp system.
+         */
+        get: operations["whatsapp_verify"];
+        put?: never;
+        /**
+         * WhatsApp's webhook events
+         * @description The WhatsApp Cloud API's signed events: each message becomes part of the
+         *     sender's conversation.
+         */
+        post: operations["whatsapp_events"];
         delete?: never;
         options?: never;
         head?: never;
@@ -29227,10 +29445,9 @@ export interface components {
         AssignRequest: {
             /**
              * Format: uuid
-             * @description Required when the queue's distribution is `manual` (or `skill_match`,
-             *     which falls back to manual — see [`Distribution::SkillMatch`]'s doc
-             *     comment); must be omitted for `round_robin`/`least_loaded`, whose
-             *     target is computed automatically.
+             * @description Required when the queue's distribution is `manual`; optional for
+             *     `skill_match` (the member must hold the skills); must be omitted for
+             *     `round_robin`/`least_loaded`, whose target is computed automatically.
              */
             assignee_id?: string | null;
             /** Format: uuid */
@@ -36308,6 +36525,30 @@ export interface components {
         EnrollResponseBody: {
             otpauth_uri: string;
             secret_base32: string;
+        };
+        /** @description One target entity of a wave. */
+        EntityCompare: {
+            /** Format: int64 */
+            created: number;
+            entity: string;
+            /**
+             * Format: int64
+             * @description Rows refused by validation.
+             */
+            invalid: number;
+            /**
+             * Format: int64
+             * @description Created records still live.
+             */
+            live: number;
+            samples: components["schemas"]["SampleCompare"][];
+            /**
+             * Format: int64
+             * @description Rows the source sent.
+             */
+            sent: number;
+            /** Format: int64 */
+            updated: number;
         };
         EntityConfig: {
             /**
@@ -48461,6 +48702,73 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_QueueItemEvent: {
+            items: {
+                /** Format: uuid */
+                actor?: string | null;
+                /** Format: date-time */
+                at: string;
+                /** Format: uuid */
+                id: string;
+                /** @description `enter`, `pick`, `release` or `transfer`. */
+                kind: string;
+                /**
+                 * Format: uuid
+                 * @description The queue the item was in.
+                 */
+                queue_id: string;
+                /**
+                 * Format: uuid
+                 * @description For a transfer, the queue it went to.
+                 */
+                to_queue_id?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_QueueOffer: {
+            items: {
+                channel: string;
+                /** Format: date-time */
+                expires_at: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                item_id: string;
+                /** Format: date-time */
+                offered_at: string;
+                /** Format: uuid */
+                queue_id: string;
+                /** @description The entity of the record the item holds (J10-T2 opens it). */
+                record_entity?: string | null;
+                /** @description The id of the record the item holds. */
+                record_id?: string | null;
+                /** @description `offered`, `accepted`, `declined`, `expired` or `withdrawn`. */
+                status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_RecentItem: {
             items: {
                 /** @description Deleted since it was opened: restore it rather than open it. */
@@ -50823,7 +51131,7 @@ export interface components {
                 since?: string | null;
                 /** Format: date-time */
                 started_at?: string | null;
-                /** @description `queued`, `running`, `loaded` or `failed`. */
+                /** @description `queued`, `running`, `loaded`, `failed` or `rolled_back`. */
                 status: string;
                 system: string;
             }[];
@@ -52942,6 +53250,58 @@ export interface components {
             /** Format: uuid */
             query_id: string;
             shares: components["schemas"]["QueryShare"][];
+        };
+        /** @description One entry of a queue item's history. */
+        QueueItemEvent: {
+            /** Format: uuid */
+            actor?: string | null;
+            /** Format: date-time */
+            at: string;
+            /** Format: uuid */
+            id: string;
+            /** @description `enter`, `pick`, `release` or `transfer`. */
+            kind: string;
+            /**
+             * Format: uuid
+             * @description The queue the item was in.
+             */
+            queue_id: string;
+            /**
+             * Format: uuid
+             * @description For a transfer, the queue it went to.
+             */
+            to_queue_id?: string | null;
+        };
+        /** @description A queue item's state after a move. */
+        QueueItemState: {
+            /** Format: uuid */
+            assigned_ref?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            queue_id: string;
+            /** @description `waiting`, `picked` or `done`. */
+            status: string;
+        };
+        /** @description An offer of a queue item to an agent. */
+        QueueOffer: {
+            channel: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            item_id: string;
+            /** Format: date-time */
+            offered_at: string;
+            /** Format: uuid */
+            queue_id: string;
+            /** @description The entity of the record the item holds (J10-T2 opens it). */
+            record_entity?: string | null;
+            /** @description The id of the record the item holds. */
+            record_id?: string | null;
+            /** @description `offered`, `accepted`, `declined`, `expired` or `withdrawn`. */
+            status: string;
         };
         /** @description M13-T4: what a test send or a replay queued. */
         QueuedDeliveries: {
@@ -55642,6 +56002,13 @@ export interface components {
             lines_restored: number;
             /** Format: uuid */
             opportunity_id: string;
+        };
+        /** @description One applied row whose stored values were compared. */
+        SampleCompare: {
+            /** @description Fields whose stored value differs from what the source sent (names only). */
+            mismatched: string[];
+            /** Format: uuid */
+            record_id: string;
         };
         SaveAsTemplate: {
             /** @description The record's entity (its logical name). */
@@ -59154,6 +59521,13 @@ export interface components {
             /** Format: date-time */
             transcribed_at: string;
         };
+        TransferBody: {
+            /**
+             * Format: uuid
+             * @description The queue the item moves to.
+             */
+            queue_id: string;
+        };
         TransitionBody: {
             /** Format: int64 */
             row_version: number;
@@ -60611,6 +60985,33 @@ export interface components {
             assets_to_change: number;
             sample: components["schemas"]["WarrantyChange"][];
         };
+        WaveCompare: {
+            entities: components["schemas"]["EntityCompare"][];
+            status: string;
+            /** Format: uuid */
+            wave_id: string;
+        };
+        /** @description What a rollback did. */
+        WaveRollback: {
+            /**
+             * Format: int64
+             * @description Imports still applying, left alone; roll back again once they finish.
+             */
+            busy: number;
+            /**
+             * Format: int64
+             * @description Imports cancelled before applying.
+             */
+            cancelled: number;
+            status: string;
+            /**
+             * Format: int64
+             * @description Imports whose undo was queued.
+             */
+            undone: number;
+            /** Format: uuid */
+            wave_id: string;
+        };
         /** @description One wave. */
         WaveRow: {
             counts: Record<string, never>;
@@ -60632,7 +61033,7 @@ export interface components {
             since?: string | null;
             /** Format: date-time */
             started_at?: string | null;
-            /** @description `queued`, `running`, `loaded` or `failed`. */
+            /** @description `queued`, `running`, `loaded`, `failed` or `rolled_back`. */
             status: string;
             system: string;
         };
@@ -83975,6 +84376,119 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    compare_wave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The migration project */
+                id: string;
+                /** @description The wave */
+                wave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The comparison */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaveCompare"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project or wave */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rollback_wave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The migration project */
+                id: string;
+                /** @description The wave */
+                wave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rollback, queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaveRollback"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project or wave */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A wave is queued or running, or a later wave exists */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -125306,6 +125820,375 @@ export interface operations {
             };
         };
     };
+    item_history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The queue item */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_QueueItemEvent"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks queue_item.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such item the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pick_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The queue item */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The item, picked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueItemState"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks queue_item.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such item the caller may update */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The item is already picked or done */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    release_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The queue item */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The item, waiting */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueItemState"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks queue_item.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such item the caller may update */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The item is not picked, is done, or is someone else's */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    transfer_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The queue item */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferBody"];
+            };
+        };
+        responses: {
+            /** @description The item, in its new queue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueItemState"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks queue_item.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such item the caller may update */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The item is done */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such queue, or the item is already in it */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    my_offers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open offers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_QueueOffer"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The offer */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The offer, accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueOffer"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such offer to the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The offer expired or was decided, or the item was taken */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    decline_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The offer */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The offer, declined */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueOffer"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such offer to the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The offer expired or was decided */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     assign_route: {
         parameters: {
             query?: never;
@@ -134965,6 +135848,77 @@ export interface operations {
             };
             /** @description Target not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    whatsapp_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The WhatsApp system's inbound key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The challenge, echoed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Not licensed, no such system, or the wrong verify token */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    whatsapp_events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The WhatsApp system's inbound key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Received */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not licensed, no such system, or a bad signature */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

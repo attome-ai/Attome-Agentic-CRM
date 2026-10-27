@@ -37770,6 +37770,201 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/migration-projects/{id}/waves/{wave_id}/compare": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Compare a wave with its source",
+        "description": "Per target entity: rows sent, refused, created and updated, created\nrecords still live, and for a sample of applied rows the fields whose\nstored value differs from what the source sent. Administrators only.",
+        "operationId": "compare_wave",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The migration project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "wave_id",
+            "in": "path",
+            "description": "The wave",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The comparison",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaveCompare"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project or wave",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/migration-projects/{id}/waves/{wave_id}/rollback": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Roll back a migration wave",
+        "description": "Takes back the project's newest wave: each of its imports is undone\n(records it created are deleted and records it updated restored, unless\nthey changed since) or, if not yet applying, cancelled. An import still\napplying is left alone and counted as busy; roll back again once it\nfinishes. Refused while a wave is queued or running, and for any but the\nnewest wave. Administrators only. Audited.",
+        "operationId": "rollback_wave",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The migration project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "wave_id",
+            "in": "path",
+            "description": "The wave",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The rollback, queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaveRollback"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project or wave",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A wave is queued or running, or a later wave exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/migration-projects/{project_id}/runs": {
       "get": {
         "tags": [
@@ -105179,6 +105374,615 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/queue-items/{id}/history": {
+      "get": {
+        "tags": [
+          "queues"
+        ],
+        "summary": "A queue item's history",
+        "description": "Its picks, releases and transfers, oldest first (at most 200).",
+        "operationId": "item_history",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The queue item",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_QueueItemEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks queue_item.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/queue-items/{id}/pick": {
+      "post": {
+        "tags": [
+          "queues"
+        ],
+        "summary": "Pick a queue item",
+        "description": "The caller takes a waiting item, which they may update and whose record\nthey may read. Recorded in the item's history. Audited.",
+        "operationId": "pick_item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The queue item",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The item, picked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueItemState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks queue_item.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item the caller may update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The item is already picked or done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/queue-items/{id}/release": {
+      "post": {
+        "tags": [
+          "queues"
+        ],
+        "summary": "Release a queue item",
+        "description": "Puts a picked item back to waiting, unassigned: its assignee, or an\nadministrator. Recorded in the item's history. Audited.",
+        "operationId": "release_item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The queue item",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The item, waiting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueItemState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks queue_item.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item the caller may update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The item is not picked, is done, or is someone else's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/queue-items/{id}/transfer": {
+      "post": {
+        "tags": [
+          "queues"
+        ],
+        "summary": "Transfer a queue item",
+        "description": "Moves an item to another queue, waiting and unassigned. Recorded in the\nitem's history. Audited.",
+        "operationId": "transfer_item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The queue item",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The item, in its new queue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueItemState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks queue_item.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item the caller may update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The item is done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No such queue, or the item is already in it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/queue-offers/mine": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "My open work offers",
+        "description": "The caller's offers still open, soonest to expire first (at most 50).",
+        "operationId": "my_offers",
+        "responses": {
+          "200": {
+            "description": "The open offers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_QueueOffer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/queue-offers/{id}/accept": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Accept a work offer",
+        "description": "The caller takes the queue item offered to them: it is picked for them,\nand a service ticket it holds with no assignee is assigned to them.\nAudited.",
+        "operationId": "accept_route",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The offer",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The offer, accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueOffer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such offer to the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The offer expired or was decided, or the item was taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/queue-offers/{id}/decline": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Decline a work offer",
+        "description": "The caller refuses the queue item offered to them; it is offered to the\nnext available agent. Audited.",
+        "operationId": "decline_route",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The offer",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The offer, declined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueOffer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such offer to the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The offer expired or was decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/queues/{id}/assign": {
       "post": {
         "tags": [
@@ -121186,6 +121990,120 @@
         "x-module": "core",
         "x-privilege": "authenticated",
         "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/whatsapp/{key}": {
+      "get": {
+        "tags": [
+          "omnichannel"
+        ],
+        "summary": "WhatsApp's subscription check",
+        "description": "Meta's subscription check for a WhatsApp system.",
+        "operationId": "whatsapp_verify",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The WhatsApp system's inbound key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The challenge, echoed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not licensed, no such system, or the wrong verify token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "omnichannel",
+        "x-privilege": "public",
+        "x-rate-class": "portal_status",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "omnichannel"
+        ],
+        "summary": "WhatsApp's webhook events",
+        "description": "The WhatsApp Cloud API's signed events: each message becomes part of the\nsender's conversation.",
+        "operationId": "whatsapp_events",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The WhatsApp system's inbound key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Received"
+          },
+          "404": {
+            "description": "Not licensed, no such system, or a bad signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "omnichannel",
+        "x-privilege": "public",
+        "x-rate-class": "webchat",
         "x-risk": "medium"
       }
     },
@@ -143307,7 +144225,7 @@
               "null"
             ],
             "format": "uuid",
-            "description": "Required when the queue's distribution is `manual` (or `skill_match`,\nwhich falls back to manual — see [`Distribution::SkillMatch`]'s doc\ncomment); must be omitted for `round_robin`/`least_loaded`, whose\ntarget is computed automatically."
+            "description": "Required when the queue's distribution is `manual`; optional for\n`skill_match` (the member must hold the skills); must be omitted for\n`round_robin`/`least_loaded`, whose target is computed automatically."
           },
           "ticket_id": {
             "type": "string",
@@ -161422,6 +162340,53 @@
           },
           "secret_base32": {
             "type": "string"
+          }
+        }
+      },
+      "EntityCompare": {
+        "type": "object",
+        "description": "One target entity of a wave.",
+        "required": [
+          "entity",
+          "sent",
+          "invalid",
+          "created",
+          "updated",
+          "live",
+          "samples"
+        ],
+        "properties": {
+          "created": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "invalid": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rows refused by validation."
+          },
+          "live": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Created records still live."
+          },
+          "samples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SampleCompare"
+            }
+          },
+          "sent": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rows the source sent."
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -192866,6 +193831,174 @@
           }
         }
       },
+      "PaginatedResponse_QueueItemEvent": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One entry of a queue item's history.",
+              "required": [
+                "id",
+                "kind",
+                "queue_id",
+                "at"
+              ],
+              "properties": {
+                "actor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`enter`, `pick`, `release` or `transfer`."
+                },
+                "queue_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The queue the item was in."
+                },
+                "to_queue_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "For a transfer, the queue it went to."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_QueueOffer": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "An offer of a queue item to an agent.",
+              "required": [
+                "id",
+                "item_id",
+                "queue_id",
+                "channel",
+                "status",
+                "offered_at",
+                "expires_at"
+              ],
+              "properties": {
+                "channel": {
+                  "type": "string"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "item_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "offered_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "queue_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "record_entity": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The entity of the record the item holds (J10-T2 opens it)."
+                },
+                "record_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The id of the record the item holds."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`offered`, `accepted`, `declined`, `expired` or `withdrawn`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_RecentItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -199097,7 +200230,7 @@
                 },
                 "status": {
                   "type": "string",
-                  "description": "`queued`, `running`, `loaded` or `failed`."
+                  "description": "`queued`, `running`, `loaded`, `failed` or `rolled_back`."
                 },
                 "system": {
                   "type": "string"
@@ -204427,6 +205560,136 @@
             "items": {
               "$ref": "#/components/schemas/QueryShare"
             }
+          }
+        }
+      },
+      "QueueItemEvent": {
+        "type": "object",
+        "description": "One entry of a queue item's history.",
+        "required": [
+          "id",
+          "kind",
+          "queue_id",
+          "at"
+        ],
+        "properties": {
+          "actor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`enter`, `pick`, `release` or `transfer`."
+          },
+          "queue_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The queue the item was in."
+          },
+          "to_queue_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "For a transfer, the queue it went to."
+          }
+        }
+      },
+      "QueueItemState": {
+        "type": "object",
+        "description": "A queue item's state after a move.",
+        "required": [
+          "id",
+          "queue_id",
+          "status"
+        ],
+        "properties": {
+          "assigned_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "queue_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`waiting`, `picked` or `done`."
+          }
+        }
+      },
+      "QueueOffer": {
+        "type": "object",
+        "description": "An offer of a queue item to an agent.",
+        "required": [
+          "id",
+          "item_id",
+          "queue_id",
+          "channel",
+          "status",
+          "offered_at",
+          "expires_at"
+        ],
+        "properties": {
+          "channel": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "offered_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "queue_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "record_entity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The entity of the record the item holds (J10-T2 opens it)."
+          },
+          "record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The id of the record the item holds."
+          },
+          "status": {
+            "type": "string",
+            "description": "`offered`, `accepted`, `declined`, `expired` or `withdrawn`."
           }
         }
       },
@@ -211494,6 +212757,27 @@
             "minimum": 0
           },
           "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SampleCompare": {
+        "type": "object",
+        "description": "One applied row whose stored values were compared.",
+        "required": [
+          "record_id",
+          "mismatched"
+        ],
+        "properties": {
+          "mismatched": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Fields whose stored value differs from what the source sent (names only)."
+          },
+          "record_id": {
             "type": "string",
             "format": "uuid"
           }
@@ -220726,6 +222010,19 @@
           }
         }
       },
+      "TransferBody": {
+        "type": "object",
+        "required": [
+          "queue_id"
+        ],
+        "properties": {
+          "queue_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The queue the item moves to."
+          }
+        }
+      },
       "TransitionBody": {
         "type": "object",
         "required": [
@@ -224484,6 +225781,67 @@
           }
         }
       },
+      "WaveCompare": {
+        "type": "object",
+        "required": [
+          "wave_id",
+          "status",
+          "entities"
+        ],
+        "properties": {
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntityCompare"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "wave_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WaveRollback": {
+        "type": "object",
+        "description": "What a rollback did.",
+        "required": [
+          "wave_id",
+          "status",
+          "undone",
+          "cancelled",
+          "busy"
+        ],
+        "properties": {
+          "busy": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Imports still applying, left alone; roll back again once they finish.",
+            "minimum": 0
+          },
+          "cancelled": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Imports cancelled before applying.",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string"
+          },
+          "undone": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Imports whose undo was queued.",
+            "minimum": 0
+          },
+          "wave_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "WaveRow": {
         "type": "object",
         "description": "One wave.",
@@ -224546,7 +225904,7 @@
           },
           "status": {
             "type": "string",
-            "description": "`queued`, `running`, `loaded` or `failed`."
+            "description": "`queued`, `running`, `loaded`, `failed` or `rolled_back`."
           },
           "system": {
             "type": "string"
@@ -225697,7 +227055,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -225750,5 +227107,6 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10"
 }
