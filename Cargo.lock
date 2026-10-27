@@ -2313,6 +2313,7 @@ dependencies = [
  "attome-jobs",
  "attome-metadata",
  "attome-modules",
+ "attome-rules",
  "attome-server",
  "attome-testkit",
  "attome-types",
