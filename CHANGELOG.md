@@ -40,6 +40,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Report builder (P1-T1, `/xrm/reports/builder`, `@attome/xrm/report/builder`): a table of chosen and
+  related columns, a summary of one measure grouped by a field (dates by day to year) with its total,
+  or a matrix by two groupings with row and column totals; filters; the first 50 rows preview live
+  through `POST /api/v1/query/run` under the person's own access. No SQL.
 - Slack app codecs (C6-T1, `connector::adapters::slack`): the per-workspace install link and its
   answer (bot token only), Events API bodies (URL check, link unfurls, mentions), notification and
   approval messages (the approval opens the single-use approval link, as Teams and email do),

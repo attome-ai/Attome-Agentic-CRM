@@ -919,6 +919,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
           },
           {
+            // P1-T1: build a table, summary or matrix report without SQL.
+            path: 'reports/builder',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/report/builder').then(m => m.ReportBuilderComponent),
+          },
+          {
             // G17-T13: the workforce screens (schedules, swaps, intraday, adherence).
             path: 'workforce',
             canActivate: [authGuard],

@@ -1,0 +1,227 @@
+<section class="rb" data-report-builder>
+  <header class="rb-head">
+    <h2 class="rb-title">{{ 'reportBuilder.title' | translate }}</h2>
+    <p class="rb-note">{{ 'reportBuilder.lead' | translate }}</p>
+  </header>
+
+  <div class="rb-row">
+    <label class="rb-field">
+      <span>{{ 'reportBuilder.entity' | translate }}</span>
+      <input type="text" data-entity [value]="entityInput()" (input)="entityInput.set(valueOf($event))"
+             (keydown.enter)="loadEntity()" />
+    </label>
+    <button type="button" class="btn btn-secondary" data-load (click)="loadEntity()">{{ 'reportBuilder.load' | translate }}</button>
+  </div>
+  @if (schemaError()) {
+    <p class="rb-error" role="alert">{{ schemaError() }}</p>
+  }
+
+  @if (fields().length) {
+    <fieldset class="rb-layouts">
+      <legend>{{ 'reportBuilder.layout' | translate }}</legend>
+      @for (l of layouts; track l) {
+        <label class="rb-choice">
+          <input type="radio" name="rb-layout" [attr.data-layout]="l" [checked]="state().layout === l" (change)="setLayout(l)" />
+          <span>{{ layoutKeys[l] | translate }}</span>
+        </label>
+      }
+    </fieldset>
+
+    @if (state().layout === 'table') {
+      <fieldset class="rb-box">
+        <legend>{{ 'reportBuilder.columns' | translate }}</legend>
+        <div class="rb-chips">
+          @for (f of fields(); track f.name) {
+            <label class="rb-choice">
+              <input type="checkbox" [attr.data-column]="f.name" [checked]="state().columns.includes(f.name)"
+                     (change)="toggleColumn(f.name)" />
+              <span>{{ f.display_name || f.name }}</span>
+            </label>
+          }
+        </div>
+        <div class="rb-row">
+          <label class="rb-field">
+            <span>{{ 'reportBuilder.related' | translate }}</span>
+            <input type="text" data-related [value]="relatedPath()" [placeholder]="'reportBuilder.relatedHint' | translate"
+                   (input)="relatedPath.set(valueOf($event))" (keydown.enter)="addRelated()" />
+          </label>
+          <button type="button" class="btn btn-text" (click)="addRelated()">{{ 'reportBuilder.add' | translate }}</button>
+        </div>
+      </fieldset>
+    } @else {
+      <fieldset class="rb-box">
+        <legend>{{ 'reportBuilder.measure' | translate }}</legend>
+        <div class="rb-row">
+          <label class="rb-field">
+            <span>{{ 'reportBuilder.func' | translate }}</span>
+            <select data-func (change)="pickFunc($event)">
+              @for (fn of funcs; track fn) {
+                <option [value]="fn" [selected]="state().func === fn">{{ funcKeys[fn] | translate }}</option>
+              }
+            </select>
+          </label>
+          @if (state().func !== 'count') {
+            <label class="rb-field">
+              <span>{{ 'reportBuilder.of' | translate }}</span>
+              <select data-measure-field (change)="update({ field: valueOf($event) })">
+                <option value="">{{ 'reportBuilder.choose' | translate }}</option>
+                @for (f of numberFields(); track f.name) {
+                  <option [value]="f.name" [selected]="state().field === f.name">{{ f.display_name || f.name }}</option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+        <div class="rb-row">
+          <label class="rb-field">
+            <span>{{ 'reportBuilder.rowsBy' | translate }}</span>
+            <select data-rows (change)="setGroup('rows', { field: valueOf($event) })">
+              <option value="">{{ 'reportBuilder.choose' | translate }}</option>
+              @for (f of fields(); track f.name) {
+                <option [value]="f.name" [selected]="state().rows.field === f.name">{{ f.display_name || f.name }}</option>
+              }
+            </select>
+          </label>
+          @if (dateFields().has(state().rows.field)) {
+            <label class="rb-field">
+              <span>{{ 'reportBuilder.by' | translate }}</span>
+              <select data-rows-bucket (change)="pickBucket('rows', $event)">
+                <option value="">{{ 'reportBuilder.value' | translate }}</option>
+                @for (b of buckets; track b) {
+                  <option [value]="b" [selected]="state().rows.bucket === b">{{ bucketKeys[b] | translate }}</option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+        @if (state().layout === 'matrix') {
+          <div class="rb-row">
+            <label class="rb-field">
+              <span>{{ 'reportBuilder.columnsBy' | translate }}</span>
+              <select data-across (change)="setGroup('across', { field: valueOf($event) })">
+                <option value="">{{ 'reportBuilder.choose' | translate }}</option>
+                @for (f of fields(); track f.name) {
+                  <option [value]="f.name" [selected]="state().across.field === f.name">{{ f.display_name || f.name }}</option>
+                }
+              </select>
+            </label>
+            @if (dateFields().has(state().across.field)) {
+              <label class="rb-field">
+                <span>{{ 'reportBuilder.by' | translate }}</span>
+                <select data-across-bucket (change)="pickBucket('across', $event)">
+                  <option value="">{{ 'reportBuilder.value' | translate }}</option>
+                  @for (b of buckets; track b) {
+                    <option [value]="b" [selected]="state().across.bucket === b">{{ bucketKeys[b] | translate }}</option>
+                  }
+                </select>
+              </label>
+            }
+          </div>
+        }
+      </fieldset>
+    }
+
+    <fieldset class="rb-box">
+      <legend>{{ 'reportBuilder.filters' | translate }}</legend>
+      @for (c of state().conditions; track $index; let i = $index) {
+        <div class="rb-row" [attr.data-condition]="i">
+          <select (change)="setCondition(i, { field: valueOf($event) })" [attr.aria-label]="'reportBuilder.field' | translate">
+            <option value="">{{ 'reportBuilder.choose' | translate }}</option>
+            @for (f of fields(); track f.name) {
+              <option [value]="f.name" [selected]="c.field === f.name">{{ f.display_name || f.name }}</option>
+            }
+          </select>
+          <select (change)="pickOperator(i, $event)" [attr.aria-label]="'reportBuilder.operator' | translate">
+            @for (o of operators; track o) {
+              <option [value]="o" [selected]="c.op === o">{{ operatorKeys[o] | translate }}</option>
+            }
+          </select>
+          @if (c.op !== 'is_null' && c.op !== 'is_not_null') {
+            <input type="text" [value]="c.value" [attr.aria-label]="'reportBuilder.valueLabel' | translate"
+                   (input)="setCondition(i, { value: valueOf($event) })" />
+          }
+          <button type="button" class="btn btn-text" (click)="removeCondition(i)">{{ 'reportBuilder.remove' | translate }}</button>
+        </div>
+      }
+      <button type="button" class="btn btn-text" data-add-filter (click)="addCondition()">{{ 'reportBuilder.addFilter' | translate }}</button>
+    </fieldset>
+
+    <div class="rb-row">
+      <button type="button" class="btn btn-primary" data-run [disabled]="!canRun() || running()" (click)="run()">
+        {{ (running() ? 'reportBuilder.running' : 'reportBuilder.preview') | translate }}
+      </button>
+      <label class="rb-choice">
+        <input type="checkbox" data-live [checked]="live()" (change)="live.set(!live())" />
+        <span>{{ 'reportBuilder.live' | translate }}</span>
+      </label>
+      @if (!canRun()) {
+        <span class="rb-note" data-not-ready>{{ 'reportBuilder.notReady' | translate }}</span>
+      }
+    </div>
+    @if (runError()) {
+      <p class="rb-error" role="alert">{{ runError() }}</p>
+    }
+
+    @if (state().layout === 'table' && rows(); as list) {
+      <div class="rb-scroll">
+        <table class="rb-table" data-table>
+          <thead><tr>@for (col of columns(); track col) { <th scope="col">{{ label(col) }}</th> }</tr></thead>
+          <tbody>
+            @for (r of list; track $index) {
+              <tr>@for (col of columns(); track col) { <td>{{ r[col] }}</td> }</tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="rb-note">{{ 'reportBuilder.firstRows' | translate: { count: list.length } }}</p>
+    }
+
+    @if (summary(); as s) {
+      <div class="rb-scroll">
+        <table class="rb-table" data-summary>
+          <thead><tr><th scope="col">{{ label(state().rows.field) }}</th><th scope="col">{{ funcKeys[state().func] | translate }}</th></tr></thead>
+          <tbody>
+            @for (line of s.lines; track line.key) {
+              <tr><th scope="row">{{ line.key || ('reportBuilder.empty' | translate) }}</th><td class="rb-num">{{ line.value }}</td></tr>
+            }
+          </tbody>
+          @if (s.total !== null) {
+            <tfoot><tr data-total><th scope="row">{{ 'reportBuilder.total' | translate }}</th><td class="rb-num">{{ s.total }}</td></tr></tfoot>
+          }
+        </table>
+      </div>
+    }
+
+    @if (matrix(); as m) {
+      <div class="rb-scroll">
+        <table class="rb-table" data-matrix>
+          <thead>
+            <tr>
+              <th scope="col">{{ label(state().rows.field) }}</th>
+              @for (c of m.cols; track c) { <th scope="col">{{ c || ('reportBuilder.empty' | translate) }}</th> }
+              @if (m.total !== null) { <th scope="col">{{ 'reportBuilder.total' | translate }}</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of m.rows; track r) {
+              <tr [attr.data-matrix-row]="r">
+                <th scope="row">{{ r || ('reportBuilder.empty' | translate) }}</th>
+                @for (c of m.cols; track c) { <td class="rb-num">{{ m.cells[r]?.[c] ?? '' }}</td> }
+                @if (m.total !== null) { <td class="rb-num rb-total">{{ m.rowTotals[r] }}</td> }
+              </tr>
+            }
+          </tbody>
+          @if (m.total !== null) {
+            <tfoot>
+              <tr data-total>
+                <th scope="row">{{ 'reportBuilder.total' | translate }}</th>
+                @for (c of m.cols; track c) { <td class="rb-num">{{ m.colTotals[c] }}</td> }
+                <td class="rb-num rb-total">{{ m.total }}</td>
+              </tr>
+            </tfoot>
+          }
+        </table>
+      </div>
+    }
+  }
+</section>

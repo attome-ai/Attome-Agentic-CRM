@@ -1,0 +1,60 @@
+:host { display: block; }
+
+.rb {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-inline: 16px;
+  padding-block: 12px;
+}
+
+.rb-head { display: flex; flex-direction: column; gap: 4px; }
+.rb-title { margin: 0; font-size: 1.25rem; }
+.rb-note { margin: 0; color: var(--color-text-secondary); }
+.rb-error { margin: 0; color: var(--color-danger, #b91c1c); }
+
+.rb-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+
+.rb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-inline-size: 0;
+}
+
+.rb-layouts,
+.rb-box {
+  margin: 0;
+  padding-block: 8px;
+  padding-inline: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rb-layouts { flex-direction: row; flex-wrap: wrap; gap: 16px; }
+
+.rb-chips { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.rb-choice { display: inline-flex; align-items: center; gap: 6px; }
+
+.rb-scroll { overflow-x: auto; }
+.rb-table { border-collapse: collapse; min-inline-size: 100%; }
+.rb-table th,
+.rb-table td {
+  padding-block: 4px;
+  padding-inline: 8px;
+  border-block-end: 1px solid var(--color-border);
+  text-align: start;
+  white-space: nowrap;
+}
+.rb-table thead th { font-weight: 600; }
+.rb-table tfoot th,
+.rb-table tfoot td,
+.rb-total { font-weight: 600; }
+.rb-num { text-align: end; font-variant-numeric: tabular-nums; }
