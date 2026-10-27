@@ -166,9 +166,12 @@ export function navProblems(groups: readonly NavGroup[]): { at: string; problem:
   return out;
 }
 
+/** One draft edit as the model's command endpoint takes it. */
+export type SaveCommand = { op: 'set'; path: string; value: unknown } | { op: 'remove'; path: string };
+
 /** The edit commands that make the server's draft this navigation: each member set whole. Pure. */
-export function saveCommands(nav: Navigation, before: Partial<Navigation>): { op: 'set' | 'remove'; path: string; value?: unknown }[] {
-  const out: { op: 'set' | 'remove'; path: string; value?: unknown }[] = [{ op: 'set', path: '/groups', value: nav.groups }];
+export function saveCommands(nav: Navigation, before: Partial<Navigation>): SaveCommand[] {
+  const out: SaveCommand[] = [{ op: 'set', path: '/groups', value: nav.groups }];
   for (const key of ['landing', 'settings'] as const) {
     if (nav[key] !== undefined) out.push({ op: 'set', path: `/${key}`, value: nav[key] });
     else if (before[key] !== undefined) out.push({ op: 'remove', path: `/${key}` });

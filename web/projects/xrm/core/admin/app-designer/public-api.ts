@@ -6,4 +6,4 @@ export { AppListComponent } from './app-list.component';
 export {
   ITEM_KINDS, cleanSettings, groupNode, groupsOf, itemNode, itemPaths, navProblems, navigationOf, saveCommands, toCanvas, uuidv7,
 } from './app-design.model';
-export type { AppDoc, AppNode, AppSettings, ItemKind, NavGroup, NavItem, Navigation } from './app-design.model';
+export type { AppDoc, AppNode, AppSettings, ItemKind, NavGroup, NavItem, Navigation, SaveCommand } from './app-design.model';

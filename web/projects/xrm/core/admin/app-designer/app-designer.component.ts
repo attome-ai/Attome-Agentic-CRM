@@ -4,7 +4,7 @@ import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
 import { CanvasComponent, valueAt } from '@attome/xrm/canvas';
 import type { EditCommand } from '@attome/xrm/canvas';
 import { ModelService } from '@attome/xrm/model';
-import type { ModelCommand, ObjectSummary } from '@attome/xrm/model';
+import type { ObjectSummary } from '@attome/xrm/model';
 import {
   AppDoc, AppNode, AppSettings, ITEM_KINDS, ItemKind, Navigation, groupNode, groupsOf, itemNode, navProblems, navigationOf,
   saveCommands, toCanvas, uuidv7,
@@ -199,7 +199,7 @@ export class AppDesignerComponent {
     this.busy.set(true);
     this.error.set(null);
     const isNew = !this.hash();
-    this.model.saveDraft('navigation', this.objectId(), this.hash(), isNew ? name : null, saveCommands(nav, this.before()) as ModelCommand[])
+    this.model.saveDraft('navigation', this.objectId(), this.hash(), isNew ? name : null, saveCommands(nav, this.before()))
       .subscribe({
         next: saved => {
           this.busy.set(false);
