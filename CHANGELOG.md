@@ -32,6 +32,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Lead conversion (D3-T2, `attome_sales::lead_convert`, migration `0302`, sales pack `0028`):
+  `GET /api/v1/sales/leads/{id}/convert` previews the account, contact and opportunity values from
+  the conversion map (setting `sales.lead_conversion_map`) and the existing records the duplicate
+  rules match; `POST` (with `If-Match`) creates or links them, moves the lead's activities and notes
+  and marks the lead converted; `POST /api/v1/sales/lead-conversions/{id}/undo` undoes it within 24
+  hours while the records it made are unchanged.
 - Lead assignment rules (D4-T1, crm pack `0006`, `attome_workflow::lead_assignment`): a new lead from
   any path goes to the owner of an earlier lead with its email or phone, else the owner of the account
   with its email domain, else the first enabled `lead_assignment_rule` (in order) whose condition holds

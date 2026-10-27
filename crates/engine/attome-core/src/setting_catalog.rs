@@ -953,6 +953,29 @@ fn commission_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(180),
         ),
+        // D3-T2: the lead conversion map.
+        SettingDescriptor::new(
+            "sales.lead_conversion_map",
+            "How a converted lead fills the records it becomes: {\"account\": {<account field>: \
+             <lead field>}, \"contact\": {...}, \"opportunity\": {...}}; `@email_domain` is the \
+             lead's work-email domain. A field either side lacks is left out. Empty uses the \
+             built-in map (company to account name, name to contact name, budget to amount, \
+             D3-T2).",
+            || {
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "account": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 100}},
+                        "contact": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 100}},
+                        "opportunity": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 100}}
+                    },
+                    "additionalProperties": false
+                })
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!({}),
+        ),
         // F2-T1: the discount policy quotes are submitted under.
         SettingDescriptor::new(
             "sales.discount_policy",

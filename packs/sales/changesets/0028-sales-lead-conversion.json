@@ -1,0 +1,122 @@
+{
+  "author": "packs",
+  "checksum": "sha256:a7abe70c63bb187afd61a37e5667595cbb4fccffca76da607ac6716ea2aaedd4",
+  "closed_at": "2026-10-27T00:00:00Z",
+  "description": "Lead conversion (D3-T2): the contact and opportunity a lead was converted into, beside its account, and the way back from converted to qualified that undoing a conversion takes.",
+  "format": "attome-changeset/v1",
+  "id": "01a17c30-11ab-7a19-9fa2-769520b20295",
+  "layer": "product",
+  "name": "sales-lead-conversion",
+  "opened_at": "2026-10-27T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Converted Contact",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "converted_contact_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "lead",
+        "field": "converted_contact_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جهة الاتصال المحوّلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.converted_contact_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Converted Opportunity",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "converted_opportunity_ref",
+          "lookup_entity": "opportunity",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "lead",
+        "field": "converted_opportunity_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفرصة المحوّلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.converted_opportunity_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "converted",
+          "guard_expression": null,
+          "name": "Undo conversion",
+          "required_privilege": null,
+          "to_state": "qualified"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "lead",
+        "transition": "converted->qualified"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 28,
+  "title": "Pack: lead conversion"
+}

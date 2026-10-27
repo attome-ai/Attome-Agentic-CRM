@@ -230,6 +230,15 @@ impl EngineModel for SalesModel {
                 post(crate::quote_submit::post_sales_quote_submit),
             )
             .route(
+                "/api/v1/sales/leads/{id}/convert",
+                get(crate::lead_convert::get_sales_lead_convert_preview)
+                    .post(crate::lead_convert::post_sales_lead_convert),
+            )
+            .route(
+                "/api/v1/sales/lead-conversions/{id}/undo",
+                post(crate::lead_convert::post_sales_lead_conversion_undo),
+            )
+            .route(
                 "/api/v1/sales/quotes/{id}/versions",
                 post(crate::quote::post_sales_quote_version),
             )
