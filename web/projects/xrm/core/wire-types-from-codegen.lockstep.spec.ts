@@ -59,15 +59,20 @@ function generatedSchemaNames(): Set<string> {
   const names = new Set<string>();
   const topLevelKey = /\n {8}([A-Za-z0-9_]+):/g;
   let m: RegExpExecArray | null;
+  // The depth is carried forward from one match to the next, so the block
+  // is walked once (rescanning the prefix per key was quadratic and made
+  // this the suite's slowest test as api-types.ts grew).
+  let d = 0;
+  let scanned = 0;
   while ((m = topLevelKey.exec(block))) {
-    // Confirm the match sits at depth 1 within this block (i.e. is a schema
-    // name, not a field nested inside one schema's own object type).
-    const before = block.slice(0, m.index);
-    let d = 0;
-    for (const c of before) {
+    for (let i = scanned; i < m.index; i++) {
+      const c = block[i];
       if (c === '{') d++;
       else if (c === '}') d--;
     }
+    scanned = m.index;
+    // At depth 0 the key is a schema name, not a field nested inside one
+    // schema's own object type.
     if (d === 0) names.add(m[1]);
   }
   return names;
