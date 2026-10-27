@@ -16,7 +16,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_ev
 use attome_core::EngineState;
 use attome_db::DbPool;
 use attome_rules::arabic::normalize_ar;
-use attome_server::authz::{Admin, Authorized, Privilege, PrivilegeKey};
+use attome_server::authz::{Authorized, Privilege, PrivilegeKey, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json,
@@ -325,7 +325,7 @@ pub struct RunQueued {
 )]
 pub(crate) async fn post_run(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
 ) -> Result<(axum::http::StatusCode, Json<RunQueued>), AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let queued = attome_jobs::enqueue_in_tx_dedup(
