@@ -18,6 +18,13 @@ import {
 /** What one side of a conflict rule names. */
 export type ConflictKind = 'role' | 'privilege' | 'set';
 
+/** The label key of each kind, spelled out so the catalog scan sees every key. */
+const KIND_KEYS: Record<ConflictKind, string> = {
+  role: 'roleConflicts.kind_role',
+  privilege: 'roleConflicts.kind_privilege',
+  set: 'roleConflicts.kind_set',
+};
+
 /**
  * Q10-T12 — conflict rules (Q10-T8): two roles, privileges or permission sets
  * one person must not hold together, refused outright or sent for a second
@@ -52,7 +59,7 @@ export type ConflictKind = 'role' | 'privilege' | 'set';
               <div class="field">
                 <label [for]="'rc-kind-' + side">{{ 'roleConflicts.kind' | translate }}</label>
                 <select [id]="'rc-kind-' + side" [ngModel]="draft()[side].kind" (ngModelChange)="setKind(side, $event)">
-                  @for (k of kinds; track k) { <option [value]="k">{{ ('roleConflicts.kind_' + k) | translate }}</option> }
+                  @for (k of kinds; track k) { <option [value]="k">{{ kindKeys[k] | translate }}</option> }
                 </select>
               </div>
               <div class="field">
@@ -152,6 +159,7 @@ export class RoleConflictsComponent implements OnInit {
   private readonly flags     = inject(FeatureFlagsService);
 
   readonly kinds: ConflictKind[] = ['role', 'privilege', 'set'];
+  readonly kindKeys = KIND_KEYS;
   readonly sides = ['left', 'right'] as const;
   readonly enabled = computed(() => this.flags.flags()[SECURITY_FLAGS.roleConflicts] === true);
 
@@ -201,7 +209,7 @@ export class RoleConflictsComponent implements OnInit {
 
   refLabel(kind: string, ref: string): string {
     const found = this.options(kind as ConflictKind).find(o => o.id === ref);
-    return `${this.lang.translate('roleConflicts.kind_' + kind)}: ${found?.label ?? ref}`;
+    return `${this.lang.translate(KIND_KEYS[kind as ConflictKind] ?? kind)}: ${found?.label ?? ref}`;
   }
 
   userLabel(id: string): string {
