@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Inbound hook preset `slack` (C6-T1, part): a hook verifies Slack's `X-Slack-Signature` (`v0=`
+  HMAC-SHA256 of `v0:{timestamp}:{body}` with the app's signing secret) inside the timestamp window, so
+  Slack Events API, interactivity and slash-command calls can start flows or create records.
 - Workforce screens (G17-T13, `@attome/xrm/workforce`, `/xrm/workforce`, workforce pack `0005`): pick a
   planning group, build a draft schedule, see it as a people-by-days grid with shifts and breaks and
   the coverage per day, move a shift, publish (a stale write asks to reload); swaps waiting for a

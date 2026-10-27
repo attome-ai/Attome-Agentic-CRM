@@ -35,6 +35,10 @@
 //!   - `moyasar` (M14-T2): Moyasar signs nothing; the body's `secret_token`
 //!     must equal the secret (compared in constant time) and the payment
 //!     event's `id` guards replay.
+//!   - `slack` (C6-T1, the Events API, interactivity and slash commands):
+//!     `X-Slack-Signature: v0=<hex>` is the HMAC-SHA256, with the app's
+//!     signing secret, of `v0:{X-Slack-Request-Timestamp}:{body}`; the
+//!     timestamp must be inside the window and the signature guards replay.
 //!   - `custom`: the signature in `header` (default `x-signature`), `hex`
 //!     or `base64`, an optional `prefix` (`sha256=`), over the body or, with
 //!     `timestamp_header`, over `{timestamp}.{body}`.
@@ -83,8 +87,9 @@ pub const UNTIMED_NONCE_TTL_SECS: i64 = 24 * 3600;
 pub const MTLS_VERIFIED_HEADER: &str = "x-client-cert-verified";
 
 /// The hook presets.
-pub const PRESETS: [&str; 9] = [
-    "github", "stripe", "standard", "docusign", "shopify", "meta", "salla", "moyasar", "custom",
+pub const PRESETS: [&str; 10] = [
+    "github", "stripe", "standard", "docusign", "shopify", "meta", "salla", "moyasar", "slack",
+    "custom",
 ];
 
 /// Why a call was refused before anything ran.
@@ -317,6 +322,27 @@ pub fn verify(
                 Ok(Verified {
                     nonce: format!("{preset}:{}", digest_hex(body)),
                     ttl_secs: UNTIMED_NONCE_TTL_SECS,
+                })
+            }
+            "slack" => {
+                let ts =
+                    header(headers, "x-slack-request-timestamp").ok_or(Refusal::BadCredential)?;
+                timestamp_ok(ts, now)?;
+                let sig = header(headers, "x-slack-signature")
+                    .and_then(|v| v.strip_prefix("v0="))
+                    .and_then(|v| hex::decode(v).ok())
+                    .ok_or(Refusal::BadCredential)?;
+                let expected = hmac_sha256(
+                    secret.as_bytes(),
+                    &["v0:".as_bytes(), ts.as_bytes(), b":", body],
+                )
+                .ok_or(Refusal::BadCredential)?;
+                if !same(&sig, &expected) {
+                    return Err(Refusal::BadCredential);
+                }
+                Ok(Verified {
+                    nonce: format!("slack:{}", hex::encode(&sig)),
+                    ttl_secs: NONCE_TTL_SECS,
                 })
             }
             "moyasar" => {
@@ -676,6 +702,50 @@ mod inbound_endpoints {
             verify(&docusign, "connect-key", &headers(&[]), body, NOW),
             Err(Refusal::BadCredential)
         );
+    }
+
+    /// C6-T1: Slack signs `v0:{timestamp}:{body}` and sends the timestamp.
+    #[test]
+    fn slack_app_requests_verify_their_signature() {
+        let body = b"token=x&team_id=T1&command=%2Fattome&text=acme";
+        let ts = NOW.to_string();
+        let mac = hmac_sha256(
+            SECRET.as_bytes(),
+            &["v0:".as_bytes(), ts.as_bytes(), b":", body],
+        )
+        .unwrap();
+        let auth = json!({ "kind": "hmac", "preset": "slack" });
+        let signed = |sig: String, at: String| {
+            headers(&[
+                ("x-slack-signature", sig),
+                ("x-slack-request-timestamp", at),
+            ])
+        };
+        let ok = signed(format!("v0={}", hex::encode(&mac)), ts.clone());
+        let verified = verify(&auth, SECRET, &ok, body, NOW).unwrap();
+        assert_eq!(verified.nonce, format!("slack:{}", hex::encode(&mac)));
+        assert_eq!(verified.ttl_secs, NONCE_TTL_SECS);
+        assert_eq!(
+            verify(&auth, "wrong", &ok, body, NOW),
+            Err(Refusal::BadCredential)
+        );
+        let old = (NOW - TIMESTAMP_WINDOW_SECS - 1).to_string();
+        let mac_old = hmac_sha256(
+            SECRET.as_bytes(),
+            &["v0:".as_bytes(), old.as_bytes(), b":", body],
+        )
+        .unwrap();
+        assert_eq!(
+            verify(
+                &auth,
+                SECRET,
+                &signed(format!("v0={}", hex::encode(mac_old)), old),
+                body,
+                NOW
+            ),
+            Err(Refusal::Stale)
+        );
+        assert!(check_auth(&auth).is_ok());
     }
 
     /// M14-T2: the Shopify, Meta, Salla and Moyasar presets with sample
