@@ -125,7 +125,9 @@ impl<'a> OdooClient<'a> {
         Ok(uid)
     }
 
-    async fn execute(
+    /// One `object.execute_kw` call, signed in first; also the migration
+    /// source's ([`super::odoo_source`]).
+    pub(crate) async fn execute(
         &mut self,
         model: &str,
         method: &str,

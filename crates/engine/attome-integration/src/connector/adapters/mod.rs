@@ -14,6 +14,8 @@ pub mod docusign;
 pub mod dynamics;
 /// S12-T2: what the ERP connectors exchange with Attome.
 pub mod erp;
+/// A24-T2: HubSpot as a migration source.
+pub mod hubspot;
 /// D30-T1: LinkedIn Lead Gen Forms responses mapped onto leads.
 pub mod linkedin;
 /// J2-T1: the IMAP, Graph and Gmail readers behind `mailbox`.
@@ -25,6 +27,8 @@ pub mod migration_source;
 pub mod national_address;
 /// S12-T2: Odoo over JSON-RPC.
 pub mod odoo;
+/// A24-T2: Odoo as a migration source.
+pub mod odoo_source;
 pub mod reputation;
 pub mod rest;
 /// A24-T1: Salesforce as a migration source.
@@ -58,3 +62,5 @@ pub mod webchat;
 pub mod whatsapp;
 /// AJ3-T1: Yakeen identity checks with consent, keeping only the outcome.
 pub mod yakeen;
+/// A24-T2: Zoho CRM as a migration source.
+pub mod zoho;
