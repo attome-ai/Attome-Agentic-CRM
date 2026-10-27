@@ -227055,7 +227055,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -227108,5 +227107,6 @@
       }
     }
   },
+  "x-version-adapters": [],
   "x-api-version": "2026-10"
 }
