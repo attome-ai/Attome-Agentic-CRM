@@ -1,0 +1,75 @@
+{
+  "author": "packs",
+  "checksum": "sha256:b9ab9a927a866981529a3e3339b819f9b43300ac953733667a3908dfba05733c",
+  "closed_at": "2026-10-27T00:00:00Z",
+  "description": "Lead qualification (D3-T1): leads are audited, and a disqualified lead needs one of the disqualify reasons (the lead lifecycle's status reason, M8-T2).",
+  "format": "attome-changeset/v1",
+  "id": "01a17c19-969f-7e29-9937-b5dfbf667690",
+  "layer": "product",
+  "name": "crm-lead-qualification",
+  "opened_at": "2026-10-27T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Lead",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "lead",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "lead"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "lead",
+          "initial_state": "new",
+          "is_active": true,
+          "name": "Lead Lifecycle",
+          "reason_field": "disqualify_reason",
+          "reasons": [
+            {
+              "reasons": [
+                "no_budget",
+                "no_need",
+                "no_authority",
+                "bad_timing",
+                "competitor",
+                "unreachable",
+                "duplicate",
+                "other"
+              ],
+              "state": "disqualified"
+            }
+          ],
+          "state_field": "lead_status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "lead"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "crm",
+  "seq": 5,
+  "title": "Pack: lead qualification"
+}

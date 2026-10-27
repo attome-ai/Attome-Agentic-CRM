@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Lead qualification (D3-T1, crm pack `0005`): leads are audited, and moving a lead to
+  `disqualified` needs a `disqualify_reason` (the lead lifecycle's status reason, M8-T2); the lead
+  form shows it, and a call outcome rule that disqualifies a lead sets a matching reason.
 - Billing on shipment or delivery (F6-T13, sales pack `0027`, `attome_fulfilment::billing_trigger`):
   an order's `billing_rule` is `on_confirm` (the default, unchanged), `on_shipment` or `on_delivery`.
   For the last two the confirm asks billing for nothing and the `fulfilment_billing` job (every

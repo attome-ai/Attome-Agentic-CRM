@@ -42,6 +42,17 @@ pub const OUTCOMES: [&str; 7] = [
     "not_interested",
 ];
 
+/// D3-T1: the disqualify reason a call outcome gives a lead it disqualifies
+/// (the crm pack's lead lifecycle requires one). Pure.
+pub fn disqualify_reason(outcome: &str) -> &'static str {
+    match outcome {
+        "not_interested" => "no_need",
+        "wrong_number" | "no_answer" | "busy" | "voicemail_left" => "unreachable",
+        "call_back_later" => "bad_timing",
+        _ => "other",
+    }
+}
+
 /// The member's status after an outcome.
 pub fn next_status(outcome: &str) -> &'static str {
     if TERMINAL.contains(&outcome) {
@@ -232,6 +243,17 @@ pub async fn apply_rules(state: &EngineState, attempt: Uuid) -> Result<(), AppEr
     match entity.as_str() {
         "lead" => {
             if let Some(status) = lead_status.filter(|s| !s.is_empty()) {
+                // D3-T1: a disqualified lead carries its reason.
+                if status == "disqualified"
+                    && state.entities.load().get("lead").is_some_and(|m| {
+                        m.attrs.iter().any(|a| a.logicalname == "disqualify_reason")
+                    })
+                {
+                    changes.insert(
+                        "disqualify_reason".into(),
+                        json!(disqualify_reason(&outcome)),
+                    );
+                }
                 changes.insert("lead_status".into(), json!(status));
             }
         }
@@ -314,6 +336,13 @@ pub(crate) struct ApiDocFragment;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_disqualifying_outcome_names_a_reason() {
+        assert_eq!(disqualify_reason("not_interested"), "no_need");
+        assert_eq!(disqualify_reason("wrong_number"), "unreachable");
+        assert_eq!(disqualify_reason("connected"), "other");
+    }
 
     #[test]
     fn terminal_outcomes_finish_the_member() {
