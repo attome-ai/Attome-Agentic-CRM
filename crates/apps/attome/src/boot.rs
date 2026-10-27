@@ -1210,6 +1210,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-ops",
         // Z11-T16: a dashboard variable's rule expression.
         "attome-dashboard-variable-expression",
+        // V7-T1: the generic queue and its items over any record.
+        "attome-project-queue",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }
@@ -1228,6 +1230,9 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // records. Idempotent; after `.build()` because both tables are
     // runtime-provisioned.
     attome_records::note_replies::move_legacy_replies(&system.state().base.db_migrator).await?;
+    // V7-T1: service work queues and their tickets become queues and queue
+    // items. Idempotent; after the platform definitions above create both.
+    attome_project::queue::migrate_service_queues(&system.state().base.db_migrator).await?;
     // Same reason as the second `seed_all` above: `attome_report{,_schedule}`,
     // the bot-analytics bundles  register only after
     // `.build()`'s own backfills ran, so a fresh database's first boot left

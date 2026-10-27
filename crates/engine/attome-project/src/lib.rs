@@ -10,6 +10,7 @@ pub mod engine;
 pub mod gantt;
 pub mod model;
 pub mod portfolio_program;
+pub mod queue;
 pub mod risk;
 pub mod seed;
 pub mod summary;

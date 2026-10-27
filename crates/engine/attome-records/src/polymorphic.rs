@@ -10,7 +10,8 @@
 //! ```
 //!
 //! `targets` lists the entities; `extends` admits every entity built on that
-//! base (A1-T4). On every write that sets either attribute
+//! base (A1-T4); `"any": true` admits every entity (V7-T1's queue item, which
+//! may hold a record of any kind). On every write that sets either attribute
 //! ([`check_writes`]), both are set together, the entity is an allowed
 //! target, and the record exists, is live and is readable by the writer
 //! (person or agent); otherwise the write is refused, with one message for a
@@ -34,6 +35,9 @@ pub struct PolymorphicOptions {
     pub targets: Vec<String>,
     #[serde(default)]
     pub extends: Option<String>,
+    /// Every entity is a target.
+    #[serde(default)]
+    pub any: bool,
 }
 
 /// The polymorphic options of `attr`, if it is a polymorphic id attribute.
@@ -91,7 +95,8 @@ pub fn pair_write(
 /// Whether `entity` is a target the options allow: listed, or built on the
 /// `extends` base (`base_of` answers an entity's base). Pure.
 pub fn allowed(options: &PolymorphicOptions, entity: &str, base_of: Option<&str>) -> bool {
-    options.targets.iter().any(|t| t == entity)
+    options.any
+        || options.targets.iter().any(|t| t == entity)
         || options
             .extends
             .as_deref()
@@ -231,6 +236,7 @@ mod tests {
             pair: "r_entity".into(),
             targets: vec!["account".into()],
             extends: None,
+            any: false,
         };
         assert!(allowed(&listed, "account", None));
         assert!(!allowed(&listed, "contact", None));
@@ -238,9 +244,14 @@ mod tests {
             pair: "r_entity".into(),
             targets: vec![],
             extends: Some("party".into()),
+            any: false,
         };
         assert!(allowed(&based, "person", Some("party")));
         assert!(allowed(&based, "party", None));
         assert!(!allowed(&based, "invoice", None));
+        let any: PolymorphicOptions =
+            serde_json::from_value(serde_json::json!({ "pair": "r_entity", "any": true })).unwrap();
+        assert!(allowed(&any, "invoice", None));
+        assert!(allowed(&any, "service_ticket", None));
     }
 }

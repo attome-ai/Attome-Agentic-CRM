@@ -290,6 +290,14 @@ struct PolymorphicEdgeMeta {
     entity_field: String,
     is_sensitive: bool,
     targets: Vec<String>,
+    /// `"any": true`: every entity is a target (V7-T1).
+    any: bool,
+}
+
+impl PolymorphicEdgeMeta {
+    fn admits(&self, entity: &str) -> bool {
+        self.any || self.targets.iter().any(|t| t == entity)
+    }
 }
 
 /// Every polymorphic id attribute in the registry (`options.polymorphic`).
@@ -319,6 +327,7 @@ fn polymorphic_edges(registry: &EntityMetaRegistry) -> Vec<PolymorphicEdgeMeta> 
                 entity_field: pair.to_owned(),
                 is_sensitive: attr.is_read_gated(),
                 targets,
+                any: poly.get("any").and_then(serde_json::Value::as_bool) == Some(true),
             });
         }
     }
@@ -349,7 +358,7 @@ async fn polymorphic_candidates(
         if outbound && e.from_entity != entity {
             continue;
         }
-        if !outbound && !e.targets.iter().any(|t| t == entity) {
+        if !outbound && !e.admits(entity) {
             continue;
         }
         if !attome_security::field_gate::field_readable(
@@ -387,7 +396,7 @@ async fn polymorphic_candidates(
                     continue;
                 };
                 // Only a target the field allows and the registry knows.
-                if !e.targets.contains(&target_entity) || registry.get(&target_entity).is_none() {
+                if !e.admits(&target_entity) || registry.get(&target_entity).is_none() {
                     continue;
                 }
                 out.push(Candidate {

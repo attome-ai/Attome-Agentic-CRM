@@ -45,6 +45,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Queues over any record (V7-T1): a `queue_item` puts a record of any entity in a `queue`, with a
+  priority, a status (waiting, picked, done), an assignee and when it entered. The record is a
+  polymorphic pair whose new `"any": true` option admits every entity. At boot every service work
+  queue becomes a queue with the same id, and every ticket in one becomes an item.
 - Reports (P1-T3): a grouped report draws as a bar, line, area, donut or funnel chart; prompts ask for
   values at run time as the saved query's typed parameters; a report is saved as a stored query and
   shared with roles and teams to run or to edit.
