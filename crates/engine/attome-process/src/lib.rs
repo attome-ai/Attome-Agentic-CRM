@@ -29,6 +29,8 @@
 //! (M28) integration.
 
 pub mod case_def_admin;
+/// O8-T1: cases replayed against the designed stage process or state model.
+pub mod conformance;
 pub mod discovery;
 pub mod extraction;
 pub mod model;
@@ -76,6 +78,7 @@ impl attome_core::EngineModel for ProcessModel {
         Router::new()
             .merge(case_def_admin::routes())
             .merge(discovery::routes())
+            .merge(conformance::routes())
             .merge(stubs::routes())
     }
 
@@ -92,6 +95,7 @@ impl attome_core::EngineModel for ProcessModel {
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = case_def_admin::openapi_fragment();
     doc.merge(discovery::openapi_fragment());
+    doc.merge(conformance::openapi_fragment());
     doc.merge(stubs::openapi_fragment());
     doc
 }

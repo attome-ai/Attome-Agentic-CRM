@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Process conformance (O8-T1, migration `0304`): case defs take a `stage:<entity>` source (the M7
+  stage moves); `GET /api/v1/process/case-defs/{id}/conformance` replays each case against the
+  entity's published stage process or its state model and reports the share of cases that conform,
+  the forbidden steps with their counts, and the first deviating steps with their case.
 - Website visits on timelines (E14-T8, migration `0303`): the `marketing_web_visit_summary` job (every
   ten minutes) writes one `marketing_visit_summary` per closed, identified web session (pages, minutes,
   key pages reached, source, campaign, account), and record timelines show them as `web_visit` entries

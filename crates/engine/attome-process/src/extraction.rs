@@ -74,6 +74,9 @@ const BATCH_LIMIT: i64 = 2_000;
 pub enum Source {
     Workflow(Uuid),
     Entity,
+    /// O8-T1: `stage:<logicalname>`, the record's stage moves (M7,
+    /// `stage_move`); the activity is the stage moved to.
+    Stage,
 }
 
 impl Source {
@@ -96,8 +99,15 @@ impl Source {
         {
             return Ok(Source::Entity);
         }
+        if raw
+            .strip_prefix("stage:")
+            .is_some_and(|rest| !rest.is_empty())
+        {
+            return Ok(Source::Stage);
+        }
         Err(AppError::Validation(
-            "source must be \"workflow:<definition_id>\" or \"entity:<logicalname>\"".into(),
+            "source must be \"workflow:<definition_id>\", \"entity:<logicalname>\" or \"stage:<logicalname>\""
+                .into(),
         ))
     }
 }
@@ -165,6 +175,7 @@ async fn extract_one(db: &DbPool, case_def: &CaseDefRow) -> Result<u64, AppError
     match Source::parse(&case_def.source)? {
         Source::Workflow(definition_id) => extract_workflow(db, case_def, definition_id).await,
         Source::Entity => extract_entity(db, case_def).await,
+        Source::Stage => extract_stage(db, case_def).await,
     }
 }
 
@@ -387,6 +398,89 @@ async fn extract_entity(db: &DbPool, case_def: &CaseDefRow) -> Result<u64, AppEr
     // rows is non-empty (guarded above), so this always has a last element —
     // the cursor advances to the last row read this tick regardless of
     // whether that particular row was a real write or a skipped null value.
+    let last = rows.last().expect("rows is non-empty, checked above");
+    advance_cursor(&mut tx, case_def.id, last.ts, last.source_ref).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok(written)
+}
+
+/// O8-T1: a stage-process case def's events, one per stage move, the
+/// activity being the stage moved to (remapped by `activity_mapping.values`
+/// when it names one).
+#[expect(
+    clippy::expect_used,
+    reason = "each expect() here guards an invariant its message states"
+)]
+async fn extract_stage(db: &DbPool, case_def: &CaseDefRow) -> Result<u64, AppError> {
+    let entity_logicalname = case_def
+        .source
+        .strip_prefix("stage:")
+        .expect("Source::parse already validated the stage: prefix")
+        .to_string();
+    let values = case_def
+        .activity_mapping
+        .get("values")
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
+    let w = watermark_args(case_def);
+    let rows: Vec<EntitySourceRow> = sqlx::query_as(
+        "SELECT id AS source_ref, record_id AS case_id, to_stage AS raw_value, \
+                moved_at AS ts, moved_by AS resource_ref \
+         FROM stage_move \
+         WHERE entity_logicalname = $1 AND moved_at <= $2 \
+           AND ($3::timestamptz IS NULL OR (moved_at, id) > ($3, $4)) \
+         ORDER BY moved_at, id \
+         LIMIT $5",
+    )
+    .bind(&entity_logicalname)
+    .bind(w.watermark)
+    .bind(w.cursor_ts)
+    .bind(w.cursor_id)
+    .bind(BATCH_LIMIT)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    if rows.is_empty() {
+        return Ok(0);
+    }
+    let mut tx = attome_db::tx::begin(db).await?;
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(format!("attome-process/extract:{}", case_def.id))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        return Ok(0);
+    }
+    let mut written = 0u64;
+    for row in &rows {
+        let Some(raw) = &row.raw_value else {
+            continue;
+        };
+        let activity = values
+            .get(raw)
+            .and_then(|v| v.as_str())
+            .map(str::to_owned)
+            .unwrap_or_else(|| raw.clone());
+        written += sqlx::query(
+            "INSERT INTO process_event \
+                 (case_def_ref, case_id, activity, ts_start, ts_end, resource_ref, \
+                  source_kind, source_ref) \
+             VALUES ($1, $2, $3, $4, $4, $5, 'stage_move', $6) \
+             ON CONFLICT (case_def_ref, source_kind, source_ref, ts_start) DO NOTHING",
+        )
+        .bind(case_def.id)
+        .bind(row.case_id)
+        .bind(&activity)
+        .bind(row.ts)
+        .bind(row.resource_ref)
+        .bind(row.source_ref)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+        .rows_affected();
+    }
     let last = rows.last().expect("rows is non-empty, checked above");
     advance_cursor(&mut tx, case_def.id, last.ts, last.source_ref).await?;
     tx.commit().await.map_err(AppError::internal)?;
