@@ -1598,6 +1598,26 @@ export const xrmEn = {
     firstRows: '{count, plural, =0 {No rows} one {The first row} other {The first # rows}}',
     total: 'Total', empty: '(empty)',
   },
+  emailDesigner: {
+    title: 'Email designer', working: 'Working…', new: 'New design', none: 'No saved designs yet.',
+    name: 'Name', subject: 'Subject', language: 'Language', english: 'English', arabic: 'Arabic',
+    width: 'Width (px)', colour: 'Brand colour', colourHint: '#1a56db',
+    palette: 'Blocks',
+    blocks: {
+      heading: 'Heading', text: 'Text', image: 'Image', button: 'Button', divider: 'Divider', spacer: 'Space',
+      columns: 'Two columns',
+    },
+    problems: {
+      missingAlt: 'Block {{block}}: an image needs its alt text.',
+      badLink: 'Block {{block}}: a link must start with https:, http:, mailto: or tel:, or be a placeholder in double braces.',
+      empty: 'Block {{block}}: fill it in or remove it.',
+    },
+    save: 'Save', saved: 'The design is saved.', nameNeeded: 'Give the design a name first.',
+    conflict: 'Someone saved this design since you opened it. Reload and try again.',
+    unreadable: 'The saved design could not be read; it opens empty.',
+    preview: 'Preview', previewEntity: 'Preview as (entity)', previewPerson: 'Record id',
+    render: 'Render', phone: 'Phone width', previewHint: 'Choose a person to see the email as they will get it.',
+  },
   searchSettings: {
     title: 'Search settings', size: 'Index size', sizeLine: '{rows} rows, {size}',
     status: 'Indexing', backlog: '{count, plural, =0 {Up to date} one {1 change waiting} other {# changes waiting}}',

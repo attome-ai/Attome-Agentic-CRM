@@ -40,6 +40,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Email designer (E2-T1, `/xrm/marketing/email-designer`, marketing pack changeset `0012`): headings,
+  text, images, buttons, dividers, spaces and two-column rows on the shared canvas, right to left in
+  Arabic; what the renderer would refuse is listed; preview renders on the server for a chosen person
+  at desktop or phone width in a sandboxed frame; designs are saved as `marketing_email_design` records.
 - Aggregate queries take `totals` (P1-T2): `rollup` adds subtotals along the group fields and a grand
   total, `cube` a total for every combination (a matrix's row, column and grand totals); the
   database computes them over the same filtered records, and each total row names the fields it

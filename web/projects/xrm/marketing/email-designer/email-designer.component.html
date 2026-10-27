@@ -1,0 +1,103 @@
+<section class="ed" data-email-designer [attr.dir]="dir()">
+  <header class="ed-head">
+    <h2 class="ed-title">{{ 'emailDesigner.title' | translate }}</h2>
+    @if (busy()) { <span class="ed-note" role="status">{{ 'emailDesigner.working' | translate }}</span> }
+  </header>
+  @if (error()) { <p class="ed-error" role="alert">{{ error() }}</p> }
+  @if (notice()) { <p class="ed-note" role="status">{{ notice() }}</p> }
+
+  @if (!initial()) {
+    <div class="ed-list" data-saved-list>
+      <a class="btn btn-primary" data-new [routerLink]="['/xrm', 'marketing', 'email-designer', 'new']">{{ 'emailDesigner.new' | translate }}</a>
+      <ul>
+        @for (d of saved(); track d.id) {
+          <li><a [routerLink]="['/xrm', 'marketing', 'email-designer', d.id]" [attr.data-design]="d.id">{{ d.name }}</a></li>
+        } @empty {
+          <li class="ed-note">{{ 'emailDesigner.none' | translate }}</li>
+        }
+      </ul>
+    </div>
+  } @else {
+    <div class="ed-settings">
+      <label class="ed-field">
+        <span>{{ 'emailDesigner.name' | translate }}</span>
+        <input type="text" maxlength="200" data-name [value]="name()" (input)="name.set(valueOf($event))" />
+      </label>
+      <label class="ed-field">
+        <span>{{ 'emailDesigner.subject' | translate }}</span>
+        <input type="text" maxlength="200" data-subject [value]="subject()" (input)="subject.set(valueOf($event))" />
+      </label>
+      <label class="ed-field">
+        <span>{{ 'emailDesigner.language' | translate }}</span>
+        <select data-locale (change)="setLocale($event)">
+          <option value="en" [selected]="locale() === 'en'">{{ 'emailDesigner.english' | translate }}</option>
+          <option value="ar" [selected]="locale() === 'ar'">{{ 'emailDesigner.arabic' | translate }}</option>
+        </select>
+      </label>
+      <label class="ed-field">
+        <span>{{ 'emailDesigner.width' | translate }}</span>
+        <input type="number" min="320" max="800" step="10" [value]="width()" (change)="setWidth($event)" />
+      </label>
+      <label class="ed-field">
+        <span>{{ 'emailDesigner.colour' | translate }}</span>
+        <input type="text" maxlength="7" dir="ltr" [value]="colour()" [placeholder]="'emailDesigner.colourHint' | translate"
+               (input)="colour.set(valueOf($event))" />
+      </label>
+    </div>
+
+    <div class="ed-layout">
+      <nav class="ed-palette" [attr.aria-label]="'emailDesigner.palette' | translate">
+        <h3>{{ 'emailDesigner.palette' | translate }}</h3>
+        @for (t of palette; track t) {
+          <button type="button" class="btn btn-secondary" [attr.data-add]="t" (click)="add(t)">{{ blockKeys[t] | translate }}</button>
+        }
+      </nav>
+
+      <div class="ed-main">
+        @if (initial(); as doc) {
+          <xrm-canvas [doc]="doc" rootPath="/root" (changed)="onChanged($event)" (save)="save($event)"
+                      (selectionChange)="onSelect($event)" />
+        }
+        @if (issues().length) {
+          <ul class="ed-issues" role="alert" data-issues>
+            @for (i of issues(); track $index) {
+              <li>{{ problemKeys[i.problem] | translate: { block: i.index } }}</li>
+            }
+          </ul>
+        }
+        <div class="ed-actions">
+          <button type="button" class="btn btn-primary" data-save [disabled]="busy()" (click)="save()">{{ 'emailDesigner.save' | translate }}</button>
+        </div>
+      </div>
+
+      <aside class="ed-preview" [attr.aria-label]="'emailDesigner.preview' | translate">
+        <h3>{{ 'emailDesigner.preview' | translate }}</h3>
+        <div class="ed-row">
+          <label class="ed-field">
+            <span>{{ 'emailDesigner.previewEntity' | translate }}</span>
+            <input type="text" dir="ltr" [value]="previewEntity()" (input)="previewEntity.set(valueOf($event))" />
+          </label>
+          <label class="ed-field">
+            <span>{{ 'emailDesigner.previewPerson' | translate }}</span>
+            <input type="text" dir="ltr" data-person [value]="previewPerson()" (input)="previewPerson.set(valueOf($event))" />
+          </label>
+        </div>
+        <div class="ed-row">
+          <button type="button" class="btn btn-secondary" data-preview [disabled]="busy() || !previewPerson().trim()" (click)="preview()">
+            {{ 'emailDesigner.render' | translate }}
+          </button>
+          <label class="ed-choice">
+            <input type="checkbox" data-phone [checked]="phone()" (change)="phone.set(!phone())" />
+            <span>{{ 'emailDesigner.phone' | translate }}</span>
+          </label>
+        </div>
+        @if (previewHtml(); as html) {
+          <iframe class="ed-frame" [class.ed-frame--phone]="phone()" sandbox="" [srcdoc]="html" data-frame
+                  [title]="'emailDesigner.preview' | translate"></iframe>
+        } @else {
+          <p class="ed-note">{{ 'emailDesigner.previewHint' | translate }}</p>
+        }
+      </aside>
+    </div>
+  }
+</section>

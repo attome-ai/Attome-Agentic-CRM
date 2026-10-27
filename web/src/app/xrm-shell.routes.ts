@@ -949,6 +949,17 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/marketing/forms').then(m => m.FormBuilderComponent),
           },
           {
+            // E2-T1: the email designer: saved designs, or one (`new` for a fresh one).
+            path: 'marketing/email-designer',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/marketing/email-designer').then(m => m.EmailDesignerComponent),
+          },
+          {
+            path: 'marketing/email-designer/:id',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/marketing/email-designer').then(m => m.EmailDesignerComponent),
+          },
+          {
             // E6-T13: the deliverability dashboard, alert guidance and pre-send check.
             path: 'marketing/deliverability',
             canActivate: [authGuard],

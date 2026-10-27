@@ -1557,6 +1557,26 @@ export const xrmAr = {
     firstRows: '{count, plural, =0 {لا صفوف} one {الصف الأول} two {أول صفين} few {أول # صفوف} other {أول # صفًا}}',
     total: 'الإجمالي', empty: '(فارغ)',
   },
+  emailDesigner: {
+    title: 'مصمم البريد الإلكتروني', working: 'جارٍ العمل…', new: 'تصميم جديد', none: 'لا تصاميم محفوظة بعد.',
+    name: 'الاسم', subject: 'الموضوع', language: 'اللغة', english: 'الإنجليزية', arabic: 'العربية',
+    width: 'العرض (بكسل)', colour: 'لون العلامة', colourHint: '#1a56db',
+    palette: 'الكتل',
+    blocks: {
+      heading: 'عنوان', text: 'نص', image: 'صورة', button: 'زر', divider: 'فاصل', spacer: 'مسافة',
+      columns: 'عمودان',
+    },
+    problems: {
+      missingAlt: 'الكتلة {{block}}: تحتاج الصورة إلى نص بديل.',
+      badLink: 'الكتلة {{block}}: يجب أن يبدأ الرابط بـ https: أو http: أو mailto: أو tel:، أو أن يكون عنصرًا نائبًا بين قوسين مزدوجين.',
+      empty: 'الكتلة {{block}}: املأها أو احذفها.',
+    },
+    save: 'حفظ', saved: 'حُفظ التصميم.', nameNeeded: 'سمِّ التصميم أولًا.',
+    conflict: 'حفظ شخص آخر هذا التصميم منذ فتحته. أعد التحميل وحاول مجددًا.',
+    unreadable: 'تعذّرت قراءة التصميم المحفوظ؛ فُتح فارغًا.',
+    preview: 'معاينة', previewEntity: 'المعاينة باسم (الكيان)', previewPerson: 'معرّف السجل',
+    render: 'عرض', phone: 'عرض الهاتف', previewHint: 'اختر شخصًا لترى البريد كما سيصله.',
+  },
   searchSettings: {
     title: 'إعدادات البحث', size: 'حجم الفهرس', sizeLine: '{rows} صف، {size}',
     status: 'الفهرسة', backlog: '{count, plural, =0 {محدّث} one {تغيير واحد بالانتظار} other {# تغييرات بالانتظار}}',
