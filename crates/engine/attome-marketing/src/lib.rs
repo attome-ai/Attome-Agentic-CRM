@@ -79,6 +79,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<dynamic_blocks::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<tracking_script::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<tracking::collect::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<tracking::alerts::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<landing::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

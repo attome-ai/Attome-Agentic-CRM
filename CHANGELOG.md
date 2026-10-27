@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Page-view alerts (E14-T9, migration `0305`): with `marketing.tracking_alerts` on, a known visitor's
+  view of a watched page (`marketing_watched_page`, `*` patterns) starts the flows whose trigger is
+  `web.page_viewed` on the contact or lead, once per session and page; anonymous visitors start
+  nothing. `GET /api/v1/marketing/tracking/live?site=` lists the sessions seen in the last five
+  minutes with the page each is on (`marketing_tracked_site.read`).
 - Speed to lead (D4-T2): with `sales.first_touch_minutes` set, each new lead gets a timer, and a lead
   still new with no activity or communication when it fires is escalated to its owner's managers;
   with `sales.stale_lead_days` set, a daily job gives open leads that went that long untouched to

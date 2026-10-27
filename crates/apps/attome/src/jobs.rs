@@ -4005,6 +4005,25 @@ pub fn register_job_types() {
                     dropped_invalid = counts.dropped_invalid,
                     "web event batch written"
                 );
+                // E14-T9: a known visitor's watched-page views start flows.
+                if counts.written > 0
+                    && let Some(session) = batch
+                        .batch
+                        .get("session")
+                        .and_then(serde_json::Value::as_str)
+                        .and_then(|s| uuid::Uuid::parse_str(s.trim()).ok())
+                {
+                    let alerted = attome_marketing::tracking::alerts::after_batch(
+                        &state,
+                        batch.site_key.trim(),
+                        session,
+                    )
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                    if alerted > 0 {
+                        tracing::info!(site = %batch.site_key, alerted, "watched pages viewed");
+                    }
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

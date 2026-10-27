@@ -116,6 +116,12 @@ pub struct ChangeEvent {
 /// workflow `merge` trigger matches.
 pub const MERGED_EVENT: &str = "record.merged";
 
+/// E14-T9: the event name on a known visitor's contact or lead when they
+/// view a watched page, which a workflow `web.page_viewed` trigger matches.
+/// Not a change to the record: it starts only that trigger and resumes no
+/// wait.
+pub const PAGE_VIEWED_EVENT: &str = "web.page_viewed";
+
 /// Y7-T2: what a write changed, for its outbox row.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ChangePayload {

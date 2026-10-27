@@ -2,6 +2,8 @@
 //! custom events and return-visit alerts. Every part sits behind its own
 //! feature flag, off by default (`marketing.tracking*`).
 
+/// E14-T9: page-view alerts as a flow trigger, and the live visitor list.
+pub mod alerts;
 pub mod bots;
 pub mod collect;
 /// E14-T7: a visitor identified as a lead or contact.

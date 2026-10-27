@@ -51,7 +51,6 @@ use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::trigger_index::EntryMatch;
-use attome_core::change_feed::MERGED_EVENT;
 
 const DISPATCH_BATCH_SIZE: i64 = 200;
 
@@ -378,13 +377,11 @@ pub(crate) async fn start_entry_instances(
     }
     let mut count = 0u64;
     // M1-T1: a merge survivor's named event starts `merge` triggers only
-    // (its ordinary update has its own event); every other event matches
-    // its operation (`create`, `update`, `delete`, `restore`).
-    let trigger_type = if event.event_name.as_deref() == Some(MERGED_EVENT) {
-        "merge"
-    } else {
-        event.operation.as_str()
-    };
+    // (its ordinary update has its own event); E14-T9: a watched-page view
+    // starts `web.page_viewed` triggers only; every other event matches its
+    // operation (`create`, `update`, `delete`, `restore`).
+    let trigger_type =
+        crate::trigger_index::entry_trigger_type(&event.operation, event.event_name.as_deref());
     let entry_matches = crate::trigger_index::match_entry_triggers(
         &state.base.db,
         &event.entity_logicalname,
@@ -426,6 +423,9 @@ pub(crate) async fn start_entry_instances(
 /// Resumes every running Wait-for-Event node `event` matches.
 async fn resume_waits(state: &EngineState, event: &ChangeEvent) -> Result<u64, AppError> {
     let mut count = 0u64;
+    if !crate::trigger_index::resumes_waits(event.event_name.as_deref()) {
+        return Ok(0);
+    }
     let wait_matches =
         crate::trigger_index::match_wait_triggers(&state.base.db, &event.entity_logicalname)
             .await

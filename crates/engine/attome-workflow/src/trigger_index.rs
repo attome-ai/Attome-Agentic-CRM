@@ -20,6 +20,27 @@ use uuid::Uuid;
 use crate::graph::Graph;
 use crate::node_types::NodeType;
 
+/// E14-T9: the entry trigger type an entity change event starts. A merge
+/// survivor's named event starts `merge` triggers (M1-T1) and a watched-page
+/// view `web.page_viewed` triggers, never the ordinary `update` ones; every
+/// other event its operation (`create`, `update`, `delete`, `restore`).
+/// Trigger nodes name these as their `trigger_type`. Pure.
+pub fn entry_trigger_type<'a>(operation: &'a str, event_name: Option<&str>) -> &'a str {
+    match event_name {
+        Some(attome_core::change_feed::MERGED_EVENT) => "merge",
+        Some(attome_core::change_feed::PAGE_VIEWED_EVENT) => {
+            attome_core::change_feed::PAGE_VIEWED_EVENT
+        }
+        _ => operation,
+    }
+}
+
+/// Whether an event is a record change that resumes Wait-for-Event nodes
+/// (a watched-page view is not). Pure.
+pub fn resumes_waits(event_name: Option<&str>) -> bool {
+    event_name != Some(attome_core::change_feed::PAGE_VIEWED_EVENT)
+}
+
 /// Publish-time rebuild for `role='entry'` rows, scoped to exactly this
 /// `definition_version_id` — never touches any `role='wait'` row (§4.3: a
 /// `wait` row belongs to one running instance, not to a definition version).
@@ -326,5 +347,24 @@ mod catalog_lineage_tests {
     #[test]
     fn empty_graph_collects_nothing() {
         assert!(collect_entity_lineage(&Graph::default()).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod trigger_type_tests {
+    use super::{entry_trigger_type, resumes_waits};
+
+    #[test]
+    fn named_events_start_their_own_trigger_type() {
+        assert_eq!(entry_trigger_type("update", Some("record.merged")), "merge");
+        assert_eq!(
+            entry_trigger_type("update", Some("web.page_viewed")),
+            "web.page_viewed"
+        );
+        assert_eq!(entry_trigger_type("update", Some("sla.breached")), "update");
+        assert_eq!(entry_trigger_type("create", None), "create");
+        assert!(!resumes_waits(Some("web.page_viewed")));
+        assert!(resumes_waits(Some("record.merged")));
+        assert!(resumes_waits(None));
     }
 }
