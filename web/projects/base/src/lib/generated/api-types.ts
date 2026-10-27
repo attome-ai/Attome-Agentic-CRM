@@ -36720,6 +36720,7 @@ export interface components {
          *     `request_rejected`: The request was refused before it reached a route: a malformed path or oversized headers.
          *     `invalid_cursor`: The cursor was not issued by this deployment; start again from the first page.
          *     `resync_needed`: The delta token is older than the change feed keeps; read the list again for a new token.
+         *     `cascade_restricted`: The delete would cascade to a record a restrict-mode lookup still references; the message names the path.
          *     `idempotency_outcome_unknown`: An earlier attempt with this key did not finish; its outcome is unknown.
          *     `idempotency_replay_unavailable`: The stored response for this key can no longer be replayed.
          *     `method_not_allowed`: The path exists but not for this method; see `Allow`.
@@ -36728,7 +36729,7 @@ export interface components {
          *     `internal_error` (retryable): An unexpected error; the request id finds it in the logs.
          * @enum {string}
          */
-        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "request_rejected" | "invalid_cursor" | "resync_needed" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "api_version_sunset" | "unsupported_api_version" | "internal_error";
+        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "request_rejected" | "invalid_cursor" | "resync_needed" | "cascade_restricted" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "api_version_sunset" | "unsupported_api_version" | "internal_error";
         /**
          * @description `ErrorResponse.details`: its shape depends on the `error` code —
          *     a list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on
@@ -36778,7 +36779,7 @@ export interface components {
              *     `metadata_authoring_locked`, `transition_not_allowed`,
              *     `rule_violation`, `field_locked`, `field_locked_required`,
              *     `reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,
-             *     `request_rejected`, `invalid_cursor`, `resync_needed`,
+             *     `request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,
              *     `idempotency_outcome_unknown`, `idempotency_replay_unavailable`,
              *     `method_not_allowed`, or
              *     `internal_error` — one per `AppError` variant (`FieldLocked` answers
