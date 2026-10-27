@@ -200,7 +200,7 @@ async fn audit(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-pub(crate) async fn draft_mapping(
+pub(crate) async fn draft_model_mapping(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
@@ -266,7 +266,7 @@ pub(crate) async fn draft_mapping(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-pub(crate) async fn get_mapping(
+pub(crate) async fn get_model_mapping(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
@@ -307,7 +307,7 @@ pub(crate) async fn get_mapping(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-pub(crate) async fn save_mapping(
+pub(crate) async fn save_model_mapping(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
@@ -414,16 +414,21 @@ pub(crate) fn routes() -> Router<EngineState> {
         )
         .route(
             "/api/v1/admin/migration-projects/{id}/model-mapping",
-            get(get_mapping).put(save_mapping),
+            get(get_model_mapping).put(save_model_mapping),
         )
         .route(
             "/api/v1/admin/migration-projects/{id}/model-mapping/draft",
-            post(draft_mapping),
+            post(draft_model_mapping),
         )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(draft_mapping, get_mapping, save_mapping, describe_source))]
+#[openapi(paths(
+    draft_model_mapping,
+    get_model_mapping,
+    save_model_mapping,
+    describe_source
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
