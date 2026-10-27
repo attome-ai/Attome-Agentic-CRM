@@ -1,0 +1,40 @@
+{
+  "_comment": "U2-T1: a deployment profile for `attome cluster plan`. Sizes are proposals from loadtest/profiles.json's reference machines until AA2 measures them.",
+  "name": "team",
+  "description": "One larger machine (8 vCPU, 32 GB): the server and a separate worker, so long jobs never slow requests.",
+  "services": [
+    {
+      "name": "server",
+      "role": "server",
+      "replicas": 1,
+      "cpu_percent": 400,
+      "memory_mb": 6144
+    },
+    {
+      "name": "worker",
+      "role": "worker",
+      "replicas": 1,
+      "cpu_percent": 200,
+      "memory_mb": 2048
+    },
+    {
+      "name": "postgres",
+      "role": "postgres",
+      "replicas": 1,
+      "cpu_percent": 200,
+      "memory_mb": 16384
+    },
+    {
+      "name": "cache",
+      "role": "cache",
+      "replicas": 1,
+      "cpu_percent": 50,
+      "memory_mb": 2048
+    }
+  ],
+  "settings": {
+    "jobs.run_worker_inline": false,
+    "database.node_count": 2,
+    "database.connection_number": 30
+  }
+}

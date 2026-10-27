@@ -1,0 +1,48 @@
+{
+  "_comment": "U2-T1: a deployment profile for `attome cluster plan`. Sizes are proposals from loadtest/profiles.json's reference machines until AA2 measures them.",
+  "name": "scale",
+  "description": "Large deployments (32 vCPU and up): four servers, four workers, PgBouncer, a PostgreSQL primary with two read replicas, and the cache.",
+  "services": [
+    {
+      "name": "server",
+      "role": "server",
+      "replicas": 4,
+      "cpu_percent": 800,
+      "memory_mb": 12288
+    },
+    {
+      "name": "worker",
+      "role": "worker",
+      "replicas": 4,
+      "cpu_percent": 400,
+      "memory_mb": 6144
+    },
+    {
+      "name": "pgbouncer",
+      "role": "pgbouncer",
+      "replicas": 2,
+      "cpu_percent": 100,
+      "memory_mb": 512
+    },
+    {
+      "name": "postgres",
+      "role": "postgres",
+      "replicas": 3,
+      "cpu_percent": 800,
+      "memory_mb": 65536
+    },
+    {
+      "name": "cache",
+      "role": "cache",
+      "replicas": 1,
+      "cpu_percent": 200,
+      "memory_mb": 8192
+    }
+  ],
+  "settings": {
+    "jobs.run_worker_inline": false,
+    "database.node_count": 8,
+    "database.connection_number": 50,
+    "database.replica_max_lag_secs": 5
+  }
+}

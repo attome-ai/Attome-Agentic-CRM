@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- `attome cluster plan --profile solo|team|ha|scale [--target native|compose|helm]` (U2-T1,
+  `deploy/profiles/`): prints a deployment profile's systemd units and `config.json` overlay, a
+  `docker-compose.yml`, or values for `deploy/helm/attome`, with each service's replicas and limits.
 - Inbound hook preset `slack` (C6-T1, part): a hook verifies Slack's `X-Slack-Signature` (`v0=`
   HMAC-SHA256 of `v0:{timestamp}:{body}` with the app's signing secret) inside the timestamp window, so
   Slack Events API, interactivity and slash-command calls can start flows or create records.

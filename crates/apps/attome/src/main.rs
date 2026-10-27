@@ -55,6 +55,9 @@ Usage:
   attome settings list|get <key>|set <key> <json> --url <server>
                                 Read or change a setting (the API key is read
                                 from ATTOME_API_KEY)
+  attome cluster plan --profile <solo|team|ha|scale> [--target native|compose|helm]
+                                Print the deployment files of a profile (systemd
+                                units and a config overlay, compose, or Helm values)
   attome status-page --url <server> --out <dir>
                                 Write a server's public status page as static
                                 HTML and JSON into a directory
@@ -189,6 +192,10 @@ fn main() -> ExitCode {
         ["storage", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::storage_migrate::run(&rest)
+        }
+        ["cluster", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::cluster::run(&rest)
         }
         ["status-page", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

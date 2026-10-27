@@ -1,0 +1,33 @@
+{
+  "_comment": "U2-T1: a deployment profile for `attome cluster plan`. Sizes are proposals from loadtest/profiles.json's reference machines until AA2 measures them.",
+  "name": "solo",
+  "description": "One machine (4 vCPU, 16 GB): the server runs the job workers inline, with PostgreSQL and the cache beside it. The normal install (V2-D100).",
+  "services": [
+    {
+      "name": "server",
+      "role": "server",
+      "replicas": 1,
+      "cpu_percent": 300,
+      "memory_mb": 3072
+    },
+    {
+      "name": "postgres",
+      "role": "postgres",
+      "replicas": 1,
+      "cpu_percent": 100,
+      "memory_mb": 8192
+    },
+    {
+      "name": "cache",
+      "role": "cache",
+      "replicas": 1,
+      "cpu_percent": 50,
+      "memory_mb": 1024
+    }
+  ],
+  "settings": {
+    "jobs.run_worker_inline": true,
+    "database.node_count": 1,
+    "database.connection_number": 20
+  }
+}
