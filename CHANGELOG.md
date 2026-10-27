@@ -45,6 +45,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Queries filter through a polymorphic lookup (A8-T2): `regarding_id.city` joins each allowed
+  target entity that has a readable `city`, on the pair naming that entity, so
+  `regarding_entity = account AND regarding_id.city = Riyadh` filters as written. The targets must
+  agree on the field's type; an `any` field reaches at most 8 entities.
 - Migration waves can be compared and rolled back (A24-T5). `GET /api/v1/admin/migration-projects/{id}/waves/{wave_id}/compare`
   reports, per target entity, the rows sent, refused, created and updated, how many created records
   are still live, and for a sample of applied rows the fields whose stored value differs from the

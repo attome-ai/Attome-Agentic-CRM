@@ -48,6 +48,9 @@ pub const DEFAULT_PAGE_SIZE: i64 = 50;
 pub const MAX_PAGE_SIZE: i64 = 200;
 /// The most lookups a related field may follow.
 pub const MAX_HOPS: usize = 3;
+
+/// A8-T2: the most entities one polymorphic path joins.
+pub const MAX_POLYMORPHIC_JOINS: usize = 8;
 /// The most `exists` conditions that may nest inside each other.
 pub const MAX_EXISTS_DEPTH: usize = 3;
 
@@ -337,6 +340,11 @@ impl<'a> Builder<'a> {
         if segments.len() - 1 > MAX_HOPS {
             return Err(AppError::Validation(format!("path too deep: {name}")));
         }
+        if let [hop, field] = segments[..]
+            && let Some(col) = self.polymorphic_field(scope, hop, field)?
+        {
+            return Ok(col);
+        }
         let mut entity = scope.entity;
         let mut alias = scope.alias.clone();
         for (i, hop) in segments[..segments.len() - 1].iter().enumerate() {
@@ -383,6 +391,111 @@ impl<'a> Builder<'a> {
             .ok_or_else(unknown)?;
         col.is_owner = false;
         Ok(col)
+    }
+
+    /// A8-T2: `regarding_id.city` through a polymorphic pair (A8-T1): one
+    /// join per allowed entity that has a readable `city`, each on the pair
+    /// naming that entity, and the value is whichever row joined, so
+    /// `regarding_entity = account AND regarding_id.city = Riyadh` filters as
+    /// written. `None` when `hop` is not a polymorphic id attribute. The
+    /// targets must agree on the field's type; an `any` field reaches every
+    /// entity with it, up to [`MAX_POLYMORPHIC_JOINS`].
+    fn polymorphic_field(
+        &self,
+        scope: &Scope<'a>,
+        hop: &str,
+        field: &str,
+    ) -> Result<Option<Col>, AppError> {
+        let unknown = || AppError::Validation(format!("unknown attribute: {hop}.{field}"));
+        let Some(attr) = self.readable_attr(scope.entity, hop) else {
+            return Ok(None);
+        };
+        let Some(poly) = crate::polymorphic::options_of(attr) else {
+            return Ok(None);
+        };
+        let pair = self
+            .readable_attr(scope.entity, &poly.pair)
+            .ok_or_else(unknown)?;
+        let registry = self.env.registry;
+        let mut targets: Vec<&'a EntityMeta> = if poly.any {
+            registry.iter().collect()
+        } else {
+            poly.targets
+                .iter()
+                .chain(poly.extends.iter())
+                .filter_map(|name| registry.get(name))
+                .collect()
+        };
+        targets.sort_by(|a, b| a.logicalname.cmp(&b.logicalname));
+        targets.dedup_by(|a, b| a.logicalname == b.logicalname);
+        let mut cols: Vec<Col> = Vec::new();
+        for target in targets {
+            if !self.readable_entity(target) {
+                continue;
+            }
+            let prefix = format!("{hop}@{}", target.logicalname);
+            let existing = self
+                .joins
+                .borrow()
+                .iter()
+                .find(|(p, _, _)| *p == prefix)
+                .map(|(_, a, _)| a.clone());
+            let alias = existing
+                .clone()
+                .unwrap_or_else(|| format!("j{}", self.joins.borrow().len() + 1));
+            let Some(col) = self.own_field(target, &alias, field) else {
+                continue;
+            };
+            if cols.len() == MAX_POLYMORPHIC_JOINS {
+                return Err(AppError::Validation(format!(
+                    "{hop}.{field} reaches more than {MAX_POLYMORPHIC_JOINS} entities; \
+                     list the field's targets"
+                )));
+            }
+            if existing.is_none() {
+                let entity = self.bind(target.logicalname.clone());
+                let join = format!(
+                    "LEFT JOIN {} AS {alias} ON {root}.{} = ${entity}::text \
+                     AND {alias}.id::text = {root}.{}{}",
+                    quote_ident(&target.logicalname),
+                    quote_ident(&pair.logicalname),
+                    quote_ident(hop),
+                    self.row_predicates(target, &alias),
+                    root = scope.alias,
+                );
+                self.joins.borrow_mut().push((prefix, alias, join));
+            }
+            cols.push(col);
+        }
+        let Some(first) = cols.first() else {
+            return Err(unknown());
+        };
+        if cols
+            .iter()
+            .any(|c| c.cast != first.cast || c.multi != first.multi)
+        {
+            return Err(AppError::Validation(format!(
+                "{hop}.{field} has a different type on its targets"
+            )));
+        }
+        let expr = if cols.len() == 1 {
+            first.expr.clone()
+        } else {
+            format!(
+                "COALESCE({})",
+                cols.iter()
+                    .map(|c| c.expr.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        };
+        Ok(Some(Col {
+            expr,
+            cast: first.cast,
+            multi: first.multi,
+            sortable: cols.iter().all(|c| c.sortable),
+            is_owner: false,
+        }))
     }
 
     pub(super) fn condition(
@@ -1109,6 +1222,25 @@ pub(super) mod fixtures {
         .sql
     }
 
+    /// A8-T2: an activity (5) regarding an account or a contact.
+    pub fn polymorphic_registry() -> EntityMetaRegistry {
+        let mut regarding = attr("regarding_id", FieldType::Text, false);
+        regarding.options = Some(serde_json::json!({
+            "polymorphic": { "pair": "regarding_entity", "targets": ["account", "contact", "team"] }
+        }));
+        let mut entities: Vec<EntityMeta> = registry().iter().cloned().collect();
+        entities.push(entity(
+            5,
+            "activity_log",
+            vec![
+                attr("name", FieldType::Text, false),
+                attr("regarding_entity", FieldType::Text, false),
+                regarding,
+            ],
+        ));
+        EntityMetaRegistry::from_entities(entities)
+    }
+
     pub fn validation(result: Result<Compiled, AppError>) -> String {
         match result {
             Err(AppError::Validation(m)) => m,
@@ -1123,6 +1255,99 @@ mod tests {
 
     use super::fixtures::*;
     use super::*;
+
+    fn run_polymorphic(doc: Value, ctx: &SecurityContext) -> Result<Compiled, AppError> {
+        let registry = polymorphic_registry();
+        let relationships = relationships();
+        let access = Access::new(
+            (1..=5)
+                .map(|i| (Uuid::from_u128(i), AccessLevel::Global))
+                .collect(),
+        );
+        let env = Env {
+            registry: &registry,
+            relationships: &relationships,
+            ctx,
+            access: &access,
+            clock: clock(),
+        };
+        let spec: QuerySpec = serde_json::from_value(doc).expect("spec");
+        compile(&spec, &env)
+    }
+
+    fn activity_reader() -> SecurityContext {
+        let mut ctx = reader();
+        ctx.privileges.insert("activity_log.read".into());
+        ctx
+    }
+
+    #[test]
+    fn polymorphic_filter_joins_once_per_allowed_entity() {
+        let c = run_polymorphic(
+            json!({
+                "entity": "activity_log",
+                "where": {"kind": "and", "all": [
+                    {"kind": "compare", "field": "regarding_entity", "op": "eq", "value": "account"},
+                    {"kind": "compare", "field": "regarding_id.name", "op": "eq", "value": "شركة النور"}
+                ]}
+            }),
+            &activity_reader(),
+        )
+        .unwrap();
+        // account, contact and team each have a `name`: three joins, each
+        // on the pair naming its entity.
+        assert!(
+            c.sql.contains(
+                "LEFT JOIN \"account\" AS j1 ON t.\"regarding_entity\" = $2::text \
+                 AND j1.id::text = t.\"regarding_id\""
+            ),
+            "{}",
+            c.sql
+        );
+        assert!(c.sql.contains("LEFT JOIN \"contact\" AS j2"), "{}", c.sql);
+        assert!(c.sql.contains("LEFT JOIN \"team\" AS j3"), "{}", c.sql);
+        assert!(
+            c.sql
+                .contains("COALESCE(j1.\"name\", j2.\"name\", j3.\"name\") = $5::text"),
+            "{}",
+            c.sql
+        );
+        assert_eq!(c.binds[0], "account");
+        assert_eq!(&c.binds[1..4], ["account", "contact", "team"]);
+        assert_eq!(c.binds[4], "شركة النور");
+    }
+
+    #[test]
+    fn polymorphic_filter_skips_targets_without_the_field_or_unreadable() {
+        // Only account has `revenue`.
+        let c = run_polymorphic(
+            json!({"entity": "activity_log",
+                   "where": {"kind": "compare", "field": "regarding_id.revenue", "op": "gt", "value": 10}}),
+            &activity_reader(),
+        )
+        .unwrap();
+        assert!(c.sql.contains("LEFT JOIN \"account\" AS j1"), "{}", c.sql);
+        assert!(!c.sql.contains("\"contact\""), "{}", c.sql);
+        assert!(c.sql.contains("j1.\"revenue\" > $2::numeric"), "{}", c.sql);
+        // A field no target has, and a target the reader may not read.
+        assert_eq!(
+            validation(run_polymorphic(
+                json!({"entity": "activity_log",
+                       "where": {"kind": "compare", "field": "regarding_id.nope", "op": "eq", "value": "x"}}),
+                &activity_reader(),
+            )),
+            "unknown attribute: regarding_id.nope"
+        );
+        let mut no_team = activity_reader();
+        no_team.privileges.remove("team.read");
+        let c = run_polymorphic(
+            json!({"entity": "activity_log",
+                   "where": {"kind": "compare", "field": "regarding_id.name", "op": "eq", "value": "x"}}),
+            &no_team,
+        )
+        .unwrap();
+        assert!(!c.sql.contains("\"team\""), "{}", c.sql);
+    }
 
     #[test]
     fn compiles_select_and_eq_with_rls() {
