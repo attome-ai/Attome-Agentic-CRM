@@ -7168,6 +7168,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/migration-projects/{id}/waves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A project's waves
+         * @description The project's waves, newest first (at most 100). Administrators only.
+         */
+        get: operations["list_waves"];
+        put?: never;
+        /**
+         * Start a migration wave
+         * @description Queues the project's next wave: a full load first, then catch-ups of
+         *     what changed at the source since the previous wave began; `cut_over`
+         *     marks the last. Refused while a wave is queued or running. Administrators
+         *     only. Audited.
+         */
+        post: operations["start_wave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/migration-projects/{project_id}/runs": {
         parameters: {
             query?: never;
@@ -41246,7 +41273,7 @@ export interface components {
         ModelMapping: {
             entities: components["schemas"]["EntityMapping"][];
             roles?: components["schemas"]["ValueMapping"][];
-            users?: components["schemas"]["ValueMapping"][];
+            users?: components["schemas"]["UserMapping"][];
         };
         ModelPublishResponse: {
             /** Format: uuid */
@@ -50676,6 +50703,44 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_WaveRow: {
+            items: {
+                counts: Record<string, never>;
+                /** Format: date-time */
+                created_at: string;
+                error?: string | null;
+                /** Format: date-time */
+                finished_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** @description `full`, `catch_up` or `cut_over`. */
+                kind: string;
+                /** Format: uuid */
+                project_id: string;
+                /**
+                 * Format: date-time
+                 * @description What changed after this was read; `null` for a full load.
+                 */
+                since?: string | null;
+                /** Format: date-time */
+                started_at?: string | null;
+                /** @description `queued`, `running`, `loaded` or `failed`. */
+                status: string;
+                system: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_WorkItemRollupRow: {
             items: {
                 /** Format: date-time */
@@ -57296,6 +57361,8 @@ export interface components {
         /** @description The source's model. */
         SourceModel: {
             entities: components["schemas"]["SourceEntity"][];
+            /** @description A24-T3: the source's people, for the mapping's users part. */
+            users?: components["schemas"]["SourceUser"][];
         };
         /** @description A source document to post through its rule. */
         SourcePosting: {
@@ -57312,6 +57379,13 @@ export interface components {
             entity: string;
             /** Format: uuid */
             id: string;
+        };
+        /** @description One person of the source system. */
+        SourceUser: {
+            active: boolean;
+            email?: string | null;
+            id: string;
+            name: string;
         };
         /** @description Full-set replace for which templates a space's editors may pick from. */
         SpaceTemplatesBody: {
@@ -57592,6 +57666,12 @@ export interface components {
             from_version: string;
             safety_point?: string | null;
             to_version: string;
+        };
+        StartWaveBody: {
+            /** @description The last wave, with the source frozen. */
+            cut_over?: boolean;
+            /** @description The integration system that is the source. */
+            system: string;
         };
         StatOut: {
             /** Format: double */
@@ -60016,6 +60096,18 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
+        /**
+         * @description One source person and the user account here they become; `target: None`
+         *     until the person picks one (a record they owned is then owned by the
+         *     wave's runner).
+         */
+        UserMapping: {
+            email?: string | null;
+            name: string;
+            source: string;
+            /** @description The user account's id here. */
+            target?: string | null;
+        };
         UserRoleItem: {
             /** Format: uuid */
             id: string;
@@ -60397,6 +60489,31 @@ export interface components {
             /** Format: int64 */
             assets_to_change: number;
             sample: components["schemas"]["WarrantyChange"][];
+        };
+        /** @description One wave. */
+        WaveRow: {
+            counts: Record<string, never>;
+            /** Format: date-time */
+            created_at: string;
+            error?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description `full`, `catch_up` or `cut_over`. */
+            kind: string;
+            /** Format: uuid */
+            project_id: string;
+            /**
+             * Format: date-time
+             * @description What changed after this was read; `null` for a full load.
+             */
+            since?: string | null;
+            /** Format: date-time */
+            started_at?: string | null;
+            /** @description `queued`, `running`, `loaded` or `failed`. */
+            status: string;
+            system: string;
         };
         WebChatMetrics: {
             /**
@@ -83614,6 +83731,128 @@ export interface operations {
                 };
             };
             /** @description The system is not a migration source, or the source refused */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_waves: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The migration project */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The waves */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_WaveRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_wave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The migration project */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartWaveBody"];
+            };
+        };
+        responses: {
+            /** @description The wave, queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaveRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project, or no model mapping yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A wave is already queued or running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
             422: {
                 headers: {
                     [name: string]: unknown;

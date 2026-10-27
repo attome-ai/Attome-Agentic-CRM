@@ -37577,6 +37577,199 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/migration-projects/{id}/waves": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A project's waves",
+        "description": "The project's waves, newest first (at most 100). Administrators only.",
+        "operationId": "list_waves",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The migration project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The waves",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_WaveRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Start a migration wave",
+        "description": "Queues the project's next wave: a full load first, then catch-ups of\nwhat changed at the source since the previous wave began; `cut_over`\nmarks the last. Refused while a wave is queued or running. Administrators\nonly. Audited.",
+        "operationId": "start_wave",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The migration project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartWaveBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The wave, queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaveRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project, or no model mapping yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A wave is already queued or running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/migration-projects/{project_id}/runs": {
       "get": {
         "tags": [
@@ -173625,7 +173818,7 @@
           "users": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ValueMapping"
+              "$ref": "#/components/schemas/UserMapping"
             }
           }
         }
@@ -198503,6 +198696,109 @@
           }
         }
       },
+      "PaginatedResponse_WaveRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One wave.",
+              "required": [
+                "id",
+                "project_id",
+                "system",
+                "kind",
+                "status",
+                "counts",
+                "created_at"
+              ],
+              "properties": {
+                "counts": {
+                  "type": "object"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "finished_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`full`, `catch_up` or `cut_over`."
+                },
+                "project_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "since": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "What changed after this was read; `null` for a full load."
+                },
+                "started_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`queued`, `running`, `loaded` or `failed`."
+                },
+                "system": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_WorkItemRollupRow": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -215528,6 +215824,13 @@
             "items": {
               "$ref": "#/components/schemas/SourceEntity"
             }
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceUser"
+            },
+            "description": "A24-T3: the source's people, for the mapping's users part."
           }
         }
       },
@@ -215577,6 +215880,32 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "SourceUser": {
+        "type": "object",
+        "description": "One person of the source system.",
+        "required": [
+          "id",
+          "name",
+          "active"
+        ],
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
           }
         }
       },
@@ -216234,6 +216563,22 @@
           }
         },
         "additionalProperties": false
+      },
+      "StartWaveBody": {
+        "type": "object",
+        "required": [
+          "system"
+        ],
+        "properties": {
+          "cut_over": {
+            "type": "boolean",
+            "description": "The last wave, with the source frozen."
+          },
+          "system": {
+            "type": "string",
+            "description": "The integration system that is the source."
+          }
+        }
       },
       "StatOut": {
         "type": "object",
@@ -222836,6 +223181,35 @@
           }
         }
       },
+      "UserMapping": {
+        "type": "object",
+        "description": "One source person and the user account here they become; `target: None`\nuntil the person picks one (a record they owned is then owned by the\nwave's runner).",
+        "required": [
+          "source",
+          "name"
+        ],
+        "properties": {
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The user account's id here."
+          }
+        }
+      },
       "UserRoleItem": {
         "type": "object",
         "required": [
@@ -223727,6 +224101,75 @@
             "items": {
               "$ref": "#/components/schemas/WarrantyChange"
             }
+          }
+        }
+      },
+      "WaveRow": {
+        "type": "object",
+        "description": "One wave.",
+        "required": [
+          "id",
+          "project_id",
+          "system",
+          "kind",
+          "status",
+          "counts",
+          "created_at"
+        ],
+        "properties": {
+          "counts": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`full`, `catch_up` or `cut_over`."
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "What changed after this was read; `null` for a full load."
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "`queued`, `running`, `loaded` or `failed`."
+          },
+          "system": {
+            "type": "string"
           }
         }
       },
@@ -224875,7 +225318,6 @@
     }
   ],
   "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -224927,5 +225369,6 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10"
 }
