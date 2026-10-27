@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { Router, Routes } from '@angular/router';
-import { authGuard, layerCatalogsReady } from '@attome/base';
+import { authGuard, layerCatalogsReady, provideLayerCatalog } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
 import { provideXrmEntityFormLoaders } from './attome-metadata-form-loaders';
 
@@ -932,7 +932,12 @@ export const xrmShellRoutes: Routes = [
           {
             // P1-T1: build a table, summary or matrix report without SQL.
             path: 'reports/builder',
-            canActivate: [authGuard],
+            // Y14-T4: the screen's own catalogue loads with it.
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/report/builder').then(m => m.reportBuilderEn),
+              () => import('@attome/xrm/report/builder').then(m => m.reportBuilderAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/report/builder').then(m => m.ReportBuilderComponent),
           },
           {

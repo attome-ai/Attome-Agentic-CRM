@@ -2,10 +2,11 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
-import { ATTOME_CONFIG, LangService, provideAttomeI18n } from '@attome/base';
+import { ATTOME_CONFIG, LangService, provideAttomeI18n, provideLayerCatalog } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
 import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { xrmAr } from '@attome/xrm/core/i18n-ar';
+import { reportBuilderAr, reportBuilderEn } from '@attome/xrm/report/builder';
 import { describe, expect, it } from 'vitest';
 import { hostAr } from './ar.catalog';
 import { hostEn } from './en.catalog';
@@ -83,6 +84,13 @@ function placeholders(message: unknown): string[] {
 const resolves = (flat: Record<string, unknown>, key: string): boolean =>
   flat[key] !== undefined || Object.keys(flat).some(k => k.startsWith(`${key}.`));
 
+/** Every layer's catalogue pair: the libraries, the host and the screens with their own (Y14-T4). */
+const LAYERS = [
+  ['xrm', xrmEn, xrmAr],
+  ['host', hostEn, hostAr],
+  ['reportBuilder', reportBuilderEn, reportBuilderAr],
+] as const;
+
 describe('i18n catalog coverage — all layers', () => {
   it('registers every key any layer asks for, in English and Arabic', async () => {
     TestBed.configureTestingModule({
@@ -91,6 +99,8 @@ describe('i18n catalog coverage — all layers', () => {
         provideAttomeI18n(),
         provideXrmI18n(xrmEn),
         provideHostI18n(),
+        // Y14-T4: screen layers, registered on their routes in the app.
+        provideLayerCatalog(reportBuilderEn, () => Promise.resolve(reportBuilderAr)),
       ],
     });
     const lang = TestBed.inject(LangService);
@@ -110,7 +120,7 @@ describe('i18n catalog coverage — all layers', () => {
   }, 30_000);
 
   it('keeps each layer\'s English and Arabic catalogs key-for-key identical', () => {
-    for (const [name, en, ar] of [['xrm', xrmEn, xrmAr], ['host', hostEn, hostAr]] as const) {
+    for (const [name, en, ar] of LAYERS) {
       const enKeys = flatten(en as Record<string, unknown>);
       const arKeys = flatten(ar as Record<string, unknown>);
       expect([...enKeys].filter(k => !arKeys.has(k)).sort(), `${name}: present in en, missing in ar`).toEqual([]);
@@ -120,7 +130,7 @@ describe('i18n catalog coverage — all layers', () => {
 
   it('gives each English message and its Arabic one the same placeholders (B20-T2)', () => {
     const mismatched: string[] = [];
-    for (const [name, en, ar] of [['xrm', xrmEn, xrmAr], ['host', hostEn, hostAr]] as const) {
+    for (const [name, en, ar] of LAYERS) {
       for (const key of flatten(en as Record<string, unknown>)) {
         const want = placeholders(valueAt(en as Record<string, unknown>, key));
         const got = placeholders(valueAt(ar as Record<string, unknown>, key));
@@ -131,7 +141,14 @@ describe('i18n catalog coverage — all layers', () => {
   });
 
   it('gives every namespace exactly one owning layer', () => {
-    const shared = Object.keys(xrmEn).filter(ns => ns in hostEn);
+    const owners = new Map<string, string>();
+    const shared: string[] = [];
+    for (const [name, en] of LAYERS) {
+      for (const ns of Object.keys(en)) {
+        if (owners.has(ns)) shared.push(`${ns}: ${owners.get(ns)} and ${name}`);
+        owners.set(ns, name);
+      }
+    }
     expect(shared).toEqual([]);
   });
 });
