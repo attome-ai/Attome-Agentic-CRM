@@ -1178,7 +1178,9 @@ pub fn paths_between(
     max_hops: usize,
     max_paths: usize,
 ) -> Vec<Vec<GraphEdge>> {
-    let mut adjacent: HashMap<(String, Uuid), Vec<(usize, (String, Uuid))>> = HashMap::new();
+    // A node is (entity, record id).
+    type Node = (String, Uuid);
+    let mut adjacent: HashMap<Node, Vec<(usize, Node)>> = HashMap::new();
     for (i, e) in edges.iter().enumerate() {
         let a = (e.from_entity.clone(), e.from_id);
         let b = (e.to_entity.clone(), e.to_id);
@@ -1189,7 +1191,7 @@ pub fn paths_between(
     let goal = (to.0.to_owned(), to.1);
     let mut found = Vec::new();
     // Breadth-first over partial paths, so shorter paths come first.
-    let mut queue: std::collections::VecDeque<(Vec<usize>, Vec<(String, Uuid)>)> =
+    let mut queue: std::collections::VecDeque<(Vec<usize>, Vec<Node>)> =
         std::collections::VecDeque::from([(Vec::new(), vec![start])]);
     while let Some((path, visited)) = queue.pop_front() {
         if found.len() >= max_paths {

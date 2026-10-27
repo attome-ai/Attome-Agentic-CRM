@@ -304,8 +304,11 @@ pub(crate) mod fixture {
         pub seen: Mutex<Vec<Request>>,
     }
 
+    /// (method, URL prefix, status, body, headers).
+    pub type Answer<'a> = (&'a str, &'a str, u16, &'a str, Vec<(&'a str, &'a str)>);
+
     impl Recorded {
-        pub fn new(answers: Vec<(&str, &str, u16, &str, Vec<(&str, &str)>)>) -> Self {
+        pub fn new(answers: Vec<Answer<'_>>) -> Self {
             Recorded {
                 answers: Mutex::new(
                     answers

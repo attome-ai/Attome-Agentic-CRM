@@ -24,7 +24,7 @@ use crate::connector::sdk::{Request, Response, Secret, Transport};
 pub const PAGE: u32 = 200;
 
 /// Refreshing the access token.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ZohoRefresh {
     /// `https://accounts.zoho.com/oauth/v2/token` (or the data centre's).
     pub token_url: String,

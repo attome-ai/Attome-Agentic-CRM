@@ -37,7 +37,7 @@ pub const MAX_POLLS: u32 = 120;
 pub const POLL_SECS: u64 = 2;
 
 /// Refreshing the access token.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Refresh {
     /// `https://login.salesforce.com/services/oauth2/token` or the org's.
     pub token_url: String,
@@ -742,9 +742,7 @@ mod tests {
             files[0].url,
             format!("{ORG}/sobjects/ContentVersion/068A/VersionData")
         );
-        let seen = source.seen.lock().unwrap();
-        assert_eq!(seen[2].headers[0].1, "Bearer fresh");
-        drop(seen);
+        assert_eq!(source.seen.lock().unwrap()[2].headers[0].1, "Bearer fresh");
         assert!(sf.read_files("Account", "001' OR Id != '").await.is_err());
     }
 }

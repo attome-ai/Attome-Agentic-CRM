@@ -625,6 +625,7 @@ mod tests {
             action: Some("update".into()),
             record_id: None,
             record_row_version: None,
+            owner: None,
         };
         assert_eq!(Value::Object(body_of(&row)), json!({"title": "a"}));
         assert_eq!(row_version_of(Some(&json!({"row_version": 3}))), Some(3));

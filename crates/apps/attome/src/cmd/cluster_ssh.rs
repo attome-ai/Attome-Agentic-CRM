@@ -73,6 +73,7 @@ pub trait Remote {
 }
 
 /// A host over the system's `ssh` client.
+#[derive(Debug)]
 pub struct SshRemote {
     target: String,
     identity: Option<PathBuf>,
@@ -641,7 +642,9 @@ mod tests {
         }
     }
 
-    fn fakes(names: &[&str]) -> (Vec<Box<dyn Remote>>, Vec<Rc<RefCell<Host>>>) {
+    type Fakes = (Vec<Box<dyn Remote>>, Vec<Rc<RefCell<Host>>>);
+
+    fn fakes(names: &[&str]) -> Fakes {
         let hosts: Vec<Rc<RefCell<Host>>> = names
             .iter()
             .map(|_| Rc::new(RefCell::new(Host::default())))

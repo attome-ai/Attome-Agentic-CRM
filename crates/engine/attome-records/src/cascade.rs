@@ -175,7 +175,7 @@ pub(crate) async fn cascade_below(
                 continue;
             }
             summary.extend(links_on_delete(tx, &level.entity, &level.ids, &level.path).await?);
-            let dependents = dependents_of(&mut **tx, &level.entity).await?;
+            let dependents = dependents_of(tx, &level.entity).await?;
             for (dep_entity, dep_field, mode) in dependents {
                 let dep_table = quote_ident(&dep_entity);
                 let dep_field_ident = quote_ident(&dep_field);

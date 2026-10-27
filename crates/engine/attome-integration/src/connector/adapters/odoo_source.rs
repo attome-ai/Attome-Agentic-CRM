@@ -408,13 +408,14 @@ mod tests {
         assert_eq!(acme.fields["is_company"], false);
         assert_eq!(acme.fields["type"], Value::Null);
         assert_eq!(page.next, None);
-        let seen = source.seen.lock().unwrap();
-        let call: Value = serde_json::from_str(seen[3].body.as_deref().unwrap()).unwrap();
-        assert_eq!(
-            call["params"]["args"][5][0][0],
-            json!(["write_date", ">", "2026-01-01 00:00:00"])
-        );
-        drop(seen);
+        {
+            let seen = source.seen.lock().unwrap();
+            let call: Value = serde_json::from_str(seen[3].body.as_deref().unwrap()).unwrap();
+            assert_eq!(
+                call["params"]["args"][5][0][0],
+                json!(["write_date", ">", "2026-01-01 00:00:00"])
+            );
+        }
         assert!(matches!(
             odoo.read_records("res.partner", None, Some("ten")).await,
             Err(AppError::InvalidCursor)

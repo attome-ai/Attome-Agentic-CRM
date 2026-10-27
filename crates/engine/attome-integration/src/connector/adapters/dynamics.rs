@@ -33,7 +33,7 @@ pub const API_VERSION: &str = "v9.2";
 pub const PAGE_SIZE: u32 = 5_000;
 
 /// Taking a new access token with the app's client credentials.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ClientCredentials {
     /// `https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token`.
     pub token_url: String,

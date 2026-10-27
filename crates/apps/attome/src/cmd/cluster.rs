@@ -25,6 +25,11 @@
 //! `attome cluster create` and `expand` install a profile over SSH
 //! ([`super::cluster_ssh`], U3-T1).
 
+#![allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
+
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::ExitCode;

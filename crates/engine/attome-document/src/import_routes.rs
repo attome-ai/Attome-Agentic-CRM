@@ -29,7 +29,7 @@ use attome_audit::business::{BusinessEvent, write_business_event_in_tx};
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::{AttrInfo, EngineState, Sensitivity};
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -1238,7 +1238,7 @@ const POLICY_COLUMNS: &str = "max_rows, approval_over_rows, allowed_roles, quiet
 )]
 pub(crate) async fn get_import_policy(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity): Path<String>,
 ) -> Result<Json<ImportPolicyView>, AppError> {
     let (_, entity, _, _) = attome_records::entity_crud::resolve_entity(&state, &entity).await?;
@@ -1285,7 +1285,7 @@ pub(crate) async fn get_import_policy(
 )]
 pub(crate) async fn put_import_policy(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity): Path<String>,
     headers: HeaderMap,
     Json(body): Json<ImportPolicy>,
@@ -1725,6 +1725,7 @@ pub async fn withdraw_import(
     Ok(outcome)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create_rows_import(
     state: &EngineState,
     entity: &str,

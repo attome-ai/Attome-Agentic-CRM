@@ -41,7 +41,6 @@ use axum::{
 };
 use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
-use serde_json::json;
 use sqlx::{Postgres, Transaction};
 use utoipa::ToSchema;
 use uuid::Uuid;

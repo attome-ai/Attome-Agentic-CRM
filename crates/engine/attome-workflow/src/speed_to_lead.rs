@@ -182,13 +182,15 @@ pub async fn fire(state: &EngineState, timer: &Timer) -> Result<(), AppError> {
         return Ok(());
     };
     let db = &state.base.db;
-    let lead: Option<(
+    // name, lead_status, owner_ref, created_by, created_at
+    type LeadRow = (
         Option<String>,
         Option<String>,
         Option<Uuid>,
         Option<Uuid>,
         DateTime<Utc>,
-    )> = sqlx::query_as(
+    );
+    let lead: Option<LeadRow> = sqlx::query_as(
         "SELECT name, lead_status, owner_ref, created_by, created_at FROM lead \
               WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
     )
