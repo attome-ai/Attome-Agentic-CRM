@@ -44,7 +44,8 @@ attome init: install a Solo deployment (the binary and PostgreSQL, no Redis)
 Usage:
   attome init --database-url <url> [--out <file>] [--port <n>] [--force]
               [--no-migrate] [--from-bundle <dir>] [--admin <email>] [--service]
-              [--pack <name>]... [--ai <profile> [--ai-dir <dir>]]
+              [--pack <name>]... [--app <sales|service|both|all>]
+              [--ai <profile> [--ai-dir <dir>]]
 
   --database-url  postgres://user:password@host:port/database, a database that
                   exists, reached as a role that can create roles and tables
@@ -58,6 +59,10 @@ Usage:
   --admin         create the first administrator and print a one-time password
   --pack          install a pack (repeatable), e.g. --pack crm; applied at every
                   boot through the changeset ledger
+  --app           what the deployment is for (default sales): it starts with the
+                  platform basics, that app's modules and the modules its packs
+                  need; turn on more later in Module Management; `all` turns
+                  every module on
   --ai            turn AI on with a local model pack (deploy/model-servers/
                   ai-packs.json); its weights are checked against the pack's
                   checksums before the configuration names them
@@ -84,6 +89,8 @@ struct Args {
     service: bool,
     /// Packs to install, in order.
     packs: Vec<String>,
+    /// AK6-T1: what the deployment is for, which picks its first modules.
+    app: String,
     /// A local AI model pack profile (N26-T2), and where its weights are.
     ai: Option<String>,
     ai_dir: Option<PathBuf>,
@@ -99,6 +106,7 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
     let mut admin = None;
     let mut service = false;
     let mut packs = Vec::new();
+    let mut app = "sales".to_owned();
     let mut ai = None;
     let mut ai_dir = None;
     let mut it = raw.iter();
@@ -122,6 +130,7 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
             "--admin" => admin = Some(value("--admin")?),
             "--service" => service = true,
             "--pack" => packs.push(value("--pack")?),
+            "--app" => app = value("--app")?,
             "--ai" => ai = Some(value("--ai")?),
             "--ai-dir" => ai_dir = Some(PathBuf::from(value("--ai-dir")?)),
             "--help" | "-h" => return Err(USAGE.to_owned()),
@@ -138,6 +147,9 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
         return Err(
             "--ai needs the weights: pass --ai-dir <dir> or --from-bundle <dir>".to_owned(),
         );
+    }
+    if attome_modules::starter_set(&app).is_none() {
+        return Err(format!("--app is sales, service, both or all, not `{app}`"));
     }
     if (service || admin.is_some()) && !migrate {
         return Err("--service and --admin need the schema; drop --no-migrate".to_owned());
@@ -159,9 +171,33 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
         admin,
         service,
         packs,
+        app,
         ai,
         ai_dir,
     })
+}
+
+/// AK6-T1: the modules a new deployment starts with: `app`'s starter set
+/// and every module the packs' changesets require, in `MODULE_MAP` order.
+/// Pure.
+fn first_modules(app: &str, pack_documents: &[Value]) -> Vec<String> {
+    let mut wanted: std::collections::BTreeSet<String> = attome_modules::starter_set(app)
+        .unwrap_or_default()
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    for doc in pack_documents {
+        for module in doc["requires"]["modules"].as_array().into_iter().flatten() {
+            if let Some(name) = module.as_str() {
+                wanted.insert(name.to_owned());
+            }
+        }
+    }
+    attome_modules::MODULE_MAP
+        .iter()
+        .map(|(name, _)| (*name).to_owned())
+        .filter(|name| wanted.contains(name))
+        .collect()
 }
 
 /// 32 random bytes as hex, for secrets and role passwords.
@@ -379,8 +415,30 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         say("applying the schema (this creates the application roles and tables)...");
         let migration_db = crate::boot::apply_schema_migrations(&config).await?;
         crate::role_seed_lock::seed_roles_and_pepper_registry(&migration_db, &config).await?;
+        // AK6-T1: a new deployment runs the smallest set of modules; an
+        // existing choice (init run again on the same database) stands.
+        let mut documents = Vec::new();
+        for pack in &args.packs {
+            match attome_api::changeset::boot::read_pack_documents(&config, pack) {
+                Ok(docs) => documents.extend(docs),
+                Err(error) => say(&format!(
+                    "warning: pack {pack} could not be read here ({error}); turn on the modules it needs in Module Management"
+                )),
+            }
+        }
+        let modules = first_modules(&args.app, &documents);
+        let chosen = sqlx::query(
+            "INSERT INTO module_configuration (singleton, enabled, enabled_modules, updated_at)              VALUES (TRUE, TRUE, $1, NOW()) ON CONFLICT (singleton) DO NOTHING",
+        )
+        .bind(&modules)
+        .execute(&migration_db)
+        .await?
+        .rows_affected();
         migration_db.close().await;
         say("schema applied");
+        if chosen > 0 {
+            say(&format!("modules on: {}", modules.join(", ")));
+        }
     }
 
     if let Some(email) = &args.admin {
@@ -469,6 +527,27 @@ mod tests {
     }
 
     #[test]
+    fn fresh_deployment_starts_with_the_smallest_module_set() {
+        let none: Vec<Value> = Vec::new();
+        let sales = first_modules("sales", &none);
+        assert!(sales.contains(&"core".to_owned()) && sales.contains(&"sales".to_owned()));
+        assert!(
+            !sales.contains(&"marketing".to_owned()),
+            "marketing waits until it is wanted"
+        );
+        let packs = vec![json!({"requires": {"modules": ["core", "marketing"]}})];
+        let with_pack = first_modules("sales", &packs);
+        assert!(
+            with_pack.contains(&"marketing".to_owned()),
+            "a pack brings the modules it needs"
+        );
+        assert_eq!(
+            first_modules("all", &none).len(),
+            attome_modules::MODULE_MAP.len()
+        );
+    }
+
+    #[test]
     fn each_init_generates_distinct_secrets() {
         let a = solo_config(&db(), 7865);
         let b = solo_config(&db(), 7865);
@@ -540,6 +619,10 @@ mod tests {
             "sales".to_owned(),
         ]);
         assert_eq!(parse_args(&args).unwrap().packs, ["crm", "sales"]);
+        assert_eq!(parse_args(&url()).unwrap().app, "sales");
+        let mut args = url();
+        args.extend(["--app".to_owned(), "everything".to_owned()]);
+        assert!(parse_args(&args).is_err(), "an unknown app is refused");
         let ai = |extra: &[&str]| {
             let mut args = vec!["--database-url".to_owned(), "postgres://u:p@h/d".to_owned()];
             args.extend(extra.iter().map(|s| (*s).to_owned()));

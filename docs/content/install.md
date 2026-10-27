@@ -110,5 +110,10 @@ attome serve --bootstrap-admin you@example.com                               # o
 attome service install --dir /var/lib/attome                                 # a systemd unit or a Windows service
 ```
 
+A new deployment starts with the smallest set of modules: the platform basics (records, people,
+flows, audit, notifications, search, reports, documents, views and dashboards) and the app it is
+for, `--app sales` (the default), `--app service` or `--app both`, plus whatever its `--pack`s
+need. Turn more on later in Module Management; `--app all` starts with every module.
+
 `attome service install --dry-run` prints the steps without doing them. `attome sovereignty report`
 lists where copies of the data live and every outside destination the configuration names.

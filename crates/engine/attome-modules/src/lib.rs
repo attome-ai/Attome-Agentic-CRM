@@ -244,10 +244,63 @@ pub fn module_by_name(name: &str) -> Option<ModuleId> {
         .map(|(_, id)| *id)
 }
 
+/// AK6-T1: the modules every new deployment runs, whatever it is for:
+/// records and people, their life cycles, flows, audit, notifications,
+/// search, reports, documents, views, dashboards, languages and settings.
+/// Everything else is turned on later in Module Management.
+pub const STARTER_MODULES: &[&str] = &[
+    "core",
+    "workflow",
+    "state",
+    "audit",
+    "notification",
+    "search",
+    "report",
+    "document",
+    "localization",
+    "view",
+    "config",
+    "automation",
+    "dashboard",
+];
+
+/// AK6-T1: the modules a new deployment starts with for `app` (`sales`,
+/// `service`, `both`, or `all` for every module), in [`MODULE_MAP`] order;
+/// `None` for an unknown app. Pure.
+pub fn starter_set(app: &str) -> Option<Vec<&'static str>> {
+    let extra: &[&str] = match app {
+        "sales" => &["sales"],
+        "service" => &["service"],
+        "both" => &["sales", "service"],
+        "all" => return Some(MODULE_MAP.iter().map(|(name, _)| *name).collect()),
+        _ => return None,
+    };
+    Some(
+        MODULE_MAP
+            .iter()
+            .map(|(name, _)| *name)
+            .filter(|name| STARTER_MODULES.contains(name) || extra.contains(name))
+            .collect(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::HashSet;
+
+    #[test]
+    fn starter_sets_are_small_and_known() {
+        for name in STARTER_MODULES {
+            assert!(module_by_name(name).is_some(), "{name} is a module");
+        }
+        let sales = starter_set("sales").unwrap();
+        assert!(sales.contains(&"core") && sales.contains(&"sales"));
+        assert!(!sales.contains(&"service") && !sales.contains(&"marketing"));
+        assert!(starter_set("service").unwrap().contains(&"service"));
+        assert_eq!(starter_set("all").unwrap().len(), MODULE_MAP.len());
+        assert!(starter_set("everything").is_none());
+    }
 
     #[test]
     fn ids_and_names_are_unique() {

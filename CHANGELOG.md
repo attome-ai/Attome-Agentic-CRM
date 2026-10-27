@@ -21,6 +21,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Changed
+- `attome init` starts a new deployment with the smallest module set (AK6-T1): the platform basics,
+  the app it is for (`--app sales`, the default; `service`, `both`, or `all` for every module) and the
+  modules its `--pack`s require, written as the module configuration. A database that already has one
+  keeps it. Before, a new deployment ran every module.
 - Field security follows sensitivity labels (Q15-T2): a field whose confirmed label is Personal, Financial,
   Health or Secret now needs a field-security read grant, like an `is_sensitive` field, on every surface.
   Labels mapped by the A1-T1 migration are unconfirmed and change nothing until a builder confirms them;
