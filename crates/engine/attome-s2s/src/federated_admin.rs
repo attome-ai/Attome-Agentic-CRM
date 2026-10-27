@@ -4,7 +4,7 @@
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx, x_audit};
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -96,7 +96,7 @@ async fn client_exists(state: &EngineState, client_db_id: Uuid) -> Result<(), Ap
 )]
 async fn list_trusts(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Path(client_db_id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<TrustItem>>, AppError> {
     client_exists(&state, client_db_id).await?;
@@ -153,12 +153,13 @@ async fn list_trusts(
 )]
 async fn create_trust(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(client_db_id): Path<Uuid>,
     Json(body): Json<CreateTrustBody>,
 ) -> Result<(StatusCode, Json<TrustItem>), AppError> {
     let body = checked(&body)?;
     client_exists(&state, client_db_id).await?;
+    crate::admin::require_existing_client_within_area(&state.base.db, &ctx, client_db_id).await?;
     let mut tx = SecurityTx::begin(
         &state,
         SecurityEvent::new(
@@ -242,7 +243,7 @@ async fn create_trust(
 )]
 async fn delete_trust(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path((client_db_id, trust_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(

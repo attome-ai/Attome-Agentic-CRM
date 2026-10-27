@@ -5,7 +5,7 @@ use attome_core::EngineState;
 /// S2S Admin API — manage external system clients, keys, permissions, and access logs.
 ///
 /// All routes are under /api/v1/admin/s2s/ and require an authenticated session.
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, DEFAULT_PAGE_SIZE, PageBase, PageWindow, PaginatedResponse};
 use axum::{
@@ -313,7 +313,7 @@ fn default_page_size() -> i64 {
 )]
 async fn list_clients(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Query(q): Query<ClientListQuery>,
 ) -> Result<Json<PaginatedResponse<ClientListItem>>, AppError> {
     let PageWindow {
@@ -430,7 +430,7 @@ async fn list_clients(
 )]
 async fn create_client(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Json(body): Json<CreateClientBody>,
 ) -> Result<(StatusCode, Json<ClientDetail>), AppError> {
     let slug = body.client_id.trim().to_lowercase();
@@ -464,6 +464,13 @@ async fn create_client(
     if body.owner_user_ref.is_some() {
         ensure_owner_exists(&state.base.db, owner).await?;
     }
+    require_client_within_area(
+        &state.base.db,
+        &ctx,
+        body.service_user_ref,
+        body.can_act_as_user,
+    )
+    .await?;
     let environment = crate::service_account::checked_environment(body.environment.as_deref())?;
     let expires_at = crate::service_account::checked_expiry(body.expires_at, Utc::now())?;
     let purpose = body
@@ -591,7 +598,7 @@ async fn create_client(
 )]
 async fn get_client(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Path(client_db_id): Path<Uuid>,
 ) -> Result<Json<ClientDetail>, AppError> {
     let row = sqlx::query_as::<
@@ -698,7 +705,7 @@ async fn get_client(
 )]
 async fn update_client(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(client_db_id): Path<Uuid>,
     Json(body): Json<UpdateClientBody>,
 ) -> Result<Json<ClientDetail>, AppError> {
@@ -784,6 +791,10 @@ async fn update_client(
     let new_days = body.auto_disable_days.unwrap_or(cur.7);
     let new_service_user = body.service_user_ref.or(cur.9);
     let new_act_as = body.can_act_as_user.unwrap_or(cur.10);
+    // Q12-T2: suspending or revoking only protects, so it stays open to the area.
+    if new_status == "active" {
+        require_client_within_area(&state.base.db, &ctx, new_service_user, new_act_as).await?;
+    }
     // D-786 follow-up L1: a client left (or put back) `active` may not keep
     // acting as a platform service principal it was bound to before the
     // refusal existed; suspending or revoking it stays allowed.
@@ -884,7 +895,7 @@ async fn update_client(
 )]
 async fn delete_client(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(client_db_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     // The client soft-delete and its key revocation now share one
@@ -951,7 +962,7 @@ async fn delete_client(
 )]
 async fn generate_key(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(client_db_id): Path<Uuid>,
     Json(body): Json<GenerateKeyBody>,
 ) -> Result<(StatusCode, Json<KeyCreatedResponse>), AppError> {
@@ -960,6 +971,8 @@ async fn generate_key(
             "slot must be 'primary' or 'secondary'".into(),
         ));
     }
+
+    require_existing_client_within_area(&state.base.db, &ctx, client_db_id).await?;
 
     // Ensure S2S is configured before generating any keys. Cloned out of the
     // arc-swap guard (not held as a reference) — this function awaits
@@ -1105,7 +1118,7 @@ async fn generate_key(
 )]
 async fn revoke_key(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path((client_db_id, slot)): Path<(Uuid, String)>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     if !valid_slot(&slot) {
@@ -1170,7 +1183,7 @@ async fn revoke_key(
 )]
 async fn list_permissions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Path(client_db_id): Path<Uuid>,
 ) -> Result<Json<Vec<PermissionItem>>, AppError> {
     Ok(Json(fetch_permissions(&state.base.db, client_db_id).await?))
@@ -1193,7 +1206,7 @@ async fn list_permissions(
 )]
 async fn set_permission(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(client_db_id): Path<Uuid>,
     Json(body): Json<SetPermissionBody>,
 ) -> Result<Json<PermissionItem>, AppError> {
@@ -1278,7 +1291,7 @@ async fn set_permission(
 )]
 async fn delete_permission(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path((client_db_id, entity_name)): Path<(Uuid, String)>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let mut tx = SecurityTx::begin(
@@ -1335,7 +1348,7 @@ async fn delete_permission(
 )]
 async fn list_logs(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Path(client_db_id): Path<Uuid>,
     Query(q): Query<LogQuery>,
 ) -> Result<Json<AccessLogPage>, AppError> {
@@ -1416,6 +1429,53 @@ async fn list_logs(
 /// `@internal.attome` row such as `metric-service@`): those act only for the
 /// engine that owns them, never for an external S2S caller.
 /// S11-T4: an owner must be an active user.
+/// Q12-T2: an administrator holding the Security area but not `system.admin`
+/// never gives a machine client more than they hold: they cannot let it act
+/// as any user (`can_act_as_user`), and cannot bind, key or federate a client
+/// whose service user holds `system.admin`. Forbidden when they would.
+pub(crate) async fn require_client_within_area(
+    db: &attome_db::DbPool,
+    ctx: &attome_server::security::SecurityContext,
+    service_user: Option<Uuid>,
+    act_as_user: bool,
+) -> Result<(), AppError> {
+    if ctx.is_admin {
+        return Ok(());
+    }
+    if act_as_user {
+        tracing::warn!(
+            actor = %ctx.user_id,
+            "delegated administrator refused: an S2S client that acts as any user needs system.admin"
+        );
+        return Err(AppError::Forbidden);
+    }
+    if let Some(user) = service_user {
+        attome_security::delegation::require_not_above(db, ctx, user).await?;
+    }
+    Ok(())
+}
+
+/// [`require_client_within_area`] for an existing client.
+pub(crate) async fn require_existing_client_within_area(
+    db: &attome_db::DbPool,
+    ctx: &attome_server::security::SecurityContext,
+    client_db_id: Uuid,
+) -> Result<(), AppError> {
+    if ctx.is_admin {
+        return Ok(());
+    }
+    let row: Option<(Option<Uuid>, bool)> =
+        sqlx::query_as("SELECT service_user_ref, can_act_as_user FROM s2s_client WHERE id = $1")
+            .bind(client_db_id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    let Some((service_user, act_as_user)) = row else {
+        return Err(AppError::NotFound);
+    };
+    require_client_within_area(db, ctx, service_user, act_as_user).await
+}
+
 async fn ensure_owner_exists(db: &attome_db::DbPool, user_id: Uuid) -> Result<(), AppError> {
     let active: Option<bool> =
         sqlx::query_scalar("SELECT is_active FROM user_account WHERE id = $1")

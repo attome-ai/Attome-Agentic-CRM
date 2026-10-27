@@ -137,6 +137,19 @@ async fn app() -> Option<(axum::Router, EngineState, Uuid, String)> {
 }
 
 async fn admin_cookie(state: &AppState) -> (Uuid, String) {
+    cookie_holding(state, "system.admin").await
+}
+
+/// A session for a new user holding exactly `privilege_key`.
+async fn cookie_holding(state: &AppState, privilege_key: &str) -> (Uuid, String) {
+    sqlx::query(
+        "INSERT INTO privilege (id, key, name, is_active, created_at, owner_layer)          VALUES ($1, $2, $2, true, NOW(), 'project') ON CONFLICT (key) DO NOTHING",
+    )
+    .bind(Uuid::now_v7())
+    .bind(privilege_key)
+    .execute(&state.db)
+    .await
+    .expect("ensure privilege");
     let user_id = Uuid::now_v7();
     sqlx::query(
         "INSERT INTO user_account (id, user_name, email, is_active) \
@@ -149,13 +162,14 @@ async fn admin_cookie(state: &AppState) -> (Uuid, String) {
     .expect("insert user_account");
     sqlx::query(
         "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
-         SELECT $1, $2, id, true, NOW() FROM privilege WHERE key = 'system.admin'",
+         SELECT $1, $2, id, true, NOW() FROM privilege WHERE key = $3",
     )
     .bind(Uuid::now_v7())
     .bind(user_id)
+    .bind(privilege_key)
     .execute(&state.db)
     .await
-    .expect("grant system.admin");
+    .expect("grant privilege");
     let now = chrono::Utc::now().timestamp();
     let claims = attome_auth::SessionClaims {
         sub: user_id,
@@ -429,5 +443,66 @@ async fn service_account_expiry_reminds_once_then_suspends() {
     assert!(
         mine(&expiry_sweep(&state).await.unwrap()).is_empty(),
         "suspended once"
+    );
+}
+
+/// Q12-T2: the Security area administers S2S clients, but a delegated
+/// administrator never gives a client more than they hold: no client that
+/// acts as any user, and none bound to someone holding `system.admin`.
+#[tokio::test]
+async fn delegated_security_admin_cannot_mint_an_admin_client() {
+    let (app, state, admin, _) = skip_if_no_db!(app().await);
+    let (_, delegate) = cookie_holding(&state.base, "admin.security").await;
+    let client = |extra: serde_json::Value| {
+        let mut body = serde_json::json!({
+            "client_id": format!("sa-{}", Uuid::now_v7().simple()),
+            "name": "Delegated", "purpose": "q12 delegation", "environment": "production",
+        });
+        body.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        body
+    };
+
+    let (status, body) = call(
+        &app,
+        &delegate,
+        "POST",
+        "/api/v1/admin/s2s/clients",
+        Some(client(serde_json::json!({}))),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::CREATED,
+        "the area admits an ordinary client: {body}"
+    );
+
+    let (status, _) = call(
+        &app,
+        &delegate,
+        "POST",
+        "/api/v1/admin/s2s/clients",
+        Some(client(serde_json::json!({ "can_act_as_user": true }))),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "acting as any user needs system.admin"
+    );
+
+    let (status, _) = call(
+        &app,
+        &delegate,
+        "POST",
+        "/api/v1/admin/s2s/clients",
+        Some(client(serde_json::json!({ "service_user_ref": admin }))),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "no client bound to a full administrator"
     );
 }
