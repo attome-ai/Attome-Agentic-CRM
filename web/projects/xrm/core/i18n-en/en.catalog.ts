@@ -842,6 +842,11 @@ export const xrmEn = {
     startersIntro: 'Add a ready set of queues; a queue with the same name is not added twice.',
     set: { it: 'IT service desk', care: 'Customer care', hr: 'HR' },
   },
+  // J10-T2 — work offers from the unified router.
+  serviceOffer: {
+    title: 'New work for you', left: '{seconds} s to accept', accept: 'Accept', decline: 'Decline',
+    channel: { case: 'Case', chat: 'Chat', call: 'Call', email: 'Email', social: 'Social message', task: 'Task' },
+  },
   serviceHandoff: {
     title: 'Hand-off', mine: 'My hand-offs', none: 'Nothing is waiting for you.',
     agent: 'Agent', person: 'Person', queue: 'Queue', summary: 'Summary:', reasoning: 'Why:',

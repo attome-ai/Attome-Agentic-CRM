@@ -5,6 +5,7 @@ import { SlaBadgeComponent } from '@attome/xrm/service';
 import { ArticleSuggestComponent, caseQuery } from './article-suggest.component';
 import { ComposerComponent } from './composer/composer.component';
 import { PresenceComponent } from './presence.component';
+import { OfferToastComponent } from './offer-toast.component';
 import { CaseSummaryComponent } from './case-summary.component';
 
 import {
@@ -31,7 +32,7 @@ const STORE = 'attome-service-workspace';
 @Component({
   selector: 'attome-service-workspace',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, SlaBadgeComponent, ArticleSuggestComponent, ComposerComponent, PresenceComponent, CaseSummaryComponent],
+  imports: [TranslatePipe, RouterLink, SlaBadgeComponent, ArticleSuggestComponent, ComposerComponent, PresenceComponent, CaseSummaryComponent, OfferToastComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../../styles/admin-page.css', './workspace.component.css'],
   templateUrl: './workspace.component.html',

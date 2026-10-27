@@ -45,6 +45,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- The service workspace shows work offers (J10-T2): the soonest open offer from the unified router
+  appears with its channel and a live countdown; Accept takes it and opens its record as a session
+  tab, Decline passes it to the next agent. Offers now carry the held record's `record_entity` and
+  `record_id`.
 - The unified router (J10-T1): every 15 seconds it offers each waiting queue item, most urgent first,
   to the best available agent of its queue (present, holding the needed skills, under their capacity
   for the item's channel: `agent_channel_capacity`, else 3 chats or 1 call at once; least loaded

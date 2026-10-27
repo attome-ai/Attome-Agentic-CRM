@@ -757,6 +757,11 @@ export const xrmAr = {
     startersIntro: 'أضف مجموعة جاهزة من القوائم؛ لا تُضاف قائمة بالاسم نفسه مرتين.',
     set: { it: 'مكتب خدمة تقنية المعلومات', care: 'خدمة العملاء', hr: 'الموارد البشرية' },
   },
+  // J10-T2 — عروض العمل من الموجّه الموحد.
+  serviceOffer: {
+    title: 'عمل جديد لك', left: 'متبقٍ {seconds} ث للقبول', accept: 'قبول', decline: 'رفض',
+    channel: { case: 'حالة', chat: 'محادثة', call: 'مكالمة', email: 'بريد إلكتروني', social: 'رسالة تواصل اجتماعي', task: 'مهمة' },
+  },
   serviceHandoff: {
     title: 'التحويل', mine: 'تحويلاتي', none: 'لا شيء بانتظارك.',
     agent: 'وكيل', person: 'موظف', queue: 'قائمة عمل', summary: 'الملخص:', reasoning: 'السبب:',

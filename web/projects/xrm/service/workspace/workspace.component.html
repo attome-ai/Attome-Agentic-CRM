@@ -11,6 +11,9 @@
   </nav>
 </div>
 
+<!-- J10-T2: work the unified router offers me. -->
+<xrm-service-offer-toast (accepted)="open($event.entity, $event.recordId, $event.title)" />
+
 @if (error(); as message) {
   <p class="error-msg" role="alert">{{ message }}</p>
 }

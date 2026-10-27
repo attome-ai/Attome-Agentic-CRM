@@ -405,9 +405,15 @@ pub struct QueueOffer {
     pub status: String,
     pub offered_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
+    /// The entity of the record the item holds (J10-T2 opens it).
+    pub record_entity: Option<String>,
+    /// The id of the record the item holds.
+    pub record_id: Option<String>,
 }
 
-const OFFER_COLUMNS: &str = "id, item_id, queue_id, channel, status, offered_at, expires_at";
+const OFFER_COLUMNS: &str = "id, item_id, queue_id, channel, status, offered_at, expires_at, \
+    (SELECT i.record_entity FROM queue_item i WHERE i.id = queue_offer.item_id) AS record_entity, \
+    (SELECT i.record_id FROM queue_item i WHERE i.id = queue_offer.item_id) AS record_id";
 
 /// Takes the caller's open offer `id` for `decision` (`accepted` or
 /// `declined`), returning it and its item.
