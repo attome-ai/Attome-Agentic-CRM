@@ -18353,6 +18353,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/tracking/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a site's live visitors.
+         * @description The sessions seen in the last five minutes (bots left out), newest
+         *     first, each with the page it is on and the known contact or lead.
+         */
+        get: operations["list_live_visitors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/unsubscribe/{token}": {
         parameters: {
             query?: never;
@@ -20464,7 +20485,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["conformance"];
+        /**
+         * Check a case def's cases against the designed process.
+         * @description Replays each case against the entity's stage process or state model and
+         *     reports the share that conform and every step the model does not allow.
+         */
+        get: operations["get_process_conformance"];
         put?: never;
         post?: never;
         delete?: never;
@@ -32755,6 +32781,20 @@ export interface components {
             /** Format: uuid */
             right_ref: string;
         };
+        /** @description The result of a check. */
+        ConformanceReport: {
+            by_step: components["schemas"]["DeviationCount"][];
+            /** Format: int64 */
+            cases: number;
+            /** Format: int64 */
+            conforming: number;
+            deviations: components["schemas"]["Deviation"][];
+            /**
+             * Format: double
+             * @description `conforming / cases`, 1 for no cases.
+             */
+            fitness: number;
+        };
         ConsentBody: {
             privacy_version?: string | null;
             terms_version?: string | null;
@@ -35174,6 +35214,25 @@ export interface components {
              *     path, and therefore the only one this tool auto-registers.
              */
             suggested_dir: string;
+        };
+        /**
+         * @description One step a case took that the model does not allow (`from` is `None` for
+         *     a wrong start).
+         */
+        Deviation: {
+            /** Format: date-time */
+            at: string;
+            /** Format: uuid */
+            case_id: string;
+            from?: string | null;
+            to: string;
+        };
+        /** @description A deviating step and how often it happened. */
+        DeviationCount: {
+            /** Format: int64 */
+            count: number;
+            from?: string | null;
+            to: string;
         };
         /** @description One reading a device posts. */
         DeviceReadingIn: {
@@ -39867,6 +39926,29 @@ export interface components {
             scheduled: string;
             /** Format: uuid */
             user_id: string;
+        };
+        /** @description One live session. */
+        LiveVisitor: {
+            /**
+             * Format: uuid
+             * @description The known contact or lead, when the visitor is identified.
+             */
+            contact_ref?: string | null;
+            /** @description The page the visitor last viewed. */
+            current_url?: string | null;
+            /** Format: date-time */
+            last_seen_at: string;
+            /** Format: uuid */
+            lead_ref?: string | null;
+            /** Format: int32 */
+            page_count: number;
+            /** Format: uuid */
+            session_id: string;
+            /** Format: date-time */
+            started_at: string;
+            utm_source?: string | null;
+            /** Format: uuid */
+            visitor_id: string;
         };
         /**
          * @description One field a business rule locks for the writer (D-789 §3.5): `effect` is
@@ -46644,6 +46726,42 @@ export interface components {
                  *     peak reached `limits.warn_at_percent` of its value.
                  */
                 warning: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_LiveVisitor: {
+            items: {
+                /**
+                 * Format: uuid
+                 * @description The known contact or lead, when the visitor is identified.
+                 */
+                contact_ref?: string | null;
+                /** @description The page the visitor last viewed. */
+                current_url?: string | null;
+                /** Format: date-time */
+                last_seen_at: string;
+                /** Format: uuid */
+                lead_ref?: string | null;
+                /** Format: int32 */
+                page_count: number;
+                /** Format: uuid */
+                session_id: string;
+                /** Format: date-time */
+                started_at: string;
+                utm_source?: string | null;
+                /** Format: uuid */
+                visitor_id: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -116863,6 +116981,51 @@ export interface operations {
             };
         };
     };
+    list_live_visitors: {
+        parameters: {
+            query: {
+                /** @description The site's key. */
+                site: string;
+                /** @description One-based page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sessions seen in the last five minutes, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_LiveVisitor"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_tracked_site.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     show_email_unsubscribe: {
         parameters: {
             query?: never;
@@ -122437,25 +122600,25 @@ export interface operations {
             };
         };
     };
-    conformance: {
+    get_process_conformance: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Case definition id */
+                /** @description The case def */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Planned Phase 2 response shape */
+            /** @description How the cases conform to the designed process */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotComputableResponse"];
+                    "application/json": components["schemas"]["ConformanceReport"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -122476,13 +122639,22 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not implemented in Phase 1 — see attome-process::stubs' doc comment */
-            501: {
+            /** @description No such case def */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotComputableResponse"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The case def has no designed model (a workflow, or no published stage process or state model) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

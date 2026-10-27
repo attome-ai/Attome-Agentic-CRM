@@ -92465,6 +92465,94 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/tracking/live": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "List a site's live visitors.",
+        "description": "The sessions seen in the last five minutes (bots left out), newest\nfirst, each with the page it is on and the known contact or lead.",
+        "operationId": "list_live_visitors",
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "description": "The site's key.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions seen in the last five minutes, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LiveVisitor"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_tracked_site.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/unsubscribe/{token}": {
       "get": {
         "tags": [
@@ -101563,12 +101651,14 @@
         "tags": [
           "process"
         ],
-        "operationId": "conformance",
+        "summary": "Check a case def's cases against the designed process.",
+        "description": "Replays each case against the entity's stage process or state model and\nreports the share that conform and every step the model does not allow.",
+        "operationId": "get_process_conformance",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "Case definition id",
+            "description": "The case def",
             "required": true,
             "schema": {
               "type": "string",
@@ -101578,11 +101668,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Planned Phase 2 response shape",
+            "description": "How the cases conform to the designed process",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotComputableResponse"
+                  "$ref": "#/components/schemas/ConformanceReport"
                 }
               }
             }
@@ -101607,12 +101697,22 @@
               }
             }
           },
-          "501": {
-            "description": "Not implemented in Phase 1 — see attome-process::stubs' doc comment",
+          "404": {
+            "description": "No such case def",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotComputableResponse"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The case def has no designed model (a workflow, or no published stage process or state model)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -151864,6 +151964,46 @@
           }
         }
       },
+      "ConformanceReport": {
+        "type": "object",
+        "description": "The result of a check.",
+        "required": [
+          "cases",
+          "conforming",
+          "fitness",
+          "by_step",
+          "deviations"
+        ],
+        "properties": {
+          "by_step": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviationCount"
+            }
+          },
+          "cases": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "conforming": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "deviations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Deviation"
+            }
+          },
+          "fitness": {
+            "type": "number",
+            "format": "double",
+            "description": "`conforming / cases`, 1 for no cases."
+          }
+        }
+      },
       "ConsentBody": {
         "type": "object",
         "properties": {
@@ -157969,6 +158109,58 @@
           "suggested_dir": {
             "type": "string",
             "description": "The conventional home for entity overrides — the only subtree from\nwhich `provide-xrm-forms.ts` can import with a library-safe relative\npath, and therefore the only one this tool auto-registers."
+          }
+        }
+      },
+      "Deviation": {
+        "type": "object",
+        "description": "One step a case took that the model does not allow (`from` is `None` for\na wrong start).",
+        "required": [
+          "case_id",
+          "to",
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
+      "DeviationCount": {
+        "type": "object",
+        "description": "A deviating step and how often it happened.",
+        "required": [
+          "to",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "type": "string"
           }
         }
       },
@@ -169656,6 +169848,67 @@
             "type": "string"
           },
           "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "LiveVisitor": {
+        "type": "object",
+        "description": "One live session.",
+        "required": [
+          "session_id",
+          "visitor_id",
+          "started_at",
+          "last_seen_at",
+          "page_count"
+        ],
+        "properties": {
+          "contact_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The known contact or lead, when the visitor is identified."
+          },
+          "current_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The page the visitor last viewed."
+          },
+          "last_seen_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lead_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "page_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "utm_source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "visitor_id": {
             "type": "string",
             "format": "uuid"
           }
@@ -187530,6 +187783,101 @@
                 "warning": {
                   "type": "boolean",
                   "description": "Someone was refused by this limit in the last seven days, or its\npeak reached `limits.warn_at_percent` of its value."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_LiveVisitor": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One live session.",
+              "required": [
+                "session_id",
+                "visitor_id",
+                "started_at",
+                "last_seen_at",
+                "page_count"
+              ],
+              "properties": {
+                "contact_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The known contact or lead, when the visitor is identified."
+                },
+                "current_url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The page the visitor last viewed."
+                },
+                "last_seen_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lead_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "page_count": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "session_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "started_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "utm_source": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "visitor_id": {
+                  "type": "string",
+                  "format": "uuid"
                 }
               }
             }
@@ -223754,8 +224102,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -223807,5 +224153,7 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }
