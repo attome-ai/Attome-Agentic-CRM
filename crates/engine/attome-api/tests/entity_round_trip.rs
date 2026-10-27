@@ -10979,3 +10979,36 @@ fn cascade_depth_restrict_at_level_two_blocks_the_delete() {
         }
     })
 }
+
+// op: POST /api/v1/{entity}, POST /api/v1/{entity}/{id}/impact
+#[test]
+fn cascade_preview_shows_the_tree_before_a_delete() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let cookie = seed_admin(&system).await;
+        let state = system.state().clone();
+        let app = full_app(system);
+        let [top, mid, leaf] = cascade_chain(&app, &cookie, &state, "cascade-deactivate").await;
+        let t = cascade_record(&app, &cookie, &top, r#"{"title":"t"}"#.into()).await;
+        let m = cascade_record(&app, &cookie, &mid, format!(r#"{{"top_ref":"{t}"}}"#)).await;
+        let l = cascade_record(&app, &cookie, &leaf, format!(r#"{{"mid_ref":"{m}"}}"#)).await;
+
+        let (status, impact) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{top}/{t}/impact?action=delete"), None).await;
+        assert_eq!(status, StatusCode::OK, "{impact:?}");
+        assert_eq!(impact["blocked"], false);
+        let groups = impact["groups"].as_array().expect("groups");
+        let find = |entity: &str| groups.iter().find(|g| g["entity"] == entity).cloned().expect("group");
+        assert_eq!(find(&mid)["effect"], "deactivated");
+        assert_eq!(find(&leaf)["first"][0], l.as_str());
+        assert!(find(&leaf)["path"].as_str().unwrap_or_default().contains(&format!("{mid}.top_ref -> {leaf}.mid_ref")));
+
+        let (status, merge) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{top}/{t}/impact?action=merge"), None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(merge["groups"][0]["effect"], "repointed");
+        let (status, _) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{top}/{t}/impact?action=explode"), None).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        // Nothing changed.
+        let (status, _) = cascade_call(&app, &cookie, "GET", format!("/api/v1/{leaf}/{l}"), None).await;
+        assert_eq!(status, StatusCode::OK);
+    })
+}

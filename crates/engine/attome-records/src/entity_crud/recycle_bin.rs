@@ -346,6 +346,82 @@ pub(super) async fn preview_delete(
     Ok(Json(delete_impact(&state, &ctx, &entity, &body.ids).await?))
 }
 
+/// `?action=` of the impact preview.
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct ImpactQuery {
+    /// `delete` (the default), `merge` or `reassign`.
+    #[serde(default)]
+    pub action: Option<String>,
+}
+
+/// Preview an action's impact
+///
+/// A7-T2: what deleting, merging away or reassigning this record would
+/// touch: per entity and path, how many records and the first 20, whether a
+/// restrict rule would refuse it, at every depth of a delete's cascade.
+/// Nothing is changed. A delete's whole cascade is undone as one unit by
+/// restoring the record (`POST .../{id}/restore` brings back everything the
+/// cascade took, level by level).
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/{id}/impact",
+    tag = "entity",
+    params(
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ImpactQuery,
+    ),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "walks what the action would touch and writes nothing"
+    )))),
+    responses(
+        (status = 200, description = "What the action would touch", body = crate::cascade::Impact),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not take this action on the record", body = ErrorResponse),
+        (status = 404, description = "No such record", body = ErrorResponse),
+        (status = 422, description = "Not delete, merge or reassign", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn preview_impact(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Path((entity, id)): Path<(String, Uuid)>,
+    Query(query): Query<ImpactQuery>,
+) -> Result<Json<crate::cascade::Impact>, AppError> {
+    let (_, entity, _, _) = resolve_entity(&state, &entity).await?;
+    let action = query.action.as_deref().unwrap_or("delete").to_owned();
+    let privilege = match action.as_str() {
+        "delete" | "merge" => "delete",
+        "reassign" => "update",
+        _ => {
+            return Err(AppError::Validation(
+                "action is delete, merge or reassign".into(),
+            ));
+        }
+    };
+    ctx.require(&entity, privilege)?;
+    let live: bool = sqlx::query_scalar(&format!(
+        "SELECT EXISTS(SELECT 1 FROM {} WHERE id = $1 AND is_active = TRUE)",
+        quote_ident(&entity)
+    ))
+    .bind(id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    if !live {
+        return Err(AppError::NotFound);
+    }
+    let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    let can_read = |e: &str| ctx.require(e, "read").is_ok();
+    Ok(Json(
+        crate::cascade::impact(&mut conn, &entity, id, &action, &can_read).await?,
+    ))
+}
+
 /// One entity's recycle-bin rules (`bin_setting`); an entity with no row
 /// has the defaults.
 #[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
@@ -779,6 +855,7 @@ pub(super) async fn restore_operation(
     restore_selection,
     restore_operation,
     preview_delete,
+    preview_impact,
     list_bin_settings,
     put_bin_setting
 ))]

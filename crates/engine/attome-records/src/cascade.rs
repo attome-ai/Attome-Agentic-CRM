@@ -375,3 +375,268 @@ pub(crate) async fn restore_below(
     }
     Ok(summary)
 }
+
+// ── A7-T2: the impact of an action, before it runs ──────────────────────────
+
+/// Records listed per group.
+pub const IMPACT_FIRST: i64 = 20;
+
+/// One group of records an action would touch.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, utoipa::ToSchema)]
+pub struct ImpactGroup {
+    /// The entity the records are in.
+    pub entity: String,
+    /// The lookup field through which they point at the record above them;
+    /// `null` for a many-to-many group.
+    pub field: Option<String>,
+    /// The many-to-many relationship, for a link group.
+    pub relationship: Option<String>,
+    /// How they are reached from the record (`account -> contact.account_ref`).
+    pub path: String,
+    /// `deactivated`, `blocks`, `orphaned`, `repointed`, `unlinked` or `reassigned`.
+    pub effect: String,
+    pub count: i64,
+    /// The first records (at most 20); none for a link group.
+    pub first: Vec<Uuid>,
+}
+
+/// What an action on one record would touch.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, utoipa::ToSchema)]
+pub struct Impact {
+    /// `delete`, `merge` or `reassign`.
+    pub action: String,
+    pub groups: Vec<ImpactGroup>,
+    /// A restrict rule would refuse the action.
+    pub blocked: bool,
+    /// The walk stopped at [`CASCADE_TREE_LIMIT`] records or
+    /// [`MAX_CASCADE_DEPTH`] levels; deeper records are not counted.
+    pub truncated: bool,
+    /// Entities the caller cannot read hold records the action touches; they
+    /// are not listed (a restrict rule there still sets `blocked`).
+    pub hidden_dependents: bool,
+}
+
+/// The live records of `dep_entity` pointing at `ids` through `field`:
+/// their count and up to `limit` ids.
+async fn pointing(
+    conn: &mut PgConnection,
+    dep_entity: &str,
+    field: &str,
+    ids: &[Uuid],
+    limit: i64,
+) -> Result<(i64, Vec<Uuid>), AppError> {
+    let table = quote_ident(dep_entity);
+    let field = quote_ident(field);
+    let count: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {table} WHERE {field} = ANY($1) AND is_active = TRUE"
+    ))
+    .bind(ids)
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    if count == 0 {
+        return Ok((0, Vec::new()));
+    }
+    let found: Vec<Uuid> = sqlx::query_scalar(&format!(
+        "SELECT id FROM {table} WHERE {field} = ANY($1) AND is_active = TRUE ORDER BY id LIMIT {limit}"
+    ))
+    .bind(ids)
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok((count, found))
+}
+
+/// The many-to-many link groups of records of `entity` (`ids`): their
+/// count per relationship, with `effect` naming what the action does; for a
+/// delete, the relationship's own rule decides (restrict blocks, cascade
+/// unlinks, orphan leaves them, not listed).
+async fn link_groups(
+    conn: &mut PgConnection,
+    entity: &str,
+    ids: &[Uuid],
+    path: &str,
+    effect: Option<&str>,
+) -> Result<(Vec<ImpactGroup>, bool), AppError> {
+    let relationships: Vec<(String, String, String, String, String)> = sqlx::query_as(
+        "SELECT name, entity_a, entity_b, join_table, cascade FROM relationship_info \
+          WHERE (entity_a = $1 OR entity_b = $1) AND is_active = TRUE AND is_deleted IS NOT TRUE \
+          ORDER BY name",
+    )
+    .bind(entity)
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    let mut groups = Vec::new();
+    let mut blocked = false;
+    for (name, entity_a, entity_b, join_table, cascade) in relationships {
+        let join = quote_ident(&join_table);
+        let mut sides = Vec::new();
+        if entity_a == entity {
+            sides.push(("a_id", "b_id", entity_b.clone()));
+        }
+        if entity_b == entity {
+            sides.push(("b_id", "a_id", entity_a.clone()));
+        }
+        for (mine, other, other_entity) in sides {
+            let rule = RelationshipCascade::from_db_str(&cascade);
+            let effect = match (effect, rule) {
+                (Some(e), _) => e,
+                (None, RelationshipCascade::Restrict) => "blocks",
+                (None, RelationshipCascade::CascadeDeactivate) => "unlinked",
+                (None, RelationshipCascade::Orphan) => continue,
+            };
+            let other_table = quote_ident(&other_entity);
+            let count: i64 = sqlx::query_scalar(&format!(
+                "SELECT COUNT(*) FROM {join} j JOIN {other_table} o ON o.id = j.{other} \
+                  WHERE j.{mine} = ANY($1) AND j.is_active = TRUE AND o.is_active = TRUE"
+            ))
+            .bind(ids)
+            .fetch_one(&mut *conn)
+            .await
+            .map_err(AppError::internal)?;
+            if count == 0 {
+                continue;
+            }
+            blocked |= effect == "blocks";
+            groups.push(ImpactGroup {
+                entity: other_entity,
+                field: None,
+                relationship: Some(name.clone()),
+                path: format!("{path} -> {name}"),
+                effect: effect.to_owned(),
+                count,
+                first: Vec::new(),
+            });
+        }
+    }
+    Ok((groups, blocked))
+}
+
+/// What `action` (`delete`, `merge` or `reassign`) on record `id` of
+/// `entity` would touch, without changing anything. A delete walks every
+/// depth as [`cascade_below`] would; a merge repoints every live record and
+/// link that points at the record; a reassignment changes the record alone.
+/// `can_read` says whether the caller may read an entity's records.
+pub async fn impact(
+    conn: &mut PgConnection,
+    entity: &str,
+    id: Uuid,
+    action: &str,
+    can_read: &(dyn Fn(&str) -> bool + Sync),
+) -> Result<Impact, AppError> {
+    let mut out = Impact {
+        action: action.to_owned(),
+        groups: Vec::new(),
+        blocked: false,
+        truncated: false,
+        hidden_dependents: false,
+    };
+    match action {
+        "reassign" => {
+            out.groups.push(ImpactGroup {
+                entity: entity.to_owned(),
+                field: None,
+                relationship: None,
+                path: entity.to_owned(),
+                effect: "reassigned".into(),
+                count: 1,
+                first: vec![id],
+            });
+        }
+        "merge" => {
+            for (dep_entity, field, _) in dependents_of(conn, entity).await? {
+                let (count, first) =
+                    pointing(conn, &dep_entity, &field, &[id], IMPACT_FIRST).await?;
+                if count == 0 {
+                    continue;
+                }
+                if !can_read(&dep_entity) {
+                    out.hidden_dependents = true;
+                    continue;
+                }
+                out.groups.push(ImpactGroup {
+                    path: format!("{entity} -> {dep_entity}.{field}"),
+                    entity: dep_entity,
+                    field: Some(field),
+                    relationship: None,
+                    effect: "repointed".into(),
+                    count,
+                    first,
+                });
+            }
+            let (links, _) = link_groups(conn, entity, &[id], entity, Some("repointed")).await?;
+            out.groups.extend(links);
+        }
+        "delete" => {
+            let mut budget = i64::try_from(CASCADE_TREE_LIMIT).unwrap_or(i64::MAX);
+            let mut frontier = vec![(entity.to_owned(), vec![id], entity.to_owned())];
+            for depth in 0..=MAX_CASCADE_DEPTH {
+                if frontier.is_empty() {
+                    break;
+                }
+                if depth == MAX_CASCADE_DEPTH {
+                    out.truncated = true;
+                    break;
+                }
+                let mut next = Vec::new();
+                for (level_entity, ids, path) in frontier {
+                    let (links, blocked) =
+                        link_groups(conn, &level_entity, &ids, &path, None).await?;
+                    out.blocked |= blocked;
+                    out.groups.extend(links);
+                    for (dep_entity, field, mode) in dependents_of(conn, &level_entity).await? {
+                        let step = format!("{path} -> {dep_entity}.{field}");
+                        let (count, first) =
+                            pointing(conn, &dep_entity, &field, &ids, IMPACT_FIRST).await?;
+                        if count == 0 {
+                            continue;
+                        }
+                        let effect = match mode {
+                            OnTargetDelete::Restrict => {
+                                out.blocked = true;
+                                "blocks"
+                            }
+                            OnTargetDelete::Orphan => "orphaned",
+                            OnTargetDelete::CascadeDeactivate => "deactivated",
+                        };
+                        if mode == OnTargetDelete::CascadeDeactivate {
+                            // The next level walks from every record this
+                            // one deactivates, within the budget.
+                            let take = budget.min(count);
+                            if count > budget {
+                                out.truncated = true;
+                            }
+                            budget -= take;
+                            if take > 0 {
+                                let (_, all) =
+                                    pointing(conn, &dep_entity, &field, &ids, take).await?;
+                                next.push((dep_entity.clone(), all, step.clone()));
+                            }
+                        }
+                        if !can_read(&dep_entity) {
+                            out.hidden_dependents = true;
+                            continue;
+                        }
+                        out.groups.push(ImpactGroup {
+                            entity: dep_entity,
+                            field: Some(field),
+                            relationship: None,
+                            path: step,
+                            effect: effect.into(),
+                            count,
+                            first,
+                        });
+                    }
+                }
+                frontier = next;
+            }
+        }
+        _ => {
+            return Err(AppError::Validation(
+                "action is delete, merge or reassign".into(),
+            ));
+        }
+    }
+    Ok(out)
+}
