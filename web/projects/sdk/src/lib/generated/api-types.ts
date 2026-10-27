@@ -22810,7 +22810,10 @@ export interface paths {
         };
         /**
          * An entity's form schema
-         * @description An entity's form schema. Administrators only.
+         * @description An entity's form schema, for anyone who may read the entity (Q10-T11):
+         *     the same `{entity}.read` check the record routes make. A field read-gated
+         *     for the caller is left out, as the record routes leave out its value; the
+         *     DataModel administration area sees every field.
          */
         get: operations["get_schema"];
         put?: never;
@@ -36814,6 +36817,14 @@ export interface components {
             warnings?: components["schemas"]["RuleWarning"][];
         };
         EntitySchemaDef: {
+            /**
+             * @description Q10-T11: the operations the caller may perform on this entity
+             *     (`read`, `create`, `update`, `delete`, `assign`, `share`, `export`,
+             *     `bulk`), decided as the record routes decide them, so the form shows a
+             *     button only when the API would admit the operation (a particular
+             *     record can still be out of reach).
+             */
+            allowed_actions: string[];
             /**
              * @description D-789 §5 (additive): the active business rules that apply to the
              *     caller and carry a client-side policy (`hidden`, `disabled`, or an
@@ -131019,7 +131030,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Caller lacks the required privilege */
+            /** @description The caller may not read the entity */
             403: {
                 headers: {
                     [name: string]: unknown;

@@ -156,6 +156,12 @@ export interface EntitySchema {
   business_rules?: BusinessRuleClient[];
   /** L1-T9: master data (golden records from source systems); absent when not. */
   is_master?: boolean;
+  /**
+   * Q10-T11: the operations the caller may perform on this entity (`read`,
+   * `create`, `update`, `delete`, `assign`, `share`, `export`, `bulk`), decided
+   * as the API decides them. Screens hide what is not listed.
+   */
+  allowed_actions?: string[];
 }
 
 // M01 Core P3 gap (D-455) — one `relationship_info` row touching

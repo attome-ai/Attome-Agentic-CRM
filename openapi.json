@@ -113972,7 +113972,7 @@
           "schema"
         ],
         "summary": "An entity's form schema",
-        "description": "An entity's form schema. Administrators only.",
+        "description": "An entity's form schema, for anyone who may read the entity (Q10-T11):\nthe same `{entity}.read` check the record routes make. A field read-gated\nfor the caller is left out, as the record routes leave out its value; the\nDataModel administration area sees every field.",
         "operationId": "get_schema",
         "parameters": [
           {
@@ -114019,7 +114019,7 @@
             }
           },
           "403": {
-            "description": "Caller lacks the required privilege",
+            "description": "The caller may not read the entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -162943,9 +162943,17 @@
           "plural_name",
           "fields",
           "relationships",
-          "business_rules"
+          "business_rules",
+          "allowed_actions"
         ],
         "properties": {
+          "allowed_actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Q10-T11: the operations the caller may perform on this entity\n(`read`, `create`, `update`, `delete`, `assign`, `share`, `export`,\n`bulk`), decided as the record routes decide them, so the form shows a\nbutton only when the API would admit the operation (a particular\nrecord can still be out of reach)."
+          },
           "business_rules": {
             "type": "array",
             "items": {
@@ -227107,6 +227115,11 @@
       }
     }
   },
+<<<<<<< Updated upstream
   "x-version-adapters": [],
   "x-api-version": "2026-10"
+=======
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
+>>>>>>> Stashed changes
 }

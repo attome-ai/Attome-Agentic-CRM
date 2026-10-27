@@ -875,6 +875,45 @@ pub(crate) fn role_depth_sql(action: &str) -> String {
     )
 }
 
+/// Q10-T11: the operations `ctx` may perform on `entity_name` somewhere,
+/// decided as the record routes decide them: the operation's privilege
+/// ([`RecordAction::privilege_action`], through
+/// [`crate::context::SecurityContextExt::allows`]) and a level other than
+/// `None` for it. A form shows its buttons from this, so nothing it offers is
+/// refused by the API for want of a privilege or a level (a particular record
+/// can still be out of reach).
+pub async fn allowed_entity_actions(
+    db: &DbPool,
+    ctx: &attome_server::security::SecurityContext,
+    entity_ref: Uuid,
+    entity_name: &str,
+) -> Result<Vec<RecordAction>, AppError> {
+    use crate::context::SecurityContextExt;
+    const ACTIONS: [RecordAction; 8] = [
+        RecordAction::Read,
+        RecordAction::Create,
+        RecordAction::Update,
+        RecordAction::Delete,
+        RecordAction::Assign,
+        RecordAction::Share,
+        RecordAction::Export,
+        RecordAction::Bulk,
+    ];
+    let mut allowed = Vec::new();
+    for action in ACTIONS {
+        if !ctx.allows(entity_name, action.privilege_action()) {
+            continue;
+        }
+        if ctx.is_admin
+            || resolve_entity_access_level(db, ctx.user_id, entity_ref, entity_name, action).await?
+                != AccessLevel::None
+        {
+            allowed.push(action);
+        }
+    }
+    Ok(allowed)
+}
+
 /// Resolves the record-level `AccessLevel` for exactly one `(user_id,
 /// entity_ref, action)` key — the fix for the cross-entity leak
 /// `resolve_access_level` had. Combines, via `MAX`, only:

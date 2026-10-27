@@ -1,8 +1,10 @@
 use attome_core::EngineState;
 use attome_metadata::provision::{ReconcileOutcome, ReconcilePolicy};
 use attome_modules::MODULE_MAP;
+use attome_security::SecurityContextExt;
 use attome_security::context::SidebarManage;
-use attome_server::authz::{Authorized, Privilege, SelfService};
+use attome_server::authz::{AdminArea, Authorized, Privilege, SelfService};
+use attome_server::security::SecurityContext;
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
@@ -49,6 +51,114 @@ fn module_visible(active: &attome_modules::ModuleSet, module_key: &Option<String
             .find(|(known, _)| known == name)
             .is_none_or(|(_, id)| active.has(*id)),
     }
+}
+
+/// Q10-T11: what opening a menu item's page needs, so the menu shows an item
+/// exactly when the API behind its page admits the caller.
+#[derive(Debug, PartialEq, Eq)]
+enum RouteGate {
+    /// Nothing beyond the item's own privilege links.
+    Open,
+    /// `{entity}.read`, the check the record routes make.
+    Entity(String),
+    /// The administration area the page's API requires (Q12-T2).
+    Area(AdminArea),
+    /// `system.admin`: an admin page with no area of its own.
+    Admin,
+}
+
+/// The area each `/xrm/admin/...` page's API requires, by the first path
+/// segments; the longest match wins. An admin page not listed needs
+/// `system.admin`, so a new page stays hidden from delegated administrators
+/// until it is listed.
+const ADMIN_ROUTE_GATES: &[(&str, Option<AdminArea>)] = &[
+    ("approvals", Some(AdminArea::Automation)),
+    ("audit", Some(AdminArea::Audit)),
+    ("branding", Some(AdminArea::Deployment)),
+    ("caches", Some(AdminArea::Deployment)),
+    ("calendars", Some(AdminArea::Automation)),
+    ("changes", Some(AdminArea::Integrations)),
+    ("config-starts", Some(AdminArea::Security)),
+    ("console", Some(AdminArea::Deployment)),
+    ("content", Some(AdminArea::Communication)),
+    ("data/catalog", Some(AdminArea::Compliance)),
+    ("data/quality", Some(AdminArea::DataModel)),
+    ("data-protection", Some(AdminArea::Compliance)),
+    ("dependencies", Some(AdminArea::Deployment)),
+    ("entities", Some(AdminArea::DataModel)),
+    ("jobs", Some(AdminArea::Deployment)),
+    ("knowledge", Some(AdminArea::Ai)),
+    ("license", Some(AdminArea::Deployment)),
+    ("ops", Some(AdminArea::Deployment)),
+    ("portals", Some(AdminArea::Users)),
+    ("profiler", Some(AdminArea::Deployment)),
+    ("queries", Some(AdminArea::DataModel)),
+    ("rules", Some(AdminArea::Automation)),
+    ("s2s", Some(AdminArea::Security)),
+    ("search", Some(AdminArea::DataModel)),
+    ("secrets", Some(AdminArea::Security)),
+    ("security", Some(AdminArea::Roles)),
+    ("security/impersonation", Some(AdminArea::Security)),
+    ("security/mfa", Some(AdminArea::Users)),
+    ("security/record-shares", Some(AdminArea::Security)),
+    ("security/users", Some(AdminArea::Users)),
+    // Self-service: the caller's own resolved access.
+    ("security/whoami", None),
+    ("settings", Some(AdminArea::Deployment)),
+    // Gated by its `sidebar.manage` link, like its routes.
+    ("sidebar", None),
+    ("slo", Some(AdminArea::Deployment)),
+    ("state-models", Some(AdminArea::Automation)),
+    ("timers", Some(AdminArea::Deployment)),
+    ("views", Some(AdminArea::DataModel)),
+    ("webcrawl", Some(AdminArea::Integrations)),
+    ("workflow", Some(AdminArea::Automation)),
+];
+
+fn route_gate(route: &str) -> RouteGate {
+    if let Some(rest) = route.strip_prefix("/xrm/entity/") {
+        return match rest.split('/').next() {
+            Some(entity) if !entity.is_empty() => RouteGate::Entity(entity.to_owned()),
+            _ => RouteGate::Open,
+        };
+    }
+    let Some(page) = route.strip_prefix("/xrm/admin/") else {
+        return RouteGate::Open;
+    };
+    let page = page.split(['?', '#']).next().unwrap_or_default();
+    ADMIN_ROUTE_GATES
+        .iter()
+        .filter(|(prefix, _)| {
+            page == *prefix
+                || page
+                    .strip_prefix(prefix)
+                    .is_some_and(|rest| rest.starts_with('/'))
+        })
+        .max_by_key(|(prefix, _)| prefix.len())
+        .map_or(RouteGate::Admin, |(_, area)| {
+            area.map_or(RouteGate::Open, RouteGate::Area)
+        })
+}
+
+/// Whether `ctx` may open the page at `route` (Q10-T11).
+fn route_visible(ctx: &SecurityContext, route: &str) -> bool {
+    if ctx.is_admin {
+        return true;
+    }
+    match route_gate(route) {
+        RouteGate::Open => true,
+        RouteGate::Entity(entity) => ctx.allows(&entity, "read"),
+        RouteGate::Area(area) => area.held_by(ctx),
+        RouteGate::Admin => false,
+    }
+}
+
+/// Drops groups (no route of their own) left with nothing to open.
+fn prune_empty_groups(items: &mut Vec<SidebarItem>) {
+    for item in items.iter_mut() {
+        prune_empty_groups(&mut item.child);
+    }
+    items.retain(|item| !item.route.is_empty() || !item.child.is_empty());
 }
 
 #[derive(Serialize, ToSchema)]
@@ -1215,6 +1325,8 @@ async fn get_sidebar(
     // everywhere until it's re-enabled, not just for non-admin users.
     let active_license = state.modules.load();
     rows.retain(|row| module_visible(&active_license, &row.7));
+    // Q10-T11: and the page behind the item must admit the caller.
+    rows.retain(|row| route_visible(&ctx, &row.2));
 
     struct RawNode {
         id: String,
@@ -1387,6 +1499,7 @@ async fn get_sidebar(
             )
         })
         .collect();
+    prune_empty_groups(&mut result);
     append_contributions(
         &mut result,
         contributions.as_ref().map(|Extension(c)| c),
@@ -1494,5 +1607,66 @@ mod contributor_tests {
         let mut user = stored();
         append_contributions(&mut user, Some(&contributions), false);
         assert_eq!(user.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn route_gate_reads_the_page_behind_an_item() {
+        assert_eq!(
+            route_gate("/xrm/entity/account/list"),
+            RouteGate::Entity("account".into())
+        );
+        assert_eq!(
+            route_gate("/xrm/admin/entities"),
+            RouteGate::Area(AdminArea::DataModel)
+        );
+        assert_eq!(
+            route_gate("/xrm/admin/security/users/42"),
+            RouteGate::Area(AdminArea::Users)
+        );
+        assert_eq!(
+            route_gate("/xrm/admin/security/role-entity-access"),
+            RouteGate::Area(AdminArea::Roles)
+        );
+        assert_eq!(route_gate("/xrm/admin/security/whoami"), RouteGate::Open);
+        assert_eq!(route_gate("/xrm/admin/metadata/bundles"), RouteGate::Admin);
+        assert_eq!(route_gate("/xrm/admin/entitiesx"), RouteGate::Admin);
+        assert_eq!(route_gate("/xrm/dashboard"), RouteGate::Open);
+    }
+
+    #[test]
+    fn route_visible_follows_areas_and_entity_reads() {
+        let mut ctx = SecurityContext {
+            user_id: Uuid::now_v7(),
+            is_admin: false,
+            privileges: ["admin.data_model", "account.read"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+            field_grants: Default::default(),
+            field_write_grants: Default::default(),
+            bulk_fields: Default::default(),
+            epoch: 0,
+            accessible_org_ids: Vec::new(),
+            team_ids: Vec::new(),
+            position_hierarchy_enabled: false,
+            subordinate_user_ids: Vec::new(),
+            condition_grants: Default::default(),
+            role_ids: None,
+            unit_scope: Default::default(),
+            field_masks: Default::default(),
+            service_principal: false,
+        };
+        assert!(route_visible(&ctx, "/xrm/admin/views"));
+        assert!(!route_visible(&ctx, "/xrm/admin/secrets"));
+        assert!(route_visible(&ctx, "/xrm/entity/account/list"));
+        assert!(!route_visible(&ctx, "/xrm/entity/contact/list"));
+        assert!(!route_visible(&ctx, "/xrm/admin/metadata/bundles"));
+        ctx.is_admin = true;
+        assert!(route_visible(&ctx, "/xrm/admin/metadata/bundles"));
     }
 }

@@ -6,7 +6,7 @@ import type { Type } from '@angular/core';
 import { NgComponentOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { catchError, firstValueFrom, of } from 'rxjs';
 import type { Observable, Subscription } from 'rxjs';
 import { Announcer, ApiError, CurrencyService, LangService, LiveChannel, TranslatePipe } from '@attome/base';
 import type { LiveRecords } from '@attome/base';
@@ -14,6 +14,7 @@ import { DialogService } from '@attome/base/dialog';
 import { EntityRecord, FieldType, ListFilter, LookupMeta } from '@attome/xrm';
 import { EntityService, type DeleteImpact } from '../services/entity.service';
 import { logicalToUrlPath } from '../services/entity-url.utils';
+import { actionAllowed } from '../services/allowed-actions';
 import { EntityRouteRegistry } from '../entity-route-registry.service';
 import type { SelectionAction } from '../entity-route-registry.service';
 import {
@@ -231,6 +232,11 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   readonly viewKindFilter = input<readonly ViewKind[] | null>(null);
   /** Creating records is opt-in so relationship grids do not offer the wrong action. */
   readonly allowCreate = input(false);
+  /** Q10-T11: the schema's `allowed_actions` for this entity (null until known). */
+  private readonly allowedActions = signal<readonly string[] | null>(null);
+  protected can(action: string): boolean {
+    return actionAllowed(this.allowedActions(), action);
+  }
   readonly showRelationshipActions = input(false);
 
   /** A27-T4: the record type chosen on the New button (`null`: none). */
@@ -471,6 +477,16 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
         const unwatch = this.live.watch(entity);
         const sub = this.live.records.subscribe(frame => this.onLiveRecords(entity, frame));
         onCleanup(() => { unwatch(); sub.unsubscribe(); });
+      });
+    });
+    // Q10-T11: buttons follow the operations the API admits for this entity.
+    effect(onCleanup => {
+      const entity = this.entityName();
+      untracked(() => {
+        this.allowedActions.set(null);
+        const sub = this.entitySvc.getSchema(entity).pipe(catchError(() => of(null)))
+          .subscribe(schema => this.allowedActions.set(schema?.allowed_actions ?? null));
+        onCleanup(() => sub.unsubscribe());
       });
     });
     effect(() => {

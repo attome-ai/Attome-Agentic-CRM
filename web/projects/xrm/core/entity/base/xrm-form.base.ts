@@ -21,6 +21,7 @@ import { DuplicatesService } from '@attome/xrm/core/admin/data';
 import { DuplicateNotice, duplicateWarningsOf } from '../duplicate-banner/duplicate-notice';
 import { ConflictChoices } from '../conflict-dialog/conflict-dialog.component';
 import { fieldValidators } from '../field/field-checks';
+import { actionAllowed } from '../services/allowed-actions';
 
 /**
  * How long the post-save tick holds before the submit button returns to its
@@ -123,7 +124,9 @@ export abstract class EngineFormBase implements OnInit {
    * auto-generated is legitimately creatable from an untouched form, so
    * gating create the same way would make those records unreachable.
    */
-  readonly canSave = computed(() => !this.saving() && (!this.isEdit() || this.dirty()));
+  /** Q10-T11: and the schema says the caller may update (or create) this entity. */
+  readonly canSave = computed(() => !this.saving() && (!this.isEdit() || this.dirty())
+    && actionAllowed(this.schema()?.allowed_actions, this.isEdit() ? 'update' : 'create'));
 
   /** Set when a save's field validation fails client-side (not the same as a server error banner). */
   readonly validationError = signal(false);

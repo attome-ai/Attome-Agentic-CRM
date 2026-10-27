@@ -30,8 +30,10 @@
         </button>
         <button type="button" class="btn btn-text" (click)="clearSelection()">{{ 'entityList.cancel' | translate }}</button>
         } @else {
+        @if (can('bulk')) {
         <button type="button" class="btn btn-secondary" [disabled]="bulkActionRunning()"
           (click)="openBulkEdit()"><i class="las la-edit"></i> {{ 'entityList.bulkEdit' | translate }}</button>
+        }
         <!-- U7 Phase A: admin-only bulk Assign (renders nothing otherwise). -->
         <xrm-record-access-actions [entity]="entityName()" [recordIds]="selectedRecordIdList()"
           [allowShare]="false" [disabled]="bulkActionRunning()" (changed)="onRecordAccessChanged()" />
@@ -60,8 +62,10 @@
           [disabled]="!canActivateSelection()" (click)="activateSelected()">
           {{ 'entityList.activateSelected' | translate }}
         </button>
+        @if (can('delete')) {
         <button type="button" class="btn btn-danger" [disabled]="bulkActionRunning()"
           (click)="deleteSelected()">{{ 'entityList.deleteSelected' | translate }}</button>
+        }
         }
         <button type="button" class="btn btn-text" (click)="clearSelection()">{{ 'entityList.cancel' | translate }}</button>
         }
@@ -165,13 +169,14 @@
           <i class="las la-unlink"></i> {{ 'entityList.removeRelationship' | translate }}
         </button>
         }
-        @if (allowCreate()) {
+        @if (allowCreate() && can('create')) {
         <!-- A27-T4: a split button when the entity has record types. -->
         <xrm-record-type-picker [entity]="entityName()" (create)="handleAdd($event)" />
         <!-- B8-T3: a new record from a template the caller may use. -->
         <xrm-record-template-picker [entity]="entityName()" />
         }
         <button type="button" class="btn btn-secondary" (click)="refresh()">{{ 'entityList.refresh' | translate }}</button>
+        @if (can('export')) {
         <button type="button" class="btn btn-secondary" [disabled]="bulkActionRunning()" (click)="exportList('csv')">
           <i class="las la-download"></i> {{ 'entityList.exportCsv' | translate }}
         </button>
@@ -187,6 +192,7 @@
                  (change)="exportLabels.set($any($event.target).checked)" />
           <span>{{ 'entityList.exportLabels' | translate }}</span>
         </label>
+        }
       </div>
     </div>
     }

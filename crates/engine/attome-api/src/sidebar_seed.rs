@@ -342,6 +342,24 @@ async fn ensure_sidebar_privilege(
     Ok(())
 }
 
+/// Q10-T11: drops a seeded item's `system.admin` link. The menu now gates an
+/// admin page by the area its API requires (`sidebar::route_gate`), so a
+/// delegated administrator sees the pages their area opens; a full
+/// administrator still sees every one.
+async fn retire_admin_link(db: &DbPool, sidebar_id: Uuid) -> Result<(), AppError> {
+    sqlx::query(
+        "UPDATE sidebar_mm_privilege SET is_deleted = true
+          WHERE sidebar_ref = $1 AND is_deleted = false
+            AND privilege_ref IN (SELECT id FROM privilege WHERE key = $2)",
+    )
+    .bind(sidebar_id)
+    .bind(ADMIN_PRIVILEGE_KEY)
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
 /// Ensures built-in sidebar groups and items are correct.
 // D-479 (M26 R-09) — bumped 1 -> 2: "Dashboards" retagged from module
 // "report" to "dashboard", which only takes effect on an already-deployed
@@ -907,9 +925,9 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, relationships_group, ADMIN_PRIVILEGE_KEY).await?;
-    ensure_sidebar_privilege(db, user_teams, ADMIN_PRIVILEGE_KEY).await?;
-    ensure_sidebar_privilege(db, user_privileges, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, relationships_group).await?;
+    retire_admin_link(db, user_teams).await?;
+    retire_admin_link(db, user_privileges).await?;
 
     let management_group = upsert_sidebar(
         db,
@@ -1044,7 +1062,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, secrets, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, secrets).await?;
     let config_starts = upsert_sidebar(
         db,
         "Configuration History",
@@ -1056,7 +1074,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, config_starts, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, config_starts).await?;
     // M10-T4: every pending timer, admin-only like its route.
     let timers = upsert_sidebar(
         db,
@@ -1069,7 +1087,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, timers, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, timers).await?;
     // Z3-T10: per-cache numbers and purge, admin-only like its routes.
     let caches = upsert_sidebar(
         db,
@@ -1082,7 +1100,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, caches, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, caches).await?;
     // AB6-T9: capabilities and outbound breakers, admin-only like the
     // dependency map it reads.
     let dependencies = upsert_sidebar(
@@ -1096,7 +1114,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, dependencies, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, dependencies).await?;
     // U10-T3: the admin console, admin-only like its route.
     let console = upsert_sidebar(
         db,
@@ -1109,7 +1127,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, console, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, console).await?;
 
     // Basic Units U8 — the state-model editor. Its routes are
     // `Authorized<Admin>`, so the row is linked to `system.admin`
@@ -1126,7 +1144,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, state_models, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, state_models).await?;
 
     // Basic Units U19 — the M89 change feed, admin-only like its route.
     let change_feed = upsert_sidebar(
@@ -1140,7 +1158,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, change_feed, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, change_feed).await?;
 
     // D-195/P-four-eyes-approval §5 step 10's own UI, built (`ApprovalQueueListComponent`,
     // `xrm-shell.routes.ts`'s `admin/approvals` route) but never linked from the
@@ -1249,7 +1267,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, data_quality, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, data_quality).await?;
 
     let data_catalog = upsert_sidebar(
         db,
@@ -1262,7 +1280,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
-    ensure_sidebar_privilege(db, data_catalog, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, data_catalog).await?;
 
     // ── Sales Suite: retired from the base seed — this is a *vertical*
     // (verticals skill), not a generic-platform module. Its ss_* entities are
@@ -1399,7 +1417,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("portal"),
     )
     .await?;
-    ensure_sidebar_privilege(db, web_portals_group, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, web_portals_group).await?;
     let portals = upsert_sidebar(
         db,
         "Portals",
@@ -1411,7 +1429,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("portal"),
     )
     .await?;
-    ensure_sidebar_privilege(db, portals, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, portals).await?;
 
     // ── Modules (D-778): no licence is checked, so the old "License" group's
     // list, import and usage pages are gone. Module Management is the one
@@ -1429,7 +1447,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         None,
     )
     .await?;
-    ensure_sidebar_privilege(db, modules_group, ADMIN_PRIVILEGE_KEY).await?;
+    retire_admin_link(db, modules_group).await?;
 
     upsert_sidebar(
         db,

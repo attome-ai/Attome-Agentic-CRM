@@ -114,6 +114,11 @@ pub trait SecurityContextExt {
     /// call sites don't need a second signature migration later.
     fn require(&self, entity: &str, action: &str) -> Result<(), AppError>;
 
+    /// Q10-T11: the decision [`Self::require`] makes, without counting it as
+    /// a use of the privilege. Screens (the menu, a form's buttons) ask this
+    /// so they show exactly what the API would admit.
+    fn allows(&self, entity: &str, action: &str) -> bool;
+
     /// Flat-key check — for callers holding a bare privilege key rather than
     /// an (entity, action) pair, e.g. `sql_query.required_privilege`
     /// (P1.1e per-query gating). Admin always satisfies it.
@@ -151,14 +156,17 @@ impl SecurityContextExt for SecurityContext {
         if self.is_admin {
             return Ok(());
         }
-        let key = format!("{entity}.{action}");
-        if self.privileges.contains(&key) {
+        if self.allows(entity, action) {
             // Q10-T9: counted for the unused-privilege proposals.
-            attome_server::privilege_usage::record(self.user_id, &key);
+            attome_server::privilege_usage::record(self.user_id, &format!("{entity}.{action}"));
             Ok(())
         } else {
             Err(AppError::Forbidden)
         }
+    }
+
+    fn allows(&self, entity: &str, action: &str) -> bool {
+        self.is_admin || self.privileges.contains(&format!("{entity}.{action}"))
     }
 
     fn require_key(&self, key: &str) -> Result<(), AppError> {

@@ -1,6 +1,7 @@
 use attome_core::business_rules::{ConditionTree, PolicyDef, PolicyType, RuleAudience};
 use attome_core::{EngineState, FieldType};
-use attome_server::authz::{Authorized, Privilege, area};
+use attome_security::SecurityContextExt;
+use attome_server::authz::{AdminArea, Authorized, SelfService};
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
 use attome_types::ErrorResponse;
@@ -79,6 +80,12 @@ struct EntitySchemaDef {
     /// `error` attached to a field) under a structured condition. The form
     /// mirrors them for UX only; the server enforces every write.
     business_rules: Vec<BusinessRuleClient>,
+    /// Q10-T11: the operations the caller may perform on this entity
+    /// (`read`, `create`, `update`, `delete`, `assign`, `share`, `export`,
+    /// `bulk`), decided as the record routes decide them, so the form shows a
+    /// button only when the API would admit the operation (a particular
+    /// record can still be out of reach).
+    allowed_actions: Vec<&'static str>,
     /// L1-T9: the entity is master data (it has golden records built from
     /// source systems), so its form shows the golden record panel. Sent only
     /// when true.
@@ -231,7 +238,10 @@ pub(crate) fn not_modified(if_none_match: Option<&str>, etag: &str) -> bool {
 
 /// An entity's form schema
 ///
-/// An entity's form schema. Administrators only.
+/// An entity's form schema, for anyone who may read the entity (Q10-T11):
+/// the same `{entity}.read` check the record routes make. A field read-gated
+/// for the caller is left out, as the record routes leave out its value; the
+/// DataModel administration area sees every field.
 #[utoipa::path(
     get,
     path = "/api/v1/schema/{logicalname}",
@@ -241,7 +251,7 @@ pub(crate) fn not_modified(if_none_match: Option<&str>, etag: &str) -> bool {
         (status = 200, description = "Success; `ETag` validates it", body = EntitySchemaDef),
         (status = 304, description = "`If-None-Match` names the current `ETag`; no body"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 403, description = "The caller may not read the entity", body = ErrorResponse),
         (status = 404, description = "No such entity", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
     ),
@@ -249,14 +259,18 @@ pub(crate) fn not_modified(if_none_match: Option<&str>, etag: &str) -> bool {
 )]
 async fn get_schema(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::DataModel>>,
+    ctx: Authorized<SelfService>,
     Path(logicalname): Path<String>,
     Query(query): Query<SchemaQuery>,
     headers: axum::http::HeaderMap,
 ) -> Result<axum::response::Response, AppError> {
     use axum::http::{StatusCode, header};
     use axum::response::IntoResponse;
-    let schema = build_schema(&state, &ctx, &logicalname, query.locale.as_deref()).await?;
+    let full = AdminArea::DataModel.held_by(&ctx);
+    if !full {
+        ctx.require(&logicalname, "read")?;
+    }
+    let schema = build_schema(&state, &ctx, &logicalname, full, query.locale.as_deref()).await?;
     let body = serde_json::to_vec(&schema).map_err(AppError::internal)?;
     let etag = schema_etag(&body);
     let if_none_match = headers
@@ -278,10 +292,13 @@ async fn get_schema(
 }
 
 /// The schema `ctx` sees of `logicalname`, built from in-memory metadata.
+/// Without `full`, a field read-gated for `ctx` (no read grant and no mask)
+/// is left out.
 async fn build_schema(
     state: &EngineState,
     ctx: &SecurityContext,
     logicalname: &str,
+    full: bool,
     requested_locale: Option<&str>,
 ) -> Result<EntitySchemaDef, AppError> {
     // M05 Phase 1 (D-426) — resolved once per request, consulted below for
@@ -293,9 +310,30 @@ async fn build_schema(
     let (entity_id, facts) = schema_facts(state, logicalname).await?;
     let registry = state.entities.load();
 
+    let withheld: std::collections::HashSet<String> = if full {
+        std::collections::HashSet::new()
+    } else {
+        registry
+            .get(logicalname)
+            .map(|meta| {
+                meta.attrs
+                    .iter()
+                    .filter(|a| {
+                        a.is_read_gated()
+                            && !ctx.has_field_read_grant(logicalname, &a.logicalname)
+                            && !ctx
+                                .field_masks
+                                .contains_key(&format!("{logicalname}.{}", a.logicalname))
+                    })
+                    .map(|a| a.logicalname.clone())
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
     let fields: Vec<FieldSchemaDef> = facts
         .fields
         .into_iter()
+        .filter(|row| !withheld.contains(row.logicalname.as_deref().unwrap_or_default()))
         .enumerate()
         .map(|(i, row)| {
             let field_type = int_to_type(row.field_type_int.unwrap_or(3)).to_owned();
@@ -407,6 +445,12 @@ async fn build_schema(
 
     let business_rules = client_business_rules(state, ctx, logicalname).await?;
     let is_master = attome_records::entity_crud::master::is_master(state, logicalname).await?;
+    let allowed_actions =
+        attome_security::allowed_entity_actions(&state.base.db, ctx, entity_id, logicalname)
+            .await?
+            .into_iter()
+            .map(attome_security::RecordAction::as_str)
+            .collect();
 
     Ok(EntitySchemaDef {
         id: entity_id,
@@ -415,6 +459,7 @@ async fn build_schema(
         fields,
         relationships,
         business_rules,
+        allowed_actions,
         is_master,
     })
 }
