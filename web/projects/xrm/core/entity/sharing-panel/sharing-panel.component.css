@@ -20,5 +20,5 @@
 .sp-off { opacity: 0.6; }
 .sp-winning { border-color: var(--color-primary, #2563eb); border-inline-start-width: 4px; }
 .sp-badge { font-size: 11px; padding-block: 1px; padding-inline: 6px; border-radius: 4px;
-  background: var(--color-primary, #2563eb); color: #fff; }
+  background: var(--color-primary, #2563eb); color: var(--color-on-accent, #fff); }
 .sp-detail { flex-basis: 100%; color: var(--color-text-secondary); }
