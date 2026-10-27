@@ -40,6 +40,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Reports (P1-T3): a grouped report draws as a bar, line, area, donut or funnel chart; prompts ask for
+  values at run time as the saved query's typed parameters; a report is saved as a stored query and
+  shared with roles and teams to run or to edit.
 - App designer (A21-T3, `/xrm/admin/apps` and `/xrm/admin/apps/{id}/design`): an app's menu on the
   shared canvas, with forms, pages, dashboards, reports and flows dragged or clicked into a group and
   views and links added by id or address; the app's settings (name, icon, colours, languages, time zone,

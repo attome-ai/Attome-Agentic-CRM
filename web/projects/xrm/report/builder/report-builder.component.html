@@ -146,6 +146,37 @@
       <button type="button" class="btn btn-text" data-add-filter (click)="addCondition()">{{ 'reportBuilder.addFilter' | translate }}</button>
     </fieldset>
 
+    <fieldset class="rb-box" data-prompts>
+      <legend>{{ 'reportBuilder.prompts' | translate }}</legend>
+      <p class="rb-note">{{ 'reportBuilder.promptsLead' | translate }}</p>
+      @for (p of state().prompts; track $index; let i = $index) {
+        <div class="rb-row" [attr.data-prompt]="i">
+          <select (change)="setPrompt(i, { field: valueOf($event) })" [attr.aria-label]="'reportBuilder.field' | translate">
+            <option value="">{{ 'reportBuilder.choose' | translate }}</option>
+            @for (f of fields(); track f.name) {
+              <option [value]="f.name" [selected]="p.field === f.name">{{ f.display_name || f.name }}</option>
+            }
+          </select>
+          <select (change)="pickPromptOperator(i, $event)" [attr.aria-label]="'reportBuilder.operator' | translate">
+            @for (o of operators; track o) {
+              <option [value]="o" [selected]="p.op === o">{{ operatorKeys[o] | translate }}</option>
+            }
+          </select>
+          <input type="text" dir="ltr" [value]="p.name" [attr.aria-label]="'reportBuilder.promptName' | translate"
+                 [class.rb-invalid]="!nameOk(p.name)" (input)="setPrompt(i, { name: valueOf($event) })" />
+          <select (change)="pickPromptType(i, $event)" [attr.aria-label]="'reportBuilder.promptType' | translate">
+            @for (t of promptTypes; track t) {
+              <option [value]="t" [selected]="p.type === t">{{ promptTypeKeys[t] | translate }}</option>
+            }
+          </select>
+          <input [type]="p.type === 'number' ? 'number' : p.type === 'date' ? 'date' : 'text'" [value]="p.value"
+                 [attr.aria-label]="'reportBuilder.promptValue' | translate" (input)="setPrompt(i, { value: valueOf($event) })" />
+          <button type="button" class="btn btn-text" (click)="removePrompt(i)">{{ 'reportBuilder.remove' | translate }}</button>
+        </div>
+      }
+      <button type="button" class="btn btn-text" data-add-prompt (click)="addPrompt()">{{ 'reportBuilder.addPrompt' | translate }}</button>
+    </fieldset>
+
     <div class="rb-row">
       <button type="button" class="btn btn-primary" data-run [disabled]="!canRun() || running()" (click)="run()">
         {{ (running() ? 'reportBuilder.running' : 'reportBuilder.preview') | translate }}
@@ -174,6 +205,25 @@
         </table>
       </div>
       <p class="rb-note">{{ 'reportBuilder.firstRows' | translate: { count: list.length } }}</p>
+    }
+
+    @if (state().layout !== 'table') {
+      <label class="rb-field rb-inline">
+        <span>{{ 'reportBuilder.chart' | translate }}</span>
+        <select data-chart (change)="pickChart($event)">
+          <option value="">{{ 'reportBuilder.noChart' | translate }}</option>
+          @for (c of charts; track c) {
+            <option [value]="c" [selected]="chartKind() === c">{{ chartKeys[c] | translate }}</option>
+          }
+        </select>
+      </label>
+    }
+    @if (chart(); as c) {
+      @if (chartKind(); as kind) {
+        <div class="rb-chart" data-chart-view>
+          <attome-dashboard-chart [kind]="kind" [categories]="c.categories" [series]="c.series" />
+        </div>
+      }
     }
 
     @if (summary(); as s) {
@@ -223,5 +273,36 @@
         </table>
       </div>
     }
+    <section class="rb-box" data-save-share>
+      <h3 class="rb-sub">{{ 'reportBuilder.saveShare' | translate }}</h3>
+      <div class="rb-row">
+        <label class="rb-field">
+          <span>{{ 'reportBuilder.reportName' | translate }}</span>
+          <input type="text" maxlength="200" data-report-name [value]="reportName()" (input)="reportName.set(valueOf($event))" />
+        </label>
+        <button type="button" class="btn btn-secondary" data-save-report [disabled]="!canRun() || !reportName().trim() || running()"
+                (click)="saveReport()">{{ 'reportBuilder.saveReport' | translate }}</button>
+        @if (savedId()) { <span class="rb-note" role="status" data-saved-report>{{ 'reportBuilder.savedReport' | translate }}</span> }
+      </div>
+      @if (savedId()) {
+        <ul class="rb-shares">
+          @for (p of principals(); track p.type + p.id) {
+            <li class="rb-row">
+              <span class="rb-kind">{{ (p.type === 'role' ? 'reportBuilder.role' : 'reportBuilder.team') | translate }}</span>
+              <bdi>{{ p.name }}</bdi>
+              <select [attr.data-share]="p.type + ':' + p.id" (change)="pickShare(p, $event)" [attr.aria-label]="'reportBuilder.access' | translate">
+                <option value="none">{{ 'reportBuilder.accessNone' | translate }}</option>
+                <option value="read">{{ 'reportBuilder.accessRead' | translate }}</option>
+                <option value="edit">{{ 'reportBuilder.accessEdit' | translate }}</option>
+              </select>
+            </li>
+          } @empty {
+            <li class="rb-note">{{ 'reportBuilder.noPrincipals' | translate }}</li>
+          }
+        </ul>
+        <button type="button" class="btn btn-secondary" data-apply-shares (click)="applyShares()">{{ 'reportBuilder.applyShares' | translate }}</button>
+        @if (shareNotice()) { <p class="rb-note" role="status">{{ shareNotice() }}</p> }
+      }
+    </section>
   }
 </section>

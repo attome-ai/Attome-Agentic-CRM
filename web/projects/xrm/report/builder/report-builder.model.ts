@@ -19,6 +19,14 @@ export type ReportFunc = (typeof REPORT_FUNCS)[number];
 export const REPORT_BUCKETS = ['day', 'week', 'month', 'quarter', 'year'] as const;
 export type ReportBucket = (typeof REPORT_BUCKETS)[number];
 
+/** P1-T3: the types a prompt asks for (a subset of the saved query's `ParamType`). */
+export const PROMPT_TYPES = ['text', 'number', 'date'] as const;
+export type PromptType = (typeof PROMPT_TYPES)[number];
+
+/** P1-T3: the chart kinds a grouped report draws (the dashboard's chart). */
+export const REPORT_CHARTS = ['bar', 'line', 'area', 'donut', 'funnel'] as const;
+export type ReportChart = (typeof REPORT_CHARTS)[number];
+
 /** Rows a preview shows. */
 export const PREVIEW_ROWS = 50;
 /** The alias the one measure carries in the answer. */
@@ -27,6 +35,20 @@ export const MEASURE = 'value';
 export interface ReportCondition {
   field: string;
   op: ReportOperator;
+  value: string;
+}
+
+/**
+ * P1-T3: a value the person running the report is asked for, an A14
+ * parameter: `{kind: 'param', field, op, param: name}` in the spec, declared
+ * with its type when the report is saved. `value` is the value for the
+ * preview.
+ */
+export interface ReportPrompt {
+  field: string;
+  op: ReportOperator;
+  name: string;
+  type: PromptType;
   value: string;
 }
 
@@ -42,6 +64,8 @@ export interface ReportState {
   /** The table's columns: fields, or related fields by path (`account.industry`). */
   columns: string[];
   conditions: ReportCondition[];
+  /** P1-T3: values asked for at run time. */
+  prompts: ReportPrompt[];
   /** Summary and matrix: what the rows are. */
   rows: ReportGroup;
   /** Matrix: what the columns are. */
@@ -54,7 +78,7 @@ export interface ReportState {
 
 export function emptyReport(entity = ''): ReportState {
   return {
-    entity, layout: 'table', columns: [], conditions: [],
+    entity, layout: 'table', columns: [], conditions: [], prompts: [],
     rows: { field: '', bucket: '' }, across: { field: '', bucket: '' }, func: 'count', field: '',
   };
 }
@@ -66,12 +90,20 @@ function typed(raw: string): string | number | boolean {
   return text;
 }
 
-function where(conditions: readonly ReportCondition[]): Record<string, unknown> | null {
+/** A prompt's parameter name, as the server takes it. Pure. */
+export function promptNameOk(name: string): boolean {
+  return /^[a-z][a-z0-9_]*$/.test(name);
+}
+
+function where(conditions: readonly ReportCondition[], prompts: readonly ReportPrompt[] = []): Record<string, unknown> | null {
   const parts = conditions.filter(c => c.field).map(c => {
     const node: Record<string, unknown> = { kind: 'compare', field: c.field, op: c.op };
     if (c.op !== 'is_null' && c.op !== 'is_not_null') node['value'] = typed(c.value);
     return node;
   });
+  for (const p of prompts) {
+    if (p.field && promptNameOk(p.name)) parts.push({ kind: 'param', field: p.field, op: p.op, param: p.name });
+  }
   if (!parts.length) return null;
   return parts.length === 1 ? parts[0] : { kind: 'and', all: parts };
 }
@@ -91,7 +123,7 @@ export function ready(state: ReportState): boolean {
 /** The QuerySpec the state describes. Pure. */
 export function reportSpec(state: ReportState): Record<string, unknown> {
   const spec: Record<string, unknown> = { entity: state.entity.trim() };
-  const filter = where(state.conditions);
+  const filter = where(state.conditions, state.prompts ?? []);
   if (filter) spec['where'] = filter;
   if (state.layout === 'table') {
     spec['select'] = [...state.columns];
@@ -104,6 +136,23 @@ export function reportSpec(state: ReportState): Record<string, unknown> {
     ? { func: state.func, field: state.field, alias: MEASURE }
     : { func: 'count', alias: MEASURE }];
   return spec;
+}
+
+/** P1-T3: the prompts' values for a run, by parameter name, typed. Pure. */
+export function promptValues(prompts: readonly ReportPrompt[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const p of prompts) {
+    if (!p.field || !promptNameOk(p.name) || !p.value.trim()) continue;
+    out[p.name] = p.type === 'number' ? Number(p.value) : p.value.trim();
+  }
+  return out;
+}
+
+/** P1-T3: the parameters a saved report declares, one per prompt. Pure. */
+export function parameterDecls(prompts: readonly ReportPrompt[]): { name: string; type: PromptType; required: boolean }[] {
+  return prompts
+    .filter(p => p.field && promptNameOk(p.name))
+    .map(p => ({ name: p.name, type: p.type, required: true }));
 }
 
 /** One group of the answer; a total row names the group fields it adds up (P1-T2). */

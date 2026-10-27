@@ -5,7 +5,8 @@ import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ReportBuilderComponent } from './report-builder.component';
-import { emptyReport, pivot, ready, reportSpec, summarise } from './report-builder.model';
+import { emptyReport, parameterDecls, pivot, promptValues, ready, reportSpec, summarise } from './report-builder.model';
+import { matrixChart, summaryChart } from './report-chart';
 
 describe('ReportBuilderComponent (P1-T1)', () => {
   const schema = {
@@ -111,6 +112,51 @@ describe('ReportBuilderComponent (P1-T1)', () => {
     vi.advanceTimersByTime(450);
     expect(post).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
+  });
+
+  it('asks prompts as parameters, saves the report and shares it (P1-T3)', () => {
+    const { cmp, post } = setUp({ items: [] });
+    const put = vi.fn(() => of({ query_id: 'q-1', shares: [] }));
+    (TestBed.inject(ApiService) as unknown as { put: typeof put }).put = put;
+    cmp.toggleColumn('name');
+    cmp.addPrompt();
+    cmp.setPrompt(0, { field: 'stage', name: 'stage', value: 'won' });
+    cmp.run();
+    expect(post).toHaveBeenLastCalledWith('/api/v1/query/run', {
+      spec: {
+        entity: 'opportunity', select: ['name'], page_size: 50,
+        where: { kind: 'param', field: 'stage', op: 'eq', param: 'stage' },
+      },
+      params: { stage: 'won' },
+    });
+    post.mockReturnValueOnce(of({ id: 'q-1' }));
+    cmp.reportName.set('Won deals');
+    cmp.saveReport();
+    expect(post).toHaveBeenLastCalledWith('/api/v1/admin/queries', expect.objectContaining({
+      name: 'Won deals', parameters: [{ name: 'stage', type: 'text', required: true }],
+    }));
+    expect(cmp.savedId()).toBe('q-1');
+    cmp.setShare({ type: 'role', id: 'r-1', name: 'Sales' }, 'read');
+    cmp.setShare({ type: 'team', id: 't-1', name: 'East' }, 'edit');
+    cmp.setShare({ type: 'team', id: 't-1', name: 'East' }, 'none');
+    cmp.applyShares();
+    expect(put).toHaveBeenCalledWith('/api/v1/admin/query-shares/q-1', {
+      shares: [{ principal_type: 'role', principal_id: 'r-1', access: 'read' }],
+    });
+  });
+
+  it('draws grouped results as chart series (P1-T3)', () => {
+    const lines = summaryChart([{ key: 'won', value: 3 }, { key: 'lost', value: null }], 'Count', '#000000');
+    expect(lines.categories.map(c => c.label)).toEqual(['won', 'lost']);
+    expect(lines.series[0].points[0]?.value).toBe(3);
+    expect(lines.series[0].points[1]).toBeNull();
+    const m = matrixChart(pivot([
+      { keys: { r: 'x', c: 'a' }, values: { value: 1 } }, { keys: { r: 'x', c: 'b' }, values: { value: 2 } },
+    ], 'r', 'c'), ['#111111', '#222222']);
+    expect(m.series.map(se => se.name)).toEqual(['a', 'b']);
+    expect(m.series[1].color).toBe('#222222');
+    expect(promptValues([{ field: 'amount', op: 'gt', name: 'min', type: 'number', value: '10' }])).toEqual({ min: 10 });
+    expect(parameterDecls([{ field: 'x', op: 'eq', name: 'Bad Name', type: 'text', value: '' }])).toEqual([]);
   });
 
   it('builds specs and layouts purely', () => {

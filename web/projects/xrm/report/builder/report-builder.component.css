@@ -58,3 +58,10 @@
 .rb-table tfoot td,
 .rb-total { font-weight: 600; }
 .rb-num { text-align: end; font-variant-numeric: tabular-nums; }
+
+.rb-inline { flex-direction: row; align-items: center; gap: 8px; }
+.rb-chart { max-inline-size: 720px; }
+.rb-sub { margin: 0; font-size: 1rem; }
+.rb-kind { font-size: 0.75rem; color: var(--color-text-secondary); }
+.rb-shares { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.rb-invalid { border-color: var(--color-danger, #b91c1c); }
