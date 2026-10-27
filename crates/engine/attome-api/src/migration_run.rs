@@ -870,7 +870,7 @@ pub(crate) async fn compare_wave(
         ("id" = Uuid, Path, description = "The migration project"),
         ("wave_id" = Uuid, Path, description = "The wave"),
     ),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 202, description = "The rollback, queued", body = WaveRollback),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -942,7 +942,7 @@ pub(crate) async fn rollback_wave(
         &attome_audit::audit_service(&state),
         attome_audit::security::SecurityEvent::new(
             attome_audit::security::MandatoryCategory::Configuration,
-            attome_audit::AuditOperation::Delete,
+            attome_audit::AuditOperation::Update,
             ctx.user_id,
             "migration_wave",
             Some(wave_id),
