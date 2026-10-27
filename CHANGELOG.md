@@ -21,6 +21,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Changed
+- The read replica lag breaker is on by default (AA8-T1): `database.replica_max_lag_secs` defaults
+  to 30 seconds (was off), so reads fall back to the primary while the replica is more than 30
+  seconds behind; `null` turns it off. `loadtest/scripts/run-pooler-100-nodes.ps1` load-tests 100
+  simulated nodes through pgbouncer.
 - `attome init` starts a new deployment with the smallest module set (AK6-T1): the platform basics,
   the app it is for (`--app sales`, the default; `service`, `both`, or `all` for every module) and the
   modules its `--pack`s require, written as the module configuration. A database that already has one

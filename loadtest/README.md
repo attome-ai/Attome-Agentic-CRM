@@ -14,6 +14,12 @@ relative shape (does X change with Y) as more trustworthy than absolute
 milliseconds, and re-run on a real host before quoting numbers to a
 customer.
 
+**2026-10-27 addition (AA8-T1, code-only, not run):** `run-pooler-100-nodes.ps1` simulates 100
+app nodes as their connection pools (100 x `database.connection_number` pgbench clients with a
+9-reads-to-1-write mix) through the transaction-pooling pgbouncer, then directly, and records
+Postgres's backend count, throughput, latency and failures per topology in
+`.generated/results/aa8-pooler-summary.json`. It needs the loadtest stack with the pgbouncer overlay.
+
 **2026-07-30 addition (code-only, not run — see the "Not yet executed" note
 below):** `run-p112-exercise.ps1` gained `-ChainerEnabled` so the P1.12
 (connection-capacity) and P1.13 (queue-saturation/chainer) exercises can

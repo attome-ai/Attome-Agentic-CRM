@@ -1305,8 +1305,8 @@
           "description": "SELECT-only role for `/api/v1/query/execute` (P1.1e) — reuses this\nsection's host/port/dbname/schema, only the credentials differ."
         },
         "replica_max_lag_secs": {
-          "default": null,
-          "description": "P-ha-failover-hardening item (e), D-125 — consumed by\n`AppState::route_if_lag_ok` (P-read-your-writes-lsn) as an\nunconditional circuit breaker: whenever\n`replica_watermark::ReplicaWatermark.lag_seconds` (the always-on\npoller's cached value, `AppState.replica_watermark`) exceeds this\nthreshold, every routed read falls back to the primary regardless of\nany specific user's pin. Also widens `pin_write_with_lsn`'s effective\nTTL to `max(sticky_primary_ttl_secs, replica_max_lag_secs)` so the\npin never expires before this policy's own declared lag tolerance\n(`P-read-your-writes-lsn.md` §4(6)). `None` (the default) means \"no\nmax-lag policy configured\" — today's behavior, unchanged: no circuit\nbreaker, and the TTL formula reduces to `sticky_primary_ttl_secs`\nalone.",
+          "default": 30,
+          "description": "P-ha-failover-hardening item (e), D-125 — consumed by\n`AppState::route_if_lag_ok` (P-read-your-writes-lsn) as an\nunconditional circuit breaker: whenever\n`replica_watermark::ReplicaWatermark.lag_seconds` (the always-on\npoller's cached value, `AppState.replica_watermark`, refreshed every\n5 seconds) exceeds this threshold, every routed read falls back to the\nprimary regardless of any specific user's pin. Also widens\n`pin_write_with_lsn`'s effective TTL to `max(sticky_primary_ttl_secs,\nreplica_max_lag_secs)` so the pin never expires before this policy's own\ndeclared lag tolerance (`P-read-your-writes-lsn.md` §4(6)). AA8-T1: 30\nseconds by default; `null` turns the breaker off, and the TTL formula\nthen reduces to `sticky_primary_ttl_secs` alone.",
           "format": "uint64",
           "minimum": 0,
           "type": [

@@ -373,16 +373,15 @@ pub struct DatabaseSection {
     /// `AppState::route_if_lag_ok` (P-read-your-writes-lsn) as an
     /// unconditional circuit breaker: whenever
     /// `replica_watermark::ReplicaWatermark.lag_seconds` (the always-on
-    /// poller's cached value, `AppState.replica_watermark`) exceeds this
-    /// threshold, every routed read falls back to the primary regardless of
-    /// any specific user's pin. Also widens `pin_write_with_lsn`'s effective
-    /// TTL to `max(sticky_primary_ttl_secs, replica_max_lag_secs)` so the
-    /// pin never expires before this policy's own declared lag tolerance
-    /// (`P-read-your-writes-lsn.md` §4(6)). `None` (the default) means "no
-    /// max-lag policy configured" — today's behavior, unchanged: no circuit
-    /// breaker, and the TTL formula reduces to `sticky_primary_ttl_secs`
-    /// alone.
-    #[serde(default)]
+    /// poller's cached value, `AppState.replica_watermark`, refreshed every
+    /// 5 seconds) exceeds this threshold, every routed read falls back to the
+    /// primary regardless of any specific user's pin. Also widens
+    /// `pin_write_with_lsn`'s effective TTL to `max(sticky_primary_ttl_secs,
+    /// replica_max_lag_secs)` so the pin never expires before this policy's own
+    /// declared lag tolerance (`P-read-your-writes-lsn.md` §4(6)). AA8-T1: 30
+    /// seconds by default; `null` turns the breaker off, and the TTL formula
+    /// then reduces to `sticky_primary_ttl_secs` alone.
+    #[serde(default = "default_replica_max_lag_secs")]
     pub replica_max_lag_secs: Option<u64>,
     /// AB2-T4: after the database's leader changes (a failover), every read goes
     /// to the primary for this many seconds, so a person never reads an older
@@ -529,6 +528,11 @@ fn default_failover_pin_secs() -> u64 {
     30
 }
 
+/// AA8-T1: the lag breaker's default threshold.
+fn default_replica_max_lag_secs() -> Option<u64> {
+    Some(30)
+}
+
 #[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct ReadonlyDbCredentials {
     pub user: String,
@@ -600,5 +604,29 @@ impl std::fmt::Debug for RuntimeDbCredentials {
             .field("user", &self.user)
             .field("password", &"[REDACTED]")
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DatabaseSection;
+
+    const BASE: &str = r#""host": "h", "port": 5432, "dbname": "d", "user": "u", "schema": "s""#;
+
+    /// AA8-T1: the replica lag breaker is armed at 30 seconds unless a
+    /// configuration turns it off with `null`.
+    #[test]
+    fn lag_breaker_defaults_to_thirty_seconds() {
+        let unset: DatabaseSection =
+            serde_json::from_str(&format!("{{{BASE}}}")).expect("a minimal database section");
+        assert_eq!(unset.replica_max_lag_secs, Some(30));
+        let off: DatabaseSection =
+            serde_json::from_str(&format!("{{{BASE}, \"replica_max_lag_secs\": null}}"))
+                .expect("an explicit null");
+        assert_eq!(off.replica_max_lag_secs, None);
+        let set: DatabaseSection =
+            serde_json::from_str(&format!("{{{BASE}, \"replica_max_lag_secs\": 5}}"))
+                .expect("an explicit value");
+        assert_eq!(set.replica_max_lag_secs, Some(5));
     }
 }
