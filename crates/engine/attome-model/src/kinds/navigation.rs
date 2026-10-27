@@ -14,6 +14,11 @@
 //! `landing` picks the first screen per role by `<group label>/<item label>`.
 //! A form target is a reference, so a menu naming a removed form cannot be
 //! published; other targets are checked when their kinds join the model.
+//!
+//! A21-T3: `settings` carries the app's own look and defaults, set in the
+//! app designer: `name`, `icon` (a Line Awesome class), `primary_colour`
+//! and `accent_colour` (`#rrggbb`), `languages` (`en`, `ar`), `time_zone`
+//! (an IANA name) and `simple` (the designer hides advanced options).
 
 use std::collections::BTreeSet;
 
@@ -32,6 +37,63 @@ pub const NAVIGATION: KindName = KindName("navigation");
 pub const ITEM_KINDS: [&str; 7] = ["view", "form", "dashboard", "page", "report", "flow", "url"];
 /// Most items in one menu.
 pub const MAX_ITEMS: usize = 500;
+/// The languages an app may offer.
+pub const LANGUAGES: [&str; 2] = ["en", "ar"];
+
+fn colour_ok(value: &str) -> bool {
+    value.len() == 7 && value.starts_with('#') && value[1..].chars().all(|c| c.is_ascii_hexdigit())
+}
+
+/// A21-T3: the issues of a menu's `settings`. Pure.
+fn settings_issues(settings: &Value) -> Vec<Issue> {
+    let mut issues = Vec::new();
+    let Some(object) = settings.as_object() else {
+        return vec![Issue::new("/settings", "invalid", "settings is an object")];
+    };
+    for (key, value) in object {
+        let at = format!("/settings/{key}");
+        let text = value.as_str();
+        let bad = match key.as_str() {
+            "name" => !text.is_some_and(|t| !t.trim().is_empty() && t.chars().count() <= 100),
+            "icon" => !text.is_some_and(|t| {
+                t.starts_with("la")
+                    && t.len() <= 64
+                    && t.chars()
+                        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == ' ')
+            }),
+            "primary_colour" | "accent_colour" => !text.is_some_and(colour_ok),
+            "time_zone" => !text.is_some_and(|t| {
+                !t.is_empty()
+                    && t.len() <= 64
+                    && t.chars()
+                        .all(|c| c.is_ascii_alphanumeric() || "/_+-".contains(c))
+            }),
+            "languages" => !value.as_array().is_some_and(|langs| {
+                !langs.is_empty()
+                    && langs
+                        .iter()
+                        .all(|l| l.as_str().is_some_and(|l| LANGUAGES.contains(&l)))
+            }),
+            "simple" => !value.is_boolean(),
+            _ => {
+                issues.push(Issue::new(
+                    at,
+                    "unknown_property",
+                    format!("settings have no `{key}`"),
+                ));
+                continue;
+            }
+        };
+        if bad {
+            issues.push(Issue::new(
+                at,
+                "invalid",
+                format!("`{key}` is not a valid setting value"),
+            ));
+        }
+    }
+    issues
+}
 
 /// The navigation kind.
 #[derive(Debug, Clone, Copy, Default)]
@@ -98,6 +160,19 @@ impl Kind for NavigationKind {
                             "item": { "type": "string" }
                         }
                     }
+                },
+                "settings": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+                        "icon": { "type": "string", "maxLength": 64 },
+                        "primary_colour": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+                        "accent_colour": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+                        "languages": { "type": "array", "minItems": 1, "items": { "enum": LANGUAGES } },
+                        "time_zone": { "type": "string", "maxLength": 64 },
+                        "simple": { "type": "boolean" }
+                    }
                 }
             }
         })
@@ -113,7 +188,7 @@ impl Kind for NavigationKind {
         };
         let mut issues = Vec::new();
         for key in object.keys() {
-            if key != "groups" && key != "landing" {
+            if key != "groups" && key != "landing" && key != "settings" {
                 issues.push(Issue::new(
                     format!("/{key}"),
                     "unknown_property",
@@ -210,6 +285,9 @@ impl Kind for NavigationKind {
                     }
                 }
             }
+        }
+        if let Some(settings) = object.get("settings") {
+            issues.extend(settings_issues(settings));
         }
         if total > MAX_ITEMS {
             issues.push(Issue::new(
@@ -308,6 +386,33 @@ mod tests {
         let refs = NavigationKind.references(&doc);
         assert_eq!(refs.len(), 1);
         assert_eq!(refs[0].target.kind, FORM);
+    }
+
+    /// A21-T3: the app designer's settings ride in the menu, checked.
+    #[test]
+    fn app_settings_are_checked() {
+        let mut doc = menu();
+        doc["settings"] = json!({
+            "name": "Sales", "icon": "las la-briefcase", "primary_colour": "#1a56db",
+            "languages": ["ar", "en"], "time_zone": "Asia/Riyadh", "simple": true
+        });
+        assert!(NavigationKind.validate_shape(&doc).is_ok());
+        doc["settings"] = json!({
+            "name": " ", "primary_colour": "red", "languages": ["fr"], "time_zone": "Asia/Riyadh; DROP",
+            "simple": "yes", "theme": "dark"
+        });
+        let issues = NavigationKind.validate_shape(&doc).unwrap_err();
+        let found: Vec<(&str, &str)> = issues.iter().map(|i| (i.path.as_str(), i.code)).collect();
+        for path in [
+            "/settings/name",
+            "/settings/primary_colour",
+            "/settings/languages",
+            "/settings/time_zone",
+            "/settings/simple",
+        ] {
+            assert!(found.contains(&(path, "invalid")), "{path}: {found:?}");
+        }
+        assert!(found.contains(&("/settings/theme", "unknown_property")));
     }
 
     #[test]

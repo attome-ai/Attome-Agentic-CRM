@@ -204,6 +204,17 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/governance').then(m => m.StateModelsManagerComponent),
           },
           {
+            // A21-T3 — the apps, and the app designer on the shared canvas (`new` starts one).
+            path: 'apps',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/app-designer').then(m => m.AppListComponent),
+          },
+          {
+            path: 'apps/:id/design',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/app-designer').then(m => m.AppDesignerComponent),
+          },
+          {
             // T2-T3 — the page designer on the shared canvas.
             path: 'pages/:id/design',
             canActivate: [authGuard],

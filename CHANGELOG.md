@@ -40,6 +40,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- App designer (A21-T3, `/xrm/admin/apps` and `/xrm/admin/apps/{id}/design`): an app's menu on the
+  shared canvas, with forms, pages, dashboards, reports and flows dragged or clicked into a group and
+  views and links added by id or address; the app's settings (name, icon, colours, languages, time zone,
+  simple mode, which hides the advanced options) now ride in the navigation object as `settings`; a
+  dependency map lists what each item opens and what a form reads; save and publish as drafts.
 - Email designer (E2-T1, `/xrm/marketing/email-designer`, marketing pack changeset `0012`): headings,
   text, images, buttons, dividers, spaces and two-column rows on the shared canvas, right to left in
   Arabic; what the renderer would refuse is listed; preview renders on the server for a chosen person

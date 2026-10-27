@@ -1,0 +1,110 @@
+<section class="ad" data-app-designer>
+  <header class="ad-head">
+    <h2 class="ad-title">{{ 'appDesigner.title' | translate }} <bdi>{{ settings().name || name() }}</bdi></h2>
+    <div class="ad-actions">
+      @if (savedVersion(); as v) { <span class="ad-note" role="status">{{ 'appDesigner.saved' | translate: { version: v } }}</span> }
+      @if (published(); as v) { <span class="ad-note" role="status">{{ 'appDesigner.published' | translate: { version: v } }}</span> }
+      <button type="button" class="btn btn-primary" data-save [disabled]="busy()" (click)="save()">{{ 'appDesigner.save' | translate }}</button>
+      <button type="button" class="btn btn-secondary" data-publish [disabled]="busy() || !hash()" (click)="publish()">{{ 'appDesigner.publish' | translate }}</button>
+    </div>
+  </header>
+  @if (error()) { <p class="ad-error" role="alert">{{ error() }}</p> }
+
+  @if (initial(); as doc) {
+    <div class="ad-layout">
+      <nav class="ad-palette" [attr.aria-label]="'appDesigner.palette' | translate">
+        <h3>{{ 'appDesigner.palette' | translate }}</h3>
+        <button type="button" class="btn btn-secondary" data-add-group (click)="addGroup()">{{ 'appDesigner.addGroup' | translate }}</button>
+        <input type="search" [attr.aria-label]="'appDesigner.filter' | translate" [placeholder]="'appDesigner.filter' | translate"
+               [value]="sourceFilter()" (input)="sourceFilter.set(valueOf($event))" />
+        <ul class="ad-sources">
+          @for (s of shownSources(); track s.kind + s.id) {
+            <li>
+              <button type="button" class="ad-source" draggable="true" [attr.data-source]="s.id"
+                      (dragstart)="dragSource($event, s)" (click)="addSource(s)">
+                <span class="ad-kind">{{ kindKeys[s.kind] | translate }}</span> <bdi>{{ s.name }}</bdi>
+              </button>
+            </li>
+          } @empty {
+            <li class="ad-note">{{ 'appDesigner.noSources' | translate }}</li>
+          }
+        </ul>
+        <fieldset class="ad-box">
+          <legend>{{ 'appDesigner.byId' | translate }}</legend>
+          <select data-by-id-kind (change)="pickKind($event)" [attr.aria-label]="'appDesigner.kind' | translate">
+            @for (k of kinds; track k) {
+              <option [value]="k" [selected]="byIdKind() === k">{{ kindKeys[k] | translate }}</option>
+            }
+          </select>
+          <input type="text" dir="ltr" data-by-id-value [value]="byIdValue()"
+                 [placeholder]="(byIdKind() === 'url' ? 'appDesigner.urlHint' : 'appDesigner.idHint') | translate"
+                 (input)="byIdValue.set(valueOf($event))" />
+          <input type="text" [value]="byIdLabel()" [placeholder]="'appDesigner.label' | translate"
+                 (input)="byIdLabel.set(valueOf($event))" />
+          <button type="button" class="btn btn-text" data-add-by-id (click)="addById()">{{ 'appDesigner.add' | translate }}</button>
+        </fieldset>
+      </nav>
+
+      <div class="ad-main" (dragover)="$event.preventDefault()" (drop)="dropSource($event)">
+        <xrm-canvas [doc]="doc" rootPath="/root" (changed)="onChanged($event)" (save)="save($event)"
+                    (selectionChange)="onSelect($event)" />
+        @if (problems().length) {
+          <ul class="ad-problems" role="alert" data-problems>
+            @for (p of problems(); track $index) { <li>{{ problemKeys[p.problem] | translate: { item: p.at } }}</li> }
+          </ul>
+        }
+      </div>
+
+      <aside class="ad-side">
+        <section class="ad-box" data-settings>
+          <h3>{{ 'appDesigner.settings' | translate }}</h3>
+          <label class="ad-field"><span>{{ 'appDesigner.name' | translate }}</span>
+            <input type="text" maxlength="100" data-setting-name [value]="settings().name ?? ''" (input)="setSetting({ name: valueOf($event) })" />
+          </label>
+          <label class="ad-field"><span>{{ 'appDesigner.icon' | translate }}</span>
+            <input type="text" dir="ltr" maxlength="64" [value]="settings().icon ?? ''" [placeholder]="'appDesigner.iconHint' | translate"
+                   (input)="setSetting({ icon: valueOf($event) })" />
+          </label>
+          <div class="ad-field"><span>{{ 'appDesigner.languages' | translate }}</span>
+            <label class="ad-choice"><input type="checkbox" data-lang-en [checked]="settings().languages?.includes('en')" (change)="toggleLanguage('en')" />
+              {{ 'appDesigner.english' | translate }}</label>
+            <label class="ad-choice"><input type="checkbox" data-lang-ar [checked]="settings().languages?.includes('ar')" (change)="toggleLanguage('ar')" />
+              {{ 'appDesigner.arabic' | translate }}</label>
+          </div>
+          <label class="ad-field"><span>{{ 'appDesigner.timeZone' | translate }}</span>
+            <input type="text" dir="ltr" maxlength="64" [value]="settings().time_zone ?? ''" [placeholder]="'appDesigner.timeZoneHint' | translate"
+                   (input)="setSetting({ time_zone: valueOf($event) })" />
+          </label>
+          @if (!simple()) {
+            <label class="ad-field" data-advanced><span>{{ 'appDesigner.primaryColour' | translate }}</span>
+              <input type="text" dir="ltr" maxlength="7" [value]="settings().primary_colour ?? ''" (input)="setSetting({ primary_colour: valueOf($event) })" />
+            </label>
+            <label class="ad-field"><span>{{ 'appDesigner.accentColour' | translate }}</span>
+              <input type="text" dir="ltr" maxlength="7" [value]="settings().accent_colour ?? ''" (input)="setSetting({ accent_colour: valueOf($event) })" />
+            </label>
+          }
+          <label class="ad-choice">
+            <input type="checkbox" data-simple [checked]="simple()" (change)="setSetting({ simple: !simple() })" />
+            <span>{{ 'appDesigner.simple' | translate }}</span>
+          </label>
+        </section>
+
+        <section class="ad-box" data-dependencies>
+          <h3>{{ 'appDesigner.dependencies' | translate }}</h3>
+          <button type="button" class="btn btn-text" data-map (click)="mapDependencies()">{{ 'appDesigner.map' | translate }}</button>
+          <ul class="ad-deps">
+            @for (d of dependencies(); track d.item) {
+              <li [attr.data-dep]="d.item">
+                {{ 'appDesigner.opens' | translate: { item: d.item, kind: d.kind } }}
+                @if (d.uses.length) {
+                  <ul>@for (u of d.uses; track u) { <li><bdi>{{ u }}</bdi></li> }</ul>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+        <a class="btn btn-text" [routerLink]="['/xrm', 'admin', 'apps']">{{ 'appDesigner.allApps' | translate }}</a>
+      </aside>
+    </div>
+  }
+</section>
