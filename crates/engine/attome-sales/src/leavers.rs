@@ -82,7 +82,7 @@ pub async fn sweep_leavers(state: &EngineState) -> Result<u64, AppError> {
 
 /// The active users above `leaver` in the position hierarchy, else the
 /// administrators.
-async fn managers(db: &attome_db::DbPool, leaver: Uuid) -> Result<Vec<Uuid>, AppError> {
+pub async fn managers(db: &attome_db::DbPool, leaver: Uuid) -> Result<Vec<Uuid>, AppError> {
     let above: Vec<Uuid> = sqlx::query_scalar(
         "SELECT DISTINCT m.user_ref FROM user_account_mm_position mine \
          JOIN position p ON p.id = mine.position_ref AND p.is_deleted = false \

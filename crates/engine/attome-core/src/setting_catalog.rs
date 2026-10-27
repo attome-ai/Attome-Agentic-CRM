@@ -976,6 +976,23 @@ fn commission_settings() -> Vec<SettingDescriptor> {
             false,
             || json!({}),
         ),
+        // D4-T2: speed to lead and stale-lead rebalancing.
+        SettingDescriptor::new(
+            "sales.first_touch_minutes",
+            "Minutes a new lead may wait for its first activity or communication; when it waits              longer, its owner's managers are notified (D4-T2). 0 turns it off.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 10080}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+        SettingDescriptor::new(
+            "sales.stale_lead_days",
+            "Days an open lead given out by an assignment rule may go without activity or              change before the rule gives it to someone else (D4-T2). 0 turns it off.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 365}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
         // F2-T1: the discount policy quotes are submitted under.
         SettingDescriptor::new(
             "sales.discount_policy",

@@ -1532,6 +1532,11 @@ async fn dispatch_platform_job(
                     attome_compliance::breach::fire(&db, &timer, chrono::Utc::now())
                         .await
                         .map_err(|e| e.to_string())
+                } else if timer.kind == attome_workflow::speed_to_lead::TIMER_KIND {
+                    // D4-T2: a new lead's first-touch deadline.
+                    attome_workflow::speed_to_lead::fire(&attome_state, &timer)
+                        .await
+                        .map_err(|e| e.to_string())
                 } else if timer.kind == attome_service::escalation::TIMER_KIND {
                     // G8-T1: one step of a service escalation rule.
                     attome_service::escalation::fire(
@@ -3103,6 +3108,8 @@ const DEDUP_KEY_FULFILMENT_SPLIT: &str = "fulfilment-split";
 const DEDUP_KEY_FULFILMENT_BILLING: &str = "fulfilment-billing";
 /// D4-T1: new leads assigned by the rule set (a registered job type).
 const DEDUP_KEY_LEAD_ASSIGNMENT: &str = "lead-assignment";
+const DEDUP_KEY_LEAD_FIRST_TOUCH: &str = "lead-first-touch";
+const DEDUP_KEY_LEAD_REBALANCE: &str = "lead-rebalance";
 /// E14-T8: closed web sessions summarised onto timelines (a registered job type).
 const DEDUP_KEY_WEB_VISIT_SUMMARY: &str = "web-visit-summary";
 /// F6-T14: late and stuck fulfilment orders (a registered job type).
@@ -3461,6 +3468,14 @@ pub const FULFILMENT_BILLING: attome_jobs::JobType =
 /// D4-T1: new leads given an owner by the lead assignment rule set.
 pub const LEAD_ASSIGNMENT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_workflow::lead_assignment::JOB, 1);
+
+/// D4-T2: new leads given their first-touch timer.
+pub const LEAD_FIRST_TOUCH: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_workflow::speed_to_lead::SCHEDULE_JOB, 1);
+
+/// D4-T2: stale leads given to someone else by their assignment rule.
+pub const LEAD_REBALANCE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_workflow::speed_to_lead::REBALANCE_JOB, 1);
 
 /// E14-T8: one visit summary per closed, identified web session.
 pub const WEB_VISIT_SUMMARY: attome_jobs::JobType =
@@ -4606,6 +4621,34 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            LEAD_FIRST_TOUCH,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let scheduled = attome_workflow::speed_to_lead::schedule_timers(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if scheduled > 0 {
+                    tracing::info!(scheduled, "first-touch timers scheduled for new leads");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            LEAD_REBALANCE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let moved = attome_workflow::speed_to_lead::rebalance(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if moved > 0 {
+                    tracing::info!(moved, "stale leads rebalanced");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             WEB_VISIT_SUMMARY,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
@@ -5530,6 +5573,10 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_FULFILMENT_BILLING
         }
         EngineJob::Registered(job) if job.name == LEAD_ASSIGNMENT.name => DEDUP_KEY_LEAD_ASSIGNMENT,
+        EngineJob::Registered(job) if job.name == LEAD_FIRST_TOUCH.name => {
+            DEDUP_KEY_LEAD_FIRST_TOUCH
+        }
+        EngineJob::Registered(job) if job.name == LEAD_REBALANCE.name => DEDUP_KEY_LEAD_REBALANCE,
         EngineJob::Registered(job) if job.name == WEB_VISIT_SUMMARY.name => {
             DEDUP_KEY_WEB_VISIT_SUMMARY
         }
@@ -6787,6 +6834,36 @@ pub fn spawn_lead_assignment_scheduler(db: DbPool, interval: std::time::Duration
             "lead assignment",
         ),
         Err(error) => tracing::error!(%error, "lead assignment: not scheduled"),
+    }
+}
+
+/// D4-T2: every minute, new leads given their first-touch timer.
+pub fn spawn_lead_first_touch_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(LEAD_FIRST_TOUCH.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_LEAD_FIRST_TOUCH,
+            "lead first touch",
+        ),
+        Err(error) => tracing::error!(%error, "lead first touch: not scheduled"),
+    }
+}
+
+/// D4-T2: daily, stale leads rebalanced.
+pub fn spawn_lead_rebalance_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(LEAD_REBALANCE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_LEAD_REBALANCE,
+            "lead rebalance",
+        ),
+        Err(error) => tracing::error!(%error, "lead rebalance: not scheduled"),
     }
 }
 

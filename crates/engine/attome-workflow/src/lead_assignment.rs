@@ -229,16 +229,21 @@ async fn today_counts(
     Ok(rows.into_iter().collect())
 }
 
-/// The person `rule` gives `lead` to, if any.
-async fn pick(
+/// The person `rule` gives `lead` to, if any, leaving `exclude` (D4-T2:
+/// the current owner, when rebalancing) out of its pool.
+pub async fn pick_other(
     state: &EngineState,
     rule: &RuleEntry,
     lead: &Value,
+    exclude: Option<Uuid>,
 ) -> Result<Option<Uuid>, AppError> {
     let Some(strategy) = rule.strategy else {
         return Ok(None);
     };
-    let pool = assign::candidates(state, rule.team, None, rule.role).await?;
+    let pool = crate::speed_to_lead::others(
+        &assign::candidates(state, rule.team, None, rule.role).await?,
+        exclude,
+    );
     let pool = if rule.daily_cap.is_some() && !pool.is_empty() {
         let today = today_counts(state, rule.id, &pool).await?;
         under_cap(&pool, &today, rule.daily_cap)
@@ -248,7 +253,7 @@ async fn pick(
     if pool.is_empty() && strategy != Strategy::Territory {
         return Ok(None);
     }
-    Ok(match strategy {
+    let chosen = match strategy {
         Strategy::RoundRobin => assign::round_robin(state, rule.id, CURSOR_NODE, &pool).await?,
         Strategy::LeastLoaded => {
             let loads = assign::loads(state, "lead", &pool).await?;
@@ -263,7 +268,8 @@ async fn pick(
             None => None,
         },
         Strategy::Rule => None,
-    })
+    };
+    Ok(chosen.filter(|c| Some(*c) != exclude))
 }
 
 /// Assigns one lead; `true` when it got an owner here.
@@ -306,7 +312,7 @@ pub async fn assign_lead(state: &EngineState, id: Uuid) -> Result<bool, AppError
             if !rule.matches(&lead) {
                 continue;
             }
-            if let Some(owner) = pick(state, &rule, &lead).await? {
+            if let Some(owner) = pick_other(state, &rule, &lead, None).await? {
                 chosen = Some((owner, Reason::Rule, Some(rule.id), rule.author));
                 break;
             }

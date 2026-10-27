@@ -27,6 +27,7 @@ pub mod scheduler;
 pub mod sequence;
 pub mod simulate;
 pub mod sla_sweep;
+pub mod speed_to_lead;
 pub mod timer_follow;
 pub mod trigger_index;
 

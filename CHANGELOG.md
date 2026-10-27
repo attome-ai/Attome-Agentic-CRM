@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Speed to lead (D4-T2): with `sales.first_touch_minutes` set, each new lead gets a timer, and a lead
+  still new with no activity or communication when it fires is escalated to its owner's managers;
+  with `sales.stale_lead_days` set, a daily job gives open leads that went that long untouched to
+  someone else their assignment rule picks (reason `rebalanced`, crm pack changeset `0007`). Both
+  are off by default.
 - A lead's Convert tab shows what the account, contact and opportunity would hold and the existing
   accounts and contacts they would repeat; each can be created or linked, the contact and the
   opportunity skipped, and the conversion undone. The lead list converts or disqualifies (with a

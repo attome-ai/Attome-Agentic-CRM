@@ -220,6 +220,9 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_fulfilment_billing_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // D4-T1: new leads assigned by the rule set, every 30 seconds.
     crate::jobs::spawn_lead_assignment_scheduler(db.clone(), std::time::Duration::from_secs(30));
+    // D4-T2: first-touch timers for new leads every minute; stale leads rebalanced daily.
+    crate::jobs::spawn_lead_first_touch_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    crate::jobs::spawn_lead_rebalance_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // E14-T8: closed web sessions summarised onto timelines, every ten minutes.
     crate::jobs::spawn_web_visit_summary_scheduler(db.clone(), std::time::Duration::from_secs(600));
     // O1-T2: weekly feature drift of active prediction models.
