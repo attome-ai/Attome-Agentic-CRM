@@ -27,6 +27,8 @@ pub mod rest;
 pub mod sap_b1;
 /// E13-T10: Search Console, Bing Webmaster Tools and IndexNow codecs.
 pub mod search_console;
+/// C6-T1: a Slack app: install, events, approvals, unfurls, `/attome search`.
+pub mod slack;
 /// J4-T1: SMS segments, senders and the provider codecs.
 pub mod sms;
 pub mod sms_twilio;

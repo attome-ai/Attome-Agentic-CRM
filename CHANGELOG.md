@@ -36,6 +36,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Slack app codecs (C6-T1, `connector::adapters::slack`): the per-workspace install link and its
+  answer (bot token only), Events API bodies (URL check, link unfurls, mentions), notification and
+  approval messages (the approval opens the single-use approval link, as Teams and email do),
+  `chat.unfurl` bodies, and the `/attome search` command with its ephemeral answer.
 - My Schedule (G17-T14, `/xrm/workforce/me`, workforce pack changeset `0006`): a person's published
   shifts for the next two weeks by day, laid out for a phone; give a shift to a colleague (a swap
   request), accept open overtime and time-off offers, a link to the leave request form; the view
