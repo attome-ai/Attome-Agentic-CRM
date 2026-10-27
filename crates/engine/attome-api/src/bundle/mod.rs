@@ -58,6 +58,8 @@ pub mod break_glass;
 pub mod canonical;
 pub mod derived_id;
 pub mod export;
+/// T8-T2: what installing a package does, from its bundle plan.
+pub mod install_preview;
 pub mod ledger;
 pub mod model;
 /// T8-T1: a bundle with a signed manifest.
