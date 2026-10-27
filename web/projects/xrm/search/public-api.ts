@@ -27,3 +27,5 @@ export type { GapTopic, CollectionCoverage, IndexerStatus } from './services/kno
 // for the platform's own built-in entities — see xrm/audit and xrm/notification
 // for the established pattern).
 export { registerSearchEntityForms } from './provide-search-entity-forms';
+// Y14-T4: this screen's own catalogue.
+export { searchLabAr, searchLabEn } from './search-lab.i18n';

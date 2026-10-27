@@ -170,7 +170,11 @@ export const xrmShellRoutes: Routes = [
             // approve -> run -> report, over the existing staged-import
             // mechanism and this module's migration-project/run admin API.
             path: 'migration',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/migration').then(m => m.migrationEn),
+              () => import('@attome/xrm/migration').then(m => m.migrationAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/migration').then(m => m.MigrationWizardComponent),
           },
           {
@@ -275,7 +279,11 @@ export const xrmShellRoutes: Routes = [
             // diagnostic for whoever is using search — not an admin surface
             // with elevated reach. It has none.
             path: 'search/lab',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/search').then(m => m.searchLabEn),
+              () => import('@attome/xrm/search').then(m => m.searchLabAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/search').then(m => m.SearchLabComponent),
           },
           {
@@ -386,7 +394,11 @@ export const xrmShellRoutes: Routes = [
             // Web portal administration (web portal plan Phase 13 step 6,
             // G-8/G-14): portals, users, roles and grants, erasure, export.
             path: 'portals',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/portal').then(m => m.portalAdminEn),
+              () => import('@attome/xrm/portal').then(m => m.portalAdminAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/portal').then(m => m.PortalAdminComponent),
           },
           {

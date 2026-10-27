@@ -1,0 +1,61 @@
+/**
+ * Y14-T4: the search lab's own catalogue, registered on its route
+ * (`provideLayerCatalog`). Its namespaces, `searchLab`, are owned by this layer only.
+ */
+export const searchLabEn = {
+  searchLab: {
+    title: 'Search lab',
+    ledeBefore: 'Runs the real',
+    ledeAfter: 'as you, against live data. Nothing here bypasses the permission filter — results are exactly what your account can see.',
+    ledeEditable: 'Every query below is editable',
+    ledeCanned: 'the canned ones exercise a feature, yours exercise your data.',
+    adHocPlaceholder: 'Ad-hoc query — type anything and press Enter',
+    audience: 'audience', human: 'human', agent: 'agent', pageSize: 'page size',
+    run: 'Run', runEveryFeature: 'Run every feature', resetQueries: 'Reset queries',
+    clearResults: 'Clear results', running: 'running…',
+    features: 'Features',
+    verdictBefore: 'The', verdict: 'verdict',
+    verdictNote: "grades routing only — the route is a pure function of the query text, so it stays decidable for a string you just typed. Expected route comes from this page's own mirror of the Rule 1-5 contract, so a mismatch means the router and the documented rules disagree. Hit counts are reported and never graded: zero hits is equally consistent with a broken leg and with nothing being indexed yet.",
+    queryLabel: '{label} query', audienceLabel: '{label} audience',
+    expectedRoute: 'Expected route, from the Rule 1-5 mirror',
+    reset: 'reset', pass: 'pass', fail: 'fail', ms: 'ms', hitCount: '{count} hit(s)',
+    results: 'Results',
+    nothingIndexed: 'Every probe came back with zero hits. Routing checks above are still valid — they do not touch the index — but nothing here is testing retrieval or ranking until records are projected into',
+    timingNote: '— timings are client-side wall clock (network + server + parse), so they are not directly comparable to the server-side §11 budgets. The server\'s own view is',
+    timingNoteAfter: '; a persistent gap between the two is a network or serialisation problem.',
+    colVerdict: 'Verdict', colFeature: 'Feature', colQuery: 'Query', colMs: 'ms', colHits: 'hits',
+    colTotal: 'total', colRoute: 'route', colNotes: 'notes',
+    expected: 'expected', toolHint: 'tool hint:', relaxed: 'relaxed to closest spellings', degraded: 'degraded:',
+    noResults: 'no results — correct if nothing matches, and worth checking the index is populated if everything returns this',
+    untitled: '(untitled)', score: 'score', legs: 'legs', groups: 'groups:',
+  },
+};
+
+export const searchLabAr = {
+  searchLab: {
+    title: 'مختبر البحث',
+    ledeBefore: 'يشغّل المسار الفعلي',
+    ledeAfter: 'بحسابك، على بيانات حية. لا شيء هنا يتجاوز مرشح الصلاحيات — النتائج هي بالضبط ما يمكن لحسابك رؤيته.',
+    ledeEditable: 'كل استعلام أدناه قابل للتعديل',
+    ledeCanned: 'الاستعلامات الجاهزة تختبر ميزة، واستعلاماتك تختبر بياناتك.',
+    adHocPlaceholder: 'استعلام حر — اكتب أي شيء واضغط Enter',
+    audience: 'الجمهور', human: 'بشري', agent: 'وكيل', pageSize: 'حجم الصفحة',
+    run: 'تشغيل', runEveryFeature: 'تشغيل كل الميزات', resetQueries: 'إعادة ضبط الاستعلامات',
+    clearResults: 'مسح النتائج', running: 'جاري التشغيل…',
+    features: 'الميزات',
+    verdictBefore: 'يقيّم', verdict: 'الحكم',
+    verdictNote: 'التوجيه فقط — فالمسار دالة خالصة لنص الاستعلام، لذا يبقى قابلاً للبت فيه لأي نص كتبته للتو. يأتي المسار المتوقع من نسخة هذه الصفحة الخاصة لعقد القواعد 1-5، لذا فإن أي اختلاف يعني أن الموجّه والقواعد الموثّقة لا يتفقان. تُعرض أعداد النتائج ولا تُقيَّم أبداً: فصفر نتائج يتفق مع فرع معطّل بقدر ما يتفق مع عدم فهرسة أي شيء بعد.',
+    queryLabel: 'استعلام {label}', audienceLabel: 'جمهور {label}',
+    expectedRoute: 'المسار المتوقع، من نسخة القواعد 1-5',
+    reset: 'إعادة ضبط', pass: 'نجاح', fail: 'فشل', ms: 'مللي ثانية', hitCount: '{count} نتيجة',
+    results: 'النتائج',
+    nothingIndexed: 'عادت كل الاستعلامات بصفر نتائج. لا تزال فحوصات التوجيه أعلاه صالحة — فهي لا تمس الفهرس — لكن لا شيء هنا يختبر الاسترجاع أو الترتيب حتى تُسقط السجلات في',
+    timingNote: '— التوقيتات هي زمن الساعة من جهة العميل (الشبكة + الخادم + التحليل)، لذا لا يمكن مقارنتها مباشرة بميزانيات §11 على جانب الخادم. أما وجهة نظر الخادم فهي',
+    timingNoteAfter: '؛ والفجوة المستمرة بين الاثنين مشكلة شبكة أو تسلسل.',
+    colVerdict: 'الحكم', colFeature: 'الميزة', colQuery: 'الاستعلام', colMs: 'مللي ثانية', colHits: 'النتائج',
+    colTotal: 'الإجمالي', colRoute: 'المسار', colNotes: 'ملاحظات',
+    expected: 'المتوقع', toolHint: 'تلميح الأداة:', relaxed: 'خُفف إلى أقرب تهجئة', degraded: 'متدهور:',
+    noResults: 'لا توجد نتائج — وهذا صحيح إن لم يطابق شيء، ويستحق التحقق من أن الفهرس مملوء إذا أعاد كل شيء هذه النتيجة',
+    untitled: '(بدون عنوان)', score: 'الدرجة', legs: 'الفروع', groups: 'المجموعات:',
+  },
+};

@@ -10,6 +10,9 @@ import { reportBuilderAr, reportBuilderEn } from '@attome/xrm/report/builder';
 import { emailDesignerAr, emailDesignerEn } from '@attome/xrm/marketing/email-designer';
 import { appDesignerAr, appDesignerEn } from '@attome/xrm/core/admin/app-designer';
 import { fleetAr, fleetEn } from '@attome/xrm/fleet';
+import { searchLabAr, searchLabEn } from '@attome/xrm/search';
+import { migrationAr, migrationEn } from '@attome/xrm/migration';
+import { portalAdminAr, portalAdminEn } from '@attome/xrm/portal';
 import { describe, expect, it } from 'vitest';
 import { hostAr } from './ar.catalog';
 import { hostEn } from './en.catalog';
@@ -95,6 +98,9 @@ const LAYERS = [
   ['emailDesigner', emailDesignerEn, emailDesignerAr],
   ['appDesigner', appDesignerEn, appDesignerAr],
   ['fleet', fleetEn, fleetAr],
+  ['searchLab', searchLabEn, searchLabAr],
+  ['migration', migrationEn, migrationAr],
+  ['portalAdmin', portalAdminEn, portalAdminAr],
 ] as const;
 
 describe('i18n catalog coverage — all layers', () => {
@@ -110,6 +116,9 @@ describe('i18n catalog coverage — all layers', () => {
         provideLayerCatalog(emailDesignerEn, () => Promise.resolve(emailDesignerAr)),
         provideLayerCatalog(appDesignerEn, () => Promise.resolve(appDesignerAr)),
         provideLayerCatalog(fleetEn, () => Promise.resolve(fleetAr)),
+        provideLayerCatalog(searchLabEn, () => Promise.resolve(searchLabAr)),
+        provideLayerCatalog(migrationEn, () => Promise.resolve(migrationAr)),
+        provideLayerCatalog(portalAdminEn, () => Promise.resolve(portalAdminAr)),
       ],
     });
     const lang = TestBed.inject(LangService);

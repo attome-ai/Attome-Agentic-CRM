@@ -8,3 +8,5 @@
 export { MigrationWizardComponent } from './migration-wizard/migration-wizard.component';
 // U11 / D-606 — CSV import (the wizard's file step).
 export { CsvImportComponent } from './csv-import/csv-import.component';
+// Y14-T4: this screen's own catalogue.
+export { migrationAr, migrationEn } from './migration.i18n';

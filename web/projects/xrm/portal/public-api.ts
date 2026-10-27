@@ -10,3 +10,5 @@ export { PortalAdminComponent } from './portal-admin/portal-admin.component';
 
 // Every entity's own form (SYSTEM-CHANGES.md Topic 14).
 export { registerPortalEntityForms } from './provide-portal-entity-forms';
+// Y14-T4: this screen's own catalogue.
+export { portalAdminAr, portalAdminEn } from './portal-admin.i18n';
