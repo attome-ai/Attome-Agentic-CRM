@@ -32966,10 +32966,13 @@ export interface components {
             service_user_ref?: string | null;
         };
         CreateConditionBody: {
-            field_logicalname: string;
+            /** @description Empty for an expression condition. */
+            field_logicalname?: string;
             /**
              * Format: int32
-             * @description 0=eq 1=ne 2=gt 3=lt 4=gte 5=lte 6=in
+             * @description 0=eq 1=ne 2=gt 3=lt 4=gte 5=lte 6=in 7=expression (Z11-T16: `value`
+             *     is a rule expression over the entity's eligible fields, refused with
+             *     422 `untranslatable_condition` when it cannot run in the database).
              */
             operator: number;
             value: unknown;

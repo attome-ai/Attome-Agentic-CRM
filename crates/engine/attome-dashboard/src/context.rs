@@ -34,6 +34,12 @@
 //! (this platform is single-tenant/on-premise per D-002 — there is no
 //! tenant id to resolve).
 //!
+//! **Expressions (Z11-T16).** A `dashboard_variable` that declares an
+//! `expression` is evaluated by base-rules over every variable resolved
+//! before it (declared defaults and the built-ins, each by its name without
+//! the `@`), after the built-ins and before URL overrides, so a URL value
+//! still wins. A variable without one keeps the resolution below unchanged.
+//!
 //! **Resolution order** (spec: "URL -> user session -> system defaults"):
 //! applied lowest-precedence-first so each layer's `insert` naturally
 //! overwrites the one before it — declared `dashboard_variable`/
@@ -99,20 +105,72 @@ pub fn resolve_builtin_variables(
     vars
 }
 
+/// Z11-T16: `expression` evaluated by base-rules with every variable in
+/// `resolved` as a field named without its `@` (text, number, true/false, or
+/// a list of those). Pure.
+pub fn evaluate_variable_expression(
+    expression: &str,
+    resolved: &serde_json::Map<String, serde_json::Value>,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<serde_json::Value, String> {
+    use attome_rules::{Context, Schema, Type, Value};
+    fn rule_value(value: &serde_json::Value) -> Option<(Value, Type)> {
+        Some(match value {
+            serde_json::Value::String(s) => (Value::Text(s.clone()), Type::Text),
+            serde_json::Value::Number(n) => (Value::Number(n.as_f64()?), Type::Number),
+            serde_json::Value::Bool(b) => (Value::Bool(*b), Type::Bool),
+            serde_json::Value::Array(items) => {
+                let values: Vec<Value> = items
+                    .iter()
+                    .map(|i| rule_value(i).map(|(v, _)| v))
+                    .collect::<Option<_>>()?;
+                let item = items
+                    .first()
+                    .and_then(rule_value)
+                    .map_or(Type::Text, |(_, t)| t);
+                (Value::List(values), Type::List(Box::new(item)))
+            }
+            _ => return None,
+        })
+    }
+    let mut schema = Schema::new();
+    let mut context = Context::new(now);
+    for (name, value) in resolved {
+        let Some((value, ty)) = rule_value(value) else {
+            continue;
+        };
+        let field = name.trim_start_matches('@');
+        schema = schema.with_field(field, ty);
+        context = context.with_field(field, value);
+    }
+    let compiled = attome_rules::compile(expression, &schema).map_err(|e| e.to_string())?;
+    match compiled.eval(&context).map_err(|e| e.to_string())? {
+        Value::Null => Ok(serde_json::Value::Null),
+        Value::Bool(b) => Ok(serde_json::Value::Bool(b)),
+        Value::Number(n) => Ok(serde_json::json!(n)),
+        Value::Text(t) | Value::Choice(t) => Ok(serde_json::Value::String(t)),
+        Value::Date(d) => Ok(serde_json::Value::String(d.to_rfc3339())),
+        Value::Lookup(id) => Ok(serde_json::Value::String(id.to_string())),
+        other => Err(format!("a variable is one value, not {other:?}")),
+    }
+}
+
 #[derive(sqlx::FromRow)]
 struct DeclaredNameDefaultRow {
     name: String,
     default_value: Option<String>,
+    /// Z11-T16: a rule expression over the variables resolved before it.
+    expression: Option<String>,
 }
 
 // R-13 item 3: two explicit `const` SQL strings, one per table, instead of a
 // `format!("... FROM {table} ...")` — no behaviour change, just removes the
 // one string-built identifier (`table` was never request-controlled, but a
 // plain constant is simpler to see is safe than a `format!` call is).
-const VARIABLE_DEFAULTS_SQL: &str = "SELECT name, default_value FROM dashboard_variable \
+const VARIABLE_DEFAULTS_SQL: &str = "SELECT name, default_value, expression FROM dashboard_variable \
      WHERE dashboard_id = $1 AND (page_id IS NULL OR page_id = $2) \
        AND (is_active IS NULL OR is_active = true)";
-const PARAMETER_DEFAULTS_SQL: &str = "SELECT name, default_value FROM dashboard_parameter \
+const PARAMETER_DEFAULTS_SQL: &str = "SELECT name, default_value, NULL::text AS expression      FROM dashboard_parameter \
      WHERE dashboard_id = $1 AND (page_id IS NULL OR page_id = $2) \
        AND (is_active IS NULL OR is_active = true)";
 
@@ -140,7 +198,11 @@ pub async fn do_resolve_variables(
 ) -> Result<serde_json::Map<String, serde_json::Value>, AppError> {
     let mut resolved = serde_json::Map::new();
 
+    let mut expressions = Vec::new();
     for row in declared_defaults(db, VARIABLE_DEFAULTS_SQL, dashboard_id, page_id).await? {
+        if let Some(expression) = row.expression.filter(|e| !e.trim().is_empty()) {
+            expressions.push((row.name.clone(), expression));
+        }
         if let Some(default_value) = row.default_value {
             resolved.insert(row.name, serde_json::Value::String(default_value));
         }
@@ -153,6 +215,14 @@ pub async fn do_resolve_variables(
 
     for (key, value) in resolve_builtin_variables(ctx, embed) {
         resolved.insert(key, value);
+    }
+
+    for (name, expression) in expressions {
+        let value = evaluate_variable_expression(&expression, &resolved, chrono::Utc::now())
+            .map_err(|reason| {
+                AppError::Validation(format!("variable {name}: expression: {reason}"))
+            })?;
+        resolved.insert(name, value);
     }
 
     for (key, value) in url_overrides {
@@ -256,6 +326,33 @@ mod tests {
             field_masks: Default::default(),
             service_principal: false,
         }
+    }
+
+    /// Z11-T16: a variable's expression reads the variables resolved before
+    /// it by their names without `@`; a list variable reads as a list, and
+    /// an expression that does not compile is an error, not a silent value.
+    #[test]
+    fn variable_expression_evaluates() {
+        let mut resolved = serde_json::Map::new();
+        resolved.insert("@current_user".into(), serde_json::json!("u-1"));
+        resolved.insert("target".into(), serde_json::json!(120));
+        resolved.insert("region".into(), serde_json::json!("riyadh"));
+        resolved.insert("@current_user_team".into(), serde_json::json!(["t1", "t2"]));
+        let now = chrono::Utc::now();
+        assert_eq!(
+            evaluate_variable_expression("target * 2", &resolved, now),
+            Ok(serde_json::json!(240.0))
+        );
+        assert_eq!(
+            evaluate_variable_expression("upper(region) + \"-\" + current_user", &resolved, now),
+            Ok(serde_json::json!("RIYADH-u-1"))
+        );
+        assert_eq!(
+            evaluate_variable_expression("in(\"t2\", current_user_team)", &resolved, now),
+            Ok(serde_json::json!(true))
+        );
+        assert!(evaluate_variable_expression("target +", &resolved, now).is_err());
+        assert!(evaluate_variable_expression("missing_variable", &resolved, now).is_err());
     }
 
     #[test]

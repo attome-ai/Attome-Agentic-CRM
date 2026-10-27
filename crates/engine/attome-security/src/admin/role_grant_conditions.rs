@@ -68,8 +68,12 @@ impl std::fmt::Debug for RoleGrantConditionItem {
 
 #[derive(Deserialize, ToSchema)]
 pub(super) struct CreateConditionBody {
+    /// Empty for an expression condition.
+    #[serde(default)]
     field_logicalname: String,
-    /// 0=eq 1=ne 2=gt 3=lt 4=gte 5=lte 6=in
+    /// 0=eq 1=ne 2=gt 3=lt 4=gte 5=lte 6=in 7=expression (Z11-T16: `value`
+    /// is a rule expression over the entity's eligible fields, refused with
+    /// 422 `untranslatable_condition` when it cannot run in the database).
     operator: i16,
     value: serde_json::Value,
 }
@@ -207,12 +211,25 @@ pub(super) async fn create_condition(
         .get(entity_logicalname)
         .map(|meta| meta.attrs.clone())
         .unwrap_or_default();
-    eligible_condition_field(&attrs, &body.field_logicalname).map_err(|reason| {
-        AppError::Validation(format!(
-            "field '{}' is not eligible for a condition: {reason}",
-            body.field_logicalname
-        ))
-    })?;
+    if operator == ConditionOperator::Expression {
+        // Z11-T16: a privilege condition must run in the database; an
+        // expression the SQL translation cannot express is refused here.
+        crate::conditions::check_expression(&body.value, &attrs).map_err(|reason| {
+            AppError::Validation(format!("untranslatable_condition: {reason}"))
+        })?;
+        if !body.field_logicalname.is_empty() {
+            return Err(AppError::Validation(
+                "an expression condition names no field".into(),
+            ));
+        }
+    } else {
+        eligible_condition_field(&attrs, &body.field_logicalname).map_err(|reason| {
+            AppError::Validation(format!(
+                "field '{}' is not eligible for a condition: {reason}",
+                body.field_logicalname
+            ))
+        })?;
+    }
 
     if operator == ConditionOperator::In {
         if !body.value.is_array() {
@@ -220,7 +237,9 @@ pub(super) async fn create_condition(
                 "an `in` condition's value must be a JSON array".into(),
             ));
         }
-    } else if body.value.is_array() || body.value.is_object() || body.value.is_null() {
+    } else if operator != ConditionOperator::Expression
+        && (body.value.is_array() || body.value.is_object() || body.value.is_null())
+    {
         return Err(AppError::Validation(
             "condition value must be a string, number, or boolean".into(),
         ));

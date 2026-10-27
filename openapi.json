@@ -151969,18 +151969,18 @@
       "CreateConditionBody": {
         "type": "object",
         "required": [
-          "field_logicalname",
           "operator",
           "value"
         ],
         "properties": {
           "field_logicalname": {
-            "type": "string"
+            "type": "string",
+            "description": "Empty for an expression condition."
           },
           "operator": {
             "type": "integer",
             "format": "int32",
-            "description": "0=eq 1=ne 2=gt 3=lt 4=gte 5=lte 6=in"
+            "description": "0=eq 1=ne 2=gt 3=lt 4=gte 5=lte 6=in 7=expression (Z11-T16: `value`\nis a rule expression over the entity's eligible fields, refused with\n422 `untranslatable_condition` when it cannot run in the database)."
           },
           "value": {}
         }
@@ -222204,8 +222204,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -222257,5 +222255,7 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }

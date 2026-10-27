@@ -22,6 +22,7 @@ attome-email.workspace    = true
 attome-jobs.workspace     = true
 attome-metadata.workspace = true
 attome-modules.workspace  = true
+attome-rules.workspace    = true
 attome-server.workspace   = true
 attome-types.workspace    = true
 axum.workspace            = true

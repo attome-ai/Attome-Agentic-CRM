@@ -78,6 +78,11 @@ struct Translator<'a> {
     attrs: &'a HashMap<String, AttrInfo>,
     params: Vec<SqlParam>,
     first: usize,
+    /// The table alias columns are qualified with (`""` for none).
+    alias: &'a str,
+    /// Z11-T16: every placeholder carries its own `::type` cast, for a
+    /// caller that binds every parameter as text.
+    cast_binds: bool,
 }
 
 /// `expr` as a predicate (or value) with its parameters, numbered from
@@ -91,6 +96,30 @@ pub fn to_sql(
         attrs,
         params: Vec::new(),
         first: first_param.max(1),
+        alias: "",
+        cast_binds: false,
+    };
+    let part = t.part(expr)?;
+    Ok((part.sql, t.params))
+}
+
+/// Z11-T16: [`to_sql`] with every column qualified by `alias` and every
+/// placeholder cast to its type (`$n::text`, `::numeric`, `::boolean`,
+/// `::uuid`), for a caller that binds each parameter as text, such as a
+/// privilege condition in the record filter. `alias` is a literal the
+/// calling code chooses, never request data.
+pub fn to_sql_text_binds(
+    expr: &Expr,
+    attrs: &HashMap<String, AttrInfo>,
+    alias: &str,
+    first_param: usize,
+) -> Result<(String, Vec<SqlParam>), NotTranslatable> {
+    let mut t = Translator {
+        attrs,
+        params: Vec::new(),
+        first: first_param.max(1),
+        alias,
+        cast_binds: true,
     };
     let part = t.part(expr)?;
     Ok((part.sql, t.params))
@@ -104,8 +133,16 @@ pub fn translatable(expr: &Expr, attrs: &HashMap<String, AttrInfo>) -> Result<()
 
 impl Translator<'_> {
     fn bind(&mut self, value: SqlParam) -> String {
+        let cast = match (&value, self.cast_binds) {
+            (_, false) => "",
+            (SqlParam::Number(_), true) => "::numeric",
+            (SqlParam::Bool(_), true) => "::boolean",
+            (SqlParam::Uuid(_), true) => "::uuid",
+            (SqlParam::Date(_), true) => "::timestamptz",
+            (SqlParam::Text(_) | SqlParam::Null, true) => "::text",
+        };
         self.params.push(value);
-        format!("${}", self.first + self.params.len() - 1)
+        format!("${}{cast}", self.first + self.params.len() - 1)
     }
 
     fn part(&mut self, expr: &Expr) -> Result<Part, NotTranslatable> {
@@ -201,7 +238,11 @@ impl Translator<'_> {
             }
         };
         Ok(Part {
-            sql: quote_ident(name),
+            sql: if self.alias.is_empty() {
+                quote_ident(name)
+            } else {
+                format!("{}.{}", self.alias, quote_ident(name))
+            },
             ty,
             cast: storage.sql_cast(false),
             literal_text: None,

@@ -1208,6 +1208,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-security-company-walls",
         // AB4-T1: the operations privileges and the Operations and Auditor roles.
         "attome-ops",
+        // Z11-T16: a dashboard variable's rule expression.
+        "attome-dashboard-variable-expression",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

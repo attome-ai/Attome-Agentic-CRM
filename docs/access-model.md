@@ -40,6 +40,13 @@ several roles give business-unit level, child units count when any of them inclu
 **Ownership.** A role can let owners see the records they own (`{operation}_owner_visible`), whatever
 its level.
 
+**Conditional grants.** A role's privilege may carry up to three conditions that narrow which records it
+reaches (D-369): a field compared with a value, or (operator 7) a rule expression such as
+`amount > 100 and status == "open"` over the entity's filterable, ungated fields. An expression runs in the
+database as part of the filter; one the SQL translation cannot express (the clock, lookups, lists,
+functions without a SQL meaning) is refused at save with 422 `untranslatable_condition`, and one that stops
+translating later (a field removed) denies rather than opens.
+
 ## Suggested roles
 
 Modules suggest roles (`GET /api/v1/admin/security/role-templates`, for the licensed modules): a sales

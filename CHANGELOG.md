@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Rule expressions in privilege conditions and dashboard variables (Z11-T16): a grant condition with
+  operator `7` carries a rule expression, translated into the record filter's SQL and refused at save
+  (422 `untranslatable_condition`) when it cannot run in the database; a dashboard variable with an
+  `expression` (platform changeset `0074`) is evaluated over the variables resolved before it.
 - Financial and Health read log (Q15-T5): every read showing a confirmed Financial or Health value in
   full is logged in `field_view_log` (migration `0298`), buffered per node and written every ten seconds;
   a full buffer is written by the read itself rather than dropped.

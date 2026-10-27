@@ -692,6 +692,7 @@ pub fn operator_name(op: ConditionOperator) -> &'static str {
         ConditionOperator::Gte => "gte",
         ConditionOperator::Lte => "lte",
         ConditionOperator::In => "in",
+        ConditionOperator::Expression => "expression",
     }
 }
 

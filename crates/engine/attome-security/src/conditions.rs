@@ -10,11 +10,22 @@
 //!   only `entity_crud.rs`'s direct paths call (D-369 v1 scope). Every other
 //!   `rls_predicate`/`rls_predicate_by_column` caller is untouched.
 //!
+//! Z11-T16: a condition may instead be a rule expression
+//! ([`ConditionOperator::Expression`], its text in `value`), translated to a
+//! bound SQL predicate by `attome_core::rules_sql` ([`render_expression`]).
+//! It may read only the fields a bounded condition could (eligible, not
+//! gated); one the translation cannot express is refused at save
+//! ([`check_expression`]), because a privilege condition must run in the
+//! database.
+//!
 //! C-16 (M01 §7): the field-type int<->PG-type map itself lives once, on
 //! `attome_core::FieldType` (already in scope for `AttrInfo` below) —
 //! [`pg_type_for_storage`] is only the condition-eligible *subset* of
 //! it (see its doc comment), not a second copy of the map.
 
+use std::collections::HashMap;
+
+use attome_core::rules_sql::SqlParam;
 use attome_core::{AttrInfo, FieldType};
 use attome_server::security::{ConditionOperator, GrantCondition, SecurityContext};
 
@@ -105,6 +116,9 @@ pub fn render_condition(
     table_alias: &str,
     placeholder: usize,
 ) -> Result<RenderedCondition, &'static str> {
+    if condition.operator == ConditionOperator::Expression {
+        return Err("an expression condition renders through render_expression");
+    }
     let (_attr, pg_type) = eligible_condition_field(attrs, &condition.field_logicalname)?;
     let col = if table_alias.is_empty() {
         condition.field_logicalname.clone()
@@ -134,6 +148,58 @@ pub fn render_condition(
         ),
         bind_text: text,
     })
+}
+
+/// Z11-T16: the fields an expression condition may read: those a bounded
+/// condition could target ([`eligible_condition_field`]), so a gated or
+/// unindexed field reads as unknown.
+fn expression_fields(attrs: &[AttrInfo]) -> HashMap<String, AttrInfo> {
+    attrs
+        .iter()
+        .filter(|a| eligible_condition_field(attrs, &a.logicalname).is_ok())
+        .map(|a| (a.logicalname.clone(), a.clone()))
+        .collect()
+}
+
+/// Z11-T16: `expression` as a predicate on `table_alias`'s row, its
+/// placeholders numbered from `placeholder`, each bound as text with its own
+/// cast. Refused when it does not parse, reads a field outside
+/// [`expression_fields`], or does not translate to SQL.
+pub fn render_expression(
+    expression: &str,
+    attrs: &[AttrInfo],
+    table_alias: &str,
+    placeholder: usize,
+) -> Result<(String, Vec<String>), String> {
+    let expr = attome_rules::parse(expression).map_err(|e| e.to_string())?;
+    let (sql, params) = attome_core::rules_sql::to_sql_text_binds(
+        &expr,
+        &expression_fields(attrs),
+        table_alias,
+        placeholder,
+    )
+    .map_err(|e| e.to_string())?;
+    let binds = params
+        .into_iter()
+        .map(|p| match p {
+            SqlParam::Number(n) => Ok(n.to_string()),
+            SqlParam::Text(t) => Ok(t),
+            SqlParam::Bool(b) => Ok(b.to_string()),
+            SqlParam::Date(d) => Ok(d.to_rfc3339()),
+            SqlParam::Uuid(u) => Ok(u.to_string()),
+            SqlParam::Null => Err("a null literal cannot be bound in a condition".to_owned()),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((format!("({sql})"), binds))
+}
+
+/// Z11-T16: the save-time check for an expression condition: `value` is
+/// text and translates against `attrs`. The reason when it does not.
+pub fn check_expression(value: &serde_json::Value, attrs: &[AttrInfo]) -> Result<(), String> {
+    let Some(text) = value.as_str().filter(|t| !t.trim().is_empty()) else {
+        return Err("an expression condition's value is the expression's text".to_owned());
+    };
+    render_expression(text, attrs, "", 1).map(|_| ())
 }
 
 /// Resolution result: the AND/OR-combined SQL fragment (already wrapped in
@@ -187,6 +253,25 @@ pub fn condition_predicate(
         let mut set_ok = true;
         let mut set_binds = Vec::with_capacity(and_set.len());
         for condition in and_set {
+            if condition.operator == ConditionOperator::Expression {
+                let rendered = condition
+                    .value
+                    .as_str()
+                    .ok_or_else(String::new)
+                    .and_then(|text| render_expression(text, attrs, table_alias, placeholder));
+                match rendered {
+                    Ok((sql, binds)) => {
+                        placeholder += binds.len();
+                        and_arms.push(sql);
+                        set_binds.extend(binds);
+                    }
+                    Err(_) => {
+                        set_ok = false;
+                        break;
+                    }
+                }
+                continue;
+            }
             match render_condition(condition, attrs, table_alias, placeholder) {
                 Ok(rendered) => {
                     and_arms.push(rendered.sql);

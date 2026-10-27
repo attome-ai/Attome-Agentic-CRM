@@ -425,6 +425,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
         name: "attome-ops",
         json: include_str!("../../../../../changesets/platform/0073-attome-ops.json"),
     },
+    PlatformChangeset {
+        file: "0074-attome-dashboard-variable-expression.json",
+        name: "attome-dashboard-variable-expression",
+        json: include_str!(
+            "../../../../../changesets/platform/0074-attome-dashboard-variable-expression.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

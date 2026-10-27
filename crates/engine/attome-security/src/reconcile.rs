@@ -207,17 +207,28 @@ fn validate_conditions(privilege: &str, conditions: &[GrantConditionDesc]) -> Re
         )));
     }
     for c in conditions {
-        if c.field.trim().is_empty() {
-            return Err(AppError::Validation(format!(
-                "grant {privilege}: a condition's field is required"
-            )));
-        }
         let operator = ConditionOperator::from_i16(c.operator).ok_or_else(|| {
             AppError::Validation(format!(
                 "grant {privilege}: unrecognized condition operator {}",
                 c.operator
             ))
         })?;
+        // Z11-T16: an expression condition names no field; its text is
+        // translated when the filter runs, and one that no longer translates
+        // denies (fail closed).
+        if operator == ConditionOperator::Expression {
+            if !c.field.is_empty() || !c.value.as_str().is_some_and(|t| !t.trim().is_empty()) {
+                return Err(AppError::Validation(format!(
+                    "grant {privilege}: an expression condition names no field and carries its text"
+                )));
+            }
+            continue;
+        }
+        if c.field.trim().is_empty() {
+            return Err(AppError::Validation(format!(
+                "grant {privilege}: a condition's field is required"
+            )));
+        }
         if operator == ConditionOperator::In {
             if !c.value.is_array() {
                 return Err(AppError::Validation(format!(

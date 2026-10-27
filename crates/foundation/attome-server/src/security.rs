@@ -63,6 +63,9 @@ pub enum ConditionOperator {
     Gte = 4,
     Lte = 5,
     In = 6,
+    /// Z11-T16: the condition is a rule expression (its text in `value`),
+    /// translated to SQL; `field_logicalname` is empty.
+    Expression = 7,
 }
 
 impl ConditionOperator {
@@ -77,12 +80,14 @@ impl ConditionOperator {
             4 => Some(Self::Gte),
             5 => Some(Self::Lte),
             6 => Some(Self::In),
+            7 => Some(Self::Expression),
             _ => None,
         }
     }
 
-    /// The SQL comparison operator text — `In` has no single-token operator
-    /// and is rendered separately by its caller (`xrm_security::rls`).
+    /// The SQL comparison operator text — `In` and `Expression` have no
+    /// single-token operator and are rendered separately by their caller
+    /// (`xrm_security::conditions`).
     pub fn as_sql(self) -> &'static str {
         match self {
             Self::Eq => "=",
@@ -92,6 +97,7 @@ impl ConditionOperator {
             Self::Gte => ">=",
             Self::Lte => "<=",
             Self::In => "IN",
+            Self::Expression => "",
         }
     }
 }
@@ -109,7 +115,8 @@ impl ConditionOperator {
 pub struct GrantCondition {
     pub field_logicalname: String,
     pub operator: ConditionOperator,
-    /// Scalar for every operator except `In`, where this is a JSON array.
+    /// Scalar for every operator except `In`, where this is a JSON array,
+    /// and `Expression`, where it is the expression's text.
     pub value: serde_json::Value,
 }
 
