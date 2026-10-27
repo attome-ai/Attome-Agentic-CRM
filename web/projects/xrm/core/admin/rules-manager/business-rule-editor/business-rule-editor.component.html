@@ -73,10 +73,11 @@
           <option value="warning" [selected]="l.severity === 'warning'">{{ 'businessRules.severity.warning' | translate }}</option>
         </select>
       </label>
-      <label class="bre-wide">{{ 'businessRules.legacy.expression' | translate }}
-        <textarea rows="3" dir="ltr" class="bre-mono" [value]="l.expression"
-                  (input)="patchLegacy({ expression: $any($event.target).value })"></textarea>
-      </label>
+      <div class="bre-block bre-wide">{{ 'businessRules.legacy.expression' | translate }}
+        <xrm-expression-editor [entity]="entityName()" [rows]="3" [value]="l.expression"
+                               [label]="'businessRules.legacy.expression' | translate"
+                               (valueChange)="patchLegacy({ expression: $event })" />
+      </div>
       <label class="bre-wide">{{ 'businessRules.legacy.message' | translate }}
         <input type="text" [value]="l.message" (input)="patchLegacy({ message: $any($event.target).value })" />
       </label>
@@ -169,7 +170,7 @@
 
     <!-- ── Condition ────────────────────────────────────────────────── -->
     <div class="bre-section">
-      <xrm-condition-group [group]="d.condition" [fields]="conditionFields()" [issuePaths]="issuePaths()"
+      <xrm-condition-group [group]="d.condition" [fields]="conditionFields()" [entity]="entityName()" [issuePaths]="issuePaths()"
                            (groupChange)="setCondition($event)" />
     </div>
 
@@ -237,9 +238,10 @@
                   <option value="expression" [selected]="p.expression !== undefined">{{ 'businessRules.policy.expression' | translate }}</option>
                 </select>
                 @if (p.expression !== undefined) {
-                  <textarea rows="2" dir="ltr" class="bre-grow bre-mono" [value]="p.expression"
-                            [attr.aria-label]="'businessRules.policy.expression' | translate"
-                            (change)="updatePolicy(i, { expression: $any($event.target).value })"></textarea>
+                  <xrm-expression-editor class="bre-grow" [entity]="entityName()" [rows]="2" [preview]="false"
+                                         [value]="p.expression ?? ''"
+                                         [label]="'businessRules.policy.expression' | translate"
+                                         (valueChange)="updatePolicy(i, { expression: $event })" />
                 } @else {
                   <input type="text" class="bre-grow" [value]="policyValueText(p)"
                          [attr.aria-label]="'businessRules.policy.value' | translate"

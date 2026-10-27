@@ -1,0 +1,83 @@
+:host { display: block; }
+
+.xee { display: flex; flex-direction: column; gap: 0.375rem; }
+
+/* The mirror and the textarea share one box, font and wrapping, so the
+   underline lands under the characters the error points at. */
+.xee-code { position: relative; }
+.xee-mirror,
+.xee-input {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid transparent;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+  inline-size: 100%;
+  margin: 0;
+}
+.xee-mirror {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  pointer-events: none;
+  overflow: hidden;
+}
+.xee-input {
+  position: relative;
+  background: transparent;
+  border-color: var(--border, #d0d5dd);
+  border-radius: 6px;
+  resize: vertical;
+  color: inherit;
+}
+.xee-bad {
+  background: transparent;
+  color: transparent;
+  text-decoration: underline wavy var(--danger, #d92d20);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.xee-suggest {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 100%;
+  z-index: 10;
+  min-inline-size: 16rem;
+  max-inline-size: 100%;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #d0d5dd);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+}
+.xee-suggest li {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.25rem 0.625rem;
+  cursor: pointer;
+}
+.xee-suggest li.xee-active { background: var(--surface-hover, #f2f4f7); }
+
+.xee-detail { color: var(--text-muted, #667085); font-size: 0.8125rem; }
+.xee-error { color: var(--danger, #d92d20); margin: 0; font-size: 0.8125rem; }
+.xee-ok { color: var(--text-muted, #667085); margin: 0; font-size: 0.8125rem; }
+
+.xee-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding-block-start: 0.25rem;
+}
+.xee-preview > p,
+.xee-preview > details { flex-basis: 100%; margin: 0; }
+.xee-sample { display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.8125rem; }
+.xee-sample input { min-inline-size: 18rem; }
+.xee-trace ol { margin: 0.25rem 0 0; padding-inline-start: 1.25rem; }

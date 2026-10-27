@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ExpressionEditorComponent } from '@attome/xrm/core/admin/expression-editor';
 import { TranslatePipe } from '@attome/base';
 import {
   BusinessRuleOp, ConditionAll, ConditionAny, ConditionExpression, ConditionFieldKind, ConditionLeaf,
@@ -33,13 +34,15 @@ export type ConditionGroup = ConditionAll | ConditionAny;
   selector: 'xrm-condition-group',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ExpressionEditorComponent],
   styleUrls: ['./condition-group.component.css'],
   templateUrl: './condition-group.component.html',
 })
 export class ConditionGroupComponent {
   readonly group = input.required<ConditionGroup>();
   readonly fields = input.required<readonly ConditionEditorField[]>();
+  /** Z11-T14: the entity an advanced expression reads, for its editor. */
+  readonly entity = input('');
   /** 1 for the root group. */
   readonly depth = input(1);
   /** Path of this group in the body (`condition`, `condition.all[1]`), for issue matching. */

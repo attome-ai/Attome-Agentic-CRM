@@ -253,8 +253,10 @@
                            [ngModel]="td.required_privilege" (ngModelChange)="setTransitionDraft(t.id, 'required_privilege', $event)" />
                   </td>
                   <td>
-                    <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.guard' | translate"
-                           [ngModel]="td.guard_expression" (ngModelChange)="setTransitionDraft(t.id, 'guard_expression', $event)" />
+                    <xrm-expression-editor [entity]="detail()?.entity_logicalname ?? ''" [rows]="1" [preview]="false"
+                                           [label]="'governance.stateModels.guard' | translate"
+                                           [value]="td.guard_expression ?? ''"
+                                           (valueChange)="setTransitionDraft(t.id, 'guard_expression', $event)" />
                   </td>
                   <td>
                     <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.entryActions' | translate"
@@ -306,8 +308,10 @@
                        [ngModel]="newTransition().required_privilege" (ngModelChange)="setNewTransition('required_privilege', $event)" />
               </td>
               <td>
-                <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.guard' | translate"
-                       [ngModel]="newTransition().guard_expression" (ngModelChange)="setNewTransition('guard_expression', $event)" />
+                <xrm-expression-editor [entity]="detail()?.entity_logicalname ?? ''" [rows]="1" [preview]="false"
+                                       [label]="'governance.stateModels.guard' | translate"
+                                       [value]="newTransition().guard_expression ?? ''"
+                                       (valueChange)="setNewTransition('guard_expression', $event)" />
               </td>
               <td>
                 <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.entryActions' | translate"

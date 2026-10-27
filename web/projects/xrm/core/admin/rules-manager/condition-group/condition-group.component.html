@@ -126,7 +126,7 @@
             </button>
           </div>
         } @else if (asGroup(child); as nested) {
-          <xrm-condition-group [group]="nested" [fields]="fields()" [depth]="depth() + 1"
+          <xrm-condition-group [group]="nested" [fields]="fields()" [entity]="entity()" [depth]="depth() + 1"
                                [path]="childPath(i)" [issuePaths]="issuePaths()"
                                (groupChange)="updateChild(i, $event)" (removeGroup)="removeChild(i)" />
         } @else if (asExpression(child); as ex) {
@@ -135,10 +135,11 @@
               <i class="las la-code" aria-hidden="true"></i>
               {{ 'businessRules.condition.advanced' | translate }}
             </span>
-            <textarea class="cg-value cg-mono" rows="2" dir="ltr" [value]="ex.expression"
-                      [attr.aria-label]="'businessRules.condition.advancedLabel' | translate"
-                      [placeholder]="'businessRules.condition.advancedPlaceholder' | translate"
-                      (change)="setExpression(i, $any($event.target).value)"></textarea>
+            <xrm-expression-editor class="cg-value" [entity]="entity()" [rows]="2" [preview]="false"
+                                   [value]="ex.expression"
+                                   [label]="'businessRules.condition.advancedLabel' | translate"
+                                   [placeholder]="'businessRules.condition.advancedPlaceholder' | translate"
+                                   (valueChange)="setExpression(i, $event)" />
             <button type="button" class="cg-icon-btn" (click)="removeChild(i)"
                     [attr.aria-label]="'businessRules.condition.removeCondition' | translate">
               <i class="las la-times" aria-hidden="true"></i>

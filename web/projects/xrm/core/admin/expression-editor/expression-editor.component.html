@@ -1,0 +1,65 @@
+<div class="xee">
+  <div class="xee-code" dir="ltr">
+    <!-- The underline layer: the same text, invisible, the error span marked. -->
+    <div class="xee-mirror" aria-hidden="true">@if (marked(); as m) {<span>{{ m.before }}</span><mark class="xee-bad" data-testid="expression-error-span">{{ m.bad }}</mark><span>{{ m.after }}</span>} @else {<span>{{ value() }}</span>}</div>
+    <textarea #code class="xee-input" dir="ltr" spellcheck="false" autocomplete="off"
+              [rows]="rows()" [value]="value()" [placeholder]="placeholder()" [disabled]="disabled()"
+              [attr.aria-label]="label() || ('expressions.label' | translate)"
+              [attr.aria-invalid]="diagnostic() ? true : null"
+              [attr.aria-describedby]="diagnostic() ? errorId : null"
+              role="combobox" aria-autocomplete="list" [attr.aria-controls]="listId"
+              [attr.aria-expanded]="suggestions().length > 0"
+              (input)="onInput($event)" (keydown)="onKeydown($event)" (blur)="suggestions.set([])"></textarea>
+    @if (suggestions().length) {
+      <ul class="xee-suggest" role="listbox" [id]="listId" [attr.aria-label]="'expressions.suggestions' | translate">
+        @for (s of suggestions(); track s.label; let i = $index) {
+          <li role="option" [attr.aria-selected]="i === active()" [class.xee-active]="i === active()"
+              (mousedown)="$event.preventDefault(); accept(s, code)">
+            <code>{{ s.label }}</code><span class="xee-detail">{{ s.detail }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  @if (message(); as text) {
+    <p [id]="errorId" class="xee-error" role="alert" data-testid="expression-error">{{ text }}</p>
+  } @else if (answer()?.ok) {
+    <p class="xee-ok">{{ 'expressions.resultType' | translate: { type: answer()?.result_type } }}</p>
+  }
+
+  @if (preview()) {
+    <div class="xee-preview">
+      <label class="xee-sample">
+        <span>{{ 'expressions.sampleRecord' | translate }}</span>
+        <input type="text" dir="ltr" [value]="sampleId()" (input)="sampleId.set($any($event.target).value)"
+               [placeholder]="'expressions.sampleRecordHint' | translate" />
+      </label>
+      <button type="button" class="btn btn-secondary" [disabled]="!value().trim() || checking()" (click)="runPreview()">
+        {{ 'expressions.preview' | translate }}
+      </button>
+      @if (previewError()) {
+        <p class="xee-error" role="alert">{{ 'expressions.previewFailed' | translate }}</p>
+      }
+      @if (check(); as c) {
+        <p class="xee-where" data-testid="expression-where">
+          {{ (c.sql_translatable ? 'expressions.runsInDatabase' : 'expressions.runsAfterQuery') | translate }}
+          @if (c.sql_reason) { <span class="xee-detail">({{ c.sql_reason }})</span> }
+        </p>
+        @if (c.trace) {
+          <p>{{ 'expressions.value' | translate }} <code dir="ltr">{{ show(c.value) }}</code></p>
+        }
+        @if (c.trace?.length) {
+          <details class="xee-trace">
+            <summary>{{ 'expressions.explain' | translate }}</summary>
+            <ol>
+              @for (t of c.trace; track $index) {
+                <li><code dir="ltr">{{ t.expr }}</code> → <code dir="ltr">{{ show(t.value) }}</code></li>
+              }
+            </ol>
+          </details>
+        }
+      }
+    </div>
+  }
+</div>

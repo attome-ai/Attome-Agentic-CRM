@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, output, signal, untracked,
 } from '@angular/core';
+import { ExpressionEditorComponent } from '@attome/xrm/core/admin/expression-editor';
 import { KeyValuePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
@@ -122,7 +123,7 @@ export function cleanPolicy(p: PolicyDef): PolicyDef {
   selector: 'xrm-business-rule-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [KeyValuePipe, TranslatePipe, ConditionGroupComponent],
+  imports: [KeyValuePipe, TranslatePipe, ConditionGroupComponent, ExpressionEditorComponent],
   styleUrls: ['./business-rule-editor.component.css'],
   templateUrl: './business-rule-editor.component.html',
 })
@@ -173,7 +174,7 @@ export class BusinessRuleEditorComponent {
   readonly isNew = computed(() => this.rule() === null);
   readonly isLegacy = computed(() => this.legacy() !== null);
 
-  private readonly entityName = computed(() => this.draft().entity);
+  protected readonly entityName = computed(() => this.draft().entity);
   /** The id of the rule the draft was last loaded from. */
   private shownRuleId: string | null = null;
 

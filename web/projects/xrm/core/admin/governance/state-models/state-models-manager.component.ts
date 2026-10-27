@@ -3,6 +3,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ExpressionEditorComponent } from '@attome/xrm/core/admin/expression-editor';
 import { LangService, TranslatePipe } from '@attome/base';
 import { ConfirmService } from '@attome/base/dialog';
 import type { ApiError } from '@attome/base';
@@ -93,7 +94,7 @@ function choicesOf(attr: AttributeMeta | undefined): string[] {
   selector: 'attome-state-models-manager',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [OwnerLayerBadgeComponent, FormsModule, TranslatePipe, GovernanceNavComponent, StateDiagramComponent],
+  imports: [OwnerLayerBadgeComponent, FormsModule, TranslatePipe, GovernanceNavComponent, StateDiagramComponent, ExpressionEditorComponent],
   styleUrls: ['../../../../styles/admin-page.css', '../governance.css', './state-models-manager.component.css'],
   templateUrl: './state-models-manager.component.html',
 })
