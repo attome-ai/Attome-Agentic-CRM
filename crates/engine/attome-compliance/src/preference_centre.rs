@@ -10,7 +10,7 @@
 //! one transaction with its audit event.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -100,7 +100,7 @@ pub struct PreferenceLink {
 )]
 async fn create_link(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Json(body): Json<PreferenceLinkBody>,
 ) -> Result<Json<PreferenceLink>, AppError> {
     if !SUBJECTS.contains(&body.subject_entity.as_str()) {

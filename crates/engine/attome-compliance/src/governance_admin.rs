@@ -38,7 +38,7 @@ use attome_core::changeset::{Layer, Op, RecordedOp, Recording, RecordingCtx};
 use attome_metadata::provision::changeset::{
     ObjectKind, entity_target, snapshot as entity_snapshot,
 };
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, PaginatedResponse};
 use attome_types::{OnePageQuery, PageWindow};
@@ -149,7 +149,7 @@ async fn fetch_domain(
 )]
 async fn list_domains(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<DataDomainSummary>>, AppError> {
     let PageWindow {
@@ -204,7 +204,7 @@ struct CreateDomainBody {
 )]
 async fn create_domain(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     recording: RecordingCtx,
     Json(body): Json<CreateDomainBody>,
 ) -> Result<(StatusCode, Json<DataDomainSummary>), AppError> {
@@ -276,7 +276,7 @@ async fn create_domain(
 )]
 async fn get_domain(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataDomainSummary>, AppError> {
     let domain = fetch_domain(&state.base.db, id)
@@ -323,7 +323,7 @@ struct UpdateDomainBody {
 )]
 async fn update_domain(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateDomainBody>,
@@ -460,7 +460,7 @@ struct AssignEntitiesBody {
 )]
 async fn assign_entities(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<AssignEntitiesBody>,
@@ -523,7 +523,7 @@ async fn assign_entities(
 )]
 async fn unassign_entity(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     recording: RecordingCtx,
     Path((id, entity_logicalname)): Path<(Uuid, String)>,
 ) -> Result<StatusCode, AppError> {
@@ -886,7 +886,7 @@ type DsrCandidateRow = (
 )]
 async fn get_report(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DomainReport>, AppError> {
     let domain = fetch_domain(&state.base.db, id)

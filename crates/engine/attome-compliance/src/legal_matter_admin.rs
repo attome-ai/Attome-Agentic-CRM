@@ -37,7 +37,7 @@ use attome_core::filter::{FieldCastError, FilterSchema, cast_for_attr, is_multi_
 use attome_core::jobs::EngineJob;
 use attome_core::{AttrInfo, EngineState, Filter, quote_ident};
 use attome_db::DbPool;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use object_store::path::Path as ObjectPath;
@@ -527,7 +527,7 @@ struct CollectTriggered {
 )]
 async fn collect(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<CollectTriggered>), AppError> {
     // Validate the matter's scope up front, before transitioning it to
@@ -619,7 +619,7 @@ struct ReleaseTriggered {
 )]
 async fn release(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<ReleaseTriggered>), AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -699,7 +699,7 @@ struct RecordsPosture {
 )]
 async fn records_posture(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
 ) -> Result<Json<RecordsPosture>, AppError> {
     let db = &state.base.db;
     let past_retention_awaiting_disposition: i64 = sqlx::query_scalar(

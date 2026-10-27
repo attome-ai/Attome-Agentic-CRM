@@ -20,7 +20,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::{EngineState, quote_ident};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -175,7 +175,7 @@ fn checked_name(name: &str) -> Result<String, AppError> {
 /// declared under one.
 async fn create_category(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Json(body): Json<CategoryBody>,
 ) -> Result<(StatusCode, Json<Category>), AppError> {
     let name = checked_name(&body.name)?;
@@ -236,7 +236,7 @@ async fn create_category(
 /// Every category in one page, by name.
 async fn list_categories(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
 ) -> Result<Json<PaginatedResponse<Category>>, AppError> {
     let items: Vec<Category> = sqlx::query_as(
         "SELECT id, name, description, retention_days, created_at FROM records_category \
@@ -302,7 +302,7 @@ async fn require_record(
 /// disposition.
 async fn declare(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Json(body): Json<DeclarationBody>,
 ) -> Result<(StatusCode, Json<Declared>), AppError> {
     require_record(&state, &body.entity, body.record_id).await?;
@@ -377,7 +377,7 @@ async fn declare(
 /// it is approved.
 async fn request_disposition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Json(body): Json<DispositionBody>,
 ) -> Result<(StatusCode, Json<Disposition>), AppError> {
     let category: Option<Uuid> = sqlx::query_scalar(
@@ -434,7 +434,7 @@ async fn request_disposition(
 /// SHA-256.
 async fn decide_disposition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Json(body): Json<DecisionBody>,
 ) -> Result<Json<Disposition>, AppError> {

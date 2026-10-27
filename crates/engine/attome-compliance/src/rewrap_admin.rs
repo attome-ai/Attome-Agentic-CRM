@@ -11,7 +11,7 @@
 
 use attome_core::EngineState;
 use attome_core::jobs::{EngineJob, RewrapDomain};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{
@@ -149,7 +149,7 @@ pub async fn do_trigger_rewrap(
 )]
 async fn trigger_rewrap(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(domain): Path<String>,
 ) -> Result<(StatusCode, Json<RewrapTriggered>), AppError> {
     let domain = domain

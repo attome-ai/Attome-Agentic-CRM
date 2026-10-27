@@ -60,7 +60,7 @@ use attome_audit::{
     AuditCategory, AuditEvent, AuditOperation, AuditRequestContext, AuditService, AuditSource,
 };
 use attome_core::{DataClassification, EngineState, TransferDecision, quote_ident};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
@@ -186,7 +186,7 @@ struct DsrRequestSummary {
 )]
 async fn list_requests(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Query(query): Query<DsrRequestQuery>,
 ) -> Result<Json<PaginatedResponse<DsrRequestSummary>>, AppError> {
     let PageWindow {
@@ -258,7 +258,7 @@ struct CreateDsrRequestBody {
 )]
 async fn create_request(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Json(body): Json<CreateDsrRequestBody>,
 ) -> Result<(StatusCode, Json<DsrRequestSummary>), AppError> {
     let subject_reference = body.subject_reference.trim();
@@ -773,7 +773,7 @@ async fn do_fulfill_export(
 )]
 async fn fulfill_access(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Json(body): Json<FulfillExportBody>,
 ) -> Result<Json<FulfillExportResult>, AppError> {
@@ -799,7 +799,7 @@ async fn fulfill_access(
 )]
 async fn fulfill_portability(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Json(body): Json<FulfillExportBody>,
 ) -> Result<Json<FulfillExportResult>, AppError> {
@@ -932,7 +932,7 @@ struct FulfillErasurePending {
 )]
 async fn fulfill_erasure(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Json(body): Json<FulfillErasureBody>,
 ) -> Result<Response, AppError> {

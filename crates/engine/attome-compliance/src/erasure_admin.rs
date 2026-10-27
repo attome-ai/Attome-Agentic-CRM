@@ -28,7 +28,7 @@
 use attome_audit::{AuditCategory, AuditEvent, AuditOperation, AuditRequestContext, AuditService};
 use attome_core::EngineState;
 use attome_metadata::provision::valid_identifier;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{
@@ -110,7 +110,7 @@ struct ErasurePending {
 )]
 async fn erase_record(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path((logicalname, record_id)): Path<(String, Uuid)>,
 ) -> Result<Response, AppError> {
     if !valid_identifier(&logicalname) {

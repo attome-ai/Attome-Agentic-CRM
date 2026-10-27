@@ -8,7 +8,7 @@
 //! holds with its users, key ids and age, and no value.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{
     AppError, DEFAULT_PAGE_SIZE, ErrorResponse, OnePageQuery, PageBase, PageWindow,
     PaginatedResponse,
@@ -59,7 +59,7 @@ pub struct StartsDiffQuery {
 )]
 async fn list_config_starts(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<ConfigStartRow>>, AppError> {
     let window = PageWindow::resolve(page.page, page.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
@@ -81,7 +81,7 @@ async fn list_config_starts(
 )]
 async fn diff_config_starts(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Query(query): Query<StartsDiffQuery>,
 ) -> Result<Json<PaginatedResponse<ConfigChange>>, AppError> {
     let changes: Vec<ConfigChange> = config_starts::diff(&state.base.db, query.a, query.b)
@@ -112,7 +112,7 @@ async fn diff_config_starts(
 )]
 async fn list_secrets(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<SecretInventoryRow>>, AppError> {
     let window = PageWindow::resolve(page.page, page.page_size, PageBase::One, DEFAULT_PAGE_SIZE);

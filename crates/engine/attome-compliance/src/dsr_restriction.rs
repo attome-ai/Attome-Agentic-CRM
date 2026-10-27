@@ -20,7 +20,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent};
 use attome_core::{EngineState, quote_ident};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -148,7 +148,7 @@ async fn scope_records(
 )]
 async fn restrict(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Json(body): Json<RestrictBody>,
 ) -> Result<Json<RestrictionResult>, AppError> {
@@ -258,7 +258,7 @@ async fn restrict(
 )]
 async fn lift(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<RestrictionResult>, AppError> {
     let status: Option<String> = sqlx::query_scalar(
@@ -336,7 +336,7 @@ async fn lift(
 )]
 async fn rectify(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Json(body): Json<RectifyBody>,
 ) -> Result<Json<RestrictionResult>, AppError> {

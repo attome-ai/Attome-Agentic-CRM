@@ -26,7 +26,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::filter::{FieldCastError, FilterSchema, cast_for_attr, is_multi_choice_attr};
 use attome_core::{AttrInfo, EngineState, Filter, quote_ident};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -408,7 +408,7 @@ pub(crate) async fn delete_for_disposition(
 )]
 async fn list_rules(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
 ) -> Result<Json<PaginatedResponse<RetentionRule>>, AppError> {
     let rules: Vec<RetentionRule> = sqlx::query_as(&format!(
         "SELECT {RULE_COLUMNS} FROM retention_rule ORDER BY created_at"
@@ -457,7 +457,7 @@ fn checked_body(state: &EngineState, body: &RetentionRuleBody) -> Result<String,
 )]
 async fn create_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Json(body): Json<RetentionRuleBody>,
 ) -> Result<(StatusCode, Json<RetentionRule>), AppError> {
     let start = checked_body(&state, &body)?;
@@ -523,7 +523,7 @@ async fn create_rule(
 )]
 async fn update_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Json(body): Json<RetentionRuleBody>,
 ) -> Result<Json<RetentionRule>, AppError> {
@@ -599,7 +599,7 @@ async fn update_rule(
 )]
 async fn delete_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let event = SecurityEvent::new(

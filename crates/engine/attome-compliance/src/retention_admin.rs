@@ -17,7 +17,7 @@
 
 use attome_core::EngineState;
 use attome_core::jobs::EngineJob;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
@@ -79,7 +79,7 @@ struct RetentionActionSummary {
 )]
 async fn list_actions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Query(query): Query<RetentionActionQuery>,
 ) -> Result<Json<PaginatedResponse<RetentionActionSummary>>, AppError> {
     let PageWindow {
@@ -278,7 +278,7 @@ pub async fn do_approve_retention_action(
 )]
 async fn approve_action(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<ActionTransitionResult>), AppError> {
     let payload = serde_json::json!({ "action_id": id });
@@ -323,7 +323,7 @@ async fn approve_action(
 )]
 async fn reject_action(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ActionTransitionResult>, AppError> {
     if state.base.config.retention.legal_hold {
@@ -398,7 +398,7 @@ struct ProposeTriggered {
 )]
 async fn trigger_propose(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
 ) -> Result<(StatusCode, Json<ProposeTriggered>), AppError> {
     // Deliberately NOT `enqueue_in_tx_dedup` (PLATFORM-REVIEW-2026-08-24
     // §3.12 reviewed this site): this handler writes no state of its own —

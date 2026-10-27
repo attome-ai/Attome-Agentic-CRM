@@ -12,7 +12,7 @@
 //! has neither): unverified.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
@@ -117,7 +117,7 @@ struct ListLegalHoldsQuery {
 )]
 async fn list_holds(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Query(query): Query<ListLegalHoldsQuery>,
 ) -> Result<Json<PaginatedResponse<LegalHoldSummary>>, AppError> {
     let status = query.status.as_deref().unwrap_or("active");
@@ -205,7 +205,7 @@ struct PlaceLegalHoldBody {
 )]
 async fn place_hold(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Json(body): Json<PlaceLegalHoldBody>,
 ) -> Result<(StatusCode, Json<PlaceLegalHoldResult>), AppError> {
     let entity_logicalname = body.entity_logicalname.trim();
@@ -283,7 +283,7 @@ async fn place_hold(
 )]
 async fn release_hold(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<LegalHoldSummary>, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -392,7 +392,7 @@ pub fn custodian_notice(matter: &str, link: &str) -> (String, String) {
 )]
 async fn add_custodians(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Json(body): Json<AddCustodiansBody>,
 ) -> Result<Json<Vec<Uuid>>, AppError> {
@@ -500,7 +500,7 @@ async fn add_custodians(
 )]
 async fn list_custodians(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<HoldCustodian>>, AppError> {

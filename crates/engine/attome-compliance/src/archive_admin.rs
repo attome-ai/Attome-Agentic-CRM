@@ -14,7 +14,7 @@
 //! (gated).
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
@@ -74,7 +74,7 @@ struct ArchiveRecordSummary {
 )]
 async fn list_archive_records(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Query(query): Query<ListArchiveQuery>,
 ) -> Result<Json<PaginatedResponse<ArchiveRecordSummary>>, AppError> {
     let status = query.status.as_deref().unwrap_or("archived");
@@ -152,7 +152,7 @@ struct RestoreResult {
 )]
 async fn restore(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<RestoreResult>, AppError> {
     crate::archive::restore_archived_record(&state, id, ctx.user_id).await?;
