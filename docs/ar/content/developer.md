@@ -15,7 +15,8 @@
 - **الاستعلامات**: `POST /api/v1/query/execute` يشغّل استعلامًا مخزنًا أو عرضًا مع مرشحات وتصفّح بالمؤشر
   (`after_id`) وعدد إجمالي دقيق اختياري.
 - **الاستعلامات المنظّمة**: `POST /api/v1/query/run` مع `{spec}` (‏QuerySpec: ‏`entity` و`select` وشجرة `where`
-  و`sort` و`page_size` و`cursor`، أو `group_by` و`aggregates` مع `having`) أو `{q}`
+  و`sort` و`page_size` و`cursor`، أو `group_by` و`aggregates` مع `having`
+  و`totals`، أي `rollup` أو `cube`، وتسمّي صفوف الإجماليات الحقول التي تجمعها في `rolled_up`) أو `{q}`
   (`SELECT name FROM account WHERE EXISTS(incident.customer WHERE statecode = 0)`)، ومع `params` لقيم `:name`.
   يُسمّى الحقل المرتبط بمساره (`primary_contact.name`). تُستبعد السجلات والحقول التي لا يحق لك قراءتها، و`explain: true`
   يعيد خطة التنفيذ بدل النتائج.

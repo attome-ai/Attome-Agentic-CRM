@@ -397,6 +397,7 @@ impl Parser {
             explain: false,
             as_of: None,
             params: Default::default(),
+            totals: None,
         })
     }
 

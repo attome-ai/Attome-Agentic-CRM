@@ -7,6 +7,13 @@
 //! What search/aggregate offers and this shape does not (for S4-T11): Hijri
 //! month and year buckets, and an `other` bucket gathering the groups past
 //! the limit.
+//!
+//! P1-T2: `totals` adds total rows, computed by the database over the same
+//! filtered rows (`GROUP BY ROLLUP` for a summary's subtotals, `CUBE` for a
+//! matrix's totals both ways), so a total is the measure over the whole set
+//! (an average of every record, not of the cells) and never counts a record
+//! the caller cannot read. A total row names the group fields it rolls up
+//! (`rolled_up`), so it is never mistaken for a group whose key is empty.
 
 use attome_core::{EntityMeta, quote_ident};
 use attome_security::SecurityContextExt;
@@ -16,7 +23,7 @@ use serde_json::{Map, Value};
 use utoipa::ToSchema;
 
 use super::compile::{Builder, Env, Scope};
-use super::model::{AggFunc, Condition, DateBucket, QuerySpec};
+use super::model::{AggFunc, Condition, DateBucket, QuerySpec, Totals};
 
 /// The most groups one query returns; it fetches one more to tell.
 pub const MAX_GROUPS: i64 = 1000;
@@ -31,6 +38,8 @@ pub struct CompiledAggregate {
     pub keys: Vec<String>,
     /// The aggregate aliases, in `a1…` order.
     pub aliases: Vec<String>,
+    /// P1-T2: the rows carry `GROUPING()` flags as `r1…rN`.
+    pub totals: bool,
 }
 
 /// One group of an aggregate result.
@@ -42,6 +51,10 @@ pub struct Group {
     /// Each aggregate's value, by alias.
     #[schema(value_type = Object)]
     pub values: Map<String, Value>,
+    /// P1-T2: on a total row, the group fields it adds up over (their keys
+    /// are null); absent on an ordinary group.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rolled_up: Vec<String>,
 }
 
 /// An aggregate query's result.
@@ -78,10 +91,24 @@ impl CompiledAggregate {
                 .map(|row| Group {
                     keys: pick(row, 'g', &self.keys),
                     values: pick(row, 'a', &self.aliases),
+                    rolled_up: rolled_up(row, self.totals, &self.keys),
                 })
                 .collect(),
         })
     }
+}
+
+/// The group fields a total row adds up over: those whose `GROUPING()` flag
+/// (`r1…`) is 1. Pure.
+fn rolled_up(row: &Map<String, Value>, totals: bool, keys: &[String]) -> Vec<String> {
+    if !totals {
+        return Vec::new();
+    }
+    keys.iter()
+        .enumerate()
+        .filter(|(i, _)| row.get(&format!("r{}", i + 1)).and_then(Value::as_i64) == Some(1))
+        .map(|(_, key)| key.clone())
+        .collect()
 }
 
 fn bucket_unit(bucket: DateBucket) -> &'static str {
@@ -118,6 +145,11 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<CompiledAggregate, App
     if spec.cursor.is_some() {
         return Err(AppError::Validation(
             "an aggregate query has no pages; narrow it instead".into(),
+        ));
+    }
+    if spec.totals.is_some() && spec.group_by.is_empty() {
+        return Err(AppError::Validation(
+            "totals need at least one group field".into(),
         ));
     }
     let b = Builder::new(env);
@@ -208,6 +240,13 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<CompiledAggregate, App
         aliases.push(agg.alias.clone());
     }
 
+    // P1-T2: one flag per group field, 1 on the rows that add it up.
+    if spec.totals.is_some() {
+        for (i, expr) in group_exprs.iter().enumerate() {
+            select.push(format!("GROUPING({expr}) AS r{}", i + 1));
+        }
+    }
+
     let where_sql = match &spec.r#where {
         Some(condition) => format!(" AND {}", b.condition(&scope, condition, spec)?),
         None => String::new(),
@@ -235,7 +274,13 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<CompiledAggregate, App
         order.push(format!("{expr} {}", if key.desc { "DESC" } else { "ASC" }));
     }
     if order.is_empty() {
-        order = (1..=keys.len()).map(|i| format!("g{i}")).collect();
+        order = match spec.totals {
+            // Each field's groups before its total, the grand total last.
+            Some(_) => (1..=keys.len())
+                .flat_map(|i| [format!("r{i}"), format!("g{i}")])
+                .collect(),
+            None => (1..=keys.len()).map(|i| format!("g{i}")).collect(),
+        };
     }
     let root_predicates = b.row_predicates(root, "t");
 
@@ -246,7 +291,12 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<CompiledAggregate, App
         b.joins_sql(),
     );
     if !group_exprs.is_empty() {
-        sql.push_str(&format!(" GROUP BY {}", group_exprs.join(", ")));
+        let grouped = group_exprs.join(", ");
+        sql.push_str(&match spec.totals {
+            None => format!(" GROUP BY {grouped}"),
+            Some(Totals::Rollup) => format!(" GROUP BY ROLLUP ({grouped})"),
+            Some(Totals::Cube) => format!(" GROUP BY CUBE ({grouped})"),
+        });
     }
     sql.push_str(&having_sql);
     if !order.is_empty() {
@@ -258,6 +308,7 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<CompiledAggregate, App
         binds: b.into_binds(),
         keys,
         aliases,
+        totals: spec.totals.is_some(),
     })
 }
 
@@ -418,6 +469,80 @@ mod tests {
         assert_eq!(result.groups[0].keys.get("owner_ref"), Some(&Value::Null));
         let too_many = vec![Map::new(); 1001];
         assert!(c.groups(too_many).is_err());
+    }
+
+    /// P1-T2: a matrix's totals both ways come from `CUBE`, each total row
+    /// naming the fields it adds up over, the grand total last.
+    #[test]
+    fn matrix_report_totals_come_from_cube() {
+        let c = run(
+            json!({"entity": "account",
+                   "group_by": [{"field": "name"}, {"field": "owner_ref"}],
+                   "aggregates": [{"func": "avg", "field": "revenue", "alias": "avg_revenue"}],
+                   "totals": "cube"}),
+            &reader(),
+            &global(),
+        )
+        .unwrap();
+        assert!(
+            c.sql.contains(
+                "GROUPING(t.\"name\") AS r1, GROUPING(t.\"owner_ref\") AS r2 FROM \"account\""
+            ),
+            "{}",
+            c.sql
+        );
+        assert!(
+            c.sql.contains(
+                "GROUP BY CUBE (t.\"name\", t.\"owner_ref\") ORDER BY r1, g1, r2, g2 LIMIT 1001"
+            ),
+            "{}",
+            c.sql
+        );
+        let row = |v: Value| v.as_object().unwrap().clone();
+        let result = c
+            .groups(vec![
+                row(json!({"g1": "Acme", "g2": "u1", "a1": 10, "r1": 0, "r2": 0})),
+                row(json!({"g1": "Acme", "g2": null, "a1": 10, "r1": 0, "r2": 1})),
+                row(json!({"g1": null, "g2": "u1", "a1": 10, "r1": 1, "r2": 0})),
+                row(json!({"g1": null, "g2": null, "a1": 10, "r1": 1, "r2": 1})),
+            ])
+            .unwrap();
+        assert!(result.groups[0].rolled_up.is_empty());
+        assert_eq!(result.groups[1].rolled_up, vec!["owner_ref"]);
+        assert_eq!(result.groups[2].rolled_up, vec!["name"]);
+        assert_eq!(result.groups[3].rolled_up, vec!["name", "owner_ref"]);
+        let wire = serde_json::to_value(&result.groups[0]).unwrap();
+        assert!(
+            wire.get("rolled_up").is_none(),
+            "an ordinary group stays as it was"
+        );
+    }
+
+    #[test]
+    fn matrix_report_rollup_keeps_security_and_needs_a_group() {
+        let team = global().with(Uuid::from_u128(1), AccessLevel::Team);
+        let c = run(
+            json!({"entity": "account", "group_by": [{"field": "name"}],
+                   "aggregates": [{"func": "count", "alias": "n"}], "totals": "rollup"}),
+            &reader(),
+            &team,
+        )
+        .unwrap();
+        let rls_at = c
+            .sql
+            .find(&team_rls(1, "t", 1))
+            .expect("record-level predicate present");
+        let group_at = c.sql.find(" GROUP BY ROLLUP (").expect("rollup");
+        assert!(
+            rls_at < group_at,
+            "the record filter applies before the totals: {}",
+            c.sql
+        );
+        assert_eq!(
+            refused(json!({"entity": "account",
+                "aggregates": [{"func": "count", "alias": "n"}], "totals": "rollup"})),
+            "totals need at least one group field"
+        );
     }
 
     #[test]

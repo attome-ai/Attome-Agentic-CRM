@@ -40,6 +40,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Aggregate queries take `totals` (P1-T2): `rollup` adds subtotals along the group fields and a grand
+  total, `cube` a total for every combination (a matrix's row, column and grand totals); the
+  database computes them over the same filtered records, and each total row names the fields it
+  adds up in `rolled_up`.
 - Report builder (P1-T1, `/xrm/reports/builder`, `@attome/xrm/report/builder`): a table of chosen and
   related columns, a summary of one measure grouped by a field (dates by day to year) with its total,
   or a matrix by two groupings with row and column totals; filters; the first 50 rows preview live

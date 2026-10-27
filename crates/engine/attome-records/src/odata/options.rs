@@ -61,6 +61,7 @@ pub fn read(entity: &str, pairs: &[(String, String)]) -> Result<Options, String>
         explain: false,
         as_of: None,
         params: Default::default(),
+        totals: None,
     };
     let mut count = false;
     let mut selected = false;

@@ -270,6 +270,7 @@ pub fn training_spec(def: &ModelDef) -> attome_records::query_spec::QuerySpec {
         explain: false,
         as_of: None,
         params: Default::default(),
+        totals: None,
     }
 }
 
@@ -324,6 +325,7 @@ pub fn rollup_specs(def: &ModelDef) -> Vec<(String, attome_records::query_spec::
                     explain: false,
                     as_of: None,
                     params: Default::default(),
+                    totals: None,
                 },
             ))
         })

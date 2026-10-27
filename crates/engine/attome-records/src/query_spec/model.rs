@@ -71,6 +71,21 @@ pub struct QuerySpec {
     /// Values for `param` conditions, by name.
     #[serde(default)]
     pub params: BTreeMap<String, Value>,
+    /// P1-T2: total rows an aggregate query adds (`rollup` or `cube`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub totals: Option<Totals>,
+}
+
+/// P1-T2: the total rows of an aggregate query.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Totals {
+    /// Subtotals along the group fields in order, then the grand total
+    /// (`GROUP BY ROLLUP`): a summary's subtotals.
+    Rollup,
+    /// A total for every combination of the group fields (`GROUP BY CUBE`):
+    /// a matrix's row totals, column totals and grand total.
+    Cube,
 }
 
 /// One node of the condition tree.
