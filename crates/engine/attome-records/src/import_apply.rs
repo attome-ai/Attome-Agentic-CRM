@@ -67,6 +67,11 @@ struct StageRow {
     action: Option<String>,
     record_id: Option<Uuid>,
     record_row_version: Option<i64>,
+    /// A24-T4: a migration import's owner for a created record (the source
+    /// owner mapped to a user account here, the staged `__owner` cell). Only
+    /// a job the migration wave made carries one; an uploaded file's
+    /// `__owner` column is never read.
+    owner: Option<String>,
 }
 
 /// The entity an import writes, resolved once per run.
@@ -195,23 +200,49 @@ async fn apply_row(
     let user_id = ctx.user_id;
     let (mutation, operation, version_before) = match row.action.as_deref() {
         Some("create") => {
+            // A24-T4: a migrated record keeps its owner when the source
+            // owner maps to an active user account here.
+            let owner = match row
+                .owner
+                .as_deref()
+                .and_then(|o| Uuid::parse_str(o.trim()).ok())
+            {
+                Some(owner) => {
+                    let active: bool = sqlx::query_scalar(
+                        "SELECT EXISTS(SELECT 1 FROM user_account WHERE id = $1 AND is_active IS NOT FALSE)",
+                    )
+                    .bind(owner)
+                    .fetch_one(&mut **tx)
+                    .await
+                    .map_err(AppError::internal)?;
+                    active.then_some(owner)
+                }
+                None => None,
+            };
+            let stamp = entity_mutation::CreateStamp {
+                owner_ref: owner.unwrap_or(user_id),
+                ..entity_mutation::CreateStamp::staff(user_id, org_ref)
+            };
             let created = entity_mutation::with_defaults(
                 true,
-                entity_mutation::create_one(
+                entity_mutation::create_one_as(
                     tx,
                     state,
-                    ctx,
+                    entity_mutation::Principal::Staff(ctx),
                     &target.entity_name,
                     &target.attrs,
                     &body,
-                    user_id,
-                    org_ref,
+                    stamp,
                     MutationMode::Strict,
                 ),
             )
             .await?;
             entity_crud::grant_creator_share(tx, target.entity_id, created.record_id, user_id)
                 .await?;
+            if let Some(owner) = owner.filter(|o| *o != user_id) {
+                entity_crud::grant_creator_share(tx, target.entity_id, created.record_id, owner)
+                    .await?;
+            }
             (created, AuditOperation::Create, None)
         }
         Some("update") => {
@@ -504,8 +535,9 @@ pub async fn apply(state: &EngineState, job_id: Uuid) -> Result<ApplyCounts, App
     let mut failed_now = 0_i64;
     loop {
         let rows: Vec<StageRow> = sqlx::query_as(
-            "SELECT s.row_no, s.mapped, s.action, s.record_id, s.record_row_version \
-               FROM import_stage s \
+            "SELECT s.row_no, s.mapped, s.action, s.record_id, s.record_row_version, \
+                    CASE WHEN j.counts->>'source' = 'migration' THEN s.raw->>'__owner' END AS owner \
+               FROM import_stage s JOIN import_job j ON j.id = s.job_id \
               WHERE s.job_id = $1 AND s.status = 'valid' AND s.action IN ('create', 'update') \
                 AND NOT EXISTS (SELECT 1 FROM import_row r \
                                  WHERE r.job_id = s.job_id AND r.row_no = s.row_no) \

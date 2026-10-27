@@ -26,7 +26,7 @@ use serde::Serialize;
 use serde_json::{Map, Value, json};
 
 use super::migration_mapping::{
-    EntityMapping, MapAction, ModelMapping, TargetEntity, logical_name,
+    EntityMapping, MapAction, ModelMapping, TargetEntity, UserMapping, logical_name,
 };
 use super::migration_source::SourceRecord;
 
@@ -281,6 +281,43 @@ pub fn import_mapping(
 
 /// The import column that carries the source's record id.
 pub const SOURCE_ID: &str = "__source_id";
+/// The import column that carries the record's owner here (a user account
+/// id), read only by a migration import.
+pub const OWNER: &str = "__owner";
+
+/// The field that holds a record's owner in each source.
+pub fn owner_field(kind: &str) -> Option<&'static str> {
+    Some(match kind {
+        "salesforce" => "OwnerId",
+        "dynamics" => "_ownerid_value",
+        "hubspot" => "hubspot_owner_id",
+        "zoho" => "Owner",
+        "odoo" => "user_id",
+        _ => return None,
+    })
+}
+
+/// The account here that owns `record`: its source owner through the
+/// mapping's people; `None` when the source names none or nobody maps.
+/// Pure.
+pub fn owner_of(record: &SourceRecord, kind: &str, users: &[UserMapping]) -> Option<String> {
+    let value = record.fields.get(owner_field(kind)?)?;
+    let source = match value {
+        Value::String(s) => s.clone(),
+        Value::Number(n) => n.to_string(),
+        // Zoho's lookup: `{"id": ..., "name": ...}`.
+        Value::Object(o) => match o.get("id")? {
+            Value::String(s) => s.clone(),
+            Value::Number(n) => n.to_string(),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    users
+        .iter()
+        .find(|u| u.source == source)
+        .and_then(|u| u.target.clone())
+}
 
 /// One source record as an import row: its id under [`SOURCE_ID`], the
 /// mapped fields (skipped ones left out), choice values translated to the
@@ -499,6 +536,33 @@ mod tests {
             Some("salesforce_id")
         );
         assert!(!im.lookups.contains_key("owner_source"));
+    }
+
+    #[test]
+    fn waves_owner_maps_through_the_people() {
+        let users = vec![UserMapping {
+            source: "005A".into(),
+            name: "Sara".into(),
+            email: None,
+            target: Some("u-1".into()),
+        }];
+        let mut fields = Map::new();
+        fields.insert("OwnerId".into(), json!("005A"));
+        let r = SourceRecord {
+            id: "1".into(),
+            modified_at: None,
+            fields,
+        };
+        assert_eq!(owner_of(&r, "salesforce", &users).as_deref(), Some("u-1"));
+        let mut zoho = Map::new();
+        zoho.insert("Owner".into(), json!({ "id": "005A", "name": "Sara" }));
+        let z = SourceRecord {
+            id: "2".into(),
+            modified_at: None,
+            fields: zoho,
+        };
+        assert_eq!(owner_of(&z, "zoho", &users).as_deref(), Some("u-1"));
+        assert_eq!(owner_of(&r, "hubspot", &users), None);
     }
 
     #[test]

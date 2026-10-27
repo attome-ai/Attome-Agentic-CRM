@@ -27,8 +27,8 @@ use attome_core::changeset::{Recording, RecordingMode, RequestContext};
 use attome_integration::connector::adapters::migration_connect::NamedSource;
 use attome_integration::connector::adapters::migration_mapping::{MapAction, ModelMapping};
 use attome_integration::connector::adapters::migration_waves::{
-    MetadataStep, SOURCE_ID, Wave, import_mapping, import_row, key_attribute, load_order,
-    metadata_steps, next_wave,
+    MetadataStep, OWNER, SOURCE_ID, Wave, import_mapping, import_row, key_attribute, load_order,
+    metadata_steps, next_wave, owner_of,
 };
 use attome_server::authz::{Admin, Authorized};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
@@ -367,7 +367,7 @@ async fn load(
         };
         let import = serde_json::to_value(import_mapping(entity, &mapping, kind))
             .map_err(AppError::internal)?;
-        let mut header = vec![SOURCE_ID.to_owned()];
+        let mut header = vec![SOURCE_ID.to_owned(), OWNER.to_owned()];
         header.extend(
             entity
                 .attributes
@@ -386,7 +386,10 @@ async fn load(
                     .records
                     .iter()
                     .map(|r| {
-                        let row = import_row(r, entity);
+                        let mut row = import_row(r, entity);
+                        if let Some(owner) = owner_of(r, kind, &mapping.users) {
+                            row.insert(OWNER.to_owned(), Value::String(owner));
+                        }
                         header
                             .iter()
                             .map(|h| row.get(h).map(cell_text).unwrap_or_default())
