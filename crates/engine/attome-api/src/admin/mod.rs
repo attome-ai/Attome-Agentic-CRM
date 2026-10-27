@@ -26,6 +26,8 @@ mod dev_scaffold;
 mod entity;
 /// Y2-T10: index proposals from slow statements.
 mod index_proposals;
+/// A1-T4: entity inheritance by copy-down.
+mod inheritance;
 /// Y2-T4: lookup values that point at no record.
 pub(crate) mod orphans;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day recovery archive routes.

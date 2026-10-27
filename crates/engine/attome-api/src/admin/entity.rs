@@ -15,7 +15,8 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::attribute::{AttributeMeta, fetch_attributes};
+use super::attribute::{AttributeMeta, fetch_attributes, inherit_from};
+use super::inheritance;
 use super::{audit_service, notify_metadata_change, pin_write_best_effort, simple_field_change};
 use attome_types::ErrorResponse;
 use utoipa::{IntoParams, ToSchema};
@@ -61,6 +62,7 @@ struct EntityRow {
     owner_layer: String,
     business_key: Option<Vec<String>>,
     is_reference_data: bool,
+    extends_entity_id: Option<Uuid>,
 }
 
 // ── Response types ────────────────────────────────────────────────────────────
@@ -86,6 +88,9 @@ pub struct EntityMeta {
     /// A configuration-like entity whose records move between deployments
     /// in changesets (`upsert_record`); always has a business key.
     is_reference_data: bool,
+    /// A1-T4: the base entity this one extends (its fields are copies of
+    /// the base's); `null`: none.
+    extends_entity_id: Option<Uuid>,
     /// PATCH only, when the business key changed: how its unique index was
     /// brought in line — `inline`, `queued` (a background job; read its state
     /// on GET), or `failed` (the key is declared but not yet enforced; see
@@ -123,6 +128,8 @@ pub struct EntityDetail {
     business_key_index_state: String,
     /// L1-T1: whether the entity is master data, and its hub style.
     master_data: attome_compliance::governance_admin::MasterData,
+    /// A1-T4: the base entity this one extends; `null`: none.
+    extends_entity_id: Option<Uuid>,
     attributes: Vec<AttributeMeta>,
 }
 
@@ -141,6 +148,11 @@ pub(super) struct CreateEntityBody {
     primary_name_attribute: Option<String>,
     #[serde(default)]
     is_append_only: bool,
+    /// A1-T4: a live entity this one extends. The new entity gets a copy of
+    /// every field of the base, and fields later added to the base (or
+    /// renamed, retyped or deleted there) follow on this one. One base only.
+    #[serde(default)]
+    extends_entity_id: Option<Uuid>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -191,6 +203,7 @@ fn entity_meta_from_row(r: EntityRow) -> EntityMeta {
         owner_layer: r.owner_layer,
         business_key: r.business_key,
         is_reference_data: r.is_reference_data,
+        extends_entity_id: r.extends_entity_id,
         business_key_index_sync: None,
     }
 }
@@ -227,7 +240,7 @@ pub(super) async fn list_entities(
     let rows: Vec<EntityRow> = sqlx::query_as(
         r#"SELECT e.id, e.logicalname, e.name, e.primary_name_attribute,
                   e.is_active, e.is_append_only, e.category, e.owner_layer,
-                  e.business_key, e.is_reference_data,
+                  e.business_key, e.is_reference_data, e.extends_entity_id,
                   COUNT(a.id) FILTER (WHERE a.is_active IS NULL OR a.is_active = true) AS attribute_count
            FROM entity_info e
            LEFT JOIN attribute_info a ON a.entity_ref = e.id
@@ -308,6 +321,15 @@ pub(super) async fn create_entity(
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(str::to_owned);
+
+    // A1-T4: the base must be a live entity.
+    if let Some(base_id) = body.extends_entity_id
+        && !inheritance::base_is_live(&state.base.db_migrator, base_id).await?
+    {
+        return Err(AppError::Validation(
+            "extends_entity_id names no live entity".into(),
+        ));
+    }
 
     // Solution 7 (D-785): refuse (changeset_required, …) before any write.
     recording.preflight(&state.base.db_migrator).await?;
@@ -422,6 +444,13 @@ pub(super) async fn create_entity(
         tracing::warn!(error = %e, entity = %logicalname, "failed to seed per-entity privileges on create");
     }
 
+    // A1-T4: copy the base's fields, through the same field primitive an
+    // admin's own field create runs.
+    let mut attribute_count = 0;
+    if let Some(base_id) = body.extends_entity_id {
+        attribute_count = inherit_from(&state, id, base_id, ctx.user_id, Some(&*recording)).await?;
+    }
+
     notify_metadata_change(&state.base.redis).await;
     pin_write_best_effort(&state, ctx.user_id, "create entity").await;
 
@@ -435,10 +464,11 @@ pub(super) async fn create_entity(
             is_active: true,
             is_append_only: body.is_append_only,
             category: None,
-            attribute_count: 0,
+            attribute_count,
             owner_layer,
             business_key: None,
             is_reference_data: false,
+            extends_entity_id: body.extends_entity_id,
             business_key_index_sync: None,
         }),
     ))
@@ -487,12 +517,14 @@ pub(super) async fn get_entity(
         is_reference_data,
     ) = row.ok_or(AppError::NotFound)?;
     let logicalname = logicalname.unwrap_or_default();
-    let (is_master, hub_style): (bool, Option<String>) =
-        sqlx::query_as("SELECT is_master, hub_style FROM entity_info WHERE id = $1")
-            .bind(entity_id)
-            .fetch_one(&state.base.db_migrator)
-            .await
-            .map_err(AppError::internal)?;
+    let (is_master, hub_style, extends_entity_id): (bool, Option<String>, Option<Uuid>) =
+        sqlx::query_as(
+            "SELECT is_master, hub_style, extends_entity_id FROM entity_info WHERE id = $1",
+        )
+        .bind(entity_id)
+        .fetch_one(&state.base.db_migrator)
+        .await
+        .map_err(AppError::internal)?;
     let attributes = fetch_attributes(&state.base.db_migrator, entity_id).await?;
     let (business_key_index, index_state) = provision::business_key_index_status(
         &state.base.db_migrator,
@@ -518,6 +550,7 @@ pub(super) async fn get_entity(
             is_master,
             hub_style,
         },
+        extends_entity_id,
         attributes,
     }))
 }
@@ -844,6 +877,7 @@ pub(super) async fn update_entity(
         owner_layer,
         business_key,
         is_reference_data,
+        extends_entity_id: inheritance::extends_of(&state.base.db_migrator, entity_id).await?,
         business_key_index_sync,
     }))
 }

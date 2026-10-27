@@ -19,7 +19,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
+use super::inheritance;
 use super::{audit_service, notify_metadata_change, pin_write_best_effort, simple_field_change};
+
+/// A boxed future: the inheritance walk recurses through the field
+/// primitives (a base's change reaches its children's children).
+type BoxFut<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
 use attome_types::ErrorResponse;
 use utoipa::ToSchema;
 
@@ -194,7 +199,7 @@ pub(super) struct SchemaChangeStatus {
 
 // ── Request types ─────────────────────────────────────────────────────────────
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct CreateAttributeBody {
     logicalname: String,
     name: String,
@@ -535,10 +540,123 @@ pub(super) async fn create_attribute(
     do_create_attribute_recorded(&state, entity_id, ctx.user_id, body, Some(&*recording)).await
 }
 
+/// Adds a field, then (A1-T4) the same field to every entity that extends
+/// this one, each copy marked as inherited. A name an extending entity
+/// already uses is refused before anything is written.
+pub(crate) async fn do_create_attribute_recorded(
+    state: &EngineState,
+    entity_id: Uuid,
+    user_id: Uuid,
+    body: CreateAttributeBody,
+    recording: Option<&Recording>,
+) -> Result<Response, AppError> {
+    let logicalname = body.logicalname.trim().to_lowercase();
+    if !body.dry_run
+        && inheritance::descendant_has_field(&state.base.db_migrator, entity_id, &logicalname)
+            .await?
+    {
+        return Err(AppError::Conflict(
+            "a field with this logicalname already exists on an entity that extends this one",
+        ));
+    }
+    let copy = body.clone();
+    let response = do_create_attribute_one(state, entity_id, user_id, body, recording).await?;
+    if response.status() == StatusCode::CREATED {
+        copy_down(state, entity_id, user_id, copy, recording).await?;
+    }
+    Ok(response)
+}
+
+/// A1-T4: adds the base's new field to each entity that extends it (and,
+/// through [`do_create_attribute_recorded`], to theirs).
+fn copy_down<'a>(
+    state: &'a EngineState,
+    base_id: Uuid,
+    user_id: Uuid,
+    body: CreateAttributeBody,
+    recording: Option<&'a Recording>,
+) -> BoxFut<'a, Result<(), AppError>> {
+    Box::pin(async move {
+        let db = &state.base.db_migrator;
+        let children = inheritance::children(db, base_id).await?;
+        if children.is_empty() {
+            return Ok(());
+        }
+        let logicalname = body.logicalname.trim().to_lowercase();
+        let base_attr = inheritance::field_id(db, base_id, &logicalname)
+            .await?
+            .ok_or(AppError::NotFound)?;
+        for child in children {
+            do_create_attribute_recorded(state, child, user_id, body.clone(), recording).await?;
+            inheritance::mark_copy(db, child, &logicalname, base_attr).await?;
+        }
+        Ok(())
+    })
+}
+
+/// A1-T4: makes `entity_id` extend `base_id` and copies every field of the
+/// base it does not already have, each marked as inherited. Returns the
+/// number of fields copied. The entity is new, so nothing extends it yet.
+pub(crate) async fn inherit_from(
+    state: &EngineState,
+    entity_id: Uuid,
+    base_id: Uuid,
+    user_id: Uuid,
+    recording: Option<&Recording>,
+) -> Result<i64, AppError> {
+    let db = &state.base.db_migrator;
+    inheritance::set_extends(db, entity_id, base_id).await?;
+    let own: std::collections::BTreeSet<String> = fetch_attributes(db, entity_id)
+        .await?
+        .into_iter()
+        .map(|a| a.logicalname)
+        .collect();
+    let mut copied = 0;
+    for base_attr in fetch_attributes(db, base_id).await? {
+        if own.contains(&base_attr.logicalname) {
+            continue;
+        }
+        do_create_attribute_one(
+            state,
+            entity_id,
+            user_id,
+            body_from_meta(&base_attr),
+            recording,
+        )
+        .await?;
+        inheritance::mark_copy(db, entity_id, &base_attr.logicalname, base_attr.id).await?;
+        copied += 1;
+    }
+    Ok(copied)
+}
+
+/// The create body that makes a copy of field `a`.
+fn body_from_meta(a: &AttributeMeta) -> CreateAttributeBody {
+    CreateAttributeBody {
+        logicalname: a.logicalname.clone(),
+        name: a.name.clone(),
+        field_type: a.field_type.clone(),
+        is_required: a.is_required,
+        is_sensitive: a.is_sensitive,
+        is_write_restricted: a.is_write_restricted,
+        is_sortable: a.is_sortable,
+        is_filterable: a.is_filterable,
+        max_length: a.max_length,
+        lookup_entity_ref: a.lookup_entity_ref,
+        on_target_delete: Some(a.on_target_delete.clone()),
+        data_classification: Some(a.data_classification.clone()),
+        sensitivity: a.sensitivity_confirmed.then(|| a.sensitivity.clone()),
+        purpose: a.purpose.clone(),
+        options: a.options.clone(),
+        dry_run: false,
+        default_value: None,
+    }
+}
+
 /// `add_field` (design §1.1): recorded in the reconcile primitive's final
 /// transaction, or — for a size-gated contract — when the contract change is
 /// queued (the intent; the job records nothing).
-pub(crate) async fn do_create_attribute_recorded(
+async fn do_create_attribute_one(
     state: &EngineState,
     entity_id: Uuid,
     user_id: Uuid,
@@ -1156,6 +1274,20 @@ pub(crate) async fn do_update_attribute_recorded(
                 return Ok(structure_response(result));
             }
             audit_structure_change(state, user_id, &result, attr_id).await?;
+            // A1-T4: a base field's copies follow the rename.
+            let rename = serde_json::json!({ "new_name": new_logicalname });
+            for (child, copy) in inheritance::copies(&state.base.db_migrator, attr_id).await? {
+                apply_structure_change(
+                    state,
+                    user_id,
+                    child,
+                    copy,
+                    StructureAction::Rename,
+                    rename.clone(),
+                    recording,
+                )
+                .await?;
+            }
         }
     }
     let cur: Option<AttrRow> = sqlx::query_as(
@@ -2067,7 +2199,110 @@ async fn do_structure_change(
 /// and returns its result. A blocked change comes back as `Ok` with
 /// `result.error` set: the route answers it as a 409 body, while the
 /// approval dispatcher must treat it as a failure (L7.3).
+///
+/// A1-T4: an inherited field's type is its base's to change
+/// (`422 inherited_attribute`); a change to a base field is applied to every
+/// copy, see [`apply_structure_change`].
 pub(crate) async fn run_structure_change(
+    state: &EngineState,
+    user_id: Uuid,
+    entity_id: Uuid,
+    attr_id: Uuid,
+    action: StructureAction,
+    body: Value,
+    recording: &Recording,
+) -> Result<crate::field_changes::FieldChangeResult, AppError> {
+    if action == StructureAction::ChangeType
+        && inheritance::is_inherited(&state.base.db_migrator, attr_id).await?
+    {
+        return Err(AppError::Validation(
+            "inherited_attribute: this field is inherited from its base entity; \
+             change its type on the base"
+                .into(),
+        ));
+    }
+    apply_structure_change(state, user_id, entity_id, attr_id, action, body, recording).await
+}
+
+/// `body` with its `dry_run` set.
+fn with_dry_run(body: &Value, dry_run: bool) -> Value {
+    let mut body = body.clone();
+    if let Some(fields) = body.as_object_mut() {
+        fields.insert("dry_run".to_owned(), Value::Bool(dry_run));
+    }
+    body
+}
+
+/// A1-T4: one structure change and the same change on every copy of the
+/// field. Each copy is rehearsed first (a dry run; adding a choice has
+/// none), so a copy that would block it stops the change before the base
+/// moves: that copy's blocked result is returned.
+fn apply_structure_change<'a>(
+    state: &'a EngineState,
+    user_id: Uuid,
+    entity_id: Uuid,
+    attr_id: Uuid,
+    action: StructureAction,
+    body: Value,
+    recording: &'a Recording,
+) -> BoxFut<'a, Result<crate::field_changes::FieldChangeResult, AppError>> {
+    Box::pin(async move {
+        let copies = inheritance::copies(&state.base.db_migrator, attr_id).await?;
+        if action != StructureAction::AddChoice {
+            for &(child, copy) in &copies {
+                let rehearsal = apply_structure_change(
+                    state,
+                    user_id,
+                    child,
+                    copy,
+                    action,
+                    with_dry_run(&body, true),
+                    recording,
+                )
+                .await?;
+                if rehearsal.error.is_some() {
+                    return Ok(rehearsal);
+                }
+            }
+        }
+        let result = change_one(
+            state,
+            user_id,
+            entity_id,
+            attr_id,
+            action,
+            body.clone(),
+            recording,
+        )
+        .await?;
+        if result.applied && !result.dry_run {
+            for (child, copy) in copies {
+                let copied = apply_structure_change(
+                    state,
+                    user_id,
+                    child,
+                    copy,
+                    action,
+                    body.clone(),
+                    recording,
+                )
+                .await?;
+                if copied.error.is_some() {
+                    tracing::warn!(
+                        entity = %child,
+                        field = %copy,
+                        op = copied.op,
+                        "an inherited field did not follow its base field's change"
+                    );
+                }
+            }
+        }
+        Ok(result)
+    })
+}
+
+/// One structure change on one field.
+async fn change_one(
     state: &EngineState,
     user_id: Uuid,
     entity_id: Uuid,
