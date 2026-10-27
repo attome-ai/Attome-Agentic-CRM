@@ -3,7 +3,7 @@
 //! while this module owns the durable multi-channel dispatch API.
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_NOTIFICATION, ModuleId};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 use serde::Serialize;
@@ -78,7 +78,7 @@ struct DispatchCreated {
 )]
 async fn create_dispatch(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Json(body): Json<DispatchRequest>,
 ) -> Result<(StatusCode, Json<DispatchCreated>), AppError> {
     let id =
