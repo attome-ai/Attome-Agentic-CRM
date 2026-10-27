@@ -49,8 +49,8 @@ const PREVIEW_DELAY_MS = 400;
  * quarter or year) with its total, or a **matrix** of that measure by two
  * groupings with totals each way. Filters narrow it. The first 50 rows
  * preview live as the report changes, through `POST /api/v1/query/run`
- * under the person's own access; totals show only where they add up (a
- * count or a sum).
+ * under the person's own access; the totals are the server's (P1-T2), true
+ * for every measure.
  */
 @Component({
   selector: 'xrm-report-builder',
@@ -96,12 +96,12 @@ export class ReportBuilderComponent {
   readonly summary = computed(() => {
     const g = this.groups();
     const s = this.state();
-    return g && s.layout === 'summary' ? summarise(g, s.rows.field, s.func) : null;
+    return g && s.layout === 'summary' ? summarise(g, s.rows.field) : null;
   });
   readonly matrix = computed(() => {
     const g = this.groups();
     const s = this.state();
-    return g && s.layout === 'matrix' ? pivot(g, s.rows.field, s.across.field, s.func) : null;
+    return g && s.layout === 'matrix' ? pivot(g, s.rows.field, s.across.field) : null;
   });
 
   constructor() {

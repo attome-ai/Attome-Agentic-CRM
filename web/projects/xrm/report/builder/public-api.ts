@@ -4,7 +4,7 @@ export { ReportBuilderComponent } from './report-builder.component';
 export type { ReportField } from './report-builder.component';
 export {
   MEASURE, PREVIEW_ROWS, REPORT_BUCKETS, REPORT_FUNCS, REPORT_LAYOUTS, REPORT_OPERATORS,
-  additive, emptyReport, keyText, measure, pivot, ready, reportSpec, summarise, tableColumns,
+  emptyReport, keyText, measure, pivot, ready, reportSpec, summarise, tableColumns,
 } from './report-builder.model';
 export type {
   AnswerGroup, Matrix, ReportBucket, ReportCondition, ReportFunc, ReportGroup, ReportLayout, ReportOperator,

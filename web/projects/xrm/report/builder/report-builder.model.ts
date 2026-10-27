@@ -2,7 +2,9 @@
  * P1-T1: the report builder's state and the QuerySpec it makes
  * (`attome_records::query_spec`, run through `POST /api/v1/query/run` under
  * the person's own access), and the pure shaping of the answer into the
- * three layouts. No SQL anywhere.
+ * three layouts. No SQL anywhere. Totals are the server's (P1-T2: `rollup`
+ * for a summary, `cube` for a matrix), so an average or an extreme has a
+ * true total over all its records, not a sum of the cells.
  */
 
 export const REPORT_LAYOUTS = ['table', 'summary', 'matrix'] as const;
@@ -97,16 +99,22 @@ export function reportSpec(state: ReportState): Record<string, unknown> {
     return spec;
   }
   spec['group_by'] = state.layout === 'matrix' ? [group(state.rows), group(state.across)] : [group(state.rows)];
+  spec['totals'] = state.layout === 'matrix' ? 'cube' : 'rollup';
   spec['aggregates'] = [state.field && state.func !== 'count'
     ? { func: state.func, field: state.field, alias: MEASURE }
     : { func: 'count', alias: MEASURE }];
   return spec;
 }
 
-/** One group of the answer. */
+/** One group of the answer; a total row names the group fields it adds up (P1-T2). */
 export interface AnswerGroup {
   keys: Record<string, unknown>;
   values: Record<string, unknown>;
+  rolled_up?: string[];
+}
+
+function rolls(g: AnswerGroup, field: string): boolean {
+  return (g.rolled_up ?? []).includes(field);
 }
 
 /** A key as the layouts show it; a missing value is empty. Pure. */
@@ -122,29 +130,20 @@ export function measure(value: unknown): number | null {
   return null;
 }
 
-/** Whether totals of the measure are its sum (a count or a sum); an average or extreme has none. Pure. */
-export function additive(func: ReportFunc): boolean {
-  return func === 'count' || func === 'sum';
-}
-
-function add(a: number | null, b: number | null): number | null {
-  if (a === null) return b;
-  if (b === null) return a;
-  return a + b;
-}
 
 export interface SummaryLine {
   key: string;
   value: number | null;
 }
 
-/** The summary layout: one line per group in key order, and the total when it adds up. Pure. */
-export function summarise(groups: readonly AnswerGroup[], rowField: string, func: ReportFunc): { lines: SummaryLine[]; total: number | null } {
+/** The summary layout: one line per group in key order, and the server's grand total. Pure. */
+export function summarise(groups: readonly AnswerGroup[], rowField: string): { lines: SummaryLine[]; total: number | null } {
   const lines = groups
+    .filter(g => !rolls(g, rowField))
     .map(g => ({ key: keyText(g.keys[rowField]), value: measure(g.values[MEASURE]) }))
     .sort((a, b) => a.key.localeCompare(b.key));
-  const total = additive(func) ? lines.reduce<number | null>((t, l) => add(t, l.value), null) : null;
-  return { lines, total };
+  const grand = groups.find(g => rolls(g, rowField));
+  return { lines, total: grand ? measure(grand.values[MEASURE]) : null };
 }
 
 export interface Matrix {
@@ -156,34 +155,34 @@ export interface Matrix {
   total: number | null;
 }
 
-/** The matrix layout: rows by columns, with totals each way when the measure adds up. Pure. */
-export function pivot(groups: readonly AnswerGroup[], rowField: string, colField: string, func: ReportFunc): Matrix {
+/** The matrix layout: rows by columns, with the server's row, column and grand totals. Pure. */
+export function pivot(groups: readonly AnswerGroup[], rowField: string, colField: string): Matrix {
   const rows = new Set<string>();
   const cols = new Set<string>();
   const cells: Record<string, Record<string, number | null>> = {};
-  for (const g of groups) {
-    const r = keyText(g.keys[rowField]);
-    const c = keyText(g.keys[colField]);
-    rows.add(r);
-    cols.add(c);
-    (cells[r] ??= {})[c] = measure(g.values[MEASURE]);
-  }
-  const sortedRows = [...rows].sort((a, b) => a.localeCompare(b));
-  const sortedCols = [...cols].sort((a, b) => a.localeCompare(b));
-  const sums = additive(func);
   const rowTotals: Record<string, number | null> = {};
   const colTotals: Record<string, number | null> = {};
   let total: number | null = null;
-  for (const r of sortedRows) {
-    for (const c of sortedCols) {
-      const v = cells[r]?.[c] ?? null;
-      if (!sums) continue;
-      rowTotals[r] = add(rowTotals[r] ?? null, v);
-      colTotals[c] = add(colTotals[c] ?? null, v);
-      total = add(total, v);
+  for (const g of groups) {
+    const r = keyText(g.keys[rowField]);
+    const c = keyText(g.keys[colField]);
+    const v = measure(g.values[MEASURE]);
+    const rowsUp = rolls(g, rowField);
+    const colsUp = rolls(g, colField);
+    if (rowsUp && colsUp) total = v;
+    else if (colsUp) rowTotals[r] = v;
+    else if (rowsUp) colTotals[c] = v;
+    else {
+      rows.add(r);
+      cols.add(c);
+      (cells[r] ??= {})[c] = v;
     }
   }
-  return { rows: sortedRows, cols: sortedCols, cells, rowTotals, colTotals, total: sums ? total : null };
+  return {
+    rows: [...rows].sort((a, b) => a.localeCompare(b)),
+    cols: [...cols].sort((a, b) => a.localeCompare(b)),
+    cells, rowTotals, colTotals, total,
+  };
 }
 
 /** The table layout's columns, in the order the person chose them. Pure. */

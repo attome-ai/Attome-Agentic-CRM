@@ -62,6 +62,7 @@ describe('ReportBuilderComponent (P1-T1)', () => {
     const { fixture, cmp, el, post } = setUp({ groups: [
       { keys: { close_date: '2026-02-01' }, values: { value: '250.5' } },
       { keys: { close_date: '2026-01-01' }, values: { value: 100 } },
+      { keys: { close_date: null }, values: { value: 350.5 }, rolled_up: ['close_date'] },
     ] });
     cmp.setLayout('summary');
     cmp.update({ func: 'sum', field: 'amount' });
@@ -72,6 +73,7 @@ describe('ReportBuilderComponent (P1-T1)', () => {
     expect(post).toHaveBeenLastCalledWith('/api/v1/query/run', { spec: {
       entity: 'opportunity',
       group_by: [{ field: 'close_date', bucket: 'month' }],
+      totals: 'rollup',
       aggregates: [{ func: 'sum', field: 'amount', alias: 'value' }],
     } });
     const summary = el.querySelector('[data-summary]') as HTMLElement;
@@ -84,6 +86,11 @@ describe('ReportBuilderComponent (P1-T1)', () => {
       { keys: { stage: 'won', owner_ref: 'sara' }, values: { value: 2 } },
       { keys: { stage: 'won', owner_ref: 'omar' }, values: { value: 1 } },
       { keys: { stage: 'lost', owner_ref: 'sara' }, values: { value: 4 } },
+      { keys: { stage: 'won', owner_ref: null }, values: { value: 3 }, rolled_up: ['owner_ref'] },
+      { keys: { stage: 'lost', owner_ref: null }, values: { value: 4 }, rolled_up: ['owner_ref'] },
+      { keys: { stage: null, owner_ref: 'sara' }, values: { value: 6 }, rolled_up: ['stage'] },
+      { keys: { stage: null, owner_ref: 'omar' }, values: { value: 1 }, rolled_up: ['stage'] },
+      { keys: { stage: null, owner_ref: null }, values: { value: 7 }, rolled_up: ['stage', 'owner_ref'] },
     ] });
     cmp.setLayout('matrix');
     cmp.setGroup('rows', { field: 'stage' });
@@ -112,8 +119,14 @@ describe('ReportBuilderComponent (P1-T1)', () => {
     expect(ready({ ...state, across: { field: 'b', bucket: '' } })).toBe(true);
     expect(reportSpec({ ...emptyReport('deal'), columns: ['x'], conditions: [{ field: 'amount', op: 'gt', value: '10' }] })['where'])
       .toEqual({ kind: 'compare', field: 'amount', op: 'gt', value: 10 });
-    expect(summarise([{ keys: { s: 'a' }, values: { value: 3 } }], 's', 'avg').total).toBeNull();
-    const m = pivot([{ keys: { r: 'x', c: 'y' }, values: { value: 2 } }], 'r', 'c', 'max');
+    expect(summarise([{ keys: { s: 'a' }, values: { value: 3 } }], 's').total).toBeNull();
+    const avg = summarise([
+      { keys: { s: 'a' }, values: { value: 2 } }, { keys: { s: 'b' }, values: { value: 10 } },
+      { keys: { s: null }, values: { value: 4 }, rolled_up: ['s'] },
+    ], 's');
+    expect(avg.lines).toHaveLength(2);
+    expect(avg.total).toBe(4);
+    const m = pivot([{ keys: { r: 'x', c: 'y' }, values: { value: 2 } }], 'r', 'c');
     expect(m.total).toBeNull();
     expect(m.cells['x']['y']).toBe(2);
   });
