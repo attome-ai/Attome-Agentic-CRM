@@ -51,7 +51,7 @@
 //! provides it.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{
     AppError, DEFAULT_PAGE_SIZE, ErrorResponse, PageBase, PageWindow, PaginatedResponse,
 };
@@ -763,7 +763,7 @@ async fn export(
 )]
 async fn event_proof(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Audit>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<crate::proof::InclusionProof>, AppError> {
     crate::proof::proof_for(&state.base.db, id).await.map(Json)
@@ -791,7 +791,7 @@ async fn event_proof(
 )]
 async fn evidence_pack(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Audit>>,
     Json(body): Json<crate::proof::EvidencePackRequest>,
 ) -> Result<Json<crate::proof::EvidencePack>, AppError> {
     // Like an export: the download is a mandatory event, written (or the
