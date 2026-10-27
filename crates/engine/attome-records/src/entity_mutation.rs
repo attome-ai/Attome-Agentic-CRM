@@ -3644,7 +3644,10 @@ pub(crate) async fn apply_dependents_on_delete(
     )
     .await?;
 
-    let mut cascade_summary = Vec::new();
+    // A7-T1: the many-to-many relationships' rule for the deleted record.
+    let mut cascade_summary =
+        crate::cascade::links_on_delete(tx, target_entity_name, &[record_id], target_entity_name)
+            .await?;
     let mut tree_budget = crate::cascade::CASCADE_TREE_LIMIT;
     for (dep_entity, dep_field, mode) in &dependents {
         if *mode != OnTargetDelete::CascadeDeactivate {

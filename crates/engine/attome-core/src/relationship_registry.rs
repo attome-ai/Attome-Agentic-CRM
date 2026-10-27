@@ -51,17 +51,16 @@ pub const RELATIONSHIP_VERSION_CHANNEL: &str = "relationship_version";
 /// rows independent of `cascade`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RelationshipCascade {
-    /// Reserved for a future enforcement pass: block deactivating either
-    /// side while a live link still references it.
+    /// A7-T1: deleting either side is refused (409 `cascade_restricted`)
+    /// while a live link to a live record still references it.
     Restrict,
-    /// Today's actual behavior for every relationship regardless of the
-    /// stored value: a soft-deleted endpoint simply drops out of every
+    /// A soft-deleted endpoint simply drops out of every
     /// `/related/{relationship}` read (both-sides `is_active` filter), and
     /// the join row itself is left untouched.
     #[default]
     Orphan,
-    /// Reserved for a future enforcement pass: deactivate the join row too
-    /// when either endpoint deactivates.
+    /// A7-T1: deleting either side deactivates its join rows too
+    /// (`attome_records::cascade::links_on_delete`).
     CascadeDeactivate,
 }
 

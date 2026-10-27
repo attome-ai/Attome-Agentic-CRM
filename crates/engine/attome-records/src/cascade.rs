@@ -20,6 +20,7 @@
 //! took. The dependents of an entity are read from the metadata tables in
 //! the same transaction ([`dependents_of`]).
 
+use attome_core::relationship_registry::RelationshipCascade;
 use attome_core::{OnTargetDelete, quote_ident};
 use attome_types::AppError;
 use sqlx::{PgConnection, Postgres, Transaction};
@@ -66,6 +67,78 @@ pub(crate) async fn dependents_of(
         .collect())
 }
 
+/// A7-T1: the many-to-many relationships' rule for records of `entity`
+/// being deleted (`ids`, reached by `path`): `restrict` refuses while a
+/// live link to a live record still holds one of them, `cascade-deactivate`
+/// deactivates their links, `orphan` leaves the links as they are (an
+/// inactive endpoint drops out of every related read). Returns the summary
+/// lines. A restored record's links are not brought back: no ledger records
+/// which links a delete took.
+pub(crate) async fn links_on_delete(
+    tx: &mut Transaction<'_, Postgres>,
+    entity: &str,
+    ids: &[Uuid],
+    path: &str,
+) -> Result<Vec<String>, AppError> {
+    let relationships: Vec<(String, String, String, String, String)> = sqlx::query_as(
+        "SELECT name, entity_a, entity_b, join_table, cascade FROM relationship_info \
+          WHERE (entity_a = $1 OR entity_b = $1) AND is_active = TRUE AND is_deleted IS NOT TRUE \
+          ORDER BY name",
+    )
+    .bind(entity)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let mut summary = Vec::new();
+    for (name, entity_a, entity_b, join_table, cascade) in relationships {
+        let join = quote_ident(&join_table);
+        // Each side the deleted records sit on, with the other side's table.
+        let mut sides = Vec::new();
+        if entity_a == entity {
+            sides.push(("a_id", "b_id", entity_b.clone()));
+        }
+        if entity_b == entity {
+            sides.push(("b_id", "a_id", entity_a.clone()));
+        }
+        for (mine, other, other_entity) in sides {
+            match RelationshipCascade::from_db_str(&cascade) {
+                RelationshipCascade::Orphan => {}
+                RelationshipCascade::Restrict => {
+                    let other_table = quote_ident(&other_entity);
+                    let blocked: bool = sqlx::query_scalar(&format!(
+                        "SELECT EXISTS(SELECT 1 FROM {join} j JOIN {other_table} o ON o.id = j.{other} \
+                          WHERE j.{mine} = ANY($1) AND j.is_active = TRUE AND o.is_active = TRUE)"
+                    ))
+                    .bind(ids)
+                    .fetch_one(&mut **tx)
+                    .await
+                    .map_err(AppError::internal)?;
+                    if blocked {
+                        return Err(AppError::CascadeRestricted(format!(
+                            "{path} -> {name} ({other_entity})"
+                        )));
+                    }
+                }
+                RelationshipCascade::CascadeDeactivate => {
+                    let done = sqlx::query(&format!(
+                        "UPDATE {join} SET is_active = false, row_version = row_version + 1 \
+                          WHERE {mine} = ANY($1) AND is_active = TRUE"
+                    ))
+                    .bind(ids)
+                    .execute(&mut **tx)
+                    .await
+                    .map_err(AppError::internal)?
+                    .rows_affected();
+                    if done > 0 {
+                        summary.push(format!("{path} -> {name}: {done} links"));
+                    }
+                }
+            }
+        }
+    }
+    Ok(summary)
+}
+
 /// One level of the walk: records of `entity` just deactivated, reached by
 /// `path` from the deleted record.
 struct Level {
@@ -101,6 +174,7 @@ pub(crate) async fn cascade_below(
             if level.ids.is_empty() {
                 continue;
             }
+            summary.extend(links_on_delete(tx, &level.entity, &level.ids, &level.path).await?);
             let dependents = dependents_of(&mut **tx, &level.entity).await?;
             for (dep_entity, dep_field, mode) in dependents {
                 let dep_table = quote_ident(&dep_entity);
