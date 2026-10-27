@@ -105,6 +105,17 @@ describe('model mapping (A24-T3)', () => {
     expect(el.querySelectorAll('table.mapping-table').length).toBe(1);
   });
 
+  it('reads the source model from a connected system, ready to draft', () => {
+    const model = { entities: [{ name: 'deals', label: 'deals', custom: false, fields: [] }] };
+    const describe = vi.fn(() => of({ kind: 'hubspot', source_model: model }));
+    const { cmp } = setUp({ get: () => throwError(() => ({ status: 404, kind: 'not_found', message: '' })), describe });
+    cmp.system.set('hubspot-prod');
+    cmp.describe();
+    expect(describe).toHaveBeenCalledWith('p1', 'hubspot-prod');
+    expect(JSON.parse(cmp.sourceText())).toEqual(model);
+    expect(cmp.busy()).toBe(false);
+  });
+
   it('says so when someone else saved first', () => {
     const save = vi.fn(() => throwError(() => ({ status: 409, kind: 'version_conflict', message: '' })));
     const { cmp } = setUp({ get: () => of(doc(fakeMapping())), save });

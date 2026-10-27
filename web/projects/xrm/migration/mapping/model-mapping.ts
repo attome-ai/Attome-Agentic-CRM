@@ -100,6 +100,12 @@ export class ModelMappingService {
     return this.api.post<MappingDoc>(`${this.path(projectId)}/draft`, { source_model: sourceModel });
   }
 
+  /** The model of the integration system `system` (a migration source). */
+  describe(projectId: string, system: string): Observable<{ kind: string; source_model: unknown }> {
+    return this.api.post<{ kind: string; source_model: unknown }>(
+      `/api/v1/admin/migration-projects/${encodeURIComponent(projectId)}/source-model`, { system });
+  }
+
   save(projectId: string, mapping: ModelMapping, rowVersion: number): Observable<MappingDoc> {
     return this.api.put<MappingDoc>(this.path(projectId), { mapping, row_version: rowVersion });
   }

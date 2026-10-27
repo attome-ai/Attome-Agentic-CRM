@@ -46,3 +46,5 @@ tr.merged td { background: var(--color-bg-alt); }
   position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap;
 }
+
+.describe-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; }

@@ -7,6 +7,9 @@
 //!   stores the proposed mapping (`migration_mapping::draft_mapping`
 //!   against the live entity registry), replacing any earlier draft.
 //! - `GET .../model-mapping` reads it, with what in it cannot run.
+//! - `POST .../source-model` reads a source's model from the integration
+//!   system that is the source (`migration_connect`), for a draft; it
+//!   writes nothing.
 //! - `PUT .../model-mapping` saves the person's edits, refused with 409
 //!   when someone saved since the version they read.
 //!
@@ -37,6 +40,21 @@ pub const MAX_SOURCE_ENTITIES: usize = 500;
 #[derive(Deserialize, ToSchema)]
 pub(crate) struct DraftBody {
     /// The source's model, as its connector describes it.
+    source_model: SourceModel,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct DescribeBody {
+    /// The integration system that is the source; its `config.migration`
+    /// names the source's kind.
+    system: String,
+}
+
+/// A source's model, as its connector describes it.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct DescribedSource {
+    /// `salesforce`, `dynamics`, `hubspot`, `zoho` or `odoo`.
+    kind: String,
     source_model: SourceModel,
 }
 
@@ -343,8 +361,57 @@ pub(crate) async fn save_mapping(
     Ok(Json(doc(&state, id, row)?))
 }
 
+/// Describe a migration source
+///
+/// Reads the model of the source system named by `system` (its entities and
+/// fields, with each field's Attome type), to draft a mapping from. Writes
+/// nothing. Administrators only.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/migration-projects/{id}/source-model",
+    tag = "admin",
+    params(("id" = Uuid, Path, description = "The migration project")),
+    request_body = DescribeBody,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::ReadOnly,
+        None,
+        "reads the source system's model; writes nothing"
+    )))),
+    responses(
+        (status = 200, description = "The source's model", body = DescribedSource),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such project or system", body = ErrorResponse),
+        (status = 422, description = "The system is not a migration source, or the source refused", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn describe_source(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<DescribeBody>,
+) -> Result<Json<DescribedSource>, AppError> {
+    project_exists(&state, id).await?;
+    let system = body.system.trim();
+    if system.is_empty() {
+        return Err(AppError::Validation("system must not be empty".into()));
+    }
+    let (kind, source_model) =
+        attome_integration::connector::adapters::migration_connect::describe_named(&state, system)
+            .await?;
+    Ok(Json(DescribedSource {
+        kind: kind.as_str().to_owned(),
+        source_model,
+    }))
+}
+
 pub(crate) fn routes() -> Router<EngineState> {
     Router::new()
+        .route(
+            "/api/v1/admin/migration-projects/{id}/source-model",
+            post(describe_source),
+        )
         .route(
             "/api/v1/admin/migration-projects/{id}/model-mapping",
             get(get_mapping).put(save_mapping),
@@ -356,7 +423,7 @@ pub(crate) fn routes() -> Router<EngineState> {
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(draft_mapping, get_mapping, save_mapping))]
+#[openapi(paths(draft_mapping, get_mapping, save_mapping, describe_source))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

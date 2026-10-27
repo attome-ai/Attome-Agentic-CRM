@@ -38,6 +38,8 @@ export class MappingComponent implements OnInit {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly sourceText = signal('');
+  /** The integration system to read the source model from. */
+  readonly system = signal('');
 
   readonly actions: readonly MapAction[] = ['map', 'create', 'skip'];
   readonly types = CREATE_TYPES;
@@ -87,6 +89,25 @@ export class MappingComponent implements OnInit {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     file.text().then(text => this.sourceText.set(text), () => this.error.set(this.lang.translate('modelMapping.unreadable')));
+  }
+
+  onSystem(event: Event): void {
+    this.system.set((event.target as HTMLInputElement).value);
+  }
+
+  /** Reads the source model from the named system into the text, ready to draft. */
+  describe(): void {
+    const system = this.system().trim();
+    if (!system || this.busy()) return;
+    this.busy.set(true);
+    this.error.set(null);
+    this.service.describe(this.id(), system).subscribe({
+      next: res => {
+        this.busy.set(false);
+        this.sourceText.set(JSON.stringify(res.source_model, null, 2));
+      },
+      error: (e: ApiError) => this.fail(e),
+    });
   }
 
   /** Drafts a mapping from the source model typed or loaded. */

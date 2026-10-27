@@ -181,7 +181,15 @@ impl Connection {
         }
     }
 
-    fn needs<'c>(&self, credential: Option<&'c Credential>) -> Result<&'c Credential, AppError> {
+    /// The system's raw `config` (A24: a migration source reads its `migration` part).
+    pub(crate) fn config(&self) -> Option<&str> {
+        self.config.as_deref()
+    }
+
+    pub(crate) fn needs<'c>(
+        &self,
+        credential: Option<&'c Credential>,
+    ) -> Result<&'c Credential, AppError> {
         credential.ok_or_else(|| {
             AppError::Validation(format!(
                 "system has no credential configured for auth_type = {}",

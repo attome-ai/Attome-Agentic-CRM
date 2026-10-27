@@ -109,6 +109,15 @@
   } @else {
     <div class="mapping-draft">
       <p>{{ 'modelMapping.draftIntro' | translate }}</p>
+      <div class="describe-row">
+        <label class="block-label">
+          <span>{{ 'modelMapping.system' | translate }}</span>
+          <input type="text" [value]="system()" (input)="onSystem($event)" data-testid="source-system" />
+        </label>
+        <button type="button" class="btn-secondary" data-testid="mapping-describe" [disabled]="!system().trim() || busy()" (click)="describe()">
+          {{ 'modelMapping.describe' | translate }}
+        </button>
+      </div>
       <label class="block-label">
         <span>{{ 'modelMapping.sourceFile' | translate }}</span>
         <input type="file" accept="application/json,.json" (change)="onSourceFile($event)" />
