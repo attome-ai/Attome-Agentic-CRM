@@ -456,6 +456,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
         name: "attome-service-router",
         json: include_str!("../../../../../changesets/platform/0078-attome-service-router.json"),
     },
+    PlatformChangeset {
+        file: "0079-attome-omnichannel-social-profile.json",
+        name: "attome-omnichannel-social-profile",
+        json: include_str!(
+            "../../../../../changesets/platform/0079-attome-omnichannel-social-profile.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

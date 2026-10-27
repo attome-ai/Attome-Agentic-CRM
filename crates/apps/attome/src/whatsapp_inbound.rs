@@ -166,8 +166,8 @@ async fn party_of(
 }
 
 /// J10-T1: a waiting chat queue item for the record in the system's queue,
-/// unless one is open there.
-async fn route(
+/// unless one is open there. Also J8-T2's social conversations.
+pub(crate) async fn route(
     state: &EngineState,
     ctx: &SecurityContext,
     principal: Uuid,

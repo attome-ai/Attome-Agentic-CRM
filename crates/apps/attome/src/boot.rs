@@ -1218,6 +1218,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-project-queue-alerts",
         // J10-T1: channels, SLA due, overflow and agent capacity per channel.
         "attome-service-router",
+        // J8-T2: social profiles, linked to the records they belong to.
+        "attome-omnichannel-social-profile",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

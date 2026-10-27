@@ -45,6 +45,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Social conversations reach the person (J8-T2): a Messenger or Instagram direct message is written
+  on the sender's new `social_profile` record (channel, handle, name; created on their first
+  message), or on the record an agent linked the profile to (its `party_entity`/`party_id`, e.g. a
+  contact), so it is on that record's timeline; with a `queue_id` on the Meta system it is routed
+  by the unified router. Comments and reviews stay on the system's record (platform changeset 0079).
 - WhatsApp conversations (J5-T2): the WhatsApp Cloud API posts to `/api/v1/whatsapp/{key}` (the
   WhatsApp system's `inbound_key`; `GET` answers the subscription check, each `POST` is checked
   against the app secret). Each message is an inbound `whatsapp` communication on the sender's

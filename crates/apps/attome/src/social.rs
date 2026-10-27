@@ -15,6 +15,15 @@
 //!
 //! The public routes are licensed with the omnichannel module and answer an
 //! unknown key, an unlicensed deployment and a bad signature alike.
+//!
+//! J8-T2: a direct message (Messenger or Instagram) is from a person, so it
+//! is written on that person's record: the `social_profile` of its channel
+//! and address (platform changeset 0079), created on the first message with
+//! the author's name, or the record the profile is linked to (its
+//! `party_entity`/`party_id` pair, set by an agent, e.g. a contact). With a
+//! `queue_id` in the system's config the conversation is then routed by the
+//! unified router (J10-T1), as for WhatsApp. Comments and reviews stay on
+//! the system's record.
 
 use std::collections::HashMap;
 
@@ -65,7 +74,67 @@ async fn thread_of(
     .map_err(AppError::internal)
 }
 
-/// Writes what arrived on `system` as an inbound communication on its record.
+/// The address of a message from one person (a direct message), which a
+/// social profile is kept for. Pure.
+pub fn profile_handle(address: &str) -> Option<&str> {
+    (address.starts_with("fb_dm:") || address.starts_with("ig_dm:")).then_some(address)
+}
+
+/// The record a direct message goes on: the profile's linked record, else
+/// the profile, created on the first message. `None` without profiles.
+async fn profile_party(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    principal: Uuid,
+    message: &SocialMessage,
+    handle: &str,
+) -> Result<Option<(String, Uuid)>, AppError> {
+    let provisioned: bool = sqlx::query_scalar("SELECT to_regclass('social_profile') IS NOT NULL")
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    if !provisioned {
+        return Ok(None);
+    }
+    let found: Option<(Uuid, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT id, party_entity, party_id FROM social_profile \
+          WHERE channel = $1 AND handle = $2 AND is_active IS NOT FALSE \
+          ORDER BY created_at LIMIT 1",
+    )
+    .bind(message.channel)
+    .bind(handle)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if let Some((id, entity, party)) = found {
+        if let (Some(entity), Some(party)) = (
+            entity.filter(|e| !e.is_empty()),
+            party
+                .as_deref()
+                .and_then(|p| Uuid::parse_str(p.trim()).ok()),
+        ) {
+            return Ok(Some((entity, party)));
+        }
+        return Ok(Some(("social_profile".to_owned(), id)));
+    }
+    let name = message
+        .author
+        .clone()
+        .filter(|a| !a.trim().is_empty())
+        .unwrap_or_else(|| handle.to_owned());
+    let (id, _) = attome_records::entity_crud::create_record_for(
+        state,
+        ctx,
+        principal,
+        "social_profile",
+        serde_json::json!({ "channel": message.channel, "handle": handle, "display_name": name }),
+    )
+    .await?;
+    Ok(Some(("social_profile".to_owned(), id)))
+}
+
+/// Writes what arrived on `system` as an inbound communication: a direct
+/// message on its sender's record (J8-T2), anything else on the system's.
 async fn record_inbound(
     state: &EngineState,
     system: &IntegrationSystem,
@@ -74,6 +143,19 @@ async fn record_inbound(
     let principal = attome_integration::system::service_principal_id(system)?;
     let ctx = state.base.security.resolve(principal).await?;
     ctx.require("communication", "create")?;
+    let party = match profile_handle(&message.address) {
+        Some(handle) => match profile_party(state, &ctx, principal, message, handle).await {
+            Ok(party) => party,
+            Err(error) => {
+                tracing::warn!(system = %system.id, %error, "social: the sender's profile was not found or created");
+                None
+            }
+        },
+        None => None,
+    };
+    let (entity, record) = party
+        .clone()
+        .unwrap_or_else(|| ("integration_system".to_owned(), system.id));
     let thread = thread_of(state, message.channel, &message.address).await?;
     let body = match &message.author {
         Some(author) => format!("{author}: {}", message.text),
@@ -83,8 +165,8 @@ async fn record_inbound(
         state,
         &ctx,
         principal,
-        "integration_system",
-        system.id,
+        &entity,
+        record,
         message.channel,
         "inbound",
         std::slice::from_ref(&message.address),
@@ -97,6 +179,12 @@ async fn record_inbound(
         None,
     )
     .await?;
+    if party.is_some()
+        && let Err(error) =
+            crate::whatsapp_inbound::route(state, &ctx, principal, system, (&entity, record)).await
+    {
+        tracing::warn!(system = %system.id, %error, "social: the conversation was not routed");
+    }
     Ok(())
 }
 
@@ -395,4 +483,17 @@ struct ApiDocFragment;
 
 pub fn openapi() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn social_meta_direct_messages_keep_a_profile() {
+        assert_eq!(profile_handle("fb_dm:123"), Some("fb_dm:123"));
+        assert_eq!(profile_handle("ig_dm:abc"), Some("ig_dm:abc"));
+        assert_eq!(profile_handle("fb_comment:9"), None);
+        assert_eq!(profile_handle("gbp_review:accounts/1"), None);
+    }
 }
