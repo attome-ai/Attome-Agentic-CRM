@@ -12,6 +12,8 @@ pub mod escalation;
 pub mod graph;
 pub mod instance_admin;
 pub mod instance_control;
+/// D4-T1: lead assignment rule sets.
+pub mod lead_assignment;
 /// L5-T2: a flow's lineage edges.
 pub mod lineage_source;
 /// S14-T1: the `map` node's transform.

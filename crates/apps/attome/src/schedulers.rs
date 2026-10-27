@@ -218,6 +218,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_fulfilment_split_scheduler(db.clone(), std::time::Duration::from_secs(30));
     // F6-T13: shipped and delivered shipments asked for billing, every minute.
     crate::jobs::spawn_fulfilment_billing_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // D4-T1: new leads assigned by the rule set, every 30 seconds.
+    crate::jobs::spawn_lead_assignment_scheduler(db.clone(), std::time::Duration::from_secs(30));
     // O1-T2: weekly feature drift of active prediction models.
     crate::jobs::spawn_predict_drift_scheduler(
         db.clone(),

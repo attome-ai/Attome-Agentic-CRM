@@ -3101,6 +3101,8 @@ const DEDUP_KEY_CONTENT_SITEMAP: &str = "content-sitemap";
 const DEDUP_KEY_FULFILMENT_SPLIT: &str = "fulfilment-split";
 /// F6-T13: shipments billed on shipment or delivery (a registered job type).
 const DEDUP_KEY_FULFILMENT_BILLING: &str = "fulfilment-billing";
+/// D4-T1: new leads assigned by the rule set (a registered job type).
+const DEDUP_KEY_LEAD_ASSIGNMENT: &str = "lead-assignment";
 /// F6-T14: late and stuck fulfilment orders (a registered job type).
 const DEDUP_KEY_FULFILMENT_EXCEPTIONS: &str = "fulfilment-exceptions";
 /// F6-T10: the carrier tracking poll (a registered job type).
@@ -3453,6 +3455,10 @@ pub const FULFILMENT_SPLIT: attome_jobs::JobType =
 /// F6-T13: shipped and delivered shipments asked for billing.
 pub const FULFILMENT_BILLING: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::billing_trigger::JOB, 1);
+
+/// D4-T1: new leads given an owner by the lead assignment rule set.
+pub const LEAD_ASSIGNMENT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_workflow::lead_assignment::JOB, 1);
 
 /// O1-T2: active prediction models checked for feature drift.
 pub const PREDICT_DRIFT: attome_jobs::JobType =
@@ -4580,6 +4586,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            LEAD_ASSIGNMENT,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let assigned = attome_workflow::lead_assignment::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if assigned > 0 {
+                    tracing::info!(assigned, "new leads assigned");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CONTENT_SITEMAP,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let counts = attome_content::seo::sitemap::regenerate_all(&state.base.db)
@@ -5486,6 +5506,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == FULFILMENT_BILLING.name => {
             DEDUP_KEY_FULFILMENT_BILLING
         }
+        EngineJob::Registered(job) if job.name == LEAD_ASSIGNMENT.name => DEDUP_KEY_LEAD_ASSIGNMENT,
         EngineJob::Registered(job) if job.name == FULFILMENT_EXCEPTIONS.name => {
             DEDUP_KEY_FULFILMENT_EXCEPTIONS
         }
@@ -6725,6 +6746,21 @@ pub fn spawn_fulfilment_billing_scheduler(db: DbPool, interval: std::time::Durat
             "fulfilment billing",
         ),
         Err(error) => tracing::error!(%error, "fulfilment billing: not scheduled"),
+    }
+}
+
+/// D4-T1: every 30 seconds, new leads assigned by the rule set.
+pub fn spawn_lead_assignment_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(LEAD_ASSIGNMENT.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_LEAD_ASSIGNMENT,
+            "lead assignment",
+        ),
+        Err(error) => tracing::error!(%error, "lead assignment: not scheduled"),
     }
 }
 

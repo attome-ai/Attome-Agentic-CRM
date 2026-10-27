@@ -2617,6 +2617,7 @@ dependencies = [
  "attome-notification",
  "attome-records",
  "attome-rules",
+ "attome-sales",
  "attome-security",
  "attome-server",
  "attome-storage",

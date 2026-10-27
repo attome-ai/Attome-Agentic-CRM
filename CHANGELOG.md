@@ -32,6 +32,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Lead assignment rules (D4-T1, crm pack `0006`, `attome_workflow::lead_assignment`): a new lead from
+  any path goes to the owner of an earlier lead with its email or phone, else the owner of the account
+  with its email domain, else the first enabled `lead_assignment_rule` (in order) whose condition holds
+  and whose strategy (round robin, least loaded, skills, territory) finds someone in its team or role
+  under the daily cap. The lead keeps `assignment_reason` and `assignment_rule_ref`; the
+  `lead_assignment` job runs every 30 seconds off the change feed.
 - Team and Splits tabs on the opportunity (D7-T7, `@attome/xrm/sales`): the team with role and access,
   add a person, remove one and copy the account team (flag `sales.deal_teams`); credit splits per
   member and type with a live total per type, a revenue type held to 100%, a reason and approval on a
