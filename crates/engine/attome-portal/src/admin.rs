@@ -11,7 +11,7 @@
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx, x_audit};
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -54,7 +54,7 @@ fn event(
 )]
 async fn create_portal(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Json(body): Json<NewPortal>,
 ) -> Result<(StatusCode, Json<PortalDetail>), AppError> {
     let mut tx = SecurityTx::begin(
@@ -121,7 +121,7 @@ async fn require_portal(conn: &mut sqlx::PgConnection, id: Uuid) -> Result<(), A
 )]
 async fn get_auth_policy(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<AuthPolicy>, AppError> {
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
@@ -154,7 +154,7 @@ async fn get_auth_policy(
 )]
 async fn put_auth_policy(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(id): Path<Uuid>,
     Json(body): Json<AuthPolicy>,
 ) -> Result<Json<AuthPolicy>, AppError> {
@@ -203,7 +203,7 @@ async fn put_auth_policy(
 )]
 async fn update_portal_settings(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path(id): Path<Uuid>,
     Json(body): Json<PortalSettingsPatch>,
 ) -> Result<Json<PortalDetail>, AppError> {
@@ -244,7 +244,7 @@ async fn update_portal_settings(
 )]
 async fn create_user(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path(id): Path<Uuid>,
     Json(body): Json<NewPortalUser>,
 ) -> Result<(StatusCode, Json<PortalUserDetail>), AppError> {
@@ -315,7 +315,7 @@ async fn set_enabled(
 )]
 async fn disable_user(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path((id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<PortalUserDetail>, AppError> {
     set_enabled(&state, ctx.user_id, id, user_id, false).await
@@ -341,7 +341,7 @@ async fn disable_user(
 )]
 async fn enable_user(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path((id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<PortalUserDetail>, AppError> {
     set_enabled(&state, ctx.user_id, id, user_id, true).await
@@ -367,7 +367,7 @@ async fn enable_user(
 )]
 async fn delete_user(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path((id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(
@@ -421,7 +421,7 @@ impl std::fmt::Debug for InvitationSent {
 )]
 async fn invite_user(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path((id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<(StatusCode, Json<InvitationSent>), AppError> {
     if !state.base.config.email.enabled {
@@ -566,7 +566,7 @@ impl std::fmt::Debug for EntityConfig {
 )]
 async fn create_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path(id): Path<Uuid>,
     Json(body): Json<NewRole>,
 ) -> Result<(StatusCode, Json<crate::roles::RoleDetail>), AppError> {
@@ -611,7 +611,7 @@ async fn create_role(
 )]
 async fn put_grant(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((id, role_id, entity)): Path<(Uuid, Uuid, String)>,
     Json(body): Json<crate::roles::GrantSpec>,
 ) -> Result<StatusCode, AppError> {
@@ -668,7 +668,7 @@ async fn put_grant(
 )]
 async fn delete_grant(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((id, role_id, entity)): Path<(Uuid, Uuid, String)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(
@@ -710,7 +710,7 @@ async fn delete_grant(
 )]
 async fn assign_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((id, user_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<RoleAssignment>,
 ) -> Result<StatusCode, AppError> {
@@ -753,7 +753,7 @@ async fn assign_role(
 )]
 async fn put_entity_config(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((id, entity)): Path<(Uuid, String)>,
     Json(body): Json<EntityConfig>,
 ) -> Result<StatusCode, AppError> {
@@ -800,7 +800,7 @@ async fn put_entity_config(
 )]
 async fn list_portals(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<PortalDetail>>, AppError> {
     // D-347/BTY-8: the admin lists use the platform's one-based paging
@@ -836,7 +836,7 @@ async fn list_portals(
 )]
 async fn get_portal(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PortalDetail>, AppError> {
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
@@ -859,7 +859,7 @@ async fn get_portal(
 )]
 async fn list_users(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Path(id): Path<Uuid>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<PortalUserDetail>>, AppError> {
@@ -896,7 +896,7 @@ async fn list_users(
 )]
 async fn list_roles(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<crate::roles::RoleSummary>>, AppError> {
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
@@ -930,7 +930,7 @@ async fn list_roles(
 )]
 async fn get_role(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path((id, role_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<crate::roles::RoleView>, AppError> {
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
@@ -960,7 +960,7 @@ async fn get_role(
 )]
 async fn rename_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((id, role_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<NewRole>,
 ) -> Result<StatusCode, AppError> {
@@ -1003,7 +1003,7 @@ async fn rename_role(
 )]
 async fn delete_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((id, role_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(
@@ -1044,7 +1044,7 @@ async fn delete_role(
 )]
 async fn unassign_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(
@@ -1081,7 +1081,7 @@ async fn unassign_role(
 )]
 async fn list_entity_configs(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<crate::roles::EntityConfigView>>, AppError> {
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
@@ -1112,7 +1112,7 @@ async fn list_entity_configs(
 )]
 async fn list_erasure_requests(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Compliance>>,
     Path(id): Path<Uuid>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<provision::ErasureRequest>>, AppError> {
@@ -1165,7 +1165,7 @@ impl std::fmt::Debug for ErasureDone {
 )]
 async fn erase_user(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path((id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<ErasureDone>, AppError> {
     let mut tx = SecurityTx::begin(
@@ -1212,7 +1212,7 @@ async fn erase_user(
 /// and keeps the request in the DSR list as evidence.
 async fn export_user(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path((id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<attome_compliance::dsr_admin::FulfillExportResult>, AppError> {
     let (field, subject, consent) = {
@@ -1257,7 +1257,7 @@ async fn export_user(
 )]
 async fn reject_erasure_request(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Compliance>>,
     Path((id, request_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(
