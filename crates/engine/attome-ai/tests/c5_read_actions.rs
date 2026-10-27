@@ -105,6 +105,64 @@ async fn search_arguments_are_validated_like_the_route() {
     }
 }
 
+/// A25-T10: the agent gets the facets the route computes for the same
+/// permissions, and a next page by cursor.
+#[tokio::test]
+async fn search_records_returns_facets() {
+    let f = skip_if_no_db!(fixture().await);
+    let ctx = f.agent_ctx("s-4").await;
+    let result = completed(
+        f.dispatch(
+            &ctx,
+            "search.records",
+            json!({"query": "acme corporation", "facets": true}),
+        )
+        .await
+        .expect("dispatch"),
+    );
+    assert!(result["facets"]["entity"].is_array(), "{result}");
+    let direct = attome_search::routes::execute_search_with(
+        &f.state,
+        &ctx.security,
+        "acme corporation",
+        1,
+        10,
+        attome_search::router::Audience::Agent,
+        attome_search::routes::SearchOptions {
+            explain: false,
+            facets: true,
+        },
+    )
+    .await
+    .expect("the route's own search");
+    assert_eq!(
+        result["facets"],
+        serde_json::to_value(&direct.facets).unwrap(),
+        "the same facets the route gives the same permissions"
+    );
+    assert_eq!(
+        result.get("next_cursor").is_some(),
+        result["has_more"] == json!(true),
+        "{result}"
+    );
+
+    let plain = completed(
+        f.dispatch(&ctx, "search.records", json!({"query": "acme corporation"}))
+            .await
+            .expect("dispatch"),
+    );
+    assert!(plain.get("facets").is_none(), "facets only when asked");
+    let err = f
+        .dispatch(
+            &ctx,
+            "search.records",
+            json!({"query": "acme", "page": 2, "cursor": "page:2"}),
+        )
+        .await
+        .expect_err("page and cursor together");
+    assert!(matches!(err, AppError::Validation(_)), "{err:?}");
+}
+
 // ---------------------------------------------------------------------------
 // approval.status
 // ---------------------------------------------------------------------------

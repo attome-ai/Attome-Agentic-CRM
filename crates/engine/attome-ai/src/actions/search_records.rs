@@ -27,6 +27,15 @@
 //! every tool result in `Segment::Untrusted`, and the call taints the turn —
 //! which is why a write proposed after a search is confirmed or approved,
 //! never executed on the model's word alone.
+//!
+//! ## Facets and the next page (A25-T10)
+//!
+//! `facets: true` adds the route's own facets (entity, owner, month
+//! changed, over every result the caller may see), the same counts a person
+//! with the same permissions gets from `GET /api/v1/search?facets=true`. An
+//! MCP agent whose admission narrows the entities it may read gets no facets:
+//! they count hits it is not shown. A result with more pages carries
+//! `next_cursor`, which the next call passes as `cursor`.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -35,7 +44,8 @@ use attome_core::EngineState;
 use attome_modules::MODULE_SEARCH;
 use attome_search::router::Audience;
 use attome_search::routes::{
-    SearchResponse, Total, execute_search, route_name, validate_paging, validate_query,
+    SearchOptions, SearchResponse, Total, execute_search, execute_search_with, route_name,
+    validate_paging, validate_query,
 };
 use attome_types::AppError;
 use serde::Deserialize;
@@ -61,7 +71,16 @@ const SEARCH_RECORDS_SCHEMA: &str = r#"{
       "description": "A name, keyword, identifier or partial text to look for, e.g. a customer name or an invoice number. Not a question to count or total - use query.execute for that."
     },
     "page": { "type": "integer", "minimum": 1, "default": 1 },
-    "page_size": { "type": "integer", "minimum": 1, "maximum": 25, "default": 10 }
+    "page_size": { "type": "integer", "minimum": 1, "maximum": 25, "default": 10 },
+    "facets": {
+      "type": "boolean",
+      "default": false,
+      "description": "Also count every visible result by entity, owner and month changed."
+    },
+    "cursor": {
+      "type": "string",
+      "description": "The next_cursor of a previous result, to read its next page. Use instead of page."
+    }
   },
   "required": ["query"],
   "additionalProperties": false
@@ -96,6 +115,24 @@ struct SearchArgs {
     page: Option<i64>,
     #[serde(default)]
     page_size: Option<i64>,
+    #[serde(default)]
+    facets: bool,
+    #[serde(default)]
+    cursor: Option<String>,
+}
+
+/// The cursor naming a page. Pure.
+pub fn page_cursor(page: i64) -> String {
+    format!("page:{page}")
+}
+
+/// The page a cursor names; `None` for anything else. Pure.
+pub fn parse_cursor(cursor: &str) -> Option<i64> {
+    cursor
+        .trim()
+        .strip_prefix("page:")
+        .and_then(|n| n.parse::<i64>().ok())
+        .filter(|n| *n >= 1)
 }
 
 /// The executor. `pub(crate)` like every C5 executor: `dispatch` is the only
@@ -117,7 +154,17 @@ impl Action for SearchRecords {
             let args: SearchArgs = serde_json::from_value(args.clone()).map_err(|e| {
                 AppError::Validation(format!("invalid search.records arguments: {e}"))
             })?;
-            let page = args.page.unwrap_or(1);
+            let page = match args.cursor.as_deref() {
+                None => args.page.unwrap_or(1),
+                Some(cursor) => {
+                    if args.page.is_some() {
+                        return Err(AppError::Validation("pass page or cursor, not both".into()));
+                    }
+                    parse_cursor(cursor).ok_or_else(|| {
+                        AppError::Validation("cursor is not a next_cursor this tool gave".into())
+                    })?
+                }
+            };
             let page_size = args.page_size.unwrap_or(DEFAULT_PAGE_SIZE);
             if page_size > 25 {
                 return Err(AppError::Validation(
@@ -136,14 +183,36 @@ impl Action for SearchRecords {
             } else {
                 Audience::Human
             };
+            let options = SearchOptions {
+                explain: false,
+                facets: args.facets,
+            };
             let response = match crate::mcp::admission::ReadAdmission::for_caller(state, ctx)? {
-                None => execute_search(state, &ctx.security, &q, page, page_size, audience).await?,
+                None => {
+                    execute_search_with(
+                        state,
+                        &ctx.security,
+                        &q,
+                        page,
+                        page_size,
+                        audience,
+                        options,
+                    )
+                    .await?
+                }
                 Some(admission) => {
                     admitted_search(state, ctx, &admission, &q, page, page_size, audience).await?
                 }
             };
-            let value = serde_json::to_value(&response)
+            let has_more = response.has_more;
+            let mut value = serde_json::to_value(&response)
                 .map_err(|e| AppError::internal(format!("search serialization failed: {e}")))?;
+            if has_more && let Some(object) = value.as_object_mut() {
+                object.insert(
+                    "next_cursor".to_owned(),
+                    Value::String(page_cursor(page.saturating_add(1))),
+                );
+            }
             Ok(ActionResult::plain(value))
         })
     }
@@ -315,6 +384,17 @@ mod tests {
             crate::turn::describe_for_model(&descriptor()),
             descriptor().description
         );
+    }
+
+    #[test]
+    fn a_cursor_names_the_next_page() {
+        assert_eq!(parse_cursor(&page_cursor(3)), Some(3));
+        assert_eq!(parse_cursor("page:0"), None);
+        assert_eq!(parse_cursor("3"), None);
+        let parsed: SearchArgs =
+            serde_json::from_value(serde_json::json!({ "query": "acme", "facets": true }))
+                .expect("facets is an argument");
+        assert!(parsed.facets);
     }
 
     #[test]
