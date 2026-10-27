@@ -1,15 +1,15 @@
 <div class="rx-panel">
   <div class="rx-controls">
     <label class="rx-control">
-      Direction
+      {{ 'relationshipExplorer.direction' | translate }}
       <select [(ngModel)]="direction" (ngModelChange)="explore()">
-        <option value="both">Both</option>
-        <option value="outbound">Outbound</option>
-        <option value="inbound">Inbound</option>
+        <option value="both">{{ 'relationshipExplorer.both' | translate }}</option>
+        <option value="outbound">{{ 'relationshipExplorer.outbound' | translate }}</option>
+        <option value="inbound">{{ 'relationshipExplorer.inbound' | translate }}</option>
       </select>
     </label>
     <label class="rx-control">
-      Depth
+      {{ 'relationshipExplorer.depth' | translate }}
       <select [(ngModel)]="maxDepth" (ngModelChange)="explore()">
         <option [value]="1">1</option>
         <option [value]="2">2</option>
@@ -19,14 +19,14 @@
     </label>
     <button type="button" class="rx-refresh" [disabled]="loading()" (click)="explore()">
       <i class="las la-sync" [class.rx-spin]="loading()"></i>
-      Refresh
+      {{ 'relationshipExplorer.refresh' | translate }}
     </button>
   </div>
 
   @if (loading()) {
     <div class="rx-loading">
       <i class="las la-circle-notch rx-spin"></i>
-      Exploring relationships…
+      {{ 'relationshipExplorer.loading' | translate }}
     </div>
   } @else if (errorMessage()) {
     <div class="rx-error">
@@ -34,15 +34,35 @@
       {{ errorMessage() }}
     </div>
   } @else if (edges().length === 0) {
-    <p class="rx-hint">No connected records found within the current depth and direction.</p>
+    <p class="rx-hint">{{ 'relationshipExplorer.none' | translate }}</p>
   } @else {
     @if (truncated()) {
       <div class="rx-truncated" role="status">
         <i class="las la-exclamation-triangle"></i>
-        This graph was truncated by a bound (depth, fan-out, or the overall node cap) — narrow the direction or depth to see a more complete picture.
+        {{ 'relationshipExplorer.truncated' | translate }}
       </div>
     }
-    <p class="rx-summary">{{ nodeCount() }} connected record(s), {{ edges().length }} relationship(s)</p>
+    <p class="rx-summary">
+      {{ 'relationshipExplorer.summary' | translate: { nodes: nodeCount(), edges: edges().length } }}
+    </p>
+
+    <!-- A7-T5: the record and what it links to directly, drawn live. -->
+    <svg class="rx-diagram" data-testid="rx-diagram" [attr.viewBox]="'0 0 ' + size + ' ' + size" role="img"
+         [attr.aria-label]="'relationshipExplorer.diagram' | translate">
+      @for (n of ring(); track n.key) {
+        <line class="rx-line" [attr.x1]="center" [attr.y1]="center" [attr.x2]="n.x" [attr.y2]="n.y" />
+        <text class="rx-line-label" [attr.x]="(center + n.x) / 2" [attr.y]="(center + n.y) / 2">{{ n.label }}</text>
+      }
+      <circle class="rx-node rx-node-self" [attr.cx]="center" [attr.cy]="center" r="30" />
+      <text class="rx-node-text" [attr.x]="center" [attr.y]="center">{{ entityName() }}</text>
+      @for (n of ring(); track n.key) {
+        <g class="rx-node-link" tabindex="0" role="link" (click)="openNode(n.node)" (keydown.enter)="openNode(n.node)">
+          <circle class="rx-node" [attr.cx]="n.x" [attr.cy]="n.y" r="24" />
+          <text class="rx-node-text" [attr.x]="n.x" [attr.y]="n.y">{{ n.node.entity }}</text>
+        </g>
+      }
+    </svg>
+
     <ul class="rx-edge-list">
       @for (edge of edges(); track edge.key) {
         <li class="rx-edge-item">
@@ -57,4 +77,44 @@
       }
     </ul>
   }
+
+  <!-- A7-T5: how this record is connected to another one. -->
+  <section class="rx-paths" data-testid="rx-paths">
+    <h4>{{ 'relationshipExplorer.pathsTitle' | translate }}</h4>
+    <div class="rx-controls">
+      <label class="rx-control">
+        {{ 'relationshipExplorer.targetEntity' | translate }}
+        <input type="text" [value]="targetEntity()" (input)="targetEntity.set(value($event))" data-testid="rx-target-entity" />
+      </label>
+      <label class="rx-control">
+        {{ 'relationshipExplorer.targetId' | translate }}
+        <input type="text" [value]="targetId()" (input)="targetId.set(value($event))" data-testid="rx-target-id" />
+      </label>
+      <button type="button" class="rx-refresh" [disabled]="!targetEntity().trim() || !targetId().trim() || pathsLoading()"
+              (click)="findPaths()" data-testid="rx-find-paths">
+        {{ 'relationshipExplorer.findPaths' | translate }}
+      </button>
+    </div>
+    @if (paths(); as found) {
+      @if (found.paths.length === 0) {
+        <p class="rx-hint">{{ 'relationshipExplorer.noPath' | translate }}</p>
+      } @else {
+        <ol class="rx-path-list">
+          @for (path of found.paths; track $index) {
+            <li class="rx-path" data-testid="rx-path">
+              @for (step of pathSteps(path); track $index) {
+                <span class="rx-path-node">{{ step.entity }}</span>
+                @if (step.via) {
+                  <span class="rx-path-via">{{ step.via }}</span>
+                }
+              }
+            </li>
+          }
+        </ol>
+      }
+      @if (found.truncated) {
+        <p class="rx-hint">{{ 'relationshipExplorer.pathsTruncated' | translate }}</p>
+      }
+    }
+  </section>
 </div>

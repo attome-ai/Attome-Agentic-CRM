@@ -138,3 +138,31 @@
   color: var(--xrm-text-secondary, #94a3b8);
   font-family: var(--xrm-mono-font, monospace);
 }
+
+.rx-diagram { display: block; inline-size: 100%; max-inline-size: 360px; margin-block: 0.75rem; }
+
+.rx-line { stroke: var(--color-border); stroke-width: 1.5; }
+
+.rx-line-label { fill: var(--color-text-secondary); font-size: 9px; text-anchor: middle; }
+
+.rx-node { fill: var(--color-bg-alt); stroke: var(--color-accent); stroke-width: 1.5; }
+
+.rx-node-self { fill: var(--color-accent); }
+
+.rx-node-text { fill: var(--color-text-primary); font-size: 9px; text-anchor: middle; dominant-baseline: middle; }
+
+.rx-node-link { cursor: pointer; }
+
+.rx-paths { margin-block-start: 1rem; }
+
+.rx-path-list { padding-inline-start: 1.25rem; display: grid; gap: 0.25rem; }
+
+.rx-path { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+
+.rx-path-node { font-weight: 600; }
+
+.rx-path-via { color: var(--color-text-secondary); font-size: 0.85rem; }
+
+.rx-path-via::before { content: '— '; }
+
+.rx-path-via::after { content: ' →'; }

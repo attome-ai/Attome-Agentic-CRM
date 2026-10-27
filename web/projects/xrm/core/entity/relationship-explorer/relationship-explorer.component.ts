@@ -4,7 +4,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiService } from '@attome/base';
+import { ApiService, LangService, TranslatePipe } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 import { entityFormRoute } from '../services/entity-url.utils';
 
@@ -28,6 +28,47 @@ interface DisplayEdge extends GraphEdge {
   key: string;
 }
 
+/** A7-T5: `POST /api/v1/graph/paths`'s answer. */
+export interface PathsResponse {
+  paths: GraphEdge[][];
+  truncated: boolean;
+}
+
+/** One node of the diagram's ring around the record. */
+export interface RingNode {
+  key: string;
+  node: { entity: string; id: string };
+  label: string;
+  x: number;
+  y: number;
+}
+
+/** `n` points evenly round a circle of `radius` at (`cx`, `cy`), the first at the top. Pure. */
+export function ringLayout(n: number, radius: number, cx: number, cy: number): { x: number; y: number }[] {
+  return Array.from({ length: n }, (_, i) => {
+    const angle = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(n, 1);
+    return { x: Math.round(cx + radius * Math.cos(angle)), y: Math.round(cy + radius * Math.sin(angle)) };
+  });
+}
+
+/** A path as the entities it passes and the field it crosses each time, from `start`. Pure. */
+export function pathSteps(path: GraphEdge[], start: { entity: string; id: string }): { entity: string; via: string | null }[] {
+  const steps: { entity: string; via: string | null }[] = [{ entity: start.entity, via: null }];
+  let here = start;
+  for (const e of path) {
+    const forward = e.from_entity === here.entity && e.from_id === here.id;
+    const next = forward ? { entity: e.to_entity, id: e.to_id } : { entity: e.from_entity, id: e.from_id };
+    const field = e.edge_type.includes(':') ? e.edge_type.slice(e.edge_type.indexOf(':') + 1) : e.edge_type;
+    steps[steps.length - 1].via = field;
+    steps.push({ entity: next.entity, via: null });
+    here = next;
+  }
+  return steps;
+}
+
+/** The most records the diagram's ring shows. */
+export const RING_MAX = 12;
+
 /**
  * The relationship explorer panel (M38 Phase 1's Angular checklist item) —
  * an entity-form tab that calls the traversal endpoint and lists what it
@@ -44,7 +85,7 @@ interface DisplayEdge extends GraphEdge {
   selector: 'xrm-relationship-explorer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   styleUrls: ['./relationship-explorer.component.css'],
   templateUrl: './relationship-explorer.component.html',
 })
@@ -54,6 +95,16 @@ export class RelationshipExplorerComponent {
 
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private readonly lang = inject(LangService);
+
+  /** A7-T5: the diagram's square size and centre. */
+  readonly size = 360;
+  readonly center = 180;
+  /** A7-T5: the other record of the path search. */
+  readonly targetEntity = signal('');
+  readonly targetId = signal('');
+  readonly paths = signal<PathsResponse | null>(null);
+  readonly pathsLoading = signal(false);
 
   readonly direction = signal<GraphDirection>('both');
   readonly maxDepth = signal(2);
@@ -70,6 +121,22 @@ export class RelationshipExplorerComponent {
     const res = this.response();
     if (!res) return [];
     return res.edges.map((e, i) => ({ ...e, key: `${e.edge_type}:${e.from_id}:${e.to_id}:${i}` }));
+  });
+
+  /** A7-T5: the records the record links to directly, round it. */
+  readonly ring = computed<RingNode[]>(() => {
+    const seen = new Map<string, { node: { entity: string; id: string }; label: string }>();
+    for (const e of this.edges()) {
+      const touches = (e.from_entity === this.entityName() && e.from_id === this.recordId())
+        || (e.to_entity === this.entityName() && e.to_id === this.recordId());
+      if (!touches) continue;
+      const node = this.otherNode(e);
+      const key = `${node.entity}:${node.id}`;
+      if (!seen.has(key)) seen.set(key, { node, label: this.edgeFieldLabel(e.edge_type) });
+    }
+    const list = [...seen.entries()].slice(0, RING_MAX);
+    const points = ringLayout(list.length, 130, this.center, this.center);
+    return list.map(([key, v], i) => ({ key, node: v.node, label: v.label, x: points[i].x, y: points[i].y }));
   });
 
   constructor() {
@@ -105,7 +172,7 @@ export class RelationshipExplorerComponent {
       error: (err) => {
         this.response.set(null);
         this.loading.set(false);
-        this.errorMessage.set(err?.message || 'Failed to load relationships.');
+        this.errorMessage.set(err?.message || this.lang.translate('relationshipExplorer.failed'));
       },
     });
   }
@@ -133,6 +200,36 @@ export class RelationshipExplorerComponent {
   edgeFieldLabel(edgeType: string): string {
     const i = edgeType.indexOf(':');
     return i === -1 ? edgeType : edgeType.slice(i + 1);
+  }
+
+  value(event: Event): string {
+    return (event.target as HTMLInputElement).value;
+  }
+
+  /** A7-T5: how this record connects to the target record. */
+  findPaths(): void {
+    const entity = this.targetEntity().trim();
+    const id = this.targetId().trim();
+    if (!entity || !id) return;
+    this.pathsLoading.set(true);
+    this.api.post<PathsResponse>('/api/v1/graph/paths', {
+      from: { entity: this.entityName(), id: this.recordId() },
+      to: { entity, id },
+    }).subscribe({
+      next: (res) => {
+        this.paths.set(res);
+        this.pathsLoading.set(false);
+      },
+      error: (err) => {
+        this.paths.set(null);
+        this.pathsLoading.set(false);
+        this.errorMessage.set(err?.message || this.lang.translate('relationshipExplorer.failed'));
+      },
+    });
+  }
+
+  pathSteps(path: GraphEdge[]): { entity: string; via: string | null }[] {
+    return pathSteps(path, { entity: this.entityName(), id: this.recordId() });
   }
 
   edgeSourceLabel(edgeType: string): string {

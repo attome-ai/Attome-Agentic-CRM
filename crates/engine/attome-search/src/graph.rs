@@ -166,7 +166,7 @@ pub struct GraphNode {
     pub depth: i32,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
 pub struct GraphEdge {
     pub from_entity: String,
     pub from_id: Uuid,
@@ -854,14 +854,166 @@ async fn traverse_route(
     Ok(Json(outcome.into_response(req.limit)))
 }
 
+// ── A7-T5: how two records are connected ─────────────────────────────────
+
+/// The longest path the path search follows.
+pub const MAX_PATH_HOPS: u32 = 3;
+/// Paths one search answers.
+pub const MAX_PATHS: usize = 10;
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct PathsRequest {
+    pub from: NodeRefInput,
+    pub to: NodeRefInput,
+    /// At most 3 (the default).
+    #[serde(default = "default_path_hops")]
+    pub max_hops: u32,
+    #[serde(default)]
+    pub edge_types: Option<Vec<String>>,
+}
+
+fn default_path_hops() -> u32 {
+    MAX_PATH_HOPS
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PathsResponse {
+    /// The shortest connections first, each the edges from `from` to `to`
+    /// in walking order (an edge may be walked against its direction).
+    pub paths: Vec<Vec<GraphEdge>>,
+    /// The walk from `from` hit a bound; a longer or wider connection may
+    /// exist.
+    pub truncated: bool,
+}
+
+/// The simple paths of at most `max_hops` edges from `from` to `to` over
+/// `edges` (followed either way), shortest first, at most `max_paths`. Pure.
+pub fn paths_between(
+    edges: &[GraphEdge],
+    from: (&str, Uuid),
+    to: (&str, Uuid),
+    max_hops: usize,
+    max_paths: usize,
+) -> Vec<Vec<GraphEdge>> {
+    let mut adjacent: HashMap<(String, Uuid), Vec<(usize, (String, Uuid))>> = HashMap::new();
+    for (i, e) in edges.iter().enumerate() {
+        let a = (e.from_entity.clone(), e.from_id);
+        let b = (e.to_entity.clone(), e.to_id);
+        adjacent.entry(a.clone()).or_default().push((i, b.clone()));
+        adjacent.entry(b).or_default().push((i, a));
+    }
+    let start = (from.0.to_owned(), from.1);
+    let goal = (to.0.to_owned(), to.1);
+    let mut found = Vec::new();
+    // Breadth-first over partial paths, so shorter paths come first.
+    let mut queue: std::collections::VecDeque<(Vec<usize>, Vec<(String, Uuid)>)> =
+        std::collections::VecDeque::from([(Vec::new(), vec![start])]);
+    while let Some((path, visited)) = queue.pop_front() {
+        if found.len() >= max_paths {
+            break;
+        }
+        let Some(here) = visited.last() else { continue };
+        if *here == goal && !path.is_empty() {
+            found.push(path.iter().map(|&i| edges[i].clone()).collect());
+            continue;
+        }
+        if path.len() >= max_hops {
+            continue;
+        }
+        for (edge, next) in adjacent.get(here).into_iter().flatten() {
+            if visited.contains(next) {
+                continue;
+            }
+            let mut p = path.clone();
+            p.push(*edge);
+            let mut v = visited.clone();
+            v.push(next.clone());
+            queue.push_back((p, v));
+        }
+    }
+    found
+}
+
+/// How `from` and `to` are connected, over what the caller can see: the
+/// permission-per-hop walk from `from` ([`traverse`]), then the shortest
+/// paths to `to` among its edges. A record the caller cannot see is never a
+/// hop, so no path reveals one.
+pub async fn paths(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    req: &PathsRequest,
+) -> Result<PathsResponse, AppError> {
+    if req.max_hops < 1 || req.max_hops > MAX_PATH_HOPS {
+        return Err(AppError::Validation(format!(
+            "max_hops must be between 1 and {MAX_PATH_HOPS}"
+        )));
+    }
+    let walk = traverse(
+        state,
+        ctx,
+        &TraverseRequest {
+            start: req.from.clone(),
+            edge_types: req.edge_types.clone(),
+            direction: Direction::Both,
+            max_depth: req.max_hops,
+            limit: MAX_TOTAL_NODES,
+        },
+    )
+    .await?;
+    let paths = paths_between(
+        &walk.edges,
+        (&req.from.entity, req.from.id),
+        (&req.to.entity, req.to.id),
+        req.max_hops as usize,
+        MAX_PATHS,
+    );
+    Ok(PathsResponse {
+        paths,
+        truncated: walk.truncated,
+    })
+}
+
+/// How two records are connected
+///
+/// A7-T5: the shortest connections (at most 3 hops, 10 paths) between two
+/// records, over lookups, hierarchies and record relationships the caller
+/// can see at every hop.
+#[utoipa::path(
+    post,
+    path = "/api/v1/graph/paths",
+    tag = "graph",
+    request_body = PathsRequest,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::ReadOnly,
+        None,
+        "a bounded, permission-filtered path search; persists nothing",
+    )))),
+    responses(
+        (status = 200, description = "The connections found", body = PathsResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "The start record does not exist or is not visible", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn paths_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Json(req): Json<PathsRequest>,
+) -> Result<Json<PathsResponse>, AppError> {
+    Ok(Json(paths(&state, &ctx, &req).await?))
+}
+
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/graph/traverse", post(traverse_route))
+    Router::new()
+        .route("/api/v1/graph/traverse", post(traverse_route))
+        .route("/api/v1/graph/paths", post(paths_route))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document, merged in by `engine::openapi`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(traverse_route))]
+#[openapi(paths(traverse_route, paths_route))]
 #[derive(Debug)]
 pub struct ApiDocFragment;
 
@@ -1013,5 +1165,61 @@ mod tests {
         assert!(edge_allowed("lookup:owner_id", Some(&filter)));
         assert!(!edge_allowed("lookup:parent_account_id", Some(&filter)));
         assert!(edge_allowed("lookup:owner_id", None));
+    }
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    fn edge(a: (&str, u128), b: (&str, u128), t: &str) -> GraphEdge {
+        GraphEdge {
+            from_entity: a.0.into(),
+            from_id: Uuid::from_u128(a.1),
+            to_entity: b.0.into(),
+            to_id: Uuid::from_u128(b.1),
+            edge_type: t.into(),
+        }
+    }
+
+    #[test]
+    fn paths_are_shortest_first_and_walk_edges_either_way() {
+        // contact 1 -> account 2 <- opportunity 3 ; contact 1 -> case 4 -> opportunity 3
+        let edges = vec![
+            edge(("contact", 1), ("account", 2), "lookup:account_ref"),
+            edge(("opportunity", 3), ("account", 2), "lookup:account_ref"),
+            edge(("case", 4), ("contact", 1), "lookup:contact_ref"),
+            edge(("case", 4), ("opportunity", 3), "lookup:opportunity_ref"),
+        ];
+        let found = paths_between(
+            &edges,
+            ("contact", Uuid::from_u128(1)),
+            ("opportunity", Uuid::from_u128(3)),
+            3,
+            10,
+        );
+        assert_eq!(found.len(), 2);
+        assert_eq!(found[0].len(), 2);
+        assert_eq!(found[1].len(), 2);
+        assert!(
+            paths_between(
+                &edges,
+                ("contact", Uuid::from_u128(1)),
+                ("opportunity", Uuid::from_u128(3)),
+                1,
+                10
+            )
+            .is_empty()
+        );
+        assert!(
+            paths_between(
+                &edges,
+                ("contact", Uuid::from_u128(1)),
+                ("lead", Uuid::from_u128(9)),
+                3,
+                10
+            )
+            .is_empty()
+        );
     }
 }
