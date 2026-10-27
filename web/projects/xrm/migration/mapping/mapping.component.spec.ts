@@ -64,7 +64,7 @@ describe('model mapping (A24-T3)', () => {
 
   it('shows the mapping as a table, edits it and saves it on its version', () => {
     const save = vi.fn((_id: string, m: ModelMapping) => of(doc(m, 2)));
-    const { cmp, el } = setUp({ get: () => of(doc(fakeMapping(), 1, ['Opportunity.Name: no attribute'])), save });
+    const { cmp, el } = setUp({ get: () => of(doc(fakeMapping(), 1, ['Opportunity.Name: no attribute'])), save, waves: () => of({ items: [] }) });
     expect(el.querySelectorAll('tbody tr').length).toBe(4);
     expect(el.querySelector('[data-testid="mapping-problems"]')?.textContent).toContain('no attribute');
     expect(el.querySelector('.type-mismatch')).not.toBeNull();
@@ -92,7 +92,8 @@ describe('model mapping (A24-T3)', () => {
 
   it('drafts a mapping from a pasted source model when there is none yet', () => {
     const draft = vi.fn(() => of(doc(fakeMapping())));
-    const { cmp, fixture, el } = setUp({ get: () => throwError(() => ({ status: 404, kind: 'not_found', message: '' })), draft });
+    const waves = () => of({ items: [] });
+    const { cmp, fixture, el } = setUp({ get: () => throwError(() => ({ status: 404, kind: 'not_found', message: '' })), draft, waves });
     expect(el.querySelector('[data-testid="mapping-draft"]')).not.toBeNull();
     cmp.sourceText.set('not json');
     cmp.draft();
@@ -116,9 +117,21 @@ describe('model mapping (A24-T3)', () => {
     expect(cmp.busy()).toBe(false);
   });
 
+  it('starts a wave from the connected system and lists it first', () => {
+    const wave = { id: 'w1', system: 'sf', kind: 'full', since: null, status: 'queued', counts: {}, error: null,
+      created_at: '2026-10-27T00:00:00Z', finished_at: null };
+    const startWave = vi.fn(() => of(wave));
+    const { cmp } = setUp({ get: () => of(doc(fakeMapping())), waves: () => of({ items: [] }), startWave });
+    cmp.system.set('sf');
+    cmp.startWave(false);
+    expect(startWave).toHaveBeenCalledWith('p1', 'sf', false);
+    expect(cmp.waves()[0].id).toBe('w1');
+    expect(cmp.waveBusy()).toBe(true);
+  });
+
   it('says so when someone else saved first', () => {
     const save = vi.fn(() => throwError(() => ({ status: 409, kind: 'version_conflict', message: '' })));
-    const { cmp } = setUp({ get: () => of(doc(fakeMapping())), save });
+    const { cmp } = setUp({ get: () => of(doc(fakeMapping())), save, waves: () => of({ items: [] }) });
     cmp.setTarget(0, 1, { target: { value: 'title' } } as unknown as Event);
     cmp.save();
     expect(cmp.error()).toBe('modelMapping.conflict');

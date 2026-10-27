@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, si
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
 
 import {
-  AttributeMapping, CREATE_TYPES, EntityMapping, MapAction, MappingDoc, ModelMapping, ModelMappingService,
+  AttributeMapping, CREATE_TYPES, EntityMapping, MapAction, MappingDoc, MigrationWave, ModelMapping, ModelMappingService,
   counts, merges, withAttribute, withEntity,
 } from './model-mapping';
 
@@ -40,6 +40,21 @@ export class MappingComponent implements OnInit {
   readonly sourceText = signal('');
   /** The integration system to read the source model from. */
   readonly system = signal('');
+  /** A24-T4: the project's waves, newest first. */
+  readonly waves = signal<MigrationWave[]>([]);
+  readonly waveKeys: Readonly<Record<MigrationWave['kind'], string>> = {
+    full: 'modelMapping.wave.full',
+    catch_up: 'modelMapping.wave.catchUp',
+    cut_over: 'modelMapping.wave.cutOver',
+  };
+  readonly waveStatusKeys: Readonly<Record<MigrationWave['status'], string>> = {
+    queued: 'modelMapping.wave.queued',
+    running: 'modelMapping.wave.running',
+    loaded: 'modelMapping.wave.loaded',
+    failed: 'modelMapping.wave.failed',
+  };
+  /** A wave is queued or running: another cannot start. */
+  readonly waveBusy = computed(() => this.waves().some(w => w.status === 'queued' || w.status === 'running'));
 
   readonly actions: readonly MapAction[] = ['map', 'create', 'skip'];
   readonly types = CREATE_TYPES;
@@ -63,6 +78,25 @@ export class MappingComponent implements OnInit {
     });
   }
 
+  /** A24-T4: reloads the waves. */
+  loadWaves(): void {
+    this.service.waves(this.id()).subscribe({ next: page => this.waves.set(page.items), error: () => this.waves.set([]) });
+  }
+
+  /** A24-T4: queues the next wave from the named system. */
+  startWave(cutOver: boolean): void {
+    const system = this.system().trim();
+    if (!system || this.busy() || this.dirty()) return;
+    this.busy.set(true);
+    this.service.startWave(this.id(), system, cutOver).subscribe({
+      next: wave => {
+        this.busy.set(false);
+        this.waves.update(all => [wave, ...all]);
+      },
+      error: (e: ApiError) => this.fail(e),
+    });
+  }
+
   private show(doc: MappingDoc): void {
     this.doc.set(doc);
     this.mapping.set(doc.mapping);
@@ -70,6 +104,7 @@ export class MappingComponent implements OnInit {
     this.loading.set(false);
     this.busy.set(false);
     this.error.set(null);
+    this.loadWaves();
   }
 
   private fail(e: ApiError): void {

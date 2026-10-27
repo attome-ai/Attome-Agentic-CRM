@@ -48,3 +48,11 @@ tr.merged td { background: var(--color-bg-alt); }
 }
 
 .describe-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; }
+
+.mapping-waves { margin-block-end: 1rem; padding-block: 0.5rem; border-block-end: 1px solid var(--color-border); }
+
+.mapping-waves h3 { margin-block: 0 0.5rem; font-size: 1rem; }
+
+.wave-list { list-style: none; padding: 0; margin-block: 0.5rem 0; display: grid; gap: 0.25rem; }
+
+.wave-note { color: var(--color-text-secondary); font-size: 0.85rem; }

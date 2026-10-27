@@ -20,6 +20,38 @@
       </button>
     </div>
 
+    <section class="mapping-waves" data-testid="mapping-waves">
+      <h3>{{ 'modelMapping.wave.title' | translate }}</h3>
+      <div class="describe-row">
+        <label class="block-label">
+          <span>{{ 'modelMapping.system' | translate }}</span>
+          <input type="text" [value]="system()" (input)="onSystem($event)" data-testid="wave-system" />
+        </label>
+        <button type="button" class="btn-primary" data-testid="wave-start"
+                [disabled]="!system().trim() || busy() || dirty() || waveBusy()" (click)="startWave(false)">
+          {{ (waves().length ? 'modelMapping.wave.startCatchUp' : 'modelMapping.wave.startFull') | translate }}
+        </button>
+        <button type="button" class="btn-secondary" data-testid="wave-cut-over"
+                [disabled]="!system().trim() || busy() || dirty() || waveBusy() || !waves().length" (click)="startWave(true)">
+          {{ 'modelMapping.wave.startCutOver' | translate }}
+        </button>
+        <button type="button" class="btn-secondary" (click)="loadWaves()">{{ 'modelMapping.wave.refresh' | translate }}</button>
+      </div>
+      @if (dirty()) { <p class="wave-note">{{ 'modelMapping.wave.saveFirst' | translate }}</p> }
+      @if (waves().length) {
+        <ul class="wave-list">
+          @for (w of waves(); track w.id) {
+            <li [attr.data-wave-status]="w.status">
+              <strong>{{ waveKeys[w.kind] | translate }}</strong>
+              {{ waveStatusKeys[w.status] | translate }}
+              {{ 'modelMapping.wave.counts' | translate: { rows: w.counts.rows ?? 0, imports: w.counts.imports ?? 0, steps: w.counts.metadata_steps ?? 0 } }}
+              @if (w.error) { <span class="mapping-error">{{ w.error }}</span> }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
     @if (doc()?.problems?.length) {
       <ul class="mapping-problems" data-testid="mapping-problems">
         @for (p of doc()?.problems ?? []; track p) { <li>{{ p }}</li> }
