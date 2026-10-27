@@ -18,7 +18,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{
     AppError, DEFAULT_PAGE_SIZE, ErrorResponse, PageBase, PageWindow, PaginatedResponse,
 };
@@ -332,7 +332,7 @@ struct DeliveryListQuery {
 )]
 async fn list_subscriptions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Query(q): Query<SubscriptionListQuery>,
 ) -> Result<Json<PaginatedResponse<SubscriptionListItem>>, AppError> {
     let PageWindow {
@@ -408,7 +408,7 @@ async fn list_subscriptions(
 )]
 async fn create_subscription(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Json(body): Json<CreateSubscriptionBody>,
 ) -> Result<(StatusCode, Json<SubscriptionCreatedResponse>), AppError> {
     let created_by = ctx.user_id;
@@ -552,7 +552,7 @@ async fn create_subscription(
 )]
 async fn get_subscription(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<SubscriptionDetail>, AppError> {
     let detail = fetch_detail(&state.base.db, id)
@@ -579,7 +579,7 @@ async fn get_subscription(
 )]
 async fn update_subscription(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateSubscriptionBody>,
 ) -> Result<Json<SubscriptionDetail>, AppError> {
@@ -744,7 +744,7 @@ async fn update_subscription(
 )]
 async fn rotate_secret(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<SecretRotatedResponse>, AppError> {
     let ring = state.base.secrets.load().webhook_signing_key.clone();
@@ -809,7 +809,7 @@ async fn rotate_secret(
 )]
 async fn delete_subscription(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let mut tx = SecurityTx::begin(
@@ -860,7 +860,7 @@ async fn delete_subscription(
 )]
 async fn list_deliveries(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Query(q): Query<DeliveryListQuery>,
 ) -> Result<Json<PaginatedResponse<DeliveryListItem>>, AppError> {
@@ -998,7 +998,7 @@ struct QueuedDeliveries {
 )]
 async fn send_test(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<QueuedDeliveries>), AppError> {
     let mut tx = SecurityTx::begin(
@@ -1071,7 +1071,7 @@ struct ReplayBody {
 )]
 async fn replay_since(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Json(body): Json<ReplayBody>,
 ) -> Result<(StatusCode, Json<QueuedDeliveries>), AppError> {
