@@ -12,7 +12,7 @@
 
 use attome_core::EngineState;
 use attome_html::tmpl::{Output, RenderContext, Template};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::post};
 use serde::{Deserialize, Serialize};
@@ -86,7 +86,7 @@ fn mentions(source: &str, field: &str) -> bool {
 )]
 pub(crate) async fn preview_template(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Json(body): Json<PreviewRequest>,
 ) -> Result<Json<PreviewResponse>, AppError> {
     let (_, entity_name, attrs, _) =
