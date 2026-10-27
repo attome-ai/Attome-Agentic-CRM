@@ -71,6 +71,8 @@ impl EngineModel for ServiceModel {
             .merge(crate::clock::routes())
             .merge(crate::timeline::routes())
             .merge(crate::queue::routes())
+            // J10-T1: work offers from the unified router.
+            .merge(crate::router::routes())
             // AI7-T5: hand-offs between agents, people and queues.
             .merge(crate::handoff_routes::routes())
             .merge(crate::order::routes())

@@ -1216,6 +1216,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-service-queue-skills",
         // G4-T2: when a queue's backlog alerts its lead.
         "attome-project-queue-alerts",
+        // J10-T1: channels, SLA due, overflow and agent capacity per channel.
+        "attome-service-router",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

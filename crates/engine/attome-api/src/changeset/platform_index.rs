@@ -451,6 +451,11 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0077-attome-project-queue-alerts.json"
         ),
     },
+    PlatformChangeset {
+        file: "0078-attome-service-router.json",
+        name: "attome-service-router",
+        json: include_str!("../../../../../changesets/platform/0078-attome-service-router.json"),
+    },
 ];
 
 #[cfg(test)]

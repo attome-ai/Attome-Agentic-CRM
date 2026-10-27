@@ -45,6 +45,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- The unified router (J10-T1): every 15 seconds it offers each waiting queue item, most urgent first,
+  to the best available agent of its queue (present, holding the needed skills, under their capacity
+  for the item's channel: `agent_channel_capacity`, else 3 chats or 1 call at once; least loaded
+  first). An offer not taken in 30 seconds goes to the next agent, and an item waiting past its
+  queue's `overflow_after_minutes` moves to the `overflow_queue_ref` queue. `POST
+  /api/v1/queue-offers/{id}/accept` and `/decline`, `GET /api/v1/queue-offers/mine`; queue items
+  gain `channel` and `sla_due_at` (migration 0311, platform changeset 0078).
 - My queues (`service/queues`, G4-T3): every open item of the queues in one list, grouped by queue
   and ordered by priority then age, with bulk pick, release and transfer, and starter queue sets for
   IT, customer care and HR, named in the reader's language and skipping queues already there.

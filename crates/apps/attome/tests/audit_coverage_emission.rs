@@ -7321,6 +7321,25 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({ "system": uniq("source-system") })),
             )
         }
+        // J10-T1: a work offer, accepted or declined.
+        "POST /api/v1/queue-offers/{id}/accept" => {
+            let id = queue_offer(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/queue-offers/{id}/accept"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/queue-offers/{id}/decline" => {
+            let id = queue_offer(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/queue-offers/{id}/decline"),
+                t,
+                None,
+            )
+        }
         // G4-T2: moving a queue item.
         "POST /api/v1/queue-items/{id}/pick" => {
             let id = queue_item(fx, "waiting").await;
@@ -8595,7 +8614,12 @@ async fn migration_project(fx: &Fx) -> Uuid {
 /// G4-T2: a queue item in `status` holding the fixture's record (the queue
 /// definitions are boot-time platform changesets the fixture does not apply).
 async fn queue_item(fx: &Fx, status: &str) -> Uuid {
-    for name in ["attome-project-queue", "attome-project-queue-alerts"] {
+    for name in [
+        "attome-project-queue",
+        "attome-project-queue-alerts",
+        "attome-service-queue-skills",
+        "attome-service-router",
+    ] {
         attome_api::changeset::boot::apply_platform_definition(&fx.xrm, name)
             .await
             .expect("the queue definitions apply");
@@ -8630,6 +8654,22 @@ async fn queue_item(fx: &Fx, status: &str) -> Uuid {
         )
         .await,
     )
+}
+
+/// J10-T1: an open offer to the admin of a waiting queue item.
+async fn queue_offer(fx: &Fx) -> Uuid {
+    let item = queue_item(fx, "waiting").await;
+    let offer = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO queue_offer (id, item_id, queue_id, user_id, channel, expires_at)          SELECT $1, i.id, i.queue_ref, $3, 'case', now() + interval '5 minutes'            FROM queue_item i WHERE i.id = $2",
+    )
+    .bind(offer)
+    .bind(item)
+    .bind(fx.admin_id)
+    .execute(&fx.base.db)
+    .await
+    .expect("an open offer");
+    offer
 }
 
 /// Q13-T1, through the whole middleware stack: view-as reads as the person

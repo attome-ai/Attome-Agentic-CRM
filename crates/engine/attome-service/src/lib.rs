@@ -29,6 +29,7 @@ pub mod portal;
 pub mod presence;
 pub mod queue;
 pub mod returns;
+pub mod router;
 pub mod routing;
 pub mod schedule_candidates;
 pub mod schedule_optimise;
@@ -61,6 +62,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(clock::openapi_fragment());
     doc.merge(timeline::openapi_fragment());
     doc.merge(queue::openapi_fragment());
+    doc.merge(router::openapi_fragment());
     doc.merge(presence::openapi_fragment());
     doc.merge(inbox::openapi_fragment());
     doc.merge(status_page::openapi_fragment());

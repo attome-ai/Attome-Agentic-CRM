@@ -25,6 +25,7 @@ import { TaskChecklistItemFormComponent } from './forms/task-checklist-item-form
 import { QueueFormComponent } from './forms/queue-form/queue-form.component';
 import { QueueItemFormComponent } from './forms/queue-item-form/queue-item-form.component';
 import { QueueItemSkillFormComponent } from './forms/queue-item-skill-form/queue-item-skill-form.component';
+import { AgentChannelCapacityFormComponent } from './forms/agent-channel-capacity-form/agent-channel-capacity-form.component';
 
 // 'attome_document'/'note' -> their own dedicated forms. Split into this
 // separate, lighter entry (rather than living directly in `core/entity`
@@ -65,4 +66,6 @@ export function registerCoreEntityForms(registry: EntityRouteRegistry): void {
   registry.register('queue', { formComponent: QueueFormComponent });
   registry.register('queue_item', { formComponent: QueueItemFormComponent });
   registry.register('queue_item_skill', { formComponent: QueueItemSkillFormComponent });
+  // J10-T1: how many items an agent handles at once per channel.
+  registry.register('agent_channel_capacity', { formComponent: AgentChannelCapacityFormComponent });
 }

@@ -143,6 +143,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
       'license', 'profiler_finding', 'record_relationship', 'resource_skill',
       'resource_availability', 'tag_category', 'tag_item', 'reminder', 'activity',
       'scan_action', 'task_checklist_item', 'queue', 'queue_item', 'queue_item_skill',
+      'agent_channel_capacity',
     ]],
     [workflow, ['workflow_definition']],
     [dashboard, ['attome_dashboard', 'dashboard_page']],
