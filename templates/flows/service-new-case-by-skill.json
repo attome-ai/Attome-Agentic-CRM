@@ -1,0 +1,57 @@
+{
+  "description_en": "Give each new case to the team member with the skills it needs.",
+  "description_ar": "يُسند كل حالة جديدة إلى عضو الفريق الذي يملك المهارات المطلوبة.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "case"
+    },
+    {
+      "name": "team",
+      "type": "text",
+      "label_en": "Team id",
+      "label_ar": "معرّف الفريق",
+      "default": "00000000-0000-7000-8000-000000000000"
+    },
+    {
+      "name": "skills",
+      "type": "text",
+      "label_en": "Required skills",
+      "label_ar": "المهارات المطلوبة",
+      "default": "support"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "create",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "assign",
+        "type": "assign",
+        "config": {
+          "entity": "{{entity}}",
+          "strategy": "skills",
+          "team_ref": "{{team}}",
+          "skills": "{{skills}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "assign",
+        "to_port": "record_id"
+      }
+    ]
+  }
+}

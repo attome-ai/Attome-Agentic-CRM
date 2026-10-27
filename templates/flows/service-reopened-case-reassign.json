@@ -1,0 +1,70 @@
+{
+  "description_en": "Give a reopened case to the least loaded team member.",
+  "description_ar": "يُسند الحالة المعاد فتحها إلى عضو الفريق الأقل انشغالًا.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "case"
+    },
+    {
+      "name": "status",
+      "type": "attribute",
+      "label_en": "Status field",
+      "label_ar": "حقل الحالة",
+      "of": "entity",
+      "default": "status"
+    },
+    {
+      "name": "team",
+      "type": "text",
+      "label_en": "Team id",
+      "label_ar": "معرّف الفريق",
+      "default": "00000000-0000-7000-8000-000000000000"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "update",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "reopened",
+        "type": "condition",
+        "config": {
+          "expression": "{{status}} == \"reopened\""
+        }
+      },
+      {
+        "id": "assign",
+        "type": "assign",
+        "config": {
+          "entity": "{{entity}}",
+          "strategy": "least_loaded",
+          "team_ref": "{{team}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "reopened",
+        "to_port": "value"
+      },
+      {
+        "from_node": "reopened",
+        "from_port": "true",
+        "to_node": "assign",
+        "to_port": "record_id"
+      }
+    ]
+  }
+}

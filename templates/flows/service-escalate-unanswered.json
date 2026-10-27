@@ -1,0 +1,61 @@
+{
+  "description_en": "Escalate a case nobody has answered after four business hours.",
+  "description_ar": "يصعّد الحالة التي لم يرد عليها أحد بعد أربع ساعات عمل.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "case"
+    },
+    {
+      "name": "template",
+      "type": "text",
+      "label_en": "Notification template key",
+      "label_ar": "مفتاح قالب الإشعار",
+      "default": "workflow.generic"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "create",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "wait",
+        "type": "wait",
+        "config": {
+          "delay_seconds": 14400,
+          "business_time": true
+        }
+      },
+      {
+        "id": "escalate",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "wait",
+        "to_port": "in"
+      },
+      {
+        "from_node": "wait",
+        "from_port": "out",
+        "to_node": "escalate",
+        "to_port": "variables"
+      }
+    ]
+  }
+}

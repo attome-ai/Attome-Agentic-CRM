@@ -1,0 +1,69 @@
+{
+  "description_en": "Remind the owner on a contract's renewal date.",
+  "description_ar": "يذكّر المالك في تاريخ تجديد العقد.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "contract"
+    },
+    {
+      "name": "renewal",
+      "type": "attribute",
+      "label_en": "Renewal date field",
+      "label_ar": "حقل تاريخ التجديد",
+      "of": "entity",
+      "default": "renewal_date"
+    },
+    {
+      "name": "template",
+      "type": "text",
+      "label_en": "Notification template key",
+      "label_ar": "مفتاح قالب الإشعار",
+      "default": "workflow.generic"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "update",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "wait",
+        "type": "wait",
+        "config": {
+          "relative_to": "{{renewal}}",
+          "delay_seconds": 0
+        }
+      },
+      {
+        "id": "remind",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "wait",
+        "to_port": "in"
+      },
+      {
+        "from_node": "wait",
+        "from_port": "out",
+        "to_node": "remind",
+        "to_port": "variables"
+      }
+    ]
+  }
+}

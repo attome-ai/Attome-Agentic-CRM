@@ -2613,6 +2613,7 @@ dependencies = [
  "attome-jobs",
  "attome-marketing",
  "attome-metadata",
+ "attome-model",
  "attome-modules",
  "attome-notification",
  "attome-records",

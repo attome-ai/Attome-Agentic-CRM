@@ -1,0 +1,68 @@
+{
+  "description_en": "Ask the owner for the VAT number when a business account is saved without one.",
+  "description_ar": "يطلب من المالك الرقم الضريبي عند حفظ حساب تجاري بدونه.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "account"
+    },
+    {
+      "name": "vat",
+      "type": "attribute",
+      "label_en": "VAT number field",
+      "label_ar": "حقل الرقم الضريبي",
+      "of": "entity",
+      "default": "vat_number"
+    },
+    {
+      "name": "template",
+      "type": "text",
+      "label_en": "Notification template key",
+      "label_ar": "مفتاح قالب الإشعار",
+      "default": "workflow.generic"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "create",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "missing",
+        "type": "condition",
+        "config": {
+          "expression": "{{vat}} == \"\""
+        }
+      },
+      {
+        "id": "ask",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "missing",
+        "to_port": "value"
+      },
+      {
+        "from_node": "missing",
+        "from_port": "true",
+        "to_node": "ask",
+        "to_port": "variables"
+      }
+    ]
+  }
+}

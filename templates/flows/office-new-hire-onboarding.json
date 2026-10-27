@@ -1,0 +1,60 @@
+{
+  "description_en": "Tell IT and facilities when a new employee record is created.",
+  "description_ar": "يبلغ تقنية المعلومات والمرافق عند إنشاء سجل موظف جديد.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "employee"
+    },
+    {
+      "name": "template",
+      "type": "text",
+      "label_en": "Notification template key",
+      "label_ar": "مفتاح قالب الإشعار",
+      "default": "workflow.generic"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "create",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "it",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}"
+        }
+      },
+      {
+        "id": "facilities",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "it",
+        "to_port": "variables"
+      },
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "facilities",
+        "to_port": "variables"
+      }
+    ]
+  }
+}

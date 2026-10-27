@@ -1,0 +1,68 @@
+{
+  "description_en": "Remind the account owner when an invoice becomes overdue.",
+  "description_ar": "يذكّر مالك الحساب عندما تتأخر فاتورة عن موعدها.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "invoice"
+    },
+    {
+      "name": "status",
+      "type": "attribute",
+      "label_en": "Status field",
+      "label_ar": "حقل الحالة",
+      "of": "entity",
+      "default": "status"
+    },
+    {
+      "name": "template",
+      "type": "text",
+      "label_en": "Notification template key",
+      "label_ar": "مفتاح قالب الإشعار",
+      "default": "workflow.generic"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "update",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "overdue",
+        "type": "condition",
+        "config": {
+          "expression": "{{status}} == \"overdue\""
+        }
+      },
+      {
+        "id": "remind",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "overdue",
+        "to_port": "value"
+      },
+      {
+        "from_node": "overdue",
+        "from_port": "true",
+        "to_node": "remind",
+        "to_port": "variables"
+      }
+    ]
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "description_en": "Remind HR on an employee's residence permit (iqama) expiry date.",
+  "description_ar": "يذكّر الموارد البشرية في تاريخ انتهاء إقامة الموظف.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "employee"
+    },
+    {
+      "name": "expiry",
+      "type": "attribute",
+      "label_en": "Iqama expiry field",
+      "label_ar": "حقل انتهاء الإقامة",
+      "of": "entity",
+      "default": "iqama_expiry"
+    },
+    {
+      "name": "template",
+      "type": "text",
+      "label_en": "Notification template key",
+      "label_ar": "مفتاح قالب الإشعار",
+      "default": "workflow.generic"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "update",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "wait",
+        "type": "wait",
+        "config": {
+          "relative_to": "{{expiry}}",
+          "delay_seconds": 0
+        }
+      },
+      {
+        "id": "remind",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}",
+          "locale": "ar"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "wait",
+        "to_port": "in"
+      },
+      {
+        "from_node": "wait",
+        "from_port": "out",
+        "to_node": "remind",
+        "to_port": "variables"
+      }
+    ]
+  }
+}

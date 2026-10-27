@@ -1,0 +1,81 @@
+{
+  "description_en": "Send a satisfaction survey a day after a case is closed.",
+  "description_ar": "يرسل استبيان رضا بعد يوم من إغلاق الحالة.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "case"
+    },
+    {
+      "name": "status",
+      "type": "attribute",
+      "label_en": "Status field",
+      "label_ar": "حقل الحالة",
+      "of": "entity",
+      "default": "status"
+    },
+    {
+      "name": "template",
+      "type": "text",
+      "label_en": "Notification template key",
+      "label_ar": "مفتاح قالب الإشعار",
+      "default": "workflow.generic"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "update",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "closed",
+        "type": "condition",
+        "config": {
+          "expression": "{{status}} == \"closed\""
+        }
+      },
+      {
+        "id": "wait",
+        "type": "wait",
+        "config": {
+          "delay_seconds": 86400
+        }
+      },
+      {
+        "id": "survey",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "closed",
+        "to_port": "value"
+      },
+      {
+        "from_node": "closed",
+        "from_port": "true",
+        "to_node": "wait",
+        "to_port": "in"
+      },
+      {
+        "from_node": "wait",
+        "from_port": "out",
+        "to_node": "survey",
+        "to_port": "variables"
+      }
+    ]
+  }
+}

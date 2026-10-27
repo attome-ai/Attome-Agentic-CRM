@@ -1,0 +1,89 @@
+{
+  "description_en": "Approve an e-invoice above an amount before it is cleared with ZATCA, then tell finance.",
+  "description_ar": "يعتمد الفاتورة الإلكترونية التي تتجاوز مبلغًا محددًا قبل اعتمادها لدى هيئة الزكاة والضريبة والجمارك، ثم يبلغ المالية.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "invoice"
+    },
+    {
+      "name": "total",
+      "type": "attribute",
+      "label_en": "Total field",
+      "label_ar": "حقل الإجمالي",
+      "of": "entity",
+      "default": "total_amount"
+    },
+    {
+      "name": "threshold",
+      "type": "number",
+      "label_en": "Amount that needs approval",
+      "label_ar": "المبلغ الذي يحتاج إلى موافقة",
+      "default": 50000
+    },
+    {
+      "name": "template",
+      "type": "text",
+      "label_en": "Notification template key",
+      "label_ar": "مفتاح قالب الإشعار",
+      "default": "workflow.generic"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "create",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "check",
+        "type": "condition",
+        "config": {
+          "expression": "{{total}} > {{threshold}}"
+        }
+      },
+      {
+        "id": "approve",
+        "type": "approval",
+        "config": {
+          "action_type": "workflow.approval",
+          "ttl_hours": 24
+        }
+      },
+      {
+        "id": "tell",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "check",
+        "to_port": "value"
+      },
+      {
+        "from_node": "check",
+        "from_port": "true",
+        "to_node": "approve",
+        "to_port": "payload"
+      },
+      {
+        "from_node": "approve",
+        "from_port": "approved",
+        "to_node": "tell",
+        "to_port": "variables"
+      }
+    ]
+  }
+}

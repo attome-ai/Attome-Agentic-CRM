@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Starter flow templates (M6-T3, `templates/flows/`): twenty `flow_template` documents for sales,
+  service, back office and MENA (ZATCA invoice approval, Hijri renewal and iqama expiry reminders), in
+  English and Arabic, each instantiating with its defaults into a graph that passes publish validation.
 - Lead conversion (D3-T2, `attome_sales::lead_convert`, migration `0302`, sales pack `0028`):
   `GET /api/v1/sales/leads/{id}/convert` previews the account, contact and opportunity values from
   the conversion map (setting `sales.lead_conversion_map`) and the existing records the duplicate

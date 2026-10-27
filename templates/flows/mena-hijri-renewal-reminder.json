@@ -1,0 +1,70 @@
+{
+  "description_en": "Remind on a licence's renewal date, with the date shown in Hijri in the Arabic message.",
+  "description_ar": "يذكّر في تاريخ تجديد الترخيص، مع عرض التاريخ بالهجري في الرسالة العربية.",
+  "parameters": [
+    {
+      "name": "entity",
+      "type": "entity",
+      "label_en": "Record type",
+      "label_ar": "نوع السجل",
+      "default": "contract"
+    },
+    {
+      "name": "renewal",
+      "type": "attribute",
+      "label_en": "Renewal date field",
+      "label_ar": "حقل تاريخ التجديد",
+      "of": "entity",
+      "default": "renewal_date"
+    },
+    {
+      "name": "template",
+      "type": "text",
+      "label_en": "Notification template key",
+      "label_ar": "مفتاح قالب الإشعار",
+      "default": "workflow.hijri_renewal"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "trigger",
+        "config": {
+          "trigger_type": "update",
+          "entity_logicalname": "{{entity}}"
+        }
+      },
+      {
+        "id": "wait",
+        "type": "wait",
+        "config": {
+          "relative_to": "{{renewal}}",
+          "delay_seconds": 0
+        }
+      },
+      {
+        "id": "remind",
+        "type": "send_notification",
+        "config": {
+          "template_key": "{{template}}",
+          "locale": "ar"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "start",
+        "from_port": "out",
+        "to_node": "wait",
+        "to_port": "in"
+      },
+      {
+        "from_node": "wait",
+        "from_port": "out",
+        "to_node": "remind",
+        "to_port": "variables"
+      }
+    ]
+  }
+}
