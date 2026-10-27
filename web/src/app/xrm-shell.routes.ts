@@ -614,6 +614,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/service').then(m => m.TriageBoardComponent),
           },
           {
+            // G4-T3: every open item of the V7 queues, with bulk moves and starter sets.
+            path: 'service/queues',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/service').then(m => m.MyQueuesComponent),
+          },
+          {
             // AI7-T6: the tickets handed to me or my queues.
             path: 'service/handoffs',
             canActivate: [authGuard],

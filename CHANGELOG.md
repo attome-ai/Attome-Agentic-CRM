@@ -45,6 +45,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- My queues (`service/queues`, G4-T3): every open item of the queues in one list, grouped by queue
+  and ordered by priority then age, with bulk pick, release and transfer, and starter queue sets for
+  IT, customer care and HR, named in the reader's language and skipping queues already there.
 - Queue items can be picked, released and transferred (G4-T2): `POST /api/v1/queue-items/{id}/pick`,
   `/release` and `/transfer`, each recorded in the item's history (`GET .../history`, migration
   0310) and in the audit log. A queue's lead is alerted when more items wait than its

@@ -26,3 +26,7 @@ export { ServiceHandoffCardComponent } from './handoff/service-handoff-card.comp
 export { ServiceHandoffsListComponent } from './handoff/service-handoffs-list.component';
 export { ServiceHandoffService, canHandBack, partyIcon } from './handoff/service-handoff.service';
 export type { ServiceHandoff } from './handoff/service-handoff.service';
+// G4-T3: my queues ('service/queues') over the V7 queue items.
+export { MyQueuesComponent } from './queues/my-queues.component';
+export { MyQueuesService, STARTER_SETS, groupByQueue, missingStarters } from './queues/my-queues.service';
+export type { QueueRef, QueueItemRow, QueueItemState, QueueGroup, StarterSetKey, StarterQueue, BulkOutcome } from './queues/my-queues.service';

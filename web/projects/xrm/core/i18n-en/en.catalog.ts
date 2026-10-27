@@ -830,6 +830,18 @@ export const xrmEn = {
     },
   },
   // AI7-T6 — ticket hand-offs between agents and people.
+  // G4-T3 — my queues.
+  myQueues: {
+    title: 'My queues', actions: 'Queue item actions', selected: '{count} selected',
+    pick: 'Pick', release: 'Release', transfer: 'Transfer', transferTo: 'Transfer to queue',
+    outcome: '{done} done, {failed} refused', selectQueue: 'Select every item in {name}',
+    selectItem: 'Select this item', count: '{count} open', none: 'No queue has an open item.',
+    priority: { low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' },
+    status: { waiting: 'Waiting', picked: 'Picked', done: 'Done' },
+    starters: 'Starter queues',
+    startersIntro: 'Add a ready set of queues; a queue with the same name is not added twice.',
+    set: { it: 'IT service desk', care: 'Customer care', hr: 'HR' },
+  },
   serviceHandoff: {
     title: 'Hand-off', mine: 'My hand-offs', none: 'Nothing is waiting for you.',
     agent: 'Agent', person: 'Person', queue: 'Queue', summary: 'Summary:', reasoning: 'Why:',

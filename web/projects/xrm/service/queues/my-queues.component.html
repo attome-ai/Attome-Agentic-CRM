@@ -1,0 +1,64 @@
+<section class="mq">
+  <h2>{{ 'myQueues.title' | translate }}</h2>
+  @if (error(); as message) { <p class="mq-error" role="alert">{{ message }}</p> }
+
+  <div class="mq-bar" role="toolbar" [attr.aria-label]="'myQueues.actions' | translate">
+    <span class="mq-muted">{{ 'myQueues.selected' | translate: { count: selectedCount() } }}</span>
+    <button type="button" (click)="pickSelected()" [disabled]="busy() || !selectedCount()" data-testid="mq-pick">
+      {{ 'myQueues.pick' | translate }}
+    </button>
+    <button type="button" (click)="releaseSelected()" [disabled]="busy() || !selectedCount()" data-testid="mq-release">
+      {{ 'myQueues.release' | translate }}
+    </button>
+    <label class="mq-transfer">
+      <span class="sr-only">{{ 'myQueues.transferTo' | translate }}</span>
+      <select (change)="onTransferTo($event)" [value]="transferTo()" data-testid="mq-transfer-to">
+        <option value="">{{ 'myQueues.transferTo' | translate }}</option>
+        @for (q of queues(); track q.id) { <option [value]="q.id">{{ q.name }}</option> }
+      </select>
+    </label>
+    <button type="button" (click)="transferSelected()" [disabled]="busy() || !selectedCount() || !transferTo()" data-testid="mq-transfer">
+      {{ 'myQueues.transfer' | translate }}
+    </button>
+  </div>
+  @if (outcome(); as o) {
+    <p class="mq-muted" role="status">{{ 'myQueues.outcome' | translate: { done: o.done, failed: o.failed } }}</p>
+  }
+
+  @for (g of groups(); track g.queue.id) {
+    <div class="mq-group" [attr.data-queue]="g.queue.id">
+      <h3>
+        <label>
+          <input type="checkbox" [checked]="groupChecked(g.items)" (change)="toggleGroup(g.items)"
+                 [attr.aria-label]="'myQueues.selectQueue' | translate: { name: g.queue.name }" />
+          <span dir="auto">{{ g.queue.name }}</span>
+          <small class="mq-muted">{{ 'myQueues.count' | translate: { count: g.items.length } }}</small>
+        </label>
+      </h3>
+      <ul class="mq-list">
+        @for (i of g.items; track i.id) {
+          <li [attr.data-item]="i.id">
+            <input type="checkbox" [checked]="isSelected(i.id)" (change)="toggle(i.id)"
+                   [attr.aria-label]="'myQueues.selectItem' | translate" />
+            <span class="mq-priority" [attr.data-priority]="i.priority">{{ ('myQueues.priority.' + i.priority) | translate }}</span>
+            <a [routerLink]="recordPath(i)" [queryParams]="{ id: i.record_id }">{{ i.record_entity }}</a>
+            <span class="mq-status">{{ ('myQueues.status.' + i.status) | translate }}</span>
+            <small class="mq-muted">{{ i.entered_at | localDate }}</small>
+          </li>
+        }
+      </ul>
+    </div>
+  } @empty {
+    <p class="mq-muted" data-none>{{ 'myQueues.none' | translate }}</p>
+  }
+
+  <div class="mq-starters">
+    <h3>{{ 'myQueues.starters' | translate }}</h3>
+    <p class="mq-muted">{{ 'myQueues.startersIntro' | translate }}</p>
+    @for (key of starterKeys; track key) {
+      <button type="button" (click)="addStarters(key)" [disabled]="busy()" [attr.data-starter]="key">
+        {{ ('myQueues.set.' + key) | translate }}
+      </button>
+    }
+  </div>
+</section>

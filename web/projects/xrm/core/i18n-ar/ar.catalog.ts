@@ -745,6 +745,18 @@ export const xrmAr = {
     },
   },
   // AI7-T6 — تحويل التذاكر بين الوكلاء والموظفين.
+  // G4-T3 — قوائم الانتظار.
+  myQueues: {
+    title: 'قوائم الانتظار', actions: 'إجراءات عناصر قوائم الانتظار', selected: 'تم تحديد {count}',
+    pick: 'استلام', release: 'إعادة', transfer: 'نقل', transferTo: 'النقل إلى قائمة',
+    outcome: 'تم {done}، ورُفض {failed}', selectQueue: 'تحديد كل العناصر في {name}',
+    selectItem: 'تحديد هذا العنصر', count: '{count} مفتوحة', none: 'لا توجد عناصر مفتوحة في أي قائمة.',
+    priority: { low: 'منخفضة', medium: 'متوسطة', high: 'عالية', critical: 'حرجة' },
+    status: { waiting: 'بالانتظار', picked: 'مستلَمة', done: 'منجزة' },
+    starters: 'قوائم جاهزة',
+    startersIntro: 'أضف مجموعة جاهزة من القوائم؛ لا تُضاف قائمة بالاسم نفسه مرتين.',
+    set: { it: 'مكتب خدمة تقنية المعلومات', care: 'خدمة العملاء', hr: 'الموارد البشرية' },
+  },
   serviceHandoff: {
     title: 'التحويل', mine: 'تحويلاتي', none: 'لا شيء بانتظارك.',
     agent: 'وكيل', person: 'موظف', queue: 'قائمة عمل', summary: 'الملخص:', reasoning: 'السبب:',
