@@ -215,7 +215,7 @@ pub(super) async fn list_related(
     });
 
     // A7-T4: links valid on `as_of` (today by default), with `role` when given.
-    ensure_link_columns_once(&state, &def.join_table).await?;
+    let has_link_columns = ensure_link_columns_once(&state, &def.join_table).await?;
     let as_of = links
         .as_of
         .unwrap_or_else(|| chrono::Utc::now().date_naive());
@@ -226,11 +226,17 @@ pub(super) async fn list_related(
         .filter(|r| !r.is_empty());
     let as_of_idx = next_idx;
     let role_idx = next_idx + 1;
-    let link_sql = format!(
-        "AND (j.valid_from IS NULL OR j.valid_from <= ${as_of_idx}) \
+    let link_sql = if has_link_columns {
+        format!(
+            "AND (j.valid_from IS NULL OR j.valid_from <= ${as_of_idx}) \
          AND (j.valid_to IS NULL OR j.valid_to >= ${as_of_idx}) \
          AND (${role_idx}::text IS NULL OR j.role = ${role_idx}::text)"
-    );
+        )
+    } else {
+        // A table without link columns: every live link counts, and the two
+        // values stay bound (unused) so the placeholders line up.
+        format!("AND (${as_of_idx}::date IS NULL OR TRUE) AND (${role_idx}::text IS NULL OR TRUE)")
+    };
     let count_sql = format!(
         "SELECT COUNT(*) FROM {join_table} j \
          JOIN {other_table} t ON t.id = j.{other_col} \
@@ -374,21 +380,26 @@ static LINK_COLUMNS_ENSURED: std::sync::LazyLock<
 > = std::sync::LazyLock::new(Default::default);
 
 /// Makes sure `join_table` has its link columns (a table provisioned before
-/// they existed gets them on first use).
-async fn ensure_link_columns_once(state: &EngineState, join_table: &str) -> Result<(), AppError> {
+/// they existed gets them on first use). Answers whether it has them: the
+/// platform's own role join tables (`OWNER_LAYER_TABLES`) are left as they
+/// are and carry none.
+async fn ensure_link_columns_once(state: &EngineState, join_table: &str) -> Result<bool, AppError> {
+    if attome_core::changeset::OWNER_LAYER_TABLES.contains(&join_table) {
+        return Ok(false);
+    }
     let known = LINK_COLUMNS_ENSURED
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .contains(join_table);
     if known {
-        return Ok(());
+        return Ok(true);
     }
     attome_metadata::provision::ensure_link_columns(&state.base.db_migrator, join_table).await?;
     LINK_COLUMNS_ENSURED
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .insert(join_table.to_owned());
-    Ok(())
+    Ok(true)
 }
 
 /// A7-T4: `?as_of=` and `?role=` of the related list.
@@ -499,7 +510,23 @@ pub(super) async fn link_related(
         body.valid_to,
         body.attributes.as_ref(),
     )?;
-    ensure_link_columns_once(&state, &def.join_table).await?;
+    let has_link_columns = ensure_link_columns_once(&state, &def.join_table).await?;
+    if !has_link_columns
+        && (role.is_some()
+            || body.valid_from.is_some()
+            || body.valid_to.is_some()
+            || body.attributes.is_some())
+    {
+        return Err(AppError::Validation(
+            "this relationship's links carry no role, dates or attributes".into(),
+        ));
+    }
+    let plain_sql = format!(
+        "INSERT INTO {join_table} ({this_col}, {other_col}, created_by{layer_col}) \
+         VALUES ($1, $2, $3{layer_val}) \
+         ON CONFLICT ({this_col}, {other_col}) \
+         DO UPDATE SET is_active = true, row_version = {join_table}.row_version + 1"
+    );
     let sql = format!(
         "INSERT INTO {join_table} ({this_col}, {other_col}, created_by, role, valid_from, valid_to, \
                                    attributes{layer_col}) \
@@ -538,17 +565,27 @@ pub(super) async fn link_related(
     // `user_account_mm_privilege` entity.
     let actor = MutationActor::fetch(&state, ctx.user_id).await;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    sqlx::query(&attome_db::tag_dynamic("entity.related", &sql))
-        .bind(record_id)
-        .bind(body.id)
-        .bind(ctx.user_id)
-        .bind(&role)
-        .bind(body.valid_from)
-        .bind(body.valid_to)
-        .bind(&body.attributes)
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
+    if has_link_columns {
+        sqlx::query(&attome_db::tag_dynamic("entity.related", &sql))
+            .bind(record_id)
+            .bind(body.id)
+            .bind(ctx.user_id)
+            .bind(&role)
+            .bind(body.valid_from)
+            .bind(body.valid_to)
+            .bind(&body.attributes)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    } else {
+        sqlx::query(&attome_db::tag_dynamic("entity.related", &plain_sql))
+            .bind(record_id)
+            .bind(body.id)
+            .bind(ctx.user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    }
 
     // Both endpoints changed from a caller's point of view (a workflow
     // entry trigger or derived index watching either entity must re-read
