@@ -19,7 +19,7 @@ use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow, PaginatedResponse};
 use axum::{
@@ -207,7 +207,7 @@ pub(super) struct ListRecordSharesQuery {
 )]
 pub(super) async fn list_record_shares(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Query(query): Query<ListRecordSharesQuery>,
 ) -> Result<Json<PaginatedResponse<RecordShareItem>>, AppError> {
     let entity_ref = resolve_entity_ref(&state.base.db, &query.entity).await?;
@@ -287,7 +287,7 @@ pub(super) async fn list_record_shares(
 )]
 pub(super) async fn create_record_share(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Json(body): Json<CreateRecordShareBody>,
 ) -> Result<(StatusCode, Json<RecordShareItem>), AppError> {
     let entity_ref = resolve_entity_ref(&state.base.db, &body.entity).await?;
@@ -412,7 +412,7 @@ impl std::fmt::Debug for OwnerItem {
 )]
 pub(super) async fn reassign_owner(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Json(body): Json<ReassignOwnerBody>,
 ) -> Result<Json<OwnerItem>, AppError> {
     let done = reassign_owner_for(
@@ -564,7 +564,7 @@ pub async fn reassign_owner_for(
 )]
 pub(super) async fn delete_record_share(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(share_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = super::shared::access_tx(
@@ -652,7 +652,7 @@ pub(super) struct ListEntityDefaultSharesQuery {
 )]
 pub(super) async fn list_entity_default_shares(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Query(query): Query<ListEntityDefaultSharesQuery>,
 ) -> Result<Json<PaginatedResponse<EntityDefaultShareItem>>, AppError> {
     let entity_ref = resolve_entity_ref(&state.base.db, &query.entity).await?;
@@ -735,7 +735,7 @@ pub(super) async fn list_entity_default_shares(
 )]
 pub(super) async fn create_entity_default_share(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     recording: RecordingCtx,
     Json(body): Json<CreateEntityDefaultShareBody>,
 ) -> Result<(StatusCode, Json<EntityDefaultShareItem>), AppError> {
@@ -855,7 +855,7 @@ pub(super) async fn create_entity_default_share(
 )]
 pub(super) async fn delete_entity_default_share(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     recording: RecordingCtx,
     Path(share_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {

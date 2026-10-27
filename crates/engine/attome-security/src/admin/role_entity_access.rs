@@ -14,7 +14,7 @@ use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -145,7 +145,7 @@ struct EntityAccessRow {
 )]
 pub(super) async fn list_entity_access_grants(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<RoleEntityAccessItem>>, AppError> {
     let window = query.window();
@@ -269,7 +269,7 @@ fn default_access_level() -> i16 {
 )]
 pub(super) async fn upsert_entity_access_grant(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Json(body): Json<UpsertEntityAccessGrantBody>,
 ) -> Result<(StatusCode, Json<RoleEntityAccessItem>), AppError> {
@@ -437,7 +437,7 @@ pub(super) async fn upsert_entity_access_grant(
 )]
 pub(super) async fn delete_entity_access_grant(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(grant_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
@@ -528,7 +528,7 @@ pub(super) struct UpdatePositionHierarchyEnabledBody {
 )]
 pub(super) async fn update_role_position_hierarchy(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(role_id): Path<Uuid>,
     Json(body): Json<UpdatePositionHierarchyEnabledBody>,

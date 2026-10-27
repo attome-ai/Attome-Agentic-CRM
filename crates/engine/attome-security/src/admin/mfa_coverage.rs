@@ -7,7 +7,7 @@
 //! (`webauthn_credential`, Z4-T6), the phishing-resistant factor.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -124,7 +124,7 @@ SELECT user_id, email, roles, factors, is_admin,
 )]
 async fn coverage(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Query(query): Query<CoverageQuery>,
 ) -> Result<Json<PaginatedResponse<MfaCoverageRow>>, AppError> {
     let rows: Vec<MfaCoverageRow> = sqlx::query_as(COVERAGE_SQL)
@@ -161,7 +161,7 @@ async fn coverage(
 )]
 async fn coverage_summary(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
 ) -> Result<Json<Vec<MfaCoverageSummary>>, AppError> {
     let rows: Vec<MfaCoverageSummary> = sqlx::query_as(
         "WITH members AS ( \

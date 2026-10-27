@@ -25,7 +25,7 @@ use attome_audit::security::{
 };
 use attome_core::EngineState;
 use attome_jobs::registry::BoxError;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -248,7 +248,7 @@ async fn resolve_selection(
 )]
 pub(super) async fn bulk_access(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Json(body): Json<BulkAccessBody>,
 ) -> Result<Response, AppError> {
     let db = &state.base.db;

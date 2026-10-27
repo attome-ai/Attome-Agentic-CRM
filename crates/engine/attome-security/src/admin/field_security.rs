@@ -14,7 +14,7 @@ use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -109,7 +109,7 @@ pub(super) struct CreateFieldSecurityProfileBody {
 )]
 pub(super) async fn list_field_profiles(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<FieldSecurityProfileItem>>, AppError> {
     let window = query.window();
@@ -168,7 +168,7 @@ pub(super) async fn list_field_profiles(
 )]
 pub(super) async fn create_field_profile(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Json(body): Json<CreateFieldSecurityProfileBody>,
 ) -> Result<(StatusCode, Json<FieldSecurityProfileItem>), AppError> {
@@ -268,7 +268,7 @@ impl std::fmt::Debug for FieldSecurityProfileFieldItem {
 )]
 pub(super) async fn list_field_profile_fields(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(profile_id): Path<Uuid>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<FieldSecurityProfileFieldItem>>, AppError> {
@@ -369,7 +369,7 @@ pub(super) struct SetFieldProfileFieldBody {
 )]
 pub(super) async fn set_field_profile_field(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(profile_id): Path<Uuid>,
     Json(body): Json<SetFieldProfileFieldBody>,
@@ -551,7 +551,7 @@ pub(super) struct CreateFieldProfileAssignmentBody {
 )]
 pub(super) async fn assign_field_profile(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(profile_id): Path<Uuid>,
     Json(body): Json<CreateFieldProfileAssignmentBody>,
@@ -681,7 +681,7 @@ pub(super) async fn assign_field_profile(
 )]
 pub(super) async fn unassign_field_profile(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path((profile_id, role_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {

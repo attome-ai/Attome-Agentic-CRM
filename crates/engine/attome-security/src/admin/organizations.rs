@@ -15,7 +15,7 @@
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -58,7 +58,7 @@ impl std::fmt::Debug for OrganizationItem {
 )]
 pub(super) async fn list_organizations(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<OrganizationItem>>, AppError> {
     let window = query.window();
@@ -129,7 +129,7 @@ async fn organization_exists(
 )]
 pub(super) async fn list_organization_members(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Path(organization_id): Path<Uuid>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<OrganizationMemberItem>>, AppError> {
@@ -199,7 +199,7 @@ pub(super) struct AddOrganizationMemberBody {
 )]
 pub(super) async fn add_organization_member(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path(organization_id): Path<Uuid>,
     Json(body): Json<AddOrganizationMemberBody>,
 ) -> Result<(StatusCode, Json<OrganizationMemberItem>), AppError> {
@@ -283,7 +283,7 @@ pub(super) async fn add_organization_member(
 )]
 pub(super) async fn remove_organization_member(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path((organization_id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = super::shared::access_tx(

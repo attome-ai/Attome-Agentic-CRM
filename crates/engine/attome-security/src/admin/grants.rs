@@ -6,7 +6,7 @@ use std::sync::Arc;
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -91,7 +91,7 @@ pub(super) async fn whoami(ctx: Authorized<SelfService>) -> Json<Arc<SecurityCon
 )]
 pub(super) async fn list_grants(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<GrantItem>>, AppError> {
     let window = query.window();
@@ -158,7 +158,7 @@ pub(super) async fn list_grants(
 )]
 pub(super) async fn create_grant(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Json(body): Json<CreateGrantBody>,
 ) -> Result<(StatusCode, Json<GrantItem>), AppError> {
     let email = body.user_email.trim();
@@ -262,9 +262,18 @@ pub(super) async fn create_grant(
 )]
 pub(super) async fn delete_grant(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path(grant_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
+    let holder: Option<Uuid> =
+        sqlx::query_scalar("SELECT user_ref FROM user_account_mm_privilege WHERE id = $1")
+            .bind(grant_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if let Some(holder) = holder {
+        crate::delegation::require_not_above(&state.base.db, &ctx, holder).await?;
+    }
     let mut tx = super::shared::access_tx(
         &state,
         AuditOperation::Revoke,

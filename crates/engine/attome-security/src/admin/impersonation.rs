@@ -12,7 +12,7 @@
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::impersonation::{HEADER, ImpersonationMode};
 use attome_server::step_up::StepUpCaller;
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
@@ -109,7 +109,7 @@ fn session_item(
 )]
 pub(super) async fn start(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     StepUpCaller(caller): StepUpCaller,
     Json(body): Json<StartBody>,
 ) -> Result<(StatusCode, Json<ImpersonationSessionItem>), AppError> {
@@ -197,7 +197,7 @@ pub(super) async fn start(
 )]
 pub(super) async fn end(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = access_tx(
@@ -244,7 +244,7 @@ pub(super) async fn end(
 )]
 pub(super) async fn list_mine(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<ImpersonationSessionItem>>, AppError> {
     sessions_page(&state, "actor_ref", ctx.user_id, page).await

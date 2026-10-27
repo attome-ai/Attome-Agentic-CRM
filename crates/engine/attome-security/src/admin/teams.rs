@@ -14,7 +14,7 @@
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -61,7 +61,7 @@ impl std::fmt::Debug for TeamItem {
 )]
 pub(super) async fn list_teams(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<TeamItem>>, AppError> {
     let window = query.window();
@@ -122,7 +122,7 @@ pub(super) struct CreateTeamBody {
 )]
 pub(super) async fn create_team(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Json(body): Json<CreateTeamBody>,
 ) -> Result<(StatusCode, Json<TeamItem>), AppError> {
     let name = body.name.trim();
@@ -177,7 +177,7 @@ pub(super) async fn create_team(
 )]
 pub(super) async fn delete_team(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path(team_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     // Members must be invalidated (their team_ids/access_level via
@@ -250,7 +250,7 @@ pub(super) struct TeamMemberItem {
 )]
 pub(super) async fn add_team_member(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path(team_id): Path<Uuid>,
     Json(body): Json<AddTeamMemberBody>,
 ) -> Result<(StatusCode, Json<TeamMemberItem>), AppError> {
@@ -345,7 +345,7 @@ pub(super) async fn add_team_member(
 )]
 pub(super) async fn remove_team_member(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((team_id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = super::shared::access_tx(
@@ -413,7 +413,7 @@ pub(super) struct AddTeamRoleBody {
 )]
 pub(super) async fn add_team_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path(team_id): Path<Uuid>,
     Json(AddTeamRoleBody { role_id }): Json<AddTeamRoleBody>,
 ) -> Result<(StatusCode, Json<TeamRoleItem>), AppError> {
@@ -518,7 +518,7 @@ pub(super) async fn add_team_role(
 )]
 pub(super) async fn remove_team_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((team_id, role_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = super::shared::access_tx(
@@ -579,7 +579,7 @@ pub(super) struct TeamMemberListItem {
 )]
 pub(super) async fn list_team_members(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(team_id): Path<Uuid>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<TeamMemberListItem>>, AppError> {
@@ -641,7 +641,7 @@ pub(super) async fn list_team_members(
 )]
 pub(super) async fn list_team_roles(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(team_id): Path<Uuid>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<TeamRoleItem>>, AppError> {

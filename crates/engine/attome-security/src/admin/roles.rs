@@ -9,7 +9,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx, x_aud
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -94,7 +94,7 @@ type RoleUpdateRow = (String, Option<String>, bool, Option<Vec<String>>, i64);
 )]
 pub(super) async fn list_roles(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<RoleItem>>, AppError> {
     let window = query.window();
@@ -182,7 +182,7 @@ pub(super) struct CreateRoleBody {
 )]
 pub(super) async fn create_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Json(body): Json<CreateRoleBody>,
 ) -> Result<(StatusCode, Json<RoleItem>), AppError> {
@@ -303,7 +303,7 @@ pub(super) struct UpdateRoleBody {
 )]
 pub(super) async fn update_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(role_id): Path<Uuid>,
     headers: HeaderMap,
@@ -486,7 +486,7 @@ type RoleUserRow = (
 )]
 pub(super) async fn list_role_users(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(role_id): Path<Uuid>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<RoleUserItem>>, AppError> {

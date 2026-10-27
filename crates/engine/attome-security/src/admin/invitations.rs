@@ -10,7 +10,7 @@ use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::jobs::EngineJob;
 use attome_email::EmailMessage;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -112,7 +112,7 @@ fn invitation_row_to_item(row: InvitationRow) -> InvitationItem {
 )]
 pub(super) async fn list_invitations(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<InvitationItem>>, AppError> {
     let window = query.window();
@@ -171,7 +171,7 @@ pub(super) async fn list_invitations(
 )]
 pub(super) async fn create_invitation(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Json(body): Json<CreateInvitationBody>,
 ) -> Result<(StatusCode, Json<CreateInvitationResponse>), AppError> {
     let email = body.email.trim();
@@ -303,7 +303,7 @@ pub(super) async fn create_invitation(
 )]
 pub(super) async fn revoke_invitation(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path(invitation_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_audit::security::SecurityTx::begin(

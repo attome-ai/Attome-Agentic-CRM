@@ -9,7 +9,7 @@
 //! set posture every other list endpoint here takes.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -58,7 +58,7 @@ pub(super) struct UserListItem {
 )]
 pub(super) async fn list_users(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<UserListItem>>, AppError> {
     let window = query.window();
@@ -122,7 +122,7 @@ pub(super) struct UserLookupQuery {
 )]
 pub(super) async fn lookup_users(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Query(query): Query<UserLookupQuery>,
 ) -> Result<Json<Vec<UserLookupItem>>, AppError> {
     let prefix = query.email.trim();

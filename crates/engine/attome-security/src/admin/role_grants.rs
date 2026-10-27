@@ -11,7 +11,7 @@ use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -109,7 +109,7 @@ pub(super) struct CreateRoleGrantBody {
 )]
 pub(super) async fn list_role_grants(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<RoleGrantItem>>, AppError> {
     let window = query.window();
@@ -194,7 +194,7 @@ pub(super) async fn list_role_grants(
 )]
 pub(super) async fn create_role_grant(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Json(body): Json<CreateRoleGrantBody>,
 ) -> Result<(StatusCode, Json<RoleGrantItem>), AppError> {
@@ -341,7 +341,7 @@ pub(super) async fn create_role_grant(
 )]
 pub(super) async fn delete_role_grant(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(grant_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {

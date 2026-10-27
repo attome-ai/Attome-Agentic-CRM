@@ -34,7 +34,7 @@ use std::net::{IpAddr, SocketAddr};
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Extension, Json, Router,
@@ -1434,7 +1434,7 @@ pub struct ScimTokenSummary {
 )]
 async fn issue_token(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Json(body): Json<NewScimToken>,
 ) -> Result<(StatusCode, Json<IssuedScimToken>), AppError> {
     let name = body.name.trim();
@@ -1506,7 +1506,7 @@ async fn issue_token(
 )]
 async fn list_tokens(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
 ) -> Result<Json<PaginatedResponse<ScimTokenSummary>>, AppError> {
     let items: Vec<ScimTokenSummary> = sqlx::query_as(
         "SELECT id, name, ip_allow, is_active, created_at, last_used_at FROM scim_token \
@@ -1539,7 +1539,7 @@ async fn list_tokens(
 )]
 async fn revoke_token(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

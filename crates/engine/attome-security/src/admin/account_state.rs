@@ -14,7 +14,7 @@
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event, x_audit};
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
 use axum::{
@@ -213,9 +213,10 @@ async fn set_user_active(
 )]
 pub(super) async fn disable_user(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path(user_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
+    crate::delegation::require_not_above(&state.base.db, &ctx, user_id).await?;
     set_user_active(&state, &ctx, user_id, false).await
 }
 
@@ -239,9 +240,10 @@ pub(super) async fn disable_user(
 )]
 pub(super) async fn enable_user(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path(user_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
+    crate::delegation::require_not_above(&state.base.db, &ctx, user_id).await?;
     set_user_active(&state, &ctx, user_id, true).await
 }
 

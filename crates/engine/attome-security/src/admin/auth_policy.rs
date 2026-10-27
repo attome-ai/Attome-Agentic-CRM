@@ -15,7 +15,7 @@
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx, x_audit};
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -74,7 +74,7 @@ pub struct BreakGlassBody {
 )]
 async fn put_role_auth_policy(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(role_id): Path<Uuid>,
     Json(body): Json<RoleSsoPolicyBody>,
 ) -> Result<Json<RoleSsoPolicy>, AppError> {
@@ -141,9 +141,10 @@ async fn put_role_auth_policy(
 )]
 async fn add_break_glass(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Json(body): Json<BreakGlassBody>,
 ) -> Result<StatusCode, AppError> {
+    crate::delegation::require_not_above(&state.base.db, &ctx, body.user_id).await?;
     let reason = body.reason.trim();
     if reason.is_empty() || reason.chars().count() > 500 {
         return Err(AppError::Validation(
@@ -220,9 +221,10 @@ async fn add_break_glass(
 )]
 async fn remove_break_glass(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(user_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
+    crate::delegation::require_not_above(&state.base.db, &ctx, user_id).await?;
     let mut tx = SecurityTx::begin(
         &state,
         SecurityEvent::new(

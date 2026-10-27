@@ -15,7 +15,7 @@
 //! record to scope them to.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{
@@ -124,7 +124,7 @@ impl std::fmt::Debug for EffectiveAccessPreview {
 )]
 pub(super) async fn effective_access_preview(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Path(user_id): Path<Uuid>,
     Query(query): Query<EffectiveAccessQuery>,
 ) -> Result<Json<EffectiveAccessPreview>, AppError> {

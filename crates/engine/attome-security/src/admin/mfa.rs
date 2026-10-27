@@ -3,7 +3,7 @@
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx, x_audit};
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{
@@ -25,32 +25,6 @@ pub const ACTION_MFA_RESET_ADMIN: &str = "security.mfa_reset_admin";
 pub struct MfaResetPending {
     pub approval_pending: bool,
     pub approval_request_id: Uuid,
-}
-
-/// Whether `user_id` holds `system.admin`, directly or through a role or team.
-async fn is_admin(db: &attome_db::DbPool, user_id: Uuid) -> Result<bool, AppError> {
-    sqlx::query_scalar(
-        "SELECT EXISTS (
-             SELECT 1 FROM user_account_mm_privilege up
-               JOIN privilege p ON p.id = up.privilege_ref AND p.is_active
-              WHERE up.user_ref = $1 AND up.is_active AND p.key = $2
-             UNION ALL
-             SELECT 1 FROM role_mm_privilege rp
-               JOIN privilege p ON p.id = rp.privilege_ref AND p.is_active
-              WHERE NOT rp.is_deleted AND p.key = $2
-                AND rp.role_ref IN (
-                    SELECT ur.role_ref FROM user_account_mm_role ur
-                     WHERE ur.user_ref = $1 AND NOT ur.is_deleted
-                    UNION
-                    SELECT rt.role_ref FROM user_account_mm_team ut
-                      JOIN role_mm_team rt ON rt.team_ref = ut.team_ref AND NOT rt.is_deleted
-                     WHERE ut.user_ref = $1 AND NOT ut.is_deleted))",
-    )
-    .bind(user_id)
-    .bind(attome_server::security::ADMIN_PRIVILEGE_KEY)
-    .fetch_one(db)
-    .await
-    .map_err(AppError::internal)
 }
 
 /// Force-disables a user's TOTP enrollment (lost-device support case) —
@@ -80,7 +54,7 @@ async fn is_admin(db: &attome_db::DbPool, user_id: Uuid) -> Result<bool, AppErro
 )]
 pub(super) async fn reset_user_mfa(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Extension(claims): Extension<attome_auth::SessionClaims>,
     attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Path(user_id): Path<Uuid>,
@@ -93,7 +67,9 @@ pub(super) async fn reset_user_mfa(
         state.base.config.refresh_absolute_lifetime_secs(),
     )
     .await?;
-    if is_admin(&state.base.db, user_id).await? {
+    // Q12-T2: a delegated administrator never resets a full administrator.
+    crate::delegation::require_not_above(&state.base.db, &ctx, user_id).await?;
+    if crate::delegation::holds_system_admin(&state.base.db, user_id).await? {
         let request = attome_audit::approval::gate_regarding_required(
             &state,
             ACTION_MFA_RESET_ADMIN,

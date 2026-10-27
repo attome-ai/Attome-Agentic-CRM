@@ -14,7 +14,7 @@ use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_server::security::ConditionOperator;
 use attome_types::AppError;
 use axum::{
@@ -130,7 +130,7 @@ async fn load_grant_context(
 )]
 pub(super) async fn list_conditions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(grant_id): Path<Uuid>,
 ) -> Result<Json<Vec<RoleGrantConditionItem>>, AppError> {
     load_grant_context(&state.base.db, grant_id).await?;
@@ -187,7 +187,7 @@ pub(super) async fn list_conditions(
 )]
 pub(super) async fn create_condition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(grant_id): Path<Uuid>,
     Json(body): Json<CreateConditionBody>,
@@ -360,7 +360,7 @@ pub(super) async fn create_condition(
 )]
 pub(super) async fn delete_condition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path((grant_id, condition_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {

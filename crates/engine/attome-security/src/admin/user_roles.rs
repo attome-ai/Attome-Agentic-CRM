@@ -13,7 +13,7 @@ use attome_audit::security::x_audit;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use attome_types::{OnePageQuery, PaginatedResponse};
@@ -97,7 +97,7 @@ pub(super) struct AssignUserRoleResponse {
 )]
 pub(super) async fn list_user_roles(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(user_id): Path<Uuid>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<UserRoleItem>>, AppError> {
@@ -342,7 +342,7 @@ pub async fn grant_role_as(
 )]
 pub(super) async fn assign_user_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Path(user_id): Path<Uuid>,
     Json(body): Json<AssignUserRoleBody>,
@@ -411,11 +411,12 @@ pub(super) async fn assign_user_role(
 )]
 pub(super) async fn remove_user_role(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     attome_server::step_up::StepUpCaller(caller): attome_server::step_up::StepUpCaller,
     Path((user_id, role_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     role_change_step_up(&state, caller, ctx.user_id).await?;
+    crate::delegation::require_not_above(&state.base.db, &ctx, user_id).await?;
     let mut tx = super::shared::access_tx(
         &state,
         AuditOperation::Revoke,

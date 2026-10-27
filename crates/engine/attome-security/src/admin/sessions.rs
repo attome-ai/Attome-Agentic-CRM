@@ -3,7 +3,7 @@
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
@@ -39,7 +39,7 @@ pub(super) struct RevokeSessionBody {
 )]
 pub(super) async fn revoke_session(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Json(body): Json<RevokeSessionBody>,
 ) -> Result<StatusCode, AppError> {
     let ttl_secs = state.base.config.access_token_expiry_secs() as i64;

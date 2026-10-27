@@ -18,7 +18,7 @@ use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -145,7 +145,7 @@ async fn load(state: &EngineState, role_id: Uuid) -> Result<RoleBulkFields, AppE
 )]
 pub(super) async fn get_role_bulk_fields(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(role_id): Path<Uuid>,
 ) -> Result<Json<RoleBulkFields>, AppError> {
     Ok(Json(load(&state, role_id).await?))
@@ -173,7 +173,7 @@ pub(super) async fn get_role_bulk_fields(
 )]
 pub(super) async fn put_role_bulk_fields(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(role_id): Path<Uuid>,
     Json(body): Json<RoleBulkFields>,

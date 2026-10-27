@@ -1,7 +1,7 @@
 //! Privilege catalog (read-only).
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -45,7 +45,7 @@ impl std::fmt::Debug for PrivilegeItem {
 )]
 pub(super) async fn list_privileges(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<PrivilegeItem>>, AppError> {
     let window = query.window();

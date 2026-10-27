@@ -19,7 +19,7 @@ use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -254,7 +254,7 @@ async fn invalidate(state: &EngineState, set_id: Uuid) -> Result<(), AppError> {
 )]
 pub(super) async fn list_sets(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<PermissionSetItem>>, AppError> {
     let window = query.window();
@@ -300,7 +300,7 @@ pub(super) async fn list_sets(
 )]
 pub(super) async fn create_set(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Json(body): Json<CreatePermissionSetBody>,
 ) -> Result<(StatusCode, Json<PermissionSetItem>), AppError> {
@@ -367,7 +367,7 @@ pub(super) async fn create_set(
 )]
 pub(super) async fn get_set(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PermissionSetDetail>, AppError> {
     let db = &state.base.db;
@@ -433,7 +433,7 @@ pub(super) async fn get_set(
 )]
 pub(super) async fn update_set(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
@@ -516,7 +516,7 @@ pub(super) async fn update_set(
 )]
 pub(super) async fn delete_set(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
@@ -573,7 +573,7 @@ pub(super) async fn delete_set(
 )]
 pub(super) async fn set_entity_access(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<SetEntityAccessItem>,
@@ -634,7 +634,7 @@ pub(super) async fn set_entity_access(
 )]
 pub(super) async fn clear_entity_access(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path((id, entity)): Path<(Uuid, String)>,
 ) -> Result<StatusCode, AppError> {
@@ -702,7 +702,7 @@ pub(super) async fn clear_entity_access(
 )]
 pub(super) async fn grant_privilege(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(id): Path<Uuid>,
     Json(body): Json<SetPrivilegeBody>,
@@ -742,7 +742,7 @@ pub(super) async fn grant_privilege(
 )]
 pub(super) async fn revoke_privilege(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path((id, key)): Path<(Uuid, String)>,
 ) -> Result<StatusCode, AppError> {
@@ -751,7 +751,7 @@ pub(super) async fn revoke_privilege(
 
 async fn change_privilege(
     state: &EngineState,
-    ctx: &Authorized<Admin>,
+    ctx: &Authorized<Privilege<area::Roles>>,
     recording: &RecordingCtx,
     id: Uuid,
     key: &str,
@@ -820,7 +820,7 @@ async fn change_privilege(
 )]
 pub(super) async fn list_assignments(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<AssignmentItem>>, AppError> {
     set_row(&state.base.db, id).await?;
@@ -887,7 +887,7 @@ pub(super) async fn list_assignments(
 )]
 pub(super) async fn create_assignment(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path(id): Path<Uuid>,
     Json(body): Json<CreateAssignmentBody>,
 ) -> Result<(StatusCode, Json<AssignmentItem>), AppError> {
@@ -997,7 +997,7 @@ pub(super) async fn create_assignment(
 )]
 pub(super) async fn delete_assignment(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path((id, assignment_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     // Who loses the set, read before the row goes.

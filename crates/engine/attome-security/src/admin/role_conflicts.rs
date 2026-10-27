@@ -10,7 +10,7 @@
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -72,7 +72,7 @@ async fn exists(db: &attome_db::DbPool, kind: &str, id: Uuid) -> Result<bool, Ap
 )]
 pub(super) async fn list_rules(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<ConflictRule>>, AppError> {
     let window = query.window();
@@ -111,7 +111,7 @@ pub(super) async fn list_rules(
 )]
 pub(super) async fn create_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Json(body): Json<CreateConflictRuleBody>,
 ) -> Result<(StatusCode, Json<ConflictRule>), AppError> {
     for kind in [&body.left_kind, &body.right_kind] {
@@ -201,7 +201,7 @@ pub(super) async fn create_rule(
 )]
 pub(super) async fn delete_rule(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = access_tx(
@@ -245,7 +245,7 @@ pub(super) async fn delete_rule(
 )]
 pub(super) async fn list_current(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<CurrentConflict>>, AppError> {
     let window = query.window();

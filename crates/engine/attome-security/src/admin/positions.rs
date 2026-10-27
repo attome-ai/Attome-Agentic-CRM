@@ -11,7 +11,7 @@
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -59,7 +59,7 @@ impl std::fmt::Debug for PositionItem {
 )]
 pub(super) async fn list_positions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Users>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<PositionItem>>, AppError> {
     let window = query.window();
@@ -131,7 +131,7 @@ async fn position_exists(db: &attome_db::DbPool, position_id: Uuid) -> Result<bo
 )]
 pub(super) async fn create_position(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Json(body): Json<CreatePositionBody>,
 ) -> Result<(StatusCode, Json<PositionItem>), AppError> {
     let name = body.name.trim();
@@ -213,7 +213,7 @@ pub(super) struct UpdatePositionParentBody {
 )]
 pub(super) async fn update_position_parent(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path(position_id): Path<Uuid>,
     Json(body): Json<UpdatePositionParentBody>,
 ) -> Result<StatusCode, AppError> {
@@ -299,7 +299,7 @@ pub(super) async fn update_position_parent(
 )]
 pub(super) async fn delete_position(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path(position_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let holder_ids: Vec<Uuid> = sqlx::query_scalar(
@@ -367,7 +367,7 @@ pub(super) struct PositionMemberItem {
 )]
 pub(super) async fn add_position_member(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path(position_id): Path<Uuid>,
     Json(body): Json<AddPositionMemberBody>,
 ) -> Result<(StatusCode, Json<PositionMemberItem>), AppError> {
@@ -452,7 +452,7 @@ pub(super) async fn add_position_member(
 )]
 pub(super) async fn remove_position_member(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Path((position_id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = super::shared::access_tx(

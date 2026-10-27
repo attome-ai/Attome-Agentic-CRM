@@ -2021,3 +2021,83 @@ async fn view_log_read_is_logged_on_flush() {
         vec![(user_id, "q15t5_employee".to_owned(), "salary".to_owned())]
     );
 }
+
+// ── Q12-T2: delegated administrators ──
+
+/// A delegated administrator (an area privilege, not `system.admin`) is
+/// refused on a person who holds `system.admin`, directly or through a role,
+/// and allowed on anyone else; a full administrator is allowed on everyone.
+#[tokio::test]
+async fn delegated_admin_never_acts_on_a_full_admin() {
+    use attome_security::delegation::{holds_system_admin, require_not_above};
+    let db = skip_if_no_db!(test_db().await);
+    // The throwaway database may not hold the seeded privilege.
+    sqlx::query(
+        "INSERT INTO privilege (id, key, name, is_active, created_at, owner_layer)          VALUES ($1, 'system.admin', 'System administration', true, NOW(), 'platform')          ON CONFLICT DO NOTHING",
+    )
+    .bind(Uuid::now_v7())
+    .execute(&db)
+    .await
+    .expect("ensure system.admin");
+    let admin_privilege: Uuid =
+        sqlx::query_scalar("SELECT id FROM privilege WHERE key = 'system.admin'")
+            .fetch_one(&db)
+            .await
+            .expect("system.admin is seeded");
+    let (direct, through_role, ordinary) = (
+        seed_bare_user(&db).await,
+        seed_bare_user(&db).await,
+        seed_bare_user(&db).await,
+    );
+    sqlx::query(
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+         VALUES ($1, $2, $3, true, NOW())",
+    )
+    .bind(Uuid::now_v7())
+    .bind(direct)
+    .bind(admin_privilege)
+    .execute(&db)
+    .await
+    .expect("grant system.admin directly");
+    let role = seed_role(&db).await;
+    grant_privilege_to_role(&db, role, admin_privilege).await;
+    link_user_to_role(&db, through_role, role).await;
+
+    for (user, expected) in [(direct, true), (through_role, true), (ordinary, false)] {
+        assert_eq!(
+            holds_system_admin(&db, user).await.expect("check"),
+            expected
+        );
+    }
+
+    let delegate = attome_server::security::SecurityContext {
+        user_id: Uuid::now_v7(),
+        is_admin: false,
+        privileges: std::collections::HashSet::from(["admin.users".to_owned()]),
+        field_grants: Default::default(),
+        field_write_grants: Default::default(),
+        field_masks: Default::default(),
+        bulk_fields: Default::default(),
+        epoch: 0,
+        accessible_org_ids: Vec::new(),
+        team_ids: Vec::new(),
+        position_hierarchy_enabled: false,
+        subordinate_user_ids: Vec::new(),
+        condition_grants: Default::default(),
+        role_ids: None,
+        unit_scope: Default::default(),
+        service_principal: false,
+    };
+    for full_admin in [direct, through_role] {
+        assert!(matches!(
+            require_not_above(&db, &delegate, full_admin).await,
+            Err(AppError::Forbidden)
+        ));
+    }
+    assert!(require_not_above(&db, &delegate, ordinary).await.is_ok());
+    let admin = attome_server::security::SecurityContext {
+        is_admin: true,
+        ..delegate
+    };
+    assert!(require_not_above(&db, &admin, direct).await.is_ok());
+}

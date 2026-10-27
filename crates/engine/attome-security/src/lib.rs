@@ -10,6 +10,7 @@ pub mod conditions;
 pub mod conflicts;
 pub mod context;
 pub mod db;
+pub mod delegation;
 pub mod entity_privileges;
 pub mod explain;
 pub mod field_gate;

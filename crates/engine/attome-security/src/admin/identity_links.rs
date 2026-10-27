@@ -17,7 +17,7 @@
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{Json, Router, extract::State, http::StatusCode};
@@ -72,9 +72,10 @@ impl std::fmt::Debug for IdentityLinkItem {
 )]
 pub(super) async fn create_identity_link(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Users>>,
     Json(body): Json<CreateIdentityLinkBody>,
 ) -> Result<(StatusCode, Json<IdentityLinkItem>), AppError> {
+    crate::delegation::require_not_above(&state.base.db, &ctx, body.user_ref).await?;
     let provider_key = body.provider_key.trim();
     let provider_sub = body.provider_sub.trim();
     if provider_key.is_empty() || provider_sub.is_empty() {

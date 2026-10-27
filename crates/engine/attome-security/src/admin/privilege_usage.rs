@@ -3,7 +3,7 @@
 //! role used in 90 days, for access-review campaigns (Q11). Read only.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -40,7 +40,7 @@ pub(super) struct ProposalQuery {
 )]
 pub(super) async fn list(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
     Query(page): Query<OnePageQuery>,
     Query(query): Query<ProposalQuery>,
 ) -> Result<Json<PaginatedResponse<RemovalProposal>>, AppError> {

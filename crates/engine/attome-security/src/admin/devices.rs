@@ -14,7 +14,7 @@
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx, x_audit};
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -297,7 +297,7 @@ pub(super) async fn my_device_wiped(
 )]
 pub(super) async fn list_devices(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Security>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<DeviceRow>>, AppError> {
     let window = query.window();
@@ -347,7 +347,7 @@ pub(super) async fn list_devices(
 )]
 pub(super) async fn wipe_device(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(
@@ -405,7 +405,7 @@ pub(super) async fn wipe_device(
 )]
 pub(super) async fn force_offline_refresh(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Security>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = SecurityTx::begin(

@@ -34,7 +34,7 @@ use attome_approval::{ApprovalStatus, Decision};
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -254,7 +254,7 @@ async fn resolve_manager(
 )]
 pub(super) async fn create_access_review(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Audit>>,
     Json(body): Json<CreateAccessReviewBody>,
 ) -> Result<(StatusCode, Json<AccessReviewCampaign>), AppError> {
     let name = body.name.trim();
@@ -457,7 +457,7 @@ async fn fetch_campaign(
 )]
 pub(super) async fn list_access_reviews(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Audit>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<AccessReviewCampaign>>, AppError> {
     let window = query.window();
@@ -509,7 +509,7 @@ pub(super) async fn list_access_reviews(
 )]
 pub(super) async fn get_access_review(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Audit>>,
     Path(review_id): Path<Uuid>,
 ) -> Result<Json<AccessReviewCampaign>, AppError> {
     fetch_campaign(&state.base.db, review_id)
@@ -535,7 +535,7 @@ pub(super) async fn get_access_review(
 )]
 pub(super) async fn list_access_review_items(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Audit>>,
     Path(review_id): Path<Uuid>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<AccessReviewItem>>, AppError> {
@@ -720,7 +720,7 @@ where
 )]
 pub(super) async fn decide_access_review_item(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Audit>>,
     Path((review_id, item_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<DecideAccessReviewItemBody>,
 ) -> Result<Json<AccessReviewItem>, AppError> {

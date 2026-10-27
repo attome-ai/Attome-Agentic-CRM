@@ -16,7 +16,7 @@ use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
 use attome_core::model::RoleTemplate;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -91,7 +91,7 @@ fn licensed(state: &EngineState) -> Vec<(attome_modules::ModuleId, RoleTemplate)
 )]
 pub(super) async fn list_templates(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Roles>>,
 ) -> Result<Json<Vec<RoleTemplateItem>>, AppError> {
     Ok(Json(
         licensed(&state)
@@ -136,7 +136,7 @@ pub(super) async fn list_templates(
 )]
 pub(super) async fn install_template(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Roles>>,
     recording: RecordingCtx,
     Path(key): Path<String>,
     body: Option<Json<InstallTemplateBody>>,
