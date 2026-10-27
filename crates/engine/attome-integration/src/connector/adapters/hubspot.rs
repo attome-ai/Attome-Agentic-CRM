@@ -81,7 +81,7 @@ pub fn field_of(p: &Value) -> Option<SourceField> {
         name: name.to_owned(),
         label: p["label"].as_str().unwrap_or(name).to_owned(),
         source_type: format!("{kind}/{field_type}"),
-        attome_type: attome,
+        attome_type: attome.to_owned(),
         required: false,
         lookup_target,
         choices: if attome == "choice" {
@@ -425,7 +425,7 @@ mod tests {
         let types: Vec<(&str, &str)> = model.entities[0]
             .fields
             .iter()
-            .map(|f| (f.name.as_str(), f.attome_type))
+            .map(|f| (f.name.as_str(), f.attome_type.as_str()))
             .collect();
         assert_eq!(
             types,

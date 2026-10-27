@@ -63,8 +63,7 @@ pub struct SourceField {
     /// `date`, `date_time`, `time`, `bool`, `choice`, `lookup`, `file`,
     /// `image`, `rich_text`).
     #[serde(deserialize_with = "attome_type_of")]
-    #[schema(value_type = String)]
-    pub attome_type: &'static str,
+    pub attome_type: String,
     pub required: bool,
     /// A lookup's target entity, by its source name.
     pub lookup_target: Option<String>,
@@ -92,13 +91,15 @@ pub const ATTOME_TYPES: [&str; 12] = [
 
 /// A source field's Attome type read back (a model posted to the mapping
 /// draft): one of [`ATTOME_TYPES`].
-fn attome_type_of<'de, D: Deserializer<'de>>(d: D) -> Result<&'static str, D::Error> {
+fn attome_type_of<'de, D: Deserializer<'de>>(d: D) -> Result<String, D::Error> {
     let name = String::deserialize(d)?;
-    ATTOME_TYPES
-        .iter()
-        .find(|t| **t == name)
-        .copied()
-        .ok_or_else(|| serde::de::Error::custom(format!("unknown field type {name:?}")))
+    if ATTOME_TYPES.contains(&name.as_str()) {
+        Ok(name)
+    } else {
+        Err(serde::de::Error::custom(format!(
+            "unknown field type {name:?}"
+        )))
+    }
 }
 
 /// One record as the source holds it.

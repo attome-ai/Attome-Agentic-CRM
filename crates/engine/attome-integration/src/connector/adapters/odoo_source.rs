@@ -69,7 +69,7 @@ pub fn fields_of(answer: &Value) -> Vec<SourceField> {
                 name: name.clone(),
                 label: f["string"].as_str().unwrap_or(name).to_owned(),
                 source_type: kind.to_owned(),
-                attome_type: if kind == "image" { "image" } else { attome },
+                attome_type: if kind == "image" { "image" } else { attome }.to_owned(),
                 required: f["required"] == true,
                 lookup_target: f["relation"].as_str().map(str::to_owned),
                 choices: f["selection"]
@@ -184,7 +184,7 @@ impl<'a> OdooSource<'a> {
             entity
                 .fields
                 .iter()
-                .filter(|f| !matches!(f.attome_type, "file" | "image"))
+                .filter(|f| !matches!(f.attome_type.as_str(), "file" | "image"))
                 .map(|f| f.name.as_str())
                 .filter(|n| *n != "id" && *n != "write_date"),
         );
@@ -337,7 +337,7 @@ mod tests {
         let fields = &model.entities[0].fields;
         let mut types: Vec<(&str, &str)> = fields
             .iter()
-            .map(|f| (f.name.as_str(), f.attome_type))
+            .map(|f| (f.name.as_str(), f.attome_type.as_str()))
             .collect();
         types.sort_unstable();
         assert_eq!(

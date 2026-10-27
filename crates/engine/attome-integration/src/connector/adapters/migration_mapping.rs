@@ -278,7 +278,7 @@ fn draft_attribute(field: &SourceField, target: Option<&TargetEntity>) -> Attrib
             MapAction::Map,
             a.logicalname.clone(),
             a.field_type.clone(),
-            !fits(field.attome_type, &a.field_type),
+            !fits(&field.attome_type, &a.field_type),
         )
     } else {
         (
@@ -410,7 +410,7 @@ mod tests {
             name: name.into(),
             label: name.into(),
             source_type: kind.into(),
-            attome_type: kind,
+            attome_type: kind.into(),
             required: false,
             lookup_target: None,
             choices: choices.iter().map(|c| (*c).to_owned()).collect(),

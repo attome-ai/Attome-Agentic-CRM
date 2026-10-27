@@ -96,7 +96,7 @@ pub fn field_of(a: &Value) -> Option<SourceField> {
         name: name.to_owned(),
         label: label(&a["DisplayName"]).unwrap_or_else(|| name.to_owned()),
         source_type: type_name.unwrap_or(attribute_type).to_owned(),
-        attome_type: attome,
+        attome_type: attome.to_owned(),
         required: matches!(
             a["RequiredLevel"]["Value"].as_str(),
             Some("ApplicationRequired" | "SystemRequired")
@@ -399,7 +399,7 @@ impl<'a> DynamicsSource<'a> {
                     entity
                         .fields
                         .iter()
-                        .filter(|f| !matches!(f.attome_type, "file" | "image"))
+                        .filter(|f| !matches!(f.attome_type.as_str(), "file" | "image"))
                         .filter(|f| f.name != id_column && f.name != "modifiedon")
                         .map(|f| {
                             // A lookup is read through its value column.
@@ -550,7 +550,7 @@ mod tests {
         let types: Vec<(&str, &str)> = account
             .fields
             .iter()
-            .map(|f| (f.name.as_str(), f.attome_type))
+            .map(|f| (f.name.as_str(), f.attome_type.as_str()))
             .collect();
         assert_eq!(
             types,

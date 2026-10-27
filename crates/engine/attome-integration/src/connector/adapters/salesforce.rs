@@ -97,7 +97,7 @@ pub fn field_of(f: &Value) -> Option<SourceField> {
         name: name.to_owned(),
         label: f["label"].as_str().unwrap_or(name).to_owned(),
         source_type: sf_type.to_owned(),
-        attome_type: attome,
+        attome_type: attome.to_owned(),
         // Required: not nillable, no default and must be given on create.
         required: f["nillable"] == false
             && f["defaultedOnCreate"] == false
@@ -554,7 +554,7 @@ mod tests {
         let types: Vec<(&str, &str)> = account
             .fields
             .iter()
-            .map(|f| (f.name.as_str(), f.attome_type))
+            .map(|f| (f.name.as_str(), f.attome_type.as_str()))
             .collect();
         assert_eq!(
             types,

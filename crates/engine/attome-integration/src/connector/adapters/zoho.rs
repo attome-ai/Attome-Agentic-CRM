@@ -88,7 +88,7 @@ pub fn field_of(f: &Value) -> Option<SourceField> {
         name: name.to_owned(),
         label: f["field_label"].as_str().unwrap_or(name).to_owned(),
         source_type: data_type.to_owned(),
-        attome_type: attome,
+        attome_type: attome.to_owned(),
         required: f["system_mandatory"] == true,
         lookup_target,
         choices: f["pick_list_values"]
@@ -309,7 +309,7 @@ impl<'a> ZohoSource<'a> {
         let fields: Vec<&str> = entity
             .fields
             .iter()
-            .filter(|f| !matches!(f.attome_type, "file" | "image"))
+            .filter(|f| !matches!(f.attome_type.as_str(), "file" | "image"))
             .map(|f| f.name.as_str())
             .collect();
         let mut path = format!(
@@ -458,7 +458,7 @@ mod tests {
         let types: Vec<(&str, &str)> = model.entities[0]
             .fields
             .iter()
-            .map(|f| (f.name.as_str(), f.attome_type))
+            .map(|f| (f.name.as_str(), f.attome_type.as_str()))
             .collect();
         assert_eq!(
             types,
