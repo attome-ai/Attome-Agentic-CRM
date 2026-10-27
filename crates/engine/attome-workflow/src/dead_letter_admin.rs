@@ -25,7 +25,7 @@ use attome_audit::AuditOutcome;
 use attome_audit::security::{MandatoryCategory, SecurityAuditor, SecurityEvent};
 use attome_core::EngineState;
 use attome_core::change_feed::ChangeEvent;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -93,7 +93,7 @@ impl std::fmt::Debug for TriggerReplayResult {
 )]
 async fn list_trigger_dead_letters(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<TriggerDeadLetter>>, AppError> {
     let w = q.window();
@@ -158,7 +158,7 @@ async fn load(state: &EngineState, event_id: Uuid) -> Result<TriggerDeadLetter, 
 )]
 async fn replay_trigger_dead_letter(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(event_id): Path<Uuid>,
 ) -> Result<Json<TriggerReplayResult>, AppError> {
     let dispatched = replay(&state, event_id, ctx.user_id).await?;
@@ -259,7 +259,7 @@ pub async fn replay(
 )]
 async fn discard_trigger_dead_letter(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(event_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     discard(&state, event_id, ctx.user_id).await?;

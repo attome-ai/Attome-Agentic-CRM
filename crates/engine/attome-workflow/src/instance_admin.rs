@@ -4,7 +4,7 @@
 //! through the change-event outbox, `entity_trigger::dispatch_pending`).
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, DEFAULT_PAGE_SIZE, PageBase, PageWindow, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -89,7 +89,7 @@ struct InstanceListQuery {
 )]
 async fn list_instances(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(q): Query<InstanceListQuery>,
 ) -> Result<Json<PaginatedResponse<InstanceListItem>>, AppError> {
     let window = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
@@ -154,7 +154,7 @@ async fn list_instances(
 )]
 async fn get_instance(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(instance_id): Path<Uuid>,
 ) -> Result<Json<InstanceDetail>, AppError> {
     let row: InstanceDetailRow = sqlx::query_as(
@@ -226,7 +226,7 @@ async fn get_instance(
 )]
 async fn cancel_instance(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(instance_id): Path<Uuid>,
     Json(body): Json<CancelInstanceBody>,
 ) -> Result<Json<serde_json::Value>, AppError> {
@@ -288,7 +288,7 @@ async fn cancel_instance(
 )]
 async fn start_manual(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Json(body): Json<StartInstanceBody>,
 ) -> Result<(StatusCode, Json<serde_json::Value>), AppError> {
     let instance_id = start_published_instance(

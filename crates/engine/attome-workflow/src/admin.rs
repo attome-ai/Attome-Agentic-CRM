@@ -18,7 +18,7 @@
 //! unless the definition's `owner_layer` is that layer.
 use attome_core::EngineState;
 use attome_core::changeset::{Layer, Op, RecordedOp, RecordingCtx};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, DEFAULT_PAGE_SIZE, PageBase, PageWindow, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -185,7 +185,7 @@ struct DefinitionListQuery {
 )]
 async fn list_definitions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Query(q): Query<DefinitionListQuery>,
 ) -> Result<Json<PaginatedResponse<DefinitionListItem>>, AppError> {
     let window = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
@@ -274,7 +274,7 @@ async fn list_definitions(
 )]
 async fn create_definition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Json(body): Json<CreateDefinitionBody>,
 ) -> Result<(StatusCode, Json<DefinitionDetail>), AppError> {
@@ -398,7 +398,7 @@ async fn create_definition(
 )]
 async fn get_definition(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(definition_id): Path<Uuid>,
 ) -> Result<Json<DefinitionDetail>, AppError> {
     let row = sqlx::query_as::<
@@ -462,7 +462,7 @@ async fn get_definition(
 )]
 async fn update_definition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(definition_id): Path<Uuid>,
     Json(body): Json<UpdateDefinitionBody>,
@@ -556,7 +556,7 @@ async fn update_definition(
 )]
 async fn delete_definition(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(definition_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
@@ -625,7 +625,7 @@ async fn delete_definition(
 )]
 async fn create_version(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path(definition_id): Path<Uuid>,
     Json(body): Json<CreateVersionBody>,
@@ -737,7 +737,7 @@ async fn create_version(
 )]
 async fn get_version(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<VersionDetail>, AppError> {
     let row = sqlx::query_as::<
@@ -800,7 +800,7 @@ async fn get_version(
 )]
 async fn update_version_graph(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<UpdateVersionGraphBody>,
@@ -931,7 +931,7 @@ fn escalation_nodes(graph: &crate::graph::Graph) -> Vec<crate::escalation::Graph
 )]
 async fn publish_version(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     recording: RecordingCtx,
     Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<VersionDetail>, AppError> {
@@ -970,6 +970,20 @@ async fn publish_version(
         .map_err(|e| AppError::Validation(format!("graph did not parse: {e}")))?;
     let schema_hash = crate::graph::validate(&graph)
         .map_err(|e| AppError::Validation(format!("graph validation failed: {e}")))?;
+    // Q12-T2: an Automation-only administrator never publishes a flow that
+    // runs as someone holding `system.admin` (`settings.run_as_user_id`).
+    let settings = graph_json.get("settings");
+    if settings
+        .and_then(|v| v.get("run_as"))
+        .and_then(serde_json::Value::as_str)
+        == Some("flow_identity")
+        && let Some(identity) = settings
+            .and_then(|v| v.get("run_as_user_id"))
+            .and_then(serde_json::Value::as_str)
+            .and_then(|v| Uuid::parse_str(v).ok())
+    {
+        attome_security::delegation::require_not_above(&state.base.db, &ctx, identity).await?;
+    }
     crate::graph::validate_module_steps(&state, &graph)?;
     // A30-T2: every `env.<name>` a condition reads must be readable here.
     attome_core::env_vars::check_publish(

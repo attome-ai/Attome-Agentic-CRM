@@ -42,7 +42,7 @@
 use std::collections::{HashMap, HashSet};
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -90,7 +90,7 @@ const MAX_SIMULATE_ITERATIONS: usize = 2000;
 )]
 async fn simulate_version(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<SimulateRequestBody>,
 ) -> Result<Json<SimulateResponse>, AppError> {
@@ -1171,7 +1171,7 @@ struct RecentRun {
 )]
 async fn replay_version(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<ReplayRequest>,
 ) -> Result<Json<ReplayReport>, AppError> {

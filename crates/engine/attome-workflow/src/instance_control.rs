@@ -9,7 +9,7 @@
 
 use attome_audit::{AuditOperation, BusinessEvent};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -145,7 +145,7 @@ async fn transition(
 )]
 async fn retry_instance(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(instance_id): Path<Uuid>,
     Json(body): Json<ControlBody>,
 ) -> Result<Json<ControlResult>, AppError> {
@@ -215,7 +215,7 @@ pub async fn retry_run(
 )]
 async fn pause_instance(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(instance_id): Path<Uuid>,
     Json(body): Json<ControlBody>,
 ) -> Result<Json<ControlResult>, AppError> {
@@ -275,7 +275,7 @@ pub async fn pause_run(
 )]
 async fn resume_instance(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(instance_id): Path<Uuid>,
     Json(body): Json<ControlBody>,
 ) -> Result<Json<ControlResult>, AppError> {
@@ -413,7 +413,7 @@ async fn preview(
 )]
 async fn move_preview(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Automation>>,
     Path(instance_id): Path<Uuid>,
     Query(query): Query<MovePreviewQuery>,
 ) -> Result<Json<MovePreview>, AppError> {
@@ -442,7 +442,7 @@ async fn move_preview(
 )]
 async fn move_instance(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Automation>>,
     Path(instance_id): Path<Uuid>,
     Json(body): Json<MoveBody>,
 ) -> Result<Json<ControlResult>, AppError> {
