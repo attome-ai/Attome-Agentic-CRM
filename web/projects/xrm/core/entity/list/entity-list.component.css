@@ -370,6 +370,12 @@
   min-width: 100%;
 }
 
+/* Y14-T4: the space of the rows not rendered in a long list. */
+.virtual-spacer td {
+  padding: 0;
+  border: 0;
+}
+
 .data-table thead {
   position: sticky;
   top: 0;

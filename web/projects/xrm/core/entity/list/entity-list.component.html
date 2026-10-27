@@ -199,7 +199,7 @@
   <div class="list-error">{{ error() }}</div>
   }
 
-  <div class="table-container" [attr.aria-busy]="loading()">
+  <div class="table-container" [attr.aria-busy]="loading()" (scroll)="onTableScroll($event)">
     @if (showLoading() && records().length > 0) {
     <div class="table-loading-overlay">{{ 'entityList.refreshingRecords' | translate }}</div>
     }
@@ -387,7 +387,12 @@
           </td>
         </tr>
         } @else {
-        @for (row of records(); track row.id) {
+        @if (virtual() && rows().before > 0) {
+        <tr class="virtual-spacer" aria-hidden="true" [style.height.px]="rows().before" data-testid="virtual-before">
+          <td [attr.colspan]="columns().length + 1"></td>
+        </tr>
+        }
+        @for (row of shownRecords(); track row.id) {
         <tr [class.selected]="selectedRecordIds().has(row.id)" data-testid="entity-grid-row"
           [attr.data-record-id]="row.id">
           <td class="w-checkbox">
@@ -444,6 +449,11 @@
             }
           </td>
           }
+        </tr>
+        }
+        @if (virtual() && rows().after > 0) {
+        <tr class="virtual-spacer" aria-hidden="true" [style.height.px]="rows().after" data-testid="virtual-after">
+          <td [attr.colspan]="columns().length + 1"></td>
         </tr>
         }
         }

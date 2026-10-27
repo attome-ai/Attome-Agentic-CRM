@@ -58,6 +58,27 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 /** A18-T9: how long "Deleted. Undo" stays offered. */
 export const UNDO_SECONDS = 8;
 
+/** Y14-T4: lists longer than this render only the rows in view. */
+export const VIRTUAL_FROM = 100;
+/** The row height the window assumes, in pixels. */
+export const ROW_HEIGHT = 41;
+/** Rows rendered beyond each edge of the view. */
+const OVERSCAN = 15;
+
+/** The rows of a long list to render at a scroll position, and the space before and after them. Pure. */
+export function rowWindow(
+  scrollTop: number,
+  viewportHeight: number,
+  total: number,
+  rowHeight = ROW_HEIGHT,
+  overscan = OVERSCAN,
+): { start: number; end: number; before: number; after: number } {
+  const first = Math.min(Math.floor(Math.max(0, scrollTop) / rowHeight), Math.max(0, total - 1));
+  const start = Math.max(0, first - overscan);
+  const end = Math.min(total, first + Math.ceil(Math.max(viewportHeight, rowHeight) / rowHeight) + overscan);
+  return { start, end, before: start * rowHeight, after: Math.max(0, total - end) * rowHeight };
+}
+
 /** A fresh id for one delete operation. */
 function newOperationId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `op-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -299,6 +320,25 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
 
   /** B17-T6: a phone-sized screen shows the list as cards. */
   readonly isPhone = signal(phoneQuery()?.matches ?? false);
+  /** Y14-T4: the table's scroll position and height, for the row window. */
+  readonly scrollTop = signal(0);
+  readonly viewportHeight = signal(800);
+  /** Y14-T4: a long list renders only the rows in view (with spacer rows for the rest). */
+  readonly virtual = computed(() => !this.isPhone() && this.records().length > VIRTUAL_FROM);
+  readonly rows = computed(() => rowWindow(this.scrollTop(), this.viewportHeight(), this.records().length));
+  readonly shownRecords = computed(() => {
+    const records = this.records();
+    if (!this.virtual()) return records;
+    const w = this.rows();
+    return records.slice(w.start, w.end);
+  });
+
+  onTableScroll(event: Event): void {
+    if (!this.virtual()) return;
+    const el = event.target as HTMLElement;
+    this.scrollTop.set(el.scrollTop);
+    if (el.clientHeight) this.viewportHeight.set(el.clientHeight);
+  }
   private readonly phoneListener = (e: MediaQueryListEvent) => this.isPhone.set(e.matches);
   /** B17-T6: the open view's phone settings (`view_metadata.mobile`). */
   readonly mobile = computed(() => mobileOptions(this.activeView()?.view_metadata));
