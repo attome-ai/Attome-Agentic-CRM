@@ -1343,6 +1343,8 @@ pub fn routes() -> Router<EngineState> {
         .merge(crate::sms_inbound::routes())
         // J8-T1: Meta's webhooks and the social reply route.
         .merge(crate::social::routes())
+        // J5-T2: WhatsApp's webhooks.
+        .merge(crate::whatsapp_inbound::routes())
         // J6-T1: calls and the voice providers' callbacks.
         .merge(crate::voice::routes())
         // D20-T2: public booking links ride the same public bundle; their
@@ -1361,6 +1363,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(crate::cobrowse::openapi());
     doc.merge(crate::sms_inbound::openapi());
     doc.merge(crate::social::openapi());
+    doc.merge(crate::whatsapp_inbound::openapi());
     doc.merge(crate::voice::openapi());
     doc
 }

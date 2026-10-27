@@ -128,6 +128,9 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     // J8-T1: Meta's subscription check and events.
     ("GET", "/api/v1/social/meta/{key}", "portal_status"),
     ("POST", "/api/v1/social/meta/{key}", "webchat"),
+    // J5-T2: WhatsApp's subscription check and events.
+    ("GET", "/api/v1/whatsapp/{key}", "portal_status"),
+    ("POST", "/api/v1/whatsapp/{key}", "webchat"),
     // D20-T2: public booking links (the handler adds per-address and
     // per-page budgets on booking, and the challenge).
     ("GET", "/api/v1/booking/{slug}", "portal_status"),

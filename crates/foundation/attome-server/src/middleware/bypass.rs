@@ -269,6 +269,8 @@ fn is_sms_receipt_path(path: &str) -> bool {
         "/api/v1/sms/inbound/",
         // J8-T1: Meta's subscription check and signed events.
         "/api/v1/social/meta/",
+        // J5-T2: WhatsApp's subscription check and signed events.
+        "/api/v1/whatsapp/",
         // D9-T3: a quote's guest link; the signed token is the authority.
         "/api/v1/quote-acceptance/",
         // K4-T1: a signer's link; the signed token (and the emailed code,
@@ -560,6 +562,8 @@ mod tests {
         assert!(!is_bypass("/api/v1/sms/inbound/a/b"));
         assert!(is_bypass("/api/v1/social/meta/key-1234567890abcdef"));
         assert!(!is_bypass("/api/v1/social/meta/a/b"));
+        assert!(is_bypass("/api/v1/whatsapp/key-1234567890abcdef"));
+        assert!(!is_bypass("/api/v1/whatsapp/a/b"));
         assert!(!is_bypass("/api/v1/social/replies"));
         assert!(is_bypass("/api/v1/quote-acceptance/abc.def"));
         assert!(!is_bypass("/api/v1/quote-acceptance/abc/def"));

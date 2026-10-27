@@ -67,3 +67,5 @@ pub mod social;
 pub mod tls;
 /// J6-T1: calls out and in.
 pub mod voice;
+/// J5-T2: WhatsApp conversations in.
+pub mod whatsapp_inbound;

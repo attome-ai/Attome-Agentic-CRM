@@ -45,6 +45,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- WhatsApp conversations (J5-T2): the WhatsApp Cloud API posts to `/api/v1/whatsapp/{key}` (the
+  WhatsApp system's `inbound_key`; `GET` answers the subscription check, each `POST` is checked
+  against the app secret). Each message is an inbound `whatsapp` communication on the sender's
+  contact, lead or account (matched by phone, E.164), threaded with their earlier messages; an
+  unknown number becomes a lead or contact per the system's `unknown_sender`. With a `queue_id` the
+  conversation gets a waiting chat queue item for the unified router. A stop word withdraws the
+  person's WhatsApp consent, and marketing templates pass the consent gate. `communication.channel`
+  gains `whatsapp`.
 - The service workspace shows work offers (J10-T2): the soonest open offer from the unified router
   appears with its channel and a live countdown; Accept takes it and opens its record as a session
   tab, Decline passes it to the next agent. Offers now carry the held record's `record_entity` and

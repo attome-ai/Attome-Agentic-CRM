@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:1b661870c1cf4ecf98c15a65b7fa7c4d82dc7cf67030ad47b6ff23d550e51681",
+  "checksum": "sha256:8e5266b305a7ed8fdeb051ff0c21679358b237fa2201c45b42a95db87d687215",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-communication.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -57,6 +57,7 @@
               "internal",
               "web_chat",
               "sms",
+              "whatsapp",
               "messenger",
               "instagram",
               "facebook",
