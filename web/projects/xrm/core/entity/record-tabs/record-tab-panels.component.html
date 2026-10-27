@@ -249,3 +249,21 @@
     }
   </div>
 }
+
+@if (has('convert')) {
+  <div [id]="panelId('convert')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('convert')" [hidden]="activeTab() !== 'convert'"
+       data-testid="convert-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'convert') {
+        @if (sales(); as m) {
+          <ng-container *ngComponentOutlet="m.LeadConvertComponent; inputs: activityInputs()" />
+        } @else if (salesLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'leadConvert.loadFailed' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'leadConvert.saveFirst' | translate }}</p>
+    }
+  </div>
+}

@@ -39,6 +39,10 @@
         <!-- B4-T4: tag or untag the selection. -->
         <xrm-bulk-tag [entity]="entityName()" [recordIds]="selectedRecordIdList()"
           [disabled]="bulkActionRunning()" (changed)="onBulkTagged()" />
+        <!-- D3-T3: bulk convert or disqualify, on a lead list. -->
+        @if (entityName() === 'lead' && leadBulk(); as m) {
+          <ng-container *ngComponentOutlet="m.LeadBulkComponent; inputs: leadBulkInputs()" />
+        }
         <!-- AE1-T5: the custom actions that take a list of records. -->
         <xrm-action-bar [entity]="entityName()" [recordIds]="selectedRecordIdList()"
           [disabled]="bulkActionRunning()" (ran)="onBulkTagged()" />

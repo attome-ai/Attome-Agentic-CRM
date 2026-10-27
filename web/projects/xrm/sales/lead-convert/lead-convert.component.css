@@ -1,0 +1,49 @@
+:host { display: block; }
+
+.lc {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lc-muted { margin: 0; color: var(--color-text-secondary); }
+.lc-error { margin: 0; color: var(--color-danger, #b91c1c); }
+
+.lc-targets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.lc-target {
+  margin: 0;
+  padding-block: 8px;
+  padding-inline: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lc-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.lc-values {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 8px;
+  row-gap: 2px;
+  font-size: 0.875rem;
+}
+.lc-values dt { color: var(--color-text-secondary); }
+.lc-values dd { margin: 0; overflow-wrap: anywhere; }
+
+.lc-done ul { margin-block: 4px; padding-inline-start: 20px; }
+
+.lc-actions { display: flex; gap: 8px; }

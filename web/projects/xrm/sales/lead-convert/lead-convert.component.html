@@ -1,0 +1,107 @@
+<section class="lc" data-lead-convert>
+  @if (error()) {
+    <p class="lc-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="lc-muted">{{ 'leadConvert.loading' | translate }}</p>
+  } @else if (converted(); as done) {
+    <div class="lc-done" role="status" data-lead-converted>
+      <p>{{ 'leadConvert.done' | translate: { moved: done.moved } }}</p>
+      <ul>
+        <li><a [routerLink]="['/xrm', 'entity', 'account', 'form']" [queryParams]="{ id: done.account_id }">{{ 'leadConvert.openAccount' | translate }}</a></li>
+        @if (done.contact_id) {
+          <li><a [routerLink]="['/xrm', 'entity', 'contact', 'form']" [queryParams]="{ id: done.contact_id }">{{ 'leadConvert.openContact' | translate }}</a></li>
+        }
+        @if (done.opportunity_id) {
+          <li><a [routerLink]="['/xrm', 'entity', 'opportunity', 'form']" [queryParams]="{ id: done.opportunity_id }">{{ 'leadConvert.openOpportunity' | translate }}</a></li>
+        }
+      </ul>
+      <button type="button" class="btn btn-secondary" data-lead-undo [disabled]="busy()" (click)="undo()">
+        {{ 'leadConvert.undo' | translate }}
+      </button>
+    </div>
+  } @else if (preview(); as p) {
+    @if (undone()) {
+      <p class="lc-muted" role="status">{{ 'leadConvert.undone' | translate }}</p>
+    }
+    @if (!convertible()) {
+      <p class="lc-muted" data-lead-not-convertible>{{ 'leadConvert.notConvertible' | translate: { status: lead()?.status ?? '' } }}</p>
+    } @else {
+      <div class="lc-targets">
+        <fieldset class="lc-target" data-target="account">
+          <legend>{{ 'leadConvert.account' | translate }}</legend>
+          <label class="lc-choice">
+            <input type="radio" name="lc-account" [checked]="account().mode === 'create'" (change)="choose('account', 'create')" />
+            <span>{{ 'leadConvert.createNew' | translate }}</span>
+          </label>
+          @for (m of accountMatches(); track m.id) {
+            <label class="lc-choice">
+              <input type="radio" name="lc-account" [attr.data-link]="'account:' + m.id"
+                     [checked]="isLinked('account', m.id)" (change)="choose('account', 'link', m.id)" />
+              <span>{{ 'leadConvert.linkTo' | translate: { name: m.name } }}</span>
+              <span class="lc-muted">{{ 'leadConvert.matchRule' | translate: { rule: m.rule, percent: m.percent } }}</span>
+            </label>
+          }
+          <dl class="lc-values">
+            @for (line of accountLines(); track line.field) {
+              <dt>{{ line.field }}</dt><dd>{{ line.value }}</dd>
+            }
+          </dl>
+        </fieldset>
+
+        <fieldset class="lc-target" data-target="contact">
+          <legend>{{ 'leadConvert.contact' | translate }}</legend>
+          <label class="lc-choice">
+            <input type="radio" name="lc-contact" [checked]="contact().mode === 'create'" (change)="choose('contact', 'create')" />
+            <span>{{ 'leadConvert.createNew' | translate }}</span>
+          </label>
+          @for (m of contactMatches(); track m.id) {
+            <label class="lc-choice">
+              <input type="radio" name="lc-contact" [attr.data-link]="'contact:' + m.id"
+                     [checked]="isLinked('contact', m.id)" (change)="choose('contact', 'link', m.id)" />
+              <span>{{ 'leadConvert.linkTo' | translate: { name: m.name } }}</span>
+              <span class="lc-muted">{{ 'leadConvert.matchRule' | translate: { rule: m.rule, percent: m.percent } }}</span>
+            </label>
+          }
+          <label class="lc-choice">
+            <input type="radio" name="lc-contact" data-skip="contact" [checked]="contact().mode === 'skip'" (change)="choose('contact', 'skip')" />
+            <span>{{ 'leadConvert.skip' | translate }}</span>
+          </label>
+          <dl class="lc-values">
+            @for (line of contactLines(); track line.field) {
+              <dt>{{ line.field }}</dt><dd>{{ line.value }}</dd>
+            }
+          </dl>
+        </fieldset>
+
+        <fieldset class="lc-target" data-target="opportunity">
+          <legend>{{ 'leadConvert.opportunity' | translate }}</legend>
+          <label class="lc-choice">
+            <input type="radio" name="lc-opportunity" [checked]="opportunity().mode === 'create'" (change)="choose('opportunity', 'create')" />
+            <span>{{ 'leadConvert.createNew' | translate }}</span>
+          </label>
+          <label class="lc-choice">
+            <input type="radio" name="lc-opportunity" data-skip="opportunity" [checked]="opportunity().mode === 'skip'" (change)="choose('opportunity', 'skip')" />
+            <span>{{ 'leadConvert.skip' | translate }}</span>
+          </label>
+          <dl class="lc-values">
+            @for (line of opportunityLines(); track line.field) {
+              <dt>{{ line.field }}</dt><dd>{{ line.value }}</dd>
+            }
+          </dl>
+        </fieldset>
+      </div>
+
+      @if (p.hidden_matches > 0) {
+        <p class="lc-muted">{{ 'leadConvert.hiddenMatches' | translate: { count: p.hidden_matches } }}</p>
+      }
+
+      <footer class="lc-actions">
+        <button type="button" class="btn btn-primary" data-lead-confirm [disabled]="busy()" (click)="confirm()">
+          {{ (busy() ? 'leadConvert.converting' : 'leadConvert.confirm') | translate }}
+        </button>
+      </footer>
+    }
+  }
+</section>

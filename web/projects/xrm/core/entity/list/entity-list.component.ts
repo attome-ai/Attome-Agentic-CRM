@@ -50,6 +50,8 @@ import { EmptyStateComponent, type EmptyReason } from './empty-state.component';
 import { RecordTemplatePickerComponent } from '../record-template/record-template-picker.component';
 import { RecordTypePickerComponent } from '../record-type-picker/record-type-picker.component';
 
+type SalesModule = typeof import('@attome/xrm/sales');
+
 /** A lowercase or uppercase hyphenated UUID. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -344,6 +346,16 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   private readonly bulkEditDialog = viewChild<BulkEditDialogComponent>('bulkEditDialog');
   private bulkEditOpenPending = false;
 
+  /** D3-T3: the sales entry point, loaded on a lead list for its bulk convert and disqualify. */
+  readonly leadBulk = signal<SalesModule | null>(null);
+  private leadBulkRequested = false;
+  /** The lead bulk actions' inputs; a finished action clears the selection and reloads. */
+  readonly leadBulkInputs = computed(() => ({
+    recordIds: this.selectedRecordIdList(),
+    disabled: this.bulkActionRunning(),
+    finished: () => this.onRecordAccessChanged(),
+  }));
+
   /** Live view of the current selection for `<xrm-bulk-edit-dialog>`'s
    * `recordIds` input — a `computed` (not a template array literal) so it
    * only produces a new array when the selection actually changes. */
@@ -417,6 +429,13 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
         const sub = this.live.records.subscribe(frame => this.onLiveRecords(entity, frame));
         onCleanup(() => { unwatch(); sub.unsubscribe(); });
       });
+    });
+    effect(() => {
+      if (this.entityName() === 'lead' && !this.leadBulkRequested) {
+        this.leadBulkRequested = true;
+        // Nothing to show when it cannot load: the other bulk actions stay.
+        import('@attome/xrm/sales').then(m => this.leadBulk.set(m), () => undefined);
+      }
     });
     // Opens the dialog once its deferred chunk has rendered it.
     effect(() => {

@@ -14,12 +14,17 @@ describe('recordTabDefs', () => {
   it('returns every record tab, in the generic form order, for an ordinary entity', () => {
     // F6-T17 and D6-T10: the Fulfilment tab is a sales order's only, Lines an opportunity's.
     // D7-T7: Team and Splits are an opportunity's too.
+    // D3-T3: Convert is a lead's only.
     const opportunityOnly = ['lines', 'team', 'splits'];
     expect(recordTabDefs('contact', echo).map(t => t.id))
-      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && !opportunityOnly.includes(id)));
-    expect(recordTabDefs('order', echo).map(t => t.id)).toEqual(RECORD_TAB_IDS.filter(id => !opportunityOnly.includes(id)));
+      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && id !== 'convert' && !opportunityOnly.includes(id)));
+    expect(recordTabDefs('order', echo).map(t => t.id))
+      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'convert' && !opportunityOnly.includes(id)));
     // D6-T10: the Lines tab is an opportunity's only.
-    expect(recordTabDefs('opportunity', echo).map(t => t.id)).toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment'));
+    expect(recordTabDefs('opportunity', echo).map(t => t.id))
+      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && id !== 'convert'));
+    expect(recordTabDefs('lead', echo).map(t => t.id))
+      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && !opportunityOnly.includes(id)));
   });
 
   it('resolves labels through the translate function', () => {

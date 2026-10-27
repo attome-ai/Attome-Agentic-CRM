@@ -91,7 +91,7 @@ export class RecordTabPanelsComponent {
   readonly fulfilment = signal<FulfilmentModule | null>(null);
   readonly fulfilmentLoadFailed = signal(false);
   private fulfilmentRequested = false;
-  /** D6-T10, D7-T7: the sales entry point, once an opportunity's Lines, Team or Splits tab has asked for it. */
+  /** D6-T10, D7-T7, D3-T3: the sales entry point, once an opportunity's Lines, Team or Splits tab, or a lead's Convert tab, has asked for it. */
   readonly sales = signal<SalesModule | null>(null);
   readonly salesLoadFailed = signal(false);
   private salesRequested = false;
@@ -127,7 +127,7 @@ export class RecordTabPanelsComponent {
     });
     effect(() => {
       const tab = this.activeTab();
-      if ((tab === 'lines' || tab === 'team' || tab === 'splits') && this.recordId() && !this.salesRequested) {
+      if ((tab === 'lines' || tab === 'team' || tab === 'splits' || tab === 'convert') && this.recordId() && !this.salesRequested) {
         this.salesRequested = true;
         import('@attome/xrm/sales').then(
           m => this.sales.set(m),

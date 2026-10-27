@@ -13,12 +13,13 @@ import type { XrmFormTabDef } from '../base/xrm-form.base';
  */
 export type RecordTabId =
   'documents' | 'communications' | 'notes' | 'activities' | 'tags' | 'consent' | 'relationships'
-  | 'timeline' | 'history' | 'approvals' | 'sharing' | 'golden' | 'fulfilment' | 'lines' | 'team' | 'splits';
+  | 'timeline' | 'history' | 'approvals' | 'sharing' | 'golden' | 'fulfilment' | 'lines' | 'team' | 'splits'
+  | 'convert';
 
 /** Every record tab, in the order the generic form has always shown them. */
 export const RECORD_TAB_IDS: readonly RecordTabId[] = [
   'documents', 'communications', 'notes', 'activities', 'tags', 'consent', 'relationships', 'timeline', 'history',
-  'approvals', 'sharing', 'fulfilment', 'lines', 'team', 'splits',
+  'approvals', 'sharing', 'fulfilment', 'lines', 'team', 'splits', 'convert',
 ];
 
 const ICONS: Record<RecordTabId, string> = {
@@ -38,6 +39,7 @@ const ICONS: Record<RecordTabId, string> = {
   lines:          'las la-list',
   team:           'las la-users',
   splits:         'las la-chart-pie',
+  convert:        'las la-arrow-right',
 };
 
 const LABEL_KEYS: Record<RecordTabId, string> = {
@@ -57,6 +59,7 @@ const LABEL_KEYS: Record<RecordTabId, string> = {
   lines:          'xrmForm.tabs.lines',
   team:           'xrmForm.tabs.team',
   splits:         'xrmForm.tabs.splits',
+  convert:        'xrmForm.tabs.convert',
 };
 
 /**
@@ -80,6 +83,8 @@ function hiddenOn(tab: RecordTabId, entityName: string): boolean {
     // D7-T7: an opportunity's team and credit splits.
     case 'team':       return entityName !== 'opportunity';
     case 'splits':     return entityName !== 'opportunity';
+    // D3-T3: a lead's conversion.
+    case 'convert':    return entityName !== 'lead';
     default:          return false;
   }
 }

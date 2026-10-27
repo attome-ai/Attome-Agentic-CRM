@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- A lead's Convert tab shows what the account, contact and opportunity would hold and the existing
+  accounts and contacts they would repeat; each can be created or linked, the contact and the
+  opportunity skipped, and the conversion undone. The lead list converts or disqualifies (with a
+  reason) up to 100 selected leads at once (D3-T3).
 - Process conformance (O8-T1, migration `0304`): case defs take a `stage:<entity>` source (the M7
   stage moves); `GET /api/v1/process/case-defs/{id}/conformance` replays each case against the
   entity's published stage process or its state model and reports the share of cases that conform,
