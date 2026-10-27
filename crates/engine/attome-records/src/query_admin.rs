@@ -5,7 +5,7 @@ use attome_db::DbPool;
 use attome_metadata::provision::{
     ReconcileOutcome, ReconcilePolicy, reject_unsafe_default_query_sql,
 };
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Admin, Authorized, Privilege, SelfService, area};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -1121,7 +1121,7 @@ async fn write_entity_mappings(
 )]
 async fn list_queries(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<QueryMeta>>, AppError> {
     let window = query.window();
@@ -1205,7 +1205,7 @@ struct QueryDependency {
 )]
 async fn list_query_dependencies(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(relation): Path<String>,
     Query(query): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<QueryDependency>>, AppError> {
@@ -1561,7 +1561,7 @@ async fn do_create_query_recorded(
 )]
 async fn get_query(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(query_id): Path<Uuid>,
 ) -> Result<Json<QueryDetail>, AppError> {
     let row: Option<QueryDetailRow> = sqlx::query_as(

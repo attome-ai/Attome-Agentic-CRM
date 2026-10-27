@@ -18,7 +18,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
 use attome_security::record_action::Read;
 use attome_security::{RecordAction, SecurityContextExt};
-use attome_server::authz::{Admin, Authorized, RecordScoped, SelfService};
+use attome_server::authz::{Authorized, Privilege, RecordScoped, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
@@ -977,7 +977,7 @@ pub(super) async fn list_tagged_records(
 )]
 pub(super) async fn list_tag_groups(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
 ) -> Result<Json<PaginatedResponse<TagGroup>>, AppError> {
     let groups: Vec<TagGroup> = sqlx::query_as(attome_db::tagged_sql!(
         "entity.tags",
@@ -1009,7 +1009,7 @@ pub(super) async fn list_tag_groups(
 )]
 pub(super) async fn create_tag_group(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<TagGroupInput>,
 ) -> Result<(StatusCode, Json<TagGroup>), AppError> {
     let name = check_name(&body.name, 100)?;
@@ -1083,7 +1083,7 @@ fn page_of<T>(items: Vec<T>) -> PaginatedResponse<T> {
 )]
 pub(super) async fn merge_tag_route(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(tag_id): Path<Uuid>,
     Json(body): Json<MergeTag>,
 ) -> Result<Json<TagMergeResult>, AppError> {
@@ -1112,7 +1112,7 @@ pub(super) async fn merge_tag_route(
 )]
 pub(super) async fn unmerge_tag_route(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(tag_id): Path<Uuid>,
 ) -> Result<Json<TagMergeResult>, AppError> {
     Ok(Json(unmerge_tag(&state, ctx.user_id, tag_id).await?))

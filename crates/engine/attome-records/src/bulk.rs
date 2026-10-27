@@ -14,7 +14,7 @@
 //! purpose is legacy data with dangling references); hierarchy-cycle
 //! protection always runs, for every mode.
 
-use attome_server::authz::{Admin, Authorized, RecordScoped};
+use attome_server::authz::{Authorized, Privilege, RecordScoped, area};
 use attome_server::capability::{Available, BatchJobs};
 use std::collections::HashSet;
 
@@ -2550,7 +2550,7 @@ fn extract_row_version(row: Option<&Value>) -> Option<i64> {
 )]
 async fn approve_staged_import(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     // D-344: approval is the moment the staged rows actually become work —
     // it flips `pending_review` to `approving` and enqueues
     // `ApplyStagedImport` (a batch job). Approving into a dead worker leaves

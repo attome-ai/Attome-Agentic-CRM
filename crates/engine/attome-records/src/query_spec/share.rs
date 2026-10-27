@@ -16,7 +16,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
 use attome_db::DbPool;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -239,7 +239,7 @@ fn validate_shares(shares: &[QueryShare]) -> Result<(), AppError> {
 )]
 pub(crate) async fn list_query_shares(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(query_id): Path<Uuid>,
 ) -> Result<Json<QuerySharesResponse>, AppError> {
     if !query_is_live(&state.base.db, query_id).await? {
@@ -275,7 +275,7 @@ pub(crate) async fn list_query_shares(
 )]
 pub(crate) async fn put_query_shares(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(query_id): Path<Uuid>,
     Json(body): Json<PutQuerySharesBody>,
 ) -> Result<Json<QuerySharesResponse>, AppError> {

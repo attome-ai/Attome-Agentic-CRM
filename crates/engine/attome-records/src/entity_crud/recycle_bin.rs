@@ -15,7 +15,7 @@ use attome_auth::SessionClaims;
 use attome_core::{EngineState, quote_ident};
 use attome_security::record_action::{Delete, Read};
 use attome_security::{RecordAction, SecurityContextExt};
-use attome_server::authz::{Admin, Authorized, RecordScoped, SelfService};
+use attome_server::authz::{Authorized, Privilege, RecordScoped, SelfService, area};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -472,7 +472,7 @@ const BIN_SETTING_COLUMNS: &str = "entity, require_reason, retention_days, alert
 )]
 pub(super) async fn list_bin_settings(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
 ) -> Result<Json<PaginatedResponse<BinSetting>>, AppError> {
     let items: Vec<BinSetting> = sqlx::query_as(&attome_db::tag_dynamic(
         "entity.recycle_bin",
@@ -506,7 +506,7 @@ pub(super) async fn list_bin_settings(
 )]
 pub(super) async fn put_bin_setting(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity_input): Path<String>,
     Json(body): Json<BinSettingBody>,
 ) -> Result<Json<BinSetting>, AppError> {
