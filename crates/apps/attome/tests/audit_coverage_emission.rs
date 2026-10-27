@@ -7321,6 +7321,26 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({ "system": uniq("source-system") })),
             )
         }
+        // A24-T5: a loaded wave, rolled back (it queued no imports).
+        "POST /api/v1/admin/migration-projects/{id}/waves/{wave_id}/rollback" => {
+            let id = migration_project(fx).await;
+            let wave = Uuid::now_v7();
+            sqlx::query(
+                "INSERT INTO migration_wave (id, project_id, system, kind, status, created_by)                  VALUES ($1, $2, 'source-system', 'full', 'loaded', $3)",
+            )
+            .bind(wave)
+            .bind(id)
+            .bind(Uuid::now_v7())
+            .execute(&fx.base.db)
+            .await
+            .expect("a loaded wave");
+            request(
+                "POST",
+                &format!("/api/v1/admin/migration-projects/{id}/waves/{wave}/rollback"),
+                t,
+                None,
+            )
+        }
         "PUT /api/v1/admin/migration-projects/{id}/model-mapping" => {
             let id = migration_project(fx).await;
             let draft = admin(
