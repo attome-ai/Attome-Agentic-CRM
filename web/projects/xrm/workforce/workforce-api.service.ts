@@ -7,6 +7,8 @@ export type ScheduleSummary = ApiComponents['schemas']['ScheduleSummary'];
 export type AssignmentView = ApiComponents['schemas']['AssignmentView'];
 export type LiveRow = ApiComponents['schemas']['LiveRow'];
 export type Published = ApiComponents['schemas']['Published'];
+export type SwapResult = ApiComponents['schemas']['SwapResult'];
+export type OfferState = ApiComponents['schemas']['OfferState'];
 
 /** One day of a build's coverage (`coverage_json`): per-interval agents. */
 export interface DayCoverage {
@@ -174,6 +176,38 @@ export class WorkforceApiService {
 
   sendOffer(id: string): Observable<unknown> {
     return this.api.post(`/api/v1/workforce/offers/${encodeURIComponent(id)}/send`, {});
+  }
+
+  /** G17-T14: the caller's own published shifts between two days. */
+  mySchedule(from: string, to: string): Observable<AssignmentView[]> {
+    return this.api.get<AssignmentView[]>('/api/v1/workforce/me/schedule', { from, to });
+  }
+
+  /** G17-T14: give one of the caller's shifts to a colleague (a swap request; it may wait for approval). */
+  giveAway(assignmentId: string, toUserId: string, reason: string | null): Observable<SwapResult> {
+    return this.api.post<SwapResult>('/api/v1/workforce/swaps', {
+      assignment_id: assignmentId, to_user_id: toUserId, reason,
+    });
+  }
+
+  /** G17-T14: the offers sent to people (overtime and time off) still open. */
+  openOffers(): Observable<OfferRow[]> {
+    return this.list('wfm_offer', { 'filter[status][eq]': 'sent', sort: 'start_at' }).pipe(
+      map(rows => rows.map(r => ({
+        id: String(r['id']),
+        kind: text(field(r, 'kind')),
+        status: text(field(r, 'status')),
+        start_at: text(field(r, 'start_at')),
+        end_at: text(field(r, 'end_at')),
+        people: typeof field(r, 'people') === 'number' ? (field(r, 'people') as number) : null,
+        reason: text(field(r, 'reason')),
+      }))),
+    );
+  }
+
+  /** G17-T14: take an offer; the first to accept gets it. */
+  acceptOffer(id: string): Observable<OfferState> {
+    return this.api.post<OfferState>(`/api/v1/workforce/offers/${encodeURIComponent(id)}/accept`, {});
   }
 
   live(groupId: string): Observable<LiveRow[]> {

@@ -1,0 +1,73 @@
+:host { display: block; }
+
+/* One column from 360 px: everything stacks, nothing scrolls sideways. */
+.ms {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-inline: 16px;
+  padding-block: 12px;
+  max-inline-size: 720px;
+  margin-inline: auto;
+}
+
+.ms-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ms-title { margin: 0; font-size: 1.25rem; }
+.ms-sub { margin: 0; font-size: 1rem; }
+.ms-day-title { margin-block: 4px; font-size: 0.875rem; color: var(--color-text-secondary); }
+
+.ms-note { margin: 0; color: var(--color-text-secondary); }
+.ms-error { margin: 0; color: var(--color-danger, #b91c1c); }
+
+.ms-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ms-shift,
+.ms-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-block: 8px;
+  padding-inline: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.ms-time { font-weight: 600; }
+.ms-activity,
+.ms-kind { color: var(--color-text-secondary); }
+
+.ms-shift button,
+.ms-offer button { margin-inline-start: auto; }
+
+.ms-give {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+
+.ms-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-inline-size: 0;
+  flex: 1 1 160px;
+}
+.ms-field select,
+.ms-field input { inline-size: 100%; }

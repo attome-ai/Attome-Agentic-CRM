@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- My Schedule (G17-T14, `/xrm/workforce/me`, workforce pack changeset `0006`): a person's published
+  shifts for the next two weeks by day, laid out for a phone; give a shift to a colleague (a swap
+  request), accept open overtime and time-off offers, a link to the leave request form; the view
+  reloads when a notification arrives or a shift or offer changes.
 - Page-view alerts (E14-T9, migration `0305`): with `marketing.tracking_alerts` on, a known visitor's
   view of a watched page (`marketing_watched_page`, `*` patterns) starts the flows whose trigger is
   `web.page_viewed` on the contact or lead, once per session and page; anonymous visitors start

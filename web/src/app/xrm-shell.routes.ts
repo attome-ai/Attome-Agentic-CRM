@@ -925,6 +925,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/workforce').then(m => m.WorkforcePageComponent),
           },
           {
+            // G17-T14: a person's own schedule, give-aways and offers.
+            path: 'workforce/me',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/workforce').then(m => m.MyScheduleComponent),
+          },
+          {
             // D17-T2: sales sequences — enrol a list, start a new sequence.
             path: 'sales/sequences',
             canActivate: [authGuard],

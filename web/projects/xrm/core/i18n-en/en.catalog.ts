@@ -3524,6 +3524,16 @@ export const xrmEn = {
         coverage: 'Coverage per day', required: 'Required', scheduled: 'Scheduled',
       },
       activity: { work: 'Work', break: 'Break', meal: 'Meal', training: 'Training' },
+      me: {
+        title: 'My schedule', requestLeave: 'Request leave', loading: 'Loading your schedule…',
+        shifts: 'Your shifts in the next {{days}} days', noShifts: 'No published shifts in the next two weeks.',
+        range: '{{from}} – {{to}}',
+        giveAway: 'Give away', giveTo: 'Give to', choose: 'Choose a colleague', reason: 'Reason (optional)', send: 'Send',
+        given: 'The shift is now theirs.', giveWaiting: 'Sent. A planner approves it before it moves.',
+        offers: 'Open offers', noOffers: 'No offers are open.',
+        overtime: 'Extra hours', vto: 'Time off', accept: 'Accept',
+        accepted: 'The offer is yours; your schedule is updated.', taken: 'Someone else took this offer first.',
+      },
     },
   },
   // ── D17-T2: sales sequences ──

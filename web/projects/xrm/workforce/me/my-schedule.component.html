@@ -1,0 +1,81 @@
+<section class="ms" data-my-schedule>
+  <header class="ms-head">
+    <h2 class="ms-title">{{ 'xrm.workforce.me.title' | translate }}</h2>
+    <a class="btn btn-secondary" [routerLink]="['/xrm', 'entity', 'leave_request', 'form']" data-leave-link>
+      {{ 'xrm.workforce.me.requestLeave' | translate }}
+    </a>
+  </header>
+
+  @if (error()) {
+    <p class="ms-error" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="ms-note" role="status">{{ notice() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="ms-note">{{ 'xrm.workforce.me.loading' | translate }}</p>
+  } @else {
+    <h3 class="ms-sub">{{ 'xrm.workforce.me.shifts' | translate: { days: dayCount } }}</h3>
+    @for (d of days(); track d.day) {
+      <div class="ms-day" [attr.data-day]="d.day">
+        <h4 class="ms-day-title">{{ d.day | localDate: { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' } }}</h4>
+        <ul class="ms-list">
+          @for (s of d.shifts; track s.id) {
+            <li class="ms-shift" [attr.data-shift]="s.id">
+              <span class="ms-time">{{ 'xrm.workforce.me.range' | translate: {
+                from: (s.start_at | localDate: { timeStyle: 'short' }), to: (s.end_at | localDate: { timeStyle: 'short' })
+              } }}</span>
+              @if (s.activity) {
+                <span class="ms-activity">{{ activityKey(s.activity) | translate }}</span>
+              }
+              <button type="button" class="btn btn-text" [attr.data-give]="s.id" [disabled]="busy() || !colleagues().length"
+                      (click)="startGiving(s.id)">
+                {{ 'xrm.workforce.me.giveAway' | translate }}
+              </button>
+              @if (giving() === s.id) {
+                <div class="ms-give">
+                  <label class="ms-field">
+                    <span>{{ 'xrm.workforce.me.giveTo' | translate }}</span>
+                    <select data-give-to (change)="pickColleague($event)">
+                      <option value="">{{ 'xrm.workforce.me.choose' | translate }}</option>
+                      @for (c of colleagues(); track c.id) {
+                        <option [value]="c.id">{{ c.label }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label class="ms-field">
+                    <span>{{ 'xrm.workforce.me.reason' | translate }}</span>
+                    <input type="text" maxlength="500" (input)="typeReason($event)" />
+                  </label>
+                  <button type="button" class="btn btn-primary" data-give-confirm [disabled]="busy() || !giveTo()" (click)="give()">
+                    {{ 'xrm.workforce.me.send' | translate }}
+                  </button>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    } @empty {
+      <p class="ms-note" data-no-shifts>{{ 'xrm.workforce.me.noShifts' | translate }}</p>
+    }
+
+    <h3 class="ms-sub">{{ 'xrm.workforce.me.offers' | translate }}</h3>
+    <ul class="ms-list">
+      @for (o of offers(); track o.id) {
+        <li class="ms-offer" [attr.data-offer]="o.id">
+          <span class="ms-kind">{{ (o.kind === 'vto' ? 'xrm.workforce.me.vto' : 'xrm.workforce.me.overtime') | translate }}</span>
+          <span class="ms-time">{{ 'xrm.workforce.me.range' | translate: {
+            from: (o.start_at | localDate: { dateStyle: 'medium', timeStyle: 'short' }), to: (o.end_at | localDate: { timeStyle: 'short' })
+          } }}</span>
+          <button type="button" class="btn btn-primary" [attr.data-accept]="o.id" [disabled]="busy()" (click)="accept(o)">
+            {{ 'xrm.workforce.me.accept' | translate }}
+          </button>
+        </li>
+      } @empty {
+        <li class="ms-note" data-no-offers>{{ 'xrm.workforce.me.noOffers' | translate }}</li>
+      }
+    </ul>
+  }
+</section>

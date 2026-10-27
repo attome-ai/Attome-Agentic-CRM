@@ -1,0 +1,47 @@
+{
+  "author": "packs",
+  "checksum": "sha256:174e0dc0988e67c39803de99df7c24f7ba6e34dc3088ca6be63d1ff7def69882",
+  "closed_at": "2026-10-27T00:00:00Z",
+  "description": "Staff schedule (G17-T14): the My Schedule sidebar entry, a person's own shifts, give-aways and open offers.",
+  "format": "attome-changeset/v1",
+  "id": "01a17c96-7391-78f6-8eb0-8d0fe4641dae",
+  "layer": "product",
+  "name": "workforce-my-schedule",
+  "opened_at": "2026-10-27T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 61,
+          "entity": null,
+          "icon": "las la-calendar-alt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "My Schedule"
+          ],
+          "privileges": [],
+          "route": "/xrm/workforce/me"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "path": "My Schedule"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "workforce",
+  "seq": 6,
+  "title": "Pack: staff schedule"
+}
