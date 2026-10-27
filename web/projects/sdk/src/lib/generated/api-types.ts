@@ -7108,7 +7108,7 @@ export interface paths {
          * @description The project's model mapping and what in it cannot run now.
          *     Administrators only.
          */
-        get: operations["get_mapping"];
+        get: operations["get_model_mapping"];
         /**
          * Save a model mapping
          * @description Saves the person's edits to the project's mapping. Refused with 409 when
@@ -7116,7 +7116,7 @@ export interface paths {
          *     is saved too; its problems come back with it. Administrators only.
          *     Audited.
          */
-        put: operations["save_mapping"];
+        put: operations["save_model_mapping"];
         post?: never;
         delete?: never;
         options?: never;
@@ -7139,7 +7139,7 @@ export interface paths {
          *     and stores it as the project's mapping, replacing an earlier one.
          *     Administrators only. Audited.
          */
-        post: operations["draft_mapping"];
+        post: operations["draft_model_mapping"];
         delete?: never;
         options?: never;
         head?: never;
@@ -83375,7 +83375,7 @@ export interface operations {
             };
         };
     };
-    get_mapping: {
+    get_model_mapping: {
         parameters: {
             query?: never;
             header?: never;
@@ -83425,7 +83425,7 @@ export interface operations {
             };
         };
     };
-    save_mapping: {
+    save_model_mapping: {
         parameters: {
             query?: never;
             header?: never;
@@ -83497,7 +83497,7 @@ export interface operations {
             };
         };
     };
-    draft_mapping: {
+    draft_model_mapping: {
         parameters: {
             query?: never;
             header?: never;

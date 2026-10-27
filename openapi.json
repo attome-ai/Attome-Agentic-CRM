@@ -37181,7 +37181,7 @@
         ],
         "summary": "A project's model mapping",
         "description": "The project's model mapping and what in it cannot run now.\nAdministrators only.",
-        "operationId": "get_mapping",
+        "operationId": "get_model_mapping",
         "parameters": [
           {
             "name": "id",
@@ -37257,7 +37257,7 @@
         ],
         "summary": "Save a model mapping",
         "description": "Saves the person's edits to the project's mapping. Refused with 409 when\nthe mapping changed since `row_version`. A mapping that cannot run yet\nis saved too; its problems come back with it. Administrators only.\nAudited.",
-        "operationId": "save_mapping",
+        "operationId": "save_model_mapping",
         "parameters": [
           {
             "name": "id",
@@ -37374,7 +37374,7 @@
         ],
         "summary": "Draft a model mapping",
         "description": "Proposes the mapping of a source model onto this deployment's entities\nand stores it as the project's mapping, replacing an earlier one.\nAdministrators only. Audited.",
-        "operationId": "draft_mapping",
+        "operationId": "draft_model_mapping",
         "parameters": [
           {
             "name": "id",
@@ -224873,6 +224873,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -224924,7 +224926,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  }
 }
