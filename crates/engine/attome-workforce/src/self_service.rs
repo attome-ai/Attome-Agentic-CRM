@@ -371,8 +371,10 @@ async fn request_swap(
     })
 }
 
-/// A planner's decision.
+/// A planner's decision. Named apart from the approval engine's
+/// `DecideBody` in the OpenAPI document, where one name is one schema.
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = WorkforceSwapDecideBody)]
 pub struct DecideBody {
     pub approve: bool,
     pub reason: Option<String>,
