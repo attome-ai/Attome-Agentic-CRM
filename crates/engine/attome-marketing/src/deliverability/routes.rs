@@ -21,7 +21,7 @@
 
 use attome_audit::security::{ExemptReason, x_audit_exempt};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, Privilege, PrivilegeKey, SelfService};
+use attome_server::authz::{Authorized, Privilege, PrivilegeKey, SelfService, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -245,7 +245,7 @@ pub struct DmarcSummaryView {
 /// passed SPF and DKIM, and the sources that failed both.
 async fn get_dmarc(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Query(q): Query<DmarcQuery>,
 ) -> Result<Json<DmarcSummaryView>, AppError> {
     let days = q.days.unwrap_or(30).clamp(1, 365);
@@ -298,7 +298,7 @@ pub struct DmarcUploaded {
 /// report id.
 async fn post_dmarc_upload(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     body: Bytes,
 ) -> Result<Json<DmarcUploaded>, AppError> {
     let report = crate::dmarc::parse_report(&body)?;
