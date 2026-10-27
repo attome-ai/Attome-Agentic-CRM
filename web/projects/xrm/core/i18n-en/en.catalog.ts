@@ -16,6 +16,20 @@ export const xrmEn = {
     prev:                   'Prev',
     next:                   'Next',
   },
+  // B6-T1: the entity list's editable grid.
+  editableGrid: {
+    toggle: 'Edit in grid',
+    label: 'Editable grid',
+    pending: '{cells, plural, one {# changed cell} other {# changed cells}} in {rows, plural, one {# row} other {# rows}}',
+    saveAll: 'Save all',
+    saving: 'Saving…',
+    discardAll: 'Discard all',
+    close: 'Close grid',
+    conflict: 'Someone else changed this field. Reload and try again.',
+    yes: 'Yes',
+    no: 'No',
+    hint: 'Click a cell or press F2 to edit. Enter and Tab keep the value, Escape cancels. Lookups and files are edited on the record.',
+  },
   entityList: {
     filterOpNotEquals: 'Does not equal', filterOpIsEmpty: 'Is empty',
     filterOpIsNotEmpty: 'Is not empty', filterOpBetween: 'Between',

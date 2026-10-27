@@ -137,6 +137,13 @@
           @if (advancedFilters().length) { <span class="summary-chip">{{ advancedFilters().length }}</span> }
         </button>
         }
+        @if (!isPhone()) {
+        <button type="button" class="btn btn-secondary" data-testid="grid-edit-toggle"
+          [class.active]="gridEdit()" [attr.aria-pressed]="gridEdit()" (click)="gridEdit.set(!gridEdit())">
+          <i class="las la-pen"></i>
+          {{ 'editableGrid.toggle' | translate }}
+        </button>
+        }
         @if (showViewSelection() && currentQueryId()) {
         <button type="button" class="btn btn-secondary" [disabled]="savingPersonalView()"
           (click)="saveAsMyView()">
@@ -208,6 +215,9 @@
     <!-- B17-T6: a phone shows the list as cards with swipe actions. -->
     <xrm-list-cards [records]="records()" [columns]="cardColumns()" [options]="mobile()" [rtl]="rtl()"
                     (activate)="runCardAction($event)" />
+    } @else if (gridEdit()) {
+    <xrm-editable-grid [entityName]="entityName()" [columns]="columns()" [records]="records()"
+                       (saved)="onGridSaved($event)" (closed)="gridEdit.set(false)" />
     } @else {
     <table class="data-table">
       <thead>

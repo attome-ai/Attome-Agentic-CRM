@@ -12,6 +12,20 @@ export const xrmAr = {
     prev:                   'السابق',
     next:                   'التالي',
   },
+  // B6-T1: the entity list's editable grid.
+  editableGrid: {
+    toggle: 'تحرير في الشبكة',
+    label: 'شبكة قابلة للتحرير',
+    pending: '{cells, plural, one {خلية معدلة واحدة} two {خليتان معدلتان} other {# خلايا معدلة}} في {rows, plural, one {صف واحد} two {صفين} other {# صفوف}}',
+    saveAll: 'حفظ الكل',
+    saving: 'جارٍ الحفظ…',
+    discardAll: 'تجاهل الكل',
+    close: 'إغلاق الشبكة',
+    conflict: 'غيّر شخص آخر هذا الحقل. أعد التحميل وحاول مرة أخرى.',
+    yes: 'نعم',
+    no: 'لا',
+    hint: 'انقر على خلية أو اضغط F2 للتحرير. يحفظ Enter و Tab القيمة، ويلغي Escape. تُحرَّر حقول البحث والملفات في السجل.',
+  },
   entityList: {
     filterOpNotEquals: 'لا يساوي', filterOpIsEmpty: 'فارغ',
     filterOpIsNotEmpty: 'غير فارغ', filterOpBetween: 'بين',

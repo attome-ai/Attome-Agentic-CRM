@@ -1,0 +1,82 @@
+<div class="grid-bar">
+  <span class="grid-count" aria-live="polite">
+    {{ 'editableGrid.pending' | translate: { cells: changedCells(), rows: changedRows() } }}
+  </span>
+  <button type="button" class="btn-primary" data-testid="grid-save" [disabled]="!changedRows() || saving()" (click)="saveAll()">
+    {{ (saving() ? 'editableGrid.saving' : 'editableGrid.saveAll') | translate }}
+  </button>
+  <button type="button" class="btn-secondary" data-testid="grid-discard" [disabled]="!changedRows() || saving()" (click)="discardAll()">
+    {{ 'editableGrid.discardAll' | translate }}
+  </button>
+  <button type="button" class="btn-secondary" (click)="closed.emit()">{{ 'editableGrid.close' | translate }}</button>
+</div>
+
+<div class="grid-wrap">
+  <table class="grid" role="grid" tabindex="0" [attr.aria-label]="'editableGrid.label' | translate" (keydown)="onKey($event)">
+    <thead>
+      <tr>
+        @for (col of columns(); track col.name) {
+          <th scope="col">{{ col.display_name }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of records(); track row.id; let r = $index) {
+        <tr [class.row-error]="errors()[row.id]">
+          @for (col of columns(); track col.name; let c = $index) {
+            <td role="gridcell"
+                [class.active]="active().row === r && active().col === c"
+                [class.pending]="isPending(row, col)"
+                [class.readonly]="!isEditable(col)"
+                [attr.aria-readonly]="!isEditable(col)"
+                [attr.data-cell]="r + ':' + c"
+                tabindex="-1"
+                (click)="select(r, c)"
+                (keyup.space)="select(r, c)"
+                (dblclick)="startEdit()">
+              @if (editing() && active().row === r && active().col === c) {
+                @switch (col.type) {
+                  @case ('bool') {
+                    <label class="cell-check">
+                      <input type="checkbox" [checked]="draft() === 'true'" (change)="onDraft($event)" />
+                      <span class="sr-only">{{ col.display_name }}</span>
+                    </label>
+                  }
+                  @case ('choice') {
+                    <label class="cell-label">
+                      <span class="sr-only">{{ col.display_name }}</span>
+                      <select class="cell-input" [value]="draft()" (change)="onDraft($event)">
+                        <option value=""></option>
+                        @for (o of col.options ?? []; track o.value) {
+                          <option [value]="o.value" [selected]="o.value === draft()">{{ o.label }}</option>
+                        }
+                      </select>
+                    </label>
+                  }
+                  @default {
+                    <label class="cell-label">
+                      <span class="sr-only">{{ col.display_name }}</span>
+                      <input class="cell-input" [class.invalid]="invalid()"
+                             [attr.aria-invalid]="invalid()"
+                             [type]="col.type === 'number' || col.type === 'currency' ? 'text' : col.type === 'date' ? 'date' : col.type === 'date_time' ? 'datetime-local' : 'text'"
+                             [attr.inputmode]="col.type === 'number' || col.type === 'currency' ? 'decimal' : null"
+                             [value]="draft()" (input)="onDraft($event)" />
+                    </label>
+                  }
+                }
+              } @else {
+                {{ display(row, col) }}
+              }
+            </td>
+          }
+        </tr>
+        @if (errors()[row.id]) {
+          <tr class="row-message">
+            <td [attr.colspan]="columns().length" role="alert">{{ errors()[row.id] }}</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
+<p class="grid-hint">{{ 'editableGrid.hint' | translate }}</p>

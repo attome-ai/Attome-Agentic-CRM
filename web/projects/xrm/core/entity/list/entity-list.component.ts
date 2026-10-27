@@ -46,6 +46,7 @@ import { viewFilters } from './advanced-find';
 import { RecordAccessActionsComponent } from '../record-access/record-access-actions.component';
 import { ImageThumbComponent } from '../field/image-thumb/image-thumb.component';
 import { ListCardsComponent, SwipeAction, mobileOptions } from './list-cards.component';
+import { EditableGridComponent, type RowSave } from './editable-grid.component';
 import { EmptyStateComponent, type EmptyReason } from './empty-state.component';
 import { RecordTemplatePickerComponent } from '../record-template/record-template-picker.component';
 import { RecordTypePickerComponent } from '../record-type-picker/record-type-picker.component';
@@ -200,7 +201,7 @@ export function richTextToPlainText(html: string): string {
   imports:     [
     FormsModule, NgComponentOutlet, RouterLink, TranslatePipe, ChoicePillComponent, BulkEditDialogComponent,
     AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent, BulkTagComponent, ActionBarComponent,
-    ListCardsComponent, RecordTypePickerComponent, RecordTemplatePickerComponent, EmptyStateComponent,
+    ListCardsComponent, EditableGridComponent, RecordTypePickerComponent, RecordTemplatePickerComponent, EmptyStateComponent,
   ],
   host: { '(document:click)': 'handleDocumentClick($event)' },
   templateUrl: './entity-list.component.html',
@@ -320,6 +321,8 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
 
   /** B17-T6: a phone-sized screen shows the list as cards. */
   readonly isPhone = signal(phoneQuery()?.matches ?? false);
+  /** B6-T1: the page shown as an editable grid in place of the table (not on a phone). */
+  readonly gridEdit = signal(false);
   /** Y14-T4: the table's scroll position and height, for the row window. */
   readonly scrollTop = signal(0);
   readonly viewportHeight = signal(800);
@@ -537,6 +540,11 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   // ── Data loading ───────────────────────────────────────────────────────────
 
   refresh(): void { this.load(); }
+
+  /** B6-T1: after the grid saves, reload so each row carries its new version. */
+  onGridSaved(outcomes: RowSave[]): void {
+    if (outcomes.some(o => o.ok)) this.load();
+  }
 
   onViewChange(viewId: string): void {
     this.viewId.set(viewId);
