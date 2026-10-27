@@ -6,6 +6,22 @@ use attome_server::authz::PrivilegeKey;
 /// `attome_project.read` — minted automatically by `entity_privileges::seed_all`
 /// once `seed::seed` registers the `attome_project` entity (same
 /// `{logicalname}.{action}` convention every entity's privileges follow).
+/// G4-T2: reading a queue item's history.
+#[derive(Debug)]
+pub struct QueueItemRead;
+
+impl PrivilegeKey for QueueItemRead {
+    const KEY: &'static str = "queue_item.read";
+}
+
+/// G4-T2: picking, releasing and transferring a queue item.
+#[derive(Debug)]
+pub struct QueueItemUpdate;
+
+impl PrivilegeKey for QueueItemUpdate {
+    const KEY: &'static str = "queue_item.update";
+}
+
 #[derive(Debug)]
 pub struct ProjectRead;
 

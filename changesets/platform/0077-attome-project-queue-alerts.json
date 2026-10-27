@@ -1,0 +1,100 @@
+{
+  "author": "attome-project (G4-T2)",
+  "checksum": "sha256:6eb08240588670af3a55badf29a1cb34c7c0d181f6ab8804bb238566c939b950",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "G4-T2: when a queue's backlog alerts its lead.",
+  "format": "attome-changeset/v1",
+  "id": "fe123d16-2a70-74db-b01b-962864e1d437",
+  "layer": "platform",
+  "name": "attome-project-queue-alerts",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Alert Above Waiting Items",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "backlog_alert_count",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "queue",
+        "field": "backlog_alert_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Alert After Waiting Minutes",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unassigned_alert_minutes",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "queue",
+        "field": "unassigned_alert_minutes"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التنبيه عند تجاوز العناصر المنتظرة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "queue.backlog_alert_count",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التنبيه بعد دقائق الانتظار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "queue.unassigned_alert_minutes",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 77,
+  "title": "Platform definitions: attome-project-queue-alerts"
+}

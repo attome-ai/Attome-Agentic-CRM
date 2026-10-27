@@ -34,6 +34,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (attome_records::query_exec::openapi_fragment(), "core"),
         (attome_records::query_admin::openapi_fragment(), "core"),
         (attome_records::composite::openapi_fragment(), "core"),
+        (attome_project::queue::openapi_fragment(), "core"),
         (crate::view_admin::openapi_fragment(), "core"),
         (crate::model_admin::openapi_fragment(), "core"),
         (crate::model_health::openapi_fragment(), "core"),

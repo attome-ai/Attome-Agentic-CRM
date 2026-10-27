@@ -2122,6 +2122,16 @@ async fn dispatch_platform_job(
         // only, same shape as `ContentReviewReminderSweep` immediately
         // above.
         EngineJob::WorkQueueEscalationSweep => {
+            // G4-T2: the V7 queues' backlog alerts, first, so a service
+            // sweep error does not stop them.
+            let backlog = attome_project::queue::run_backlog_sweep(
+                &db,
+                &attome_state.base.config.notification,
+            )
+            .await?;
+            if backlog > 0 {
+                tracing::info!(alerts = backlog, "queue backlog sweep: run complete");
+            }
             let stats = attome_service::queue::run_escalation_sweep(
                 &db,
                 &attome_state.base.config.notification,

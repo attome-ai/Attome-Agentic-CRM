@@ -1214,6 +1214,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-project-queue",
         // G4-T1: a skill's kind, and the skills a queue item needs.
         "attome-service-queue-skills",
+        // G4-T2: when a queue's backlog alerts its lead.
+        "attome-project-queue-alerts",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

@@ -1,0 +1,48 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "attribute_patches": [
+    {
+      "entity": "queue",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Alert Above Waiting Items",
+        "field_type": "number",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "backlog_alert_count",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "queue",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Alert After Waiting Minutes",
+        "field_type": "number",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "unassigned_alert_minutes",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    }
+  ]
+}

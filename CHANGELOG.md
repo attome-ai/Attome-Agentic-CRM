@@ -45,6 +45,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Queue items can be picked, released and transferred (G4-T2): `POST /api/v1/queue-items/{id}/pick`,
+  `/release` and `/transfer`, each recorded in the item's history (`GET .../history`, migration
+  0310) and in the audit log. A queue's lead is alerted when more items wait than its
+  `backlog_alert_count`, or the oldest has waited longer than its `unassigned_alert_minutes`
+  (platform changeset 0077), on the work-queue escalation sweep.
 - Service queues run on the V7 queues (G4-T1). A `skill_match` queue now assigns the least loaded
   available member who holds every skill the ticket needs at its level: the queue's
   `required_skills` plus the new `queue_item_skill` rows of the ticket's queue item, against the

@@ -7321,6 +7321,38 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({ "system": uniq("source-system") })),
             )
         }
+        // G4-T2: moving a queue item.
+        "POST /api/v1/queue-items/{id}/pick" => {
+            let id = queue_item(fx, "waiting").await;
+            request("POST", &format!("/api/v1/queue-items/{id}/pick"), t, None)
+        }
+        "POST /api/v1/queue-items/{id}/release" => {
+            let id = queue_item(fx, "picked").await;
+            request(
+                "POST",
+                &format!("/api/v1/queue-items/{id}/release"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/queue-items/{id}/transfer" => {
+            let id = queue_item(fx, "waiting").await;
+            let to = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    "/api/v1/queue",
+                    Some(json!({"name": uniq("queue")})),
+                )
+                .await,
+            );
+            request(
+                "POST",
+                &format!("/api/v1/queue-items/{id}/transfer"),
+                t,
+                Some(json!({ "queue_id": to })),
+            )
+        }
         // A24-T5: a loaded wave, rolled back (it queued no imports).
         "POST /api/v1/admin/migration-projects/{id}/waves/{wave_id}/rollback" => {
             let id = migration_project(fx).await;
@@ -8554,6 +8586,46 @@ async fn migration_project(fx: &Fx) -> Uuid {
                 "name": uniq("migration-project"),
                 "source_kind": "csv",
                 "target_entity": fx.entity,
+            })),
+        )
+        .await,
+    )
+}
+
+/// G4-T2: a queue item in `status` holding the fixture's record (the queue
+/// definitions are boot-time platform changesets the fixture does not apply).
+async fn queue_item(fx: &Fx, status: &str) -> Uuid {
+    for name in ["attome-project-queue", "attome-project-queue-alerts"] {
+        attome_api::changeset::boot::apply_platform_definition(&fx.xrm, name)
+            .await
+            .expect("the queue definitions apply");
+    }
+    let registry = attome_core::build_registry(&fx.base.db)
+        .await
+        .expect("build metadata registry");
+    fx.xrm.entities.swap(registry);
+    let queue = id_of(
+        &admin(
+            fx,
+            "POST",
+            "/api/v1/queue",
+            Some(json!({"name": uniq("queue")})),
+        )
+        .await,
+    );
+    id_of(
+        &admin(
+            fx,
+            "POST",
+            "/api/v1/queue_item",
+            Some(json!({
+                "queue_ref": queue,
+                "record_entity": fx.entity,
+                "record_id": fx.record_id.to_string(),
+                "priority": "medium",
+                "status": status,
+                "assigned_ref": if status == "picked" { Some(fx.admin_id) } else { None },
+                "entered_at": "2026-10-27T00:00:00Z",
             })),
         )
         .await,
