@@ -65,6 +65,15 @@ export const xrmAr = {
     noPath: 'لا يوجد رابط خلال ثلاث خطوات بين السجلات التي يمكنك رؤيتها.',
     pathsTruncated: 'بلغ البحث حدًا؛ قد يوجد رابط أطول.',
   },
+  // A8-T5: the polymorphic lookup picker.
+  polymorphicLookup: {
+    search: 'البحث في السجلات',
+    placeholder: 'ابحث في {entities}',
+    results: 'السجلات المطابقة',
+    searching: 'جارٍ البحث…',
+    none: 'لا توجد سجلات مطابقة.',
+    clear: 'مسح',
+  },
   entityList: {
     filterOpNotEquals: 'لا يساوي', filterOpIsEmpty: 'فارغ',
     filterOpIsNotEmpty: 'غير فارغ', filterOpBetween: 'بين',

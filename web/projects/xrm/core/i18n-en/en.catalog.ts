@@ -69,6 +69,15 @@ export const xrmEn = {
     noPath: 'No connection within three steps, among records you can see.',
     pathsTruncated: 'The search hit a bound; a longer connection may exist.',
   },
+  // A8-T5: the polymorphic lookup picker.
+  polymorphicLookup: {
+    search: 'Search records',
+    placeholder: 'Search {entities}',
+    results: 'Matching records',
+    searching: 'Searching…',
+    none: 'No matching records.',
+    clear: 'Clear',
+  },
   entityList: {
     filterOpNotEquals: 'Does not equal', filterOpIsEmpty: 'Is empty',
     filterOpIsNotEmpty: 'Is not empty', filterOpBetween: 'Between',

@@ -1,0 +1,40 @@
+<div class="poly">
+  @if (value(); as v) {
+    <div class="poly-value" data-testid="poly-value">
+      <i [class]="iconOf(v.entity)" aria-hidden="true"></i>
+      <span class="poly-entity">{{ v.entity }}</span>
+      <span class="poly-label">{{ v.label }}</span>
+      @if (!disabled()) {
+        <button type="button" class="poly-clear" (click)="clear()" [attr.aria-label]="'polymorphicLookup.clear' | translate">
+          <i class="las la-times" aria-hidden="true"></i>
+        </button>
+      }
+    </div>
+  }
+  @if (!disabled()) {
+    <label class="poly-search">
+      <span class="sr-only">{{ 'polymorphicLookup.search' | translate }}</span>
+      <input type="search" [value]="term()" (input)="onInput($event)" data-testid="poly-search"
+             [attr.placeholder]="'polymorphicLookup.placeholder' | translate: { entities: targets().join(', ') }" />
+    </label>
+    @if (open() && term().trim().length >= 2) {
+      <div class="poly-results" role="listbox" [attr.aria-label]="'polymorphicLookup.results' | translate">
+        @if (searching()) {
+          <p class="poly-hint">{{ 'polymorphicLookup.searching' | translate }}</p>
+        } @else if (!hitCount()) {
+          <p class="poly-hint">{{ 'polymorphicLookup.none' | translate }}</p>
+        }
+        @for (g of groups(); track g.entity) {
+          <div class="poly-group" [attr.data-poly-group]="g.entity">
+            <p class="poly-group-title"><i [class]="g.icon" aria-hidden="true"></i> {{ g.entity }}</p>
+            @for (h of g.hits; track h.id) {
+              <button type="button" class="poly-hit" role="option" [attr.aria-selected]="false" (click)="pick(g.entity, h)">
+                {{ h.label }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

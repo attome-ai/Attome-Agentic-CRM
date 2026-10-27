@@ -191,3 +191,6 @@ export { provideAttomeXrm }           from './services/provide';
 // agent workspace's context panel.
 export { Customer360Component, SECTION_ROWS, sectionsFor } from './customer-360/customer-360.component';
 export type { Customer360Filter, Customer360Section } from './customer-360/customer-360.component';
+// A8-T5: the polymorphic lookup picker.
+export { PolymorphicLookupComponent } from './field/polymorphic-lookup/polymorphic-lookup.component';
+export type { PolymorphicValue } from './field/polymorphic-lookup/polymorphic-lookup.component';
