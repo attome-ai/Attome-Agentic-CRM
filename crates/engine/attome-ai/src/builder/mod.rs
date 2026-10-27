@@ -5,3 +5,7 @@
 /// AD6-T2: documentation for every published metadata version.
 pub mod docs;
 pub mod explain;
+/// A1-T13 (part): spreadsheet column types for a drafted model.
+pub mod infer;
+/// A1-T13 (part): findings on a drafted model.
+pub mod review;
