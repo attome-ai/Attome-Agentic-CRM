@@ -22,7 +22,7 @@
 
 use attome_core::EngineState;
 use attome_db::is_unique_violation;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -121,7 +121,7 @@ async fn latest_version(db: &attome_db::DbPool, page_id: Uuid) -> Result<Option<
 )]
 async fn create_translation(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(source_id): Path<Uuid>,
     Json(body): Json<CreateTranslationBody>,
 ) -> Result<(StatusCode, Json<TranslationSummary>), AppError> {
@@ -231,7 +231,7 @@ async fn create_translation(
 )]
 async fn list_translations(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<TranslationSet>, AppError> {
     let source_id: Option<Uuid> = sqlx::query_scalar(
@@ -284,7 +284,7 @@ async fn list_translations(
 )]
 async fn mark_current(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<TranslationSummary>, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

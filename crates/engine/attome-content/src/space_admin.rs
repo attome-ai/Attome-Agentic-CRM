@@ -12,7 +12,7 @@
 use crate::model::{ContentSpace, CreateSpaceBody, SpaceTemplatesBody, UpdateSpaceBody};
 use attome_core::EngineState;
 use attome_db::is_unique_violation;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -57,7 +57,7 @@ fn expected_row_version(headers: &HeaderMap) -> Result<i64, AppError> {
 )]
 async fn list_spaces(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
 ) -> Result<Json<Vec<ContentSpace>>, AppError> {
     let sql = format!(
         "SELECT {SPACE_COLUMNS} FROM content_space WHERE is_deleted = FALSE ORDER BY name ASC"
@@ -86,7 +86,7 @@ async fn list_spaces(
 )]
 async fn create_space(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Json(body): Json<CreateSpaceBody>,
 ) -> Result<(StatusCode, Json<ContentSpace>), AppError> {
     let name = body.name.trim();
@@ -167,7 +167,7 @@ async fn create_space(
 )]
 async fn get_space(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ContentSpace>, AppError> {
     let sql =
@@ -200,7 +200,7 @@ async fn get_space(
 )]
 async fn update_space(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
     Json(body): Json<UpdateSpaceBody>,
@@ -340,7 +340,7 @@ async fn update_space(
 )]
 async fn delete_space(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -391,7 +391,7 @@ async fn delete_space(
 )]
 async fn get_space_templates(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<Uuid>>, AppError> {
     let ids: Vec<Uuid> = sqlx::query_scalar(
@@ -423,7 +423,7 @@ async fn get_space_templates(
 /// Full-set replace of the space's allowed templates.
 async fn set_space_templates(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     Json(body): Json<SpaceTemplatesBody>,
 ) -> Result<Json<Vec<Uuid>>, AppError> {

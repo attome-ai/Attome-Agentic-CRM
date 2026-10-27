@@ -11,7 +11,7 @@
 use std::collections::{HashMap, HashSet};
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -284,7 +284,7 @@ async fn load_version(
 )]
 async fn list_versions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<PageVersionSummary>>, AppError> {
     let items: Vec<PageVersionSummary> = sqlx::query_as(
@@ -322,7 +322,7 @@ async fn list_versions(
 )]
 async fn get_version(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path((id, number)): Path<(Uuid, i32)>,
 ) -> Result<Json<PageVersion>, AppError> {
     Ok(Json(load_version(&state.base.db, id, number).await?))
@@ -357,7 +357,7 @@ pub struct CompareQuery {
 )]
 async fn compare_versions(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     Query(q): Query<CompareQuery>,
 ) -> Result<Json<VersionDiff>, AppError> {
@@ -394,7 +394,7 @@ async fn compare_versions(
 )]
 async fn restore_version(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path((id, number)): Path<(Uuid, i32)>,
 ) -> Result<(StatusCode, Json<crate::admin::PublishResult>), AppError> {
     let version = load_version(&state.base.db, id, number).await?;

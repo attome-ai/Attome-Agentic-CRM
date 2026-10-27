@@ -17,7 +17,7 @@ use crate::model::{
 use crate::{blocks, hierarchy::try_lock_hierarchy};
 use attome_core::EngineState;
 use attome_db::is_unique_violation;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{
     AppError, DEFAULT_PAGE_SIZE, ErrorResponse, PageBase, PageWindow, PaginatedResponse,
 };
@@ -94,7 +94,7 @@ struct ListQuery {
 )]
 async fn list_pages(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Query(q): Query<ListQuery>,
 ) -> Result<Json<PaginatedResponse<PageSummary>>, AppError> {
     let PageWindow {
@@ -177,7 +177,7 @@ async fn list_pages(
 )]
 async fn create_page(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Json(body): Json<CreatePageBody>,
 ) -> Result<(StatusCode, Json<PageDetail>), AppError> {
     let title = body.title.trim();
@@ -314,7 +314,7 @@ pub(crate) async fn load_page(db: &attome_db::DbPool, id: Uuid) -> Result<PageDe
 )]
 async fn get_page(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PageDetail>, AppError> {
     Ok(Json(load_page(&state.base.db, id).await?))
@@ -349,7 +349,7 @@ pub struct AsPageQuery {
 /// title and SEO title and description, for the page designer to open.
 async fn get_page_as_page(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     axum::extract::Query(q): axum::extract::Query<AsPageQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
@@ -393,7 +393,7 @@ async fn get_page_as_page(
 /// last-write-wins update.
 async fn update_page(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
     Json(body): Json<UpdatePageBody>,
@@ -527,7 +527,7 @@ async fn update_page(
 )]
 async fn delete_page(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -580,7 +580,7 @@ async fn delete_page(
 )]
 async fn get_ancestors(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<AncestorRow>>, AppError> {
     let rows = hierarchy::ancestors(&state.base.db, id)
@@ -607,7 +607,7 @@ async fn get_ancestors(
 )]
 async fn move_page(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     Json(body): Json<MovePageBody>,
 ) -> Result<Json<PageDetail>, AppError> {
@@ -850,7 +850,7 @@ pub async fn publish_or_submit(
 )]
 async fn publish_page(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<PublishResult>), AppError> {
     publish_or_submit(&state, id, ctx.user_id, None).await
@@ -882,7 +882,7 @@ async fn publish_page(
 /// schedule. Requires `If-Match` (D-079's contract), same as `update_page`.
 async fn schedule_page(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
     Json(body): Json<SchedulePageBody>,
@@ -962,7 +962,7 @@ async fn schedule_page(
 )]
 async fn get_related_pages(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<PageSummary>>, AppError> {
     let rows = sqlx::query_as::<_, PageSummary>(
@@ -1000,7 +1000,7 @@ async fn get_related_pages(
 /// single-direction query (D-369).
 async fn set_related_pages(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     Json(body): Json<RelatedPagesBody>,
 ) -> Result<Json<Vec<PageSummary>>, AppError> {
@@ -1116,7 +1116,7 @@ async fn set_related_pages(
 /// it; nothing else touches it.
 async fn set_review_by(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
     Json(body): Json<ReviewByBody>,
@@ -1187,7 +1187,7 @@ async fn set_review_by(
 /// `EngineJob::ContentPageStatsRollup`, never by this route.
 async fn page_stats(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PageStats>, AppError> {
     let exists: bool = sqlx::query_scalar(

@@ -14,7 +14,7 @@ use crate::blocks;
 use crate::model::{ContentTemplate, CreateTemplateBody, UpdateTemplateBody};
 use attome_core::EngineState;
 use attome_db::is_unique_violation;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -58,7 +58,7 @@ fn expected_row_version(headers: &HeaderMap) -> Result<i64, AppError> {
 )]
 async fn list_templates(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
 ) -> Result<Json<Vec<ContentTemplate>>, AppError> {
     let sql = format!(
         "SELECT {TEMPLATE_COLUMNS} FROM content_template WHERE is_deleted = FALSE ORDER BY name ASC"
@@ -87,7 +87,7 @@ async fn list_templates(
 )]
 async fn create_template(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Json(body): Json<CreateTemplateBody>,
 ) -> Result<(StatusCode, Json<ContentTemplate>), AppError> {
     let name = body.name.trim();
@@ -161,7 +161,7 @@ async fn create_template(
 )]
 async fn get_template(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ContentTemplate>, AppError> {
     let sql = format!(
@@ -195,7 +195,7 @@ async fn get_template(
 )]
 async fn update_template(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
     Json(body): Json<UpdateTemplateBody>,
@@ -289,7 +289,7 @@ async fn update_template(
 )]
 async fn delete_template(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

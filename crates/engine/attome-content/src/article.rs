@@ -22,7 +22,7 @@
 
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -360,7 +360,7 @@ pub async fn sync(state: &EngineState, page_id: Uuid) -> Result<(), AppError> {
 )]
 async fn set_article(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     Json(body): Json<ArticleBody>,
 ) -> Result<Json<ArticleSettings>, AppError> {

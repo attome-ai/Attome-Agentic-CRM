@@ -6,7 +6,7 @@
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -65,7 +65,7 @@ pub struct PageSeoView {
 )]
 async fn get_page_seo(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PageSeoView>, AppError> {
     let (settings, row_version) = super::settings::get_page_seo(&state.base.db, id).await?;
@@ -102,7 +102,7 @@ async fn get_page_seo(
 )]
 async fn put_page_seo(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
     Json(body): Json<PageSeo>,
@@ -135,7 +135,7 @@ async fn put_page_seo(
 )]
 async fn page_findings(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<SeoFinding>>, AppError> {
@@ -182,7 +182,7 @@ pub struct SeoAuditRun {
 )]
 async fn audit_page_now(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<SeoAuditRun>, AppError> {
     let score = site::audit_now(&state.base.db, id).await?;
@@ -210,7 +210,7 @@ async fn audit_page_now(
 )]
 async fn list_topics(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<SeoTopic>>, AppError> {
     let window = q.window();
@@ -242,7 +242,7 @@ async fn list_topics(
 )]
 async fn create_topic(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Json(body): Json<SeoTopicBody>,
 ) -> Result<(StatusCode, Json<SeoTopic>), AppError> {
     let topic = site::create_topic(&state, ctx.user_id, &body).await?;
@@ -274,7 +274,7 @@ async fn create_topic(
 )]
 async fn update_topic(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
     Json(body): Json<SeoTopicBody>,
@@ -304,7 +304,7 @@ async fn update_topic(
 )]
 async fn delete_topic(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     site::delete_topic(&state, ctx.user_id, id).await?;
@@ -339,7 +339,7 @@ pub struct SeoTopicPagesBody {
 )]
 async fn set_topic_pages(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     Json(body): Json<SeoTopicPagesBody>,
 ) -> Result<StatusCode, AppError> {
@@ -384,7 +384,7 @@ pub struct SeoRobotsBody {
 )]
 async fn get_robots(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Communication>>,
     Path(site_key): Path<String>,
 ) -> Result<Json<SeoRobotsView>, AppError> {
     if !site::site_key_ok(&site_key) {
@@ -422,7 +422,7 @@ async fn get_robots(
 )]
 async fn put_robots(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(site_key): Path<String>,
     Json(body): Json<SeoRobotsBody>,
 ) -> Result<Json<SeoRobotsView>, AppError> {

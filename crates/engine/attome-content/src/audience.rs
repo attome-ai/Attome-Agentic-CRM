@@ -10,7 +10,7 @@
 //! needs no storage and opens nothing else.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -93,7 +93,7 @@ pub fn preview_page(secret: &str, token: &str, now: DateTime<Utc>) -> Option<Uui
 )]
 async fn set_audience(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     Json(body): Json<AudienceBody>,
 ) -> Result<Json<AudienceBody>, AppError> {
@@ -157,7 +157,7 @@ async fn set_audience(
 )]
 async fn create_preview_link(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Communication>>,
     Path(id): Path<Uuid>,
     Json(body): Json<PreviewLinkBody>,
 ) -> Result<Json<PreviewLink>, AppError> {
