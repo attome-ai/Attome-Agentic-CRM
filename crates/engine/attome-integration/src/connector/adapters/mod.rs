@@ -10,6 +10,8 @@ pub mod carrier_aramex;
 pub mod carrier_smsa;
 /// K4-T3: DocuSign envelopes and Connect status messages.
 pub mod docusign;
+/// A24-T1: Dynamics 365 (Dataverse) as a migration source.
+pub mod dynamics;
 /// S12-T2: what the ERP connectors exchange with Attome.
 pub mod erp;
 /// D30-T1: LinkedIn Lead Gen Forms responses mapped onto leads.
@@ -17,12 +19,16 @@ pub mod linkedin;
 /// J2-T1: the IMAP, Graph and Gmail readers behind `mailbox`.
 pub mod mail;
 pub mod mailbox;
+/// A24-T1: the migration source-connector trait.
+pub mod migration_source;
 /// AJ5-T1: SPL National Address lookups and standardisation.
 pub mod national_address;
 /// S12-T2: Odoo over JSON-RPC.
 pub mod odoo;
 pub mod reputation;
 pub mod rest;
+/// A24-T1: Salesforce as a migration source.
+pub mod salesforce;
 /// S12-T2: SAP Business One over its Service Layer.
 pub mod sap_b1;
 /// E13-T10: Search Console, Bing Webmaster Tools and IndexNow codecs.
