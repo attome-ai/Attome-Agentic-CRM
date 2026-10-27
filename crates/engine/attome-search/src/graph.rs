@@ -279,6 +279,231 @@ fn edge_allowed(label: &str, filter: Option<&HashSet<String>>) -> bool {
     }
 }
 
+// ── O6-T1: polymorphic pairs (A8-T1) and many-to-many links (A7-T4) ─────────
+
+/// A polymorphic id attribute: `from_entity.id_field` (with the target
+/// entity in `entity_field`) points at a record of one of `targets`.
+#[derive(Debug, Clone)]
+struct PolymorphicEdgeMeta {
+    from_entity: String,
+    id_field: String,
+    entity_field: String,
+    is_sensitive: bool,
+    targets: Vec<String>,
+}
+
+/// Every polymorphic id attribute in the registry (`options.polymorphic`).
+fn polymorphic_edges(registry: &EntityMetaRegistry) -> Vec<PolymorphicEdgeMeta> {
+    let mut out = Vec::new();
+    for meta in registry.iter() {
+        for attr in &meta.attrs {
+            let Some(poly) = attr.options.as_ref().and_then(|o| o.get("polymorphic")) else {
+                continue;
+            };
+            let Some(pair) = poly.get("pair").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            let mut targets: Vec<String> = poly
+                .get("targets")
+                .and_then(serde_json::Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(|t| t.as_str().map(str::to_owned))
+                .collect();
+            if let Some(base) = poly.get("extends").and_then(serde_json::Value::as_str) {
+                targets.push(base.to_owned());
+            }
+            out.push(PolymorphicEdgeMeta {
+                from_entity: meta.logicalname.clone(),
+                id_field: attr.logicalname.clone(),
+                entity_field: pair.to_owned(),
+                is_sensitive: attr.is_read_gated(),
+                targets,
+            });
+        }
+    }
+    out
+}
+
+/// The polymorphic edges leaving (`outbound`) or reaching (`!outbound`)
+/// records `ids` of `entity`.
+#[allow(clippy::too_many_arguments)]
+async fn polymorphic_candidates(
+    tx: &mut sqlx::PgConnection,
+    edges: &[PolymorphicEdgeMeta],
+    registry: &EntityMetaRegistry,
+    ctx: &SecurityContext,
+    entity: &str,
+    ids: &[Uuid],
+    outbound: bool,
+    edge_filter: Option<&HashSet<String>>,
+    cap: i64,
+    truncated: &mut bool,
+) -> Result<Vec<Candidate>, AppError> {
+    let mut out = Vec::new();
+    for e in edges {
+        let label = format!("polymorphic:{}", e.id_field);
+        if !edge_allowed(&label, edge_filter) {
+            continue;
+        }
+        if outbound && e.from_entity != entity {
+            continue;
+        }
+        if !outbound && !e.targets.iter().any(|t| t == entity) {
+            continue;
+        }
+        if !attome_security::field_gate::field_readable(
+            ctx,
+            &e.from_entity,
+            &e.id_field,
+            e.is_sensitive,
+            None,
+            attome_security::field_gate::Surface::Bulk,
+        ) {
+            continue;
+        }
+        let table = quote_ident(&e.from_entity);
+        let id_field = quote_ident(&e.id_field);
+        let entity_field = quote_ident(&e.entity_field);
+        if outbound {
+            let rows: Vec<(Uuid, Option<String>, Option<String>)> = sqlx::query_as(&format!(
+                "SELECT r.id, r.{entity_field}::text, r.{id_field}::text FROM {table} r \
+                  WHERE r.id = ANY($1::uuid[]) AND r.{id_field} IS NOT NULL \
+                    AND (r.is_active IS NULL OR r.is_active = true) LIMIT $2"
+            ))
+            .bind(ids)
+            .bind(cap)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+            if rows.len() as i64 >= cap {
+                *truncated = true;
+            }
+            for (from_id, target_entity, target_id) in rows {
+                let (Some(target_entity), Some(target_id)) = (target_entity, target_id) else {
+                    continue;
+                };
+                let Ok(to_id) = Uuid::parse_str(target_id.trim()) else {
+                    continue;
+                };
+                // Only a target the field allows and the registry knows.
+                if !e.targets.contains(&target_entity) || registry.get(&target_entity).is_none() {
+                    continue;
+                }
+                out.push(Candidate {
+                    from: NodeRef {
+                        entity: entity.to_owned(),
+                        id: from_id,
+                    },
+                    to_entity: target_entity,
+                    to_id,
+                    edge_type: label.clone(),
+                });
+            }
+        } else {
+            let texts: Vec<String> = ids.iter().map(Uuid::to_string).collect();
+            let rows: Vec<(Uuid, String)> = sqlx::query_as(&format!(
+                "SELECT r.id, r.{id_field}::text FROM {table} r \
+                  WHERE r.{entity_field}::text = $1 AND r.{id_field}::text = ANY($2::text[]) \
+                    AND (r.is_active IS NULL OR r.is_active = true) LIMIT $3"
+            ))
+            .bind(entity)
+            .bind(&texts)
+            .bind(cap)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+            if rows.len() as i64 >= cap {
+                *truncated = true;
+            }
+            for (from_id, target_id) in rows {
+                let Ok(to_id) = Uuid::parse_str(target_id.trim()) else {
+                    continue;
+                };
+                // Walked backward: the newly found node is the record holding
+                // the pair; the edge still reads from it to the target.
+                out.push(Candidate {
+                    from: NodeRef {
+                        entity: entity.to_owned(),
+                        id: to_id,
+                    },
+                    to_entity: e.from_entity.clone(),
+                    to_id: from_id,
+                    edge_type: label.clone(),
+                });
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// The many-to-many links (`relationship_info` join tables) of records `ids`
+/// of `entity`, either side, live links only.
+#[allow(clippy::too_many_arguments)]
+async fn link_candidates(
+    tx: &mut sqlx::PgConnection,
+    registry: &EntityMetaRegistry,
+    entity: &str,
+    ids: &[Uuid],
+    edge_filter: Option<&HashSet<String>>,
+    cap: i64,
+    truncated: &mut bool,
+) -> Result<Vec<Candidate>, AppError> {
+    let relationships: Vec<(String, String, String, String)> = sqlx::query_as(
+        "SELECT name, entity_a, entity_b, join_table FROM relationship_info \
+          WHERE (entity_a = $1 OR entity_b = $1) AND is_active = TRUE AND is_deleted IS NOT TRUE \
+          ORDER BY name",
+    )
+    .bind(entity)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let mut out = Vec::new();
+    for (name, entity_a, entity_b, join_table) in relationships {
+        let label = format!("link:{name}");
+        if !edge_allowed(&label, edge_filter) {
+            continue;
+        }
+        let join = quote_ident(&join_table);
+        let mut sides = Vec::new();
+        if entity_a == entity {
+            sides.push(("a_id", "b_id", entity_b.clone()));
+        }
+        if entity_b == entity {
+            sides.push(("b_id", "a_id", entity_a.clone()));
+        }
+        for (mine, other, other_entity) in sides {
+            if registry.get(&other_entity).is_none() {
+                continue;
+            }
+            let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(&format!(
+                "SELECT j.{mine}, j.{other} FROM {join} j \
+                  WHERE j.{mine} = ANY($1::uuid[]) AND j.is_active = true LIMIT $2"
+            ))
+            .bind(ids)
+            .bind(cap)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+            if rows.len() as i64 >= cap {
+                *truncated = true;
+            }
+            for (from_id, to_id) in rows {
+                out.push(Candidate {
+                    from: NodeRef {
+                        entity: entity.to_owned(),
+                        id: from_id,
+                    },
+                    to_entity: other_entity.clone(),
+                    to_id,
+                    edge_type: label.clone(),
+                });
+            }
+        }
+    }
+    Ok(out)
+}
+
 // ── Candidate discovery — cheap, unfiltered reads from an already-vetted frontier ──
 
 /// One undecided edge: `from` is a node already known to be visible (either
@@ -594,6 +819,7 @@ async fn walk(
     req: &TraverseRequest,
 ) -> Result<TraverseOutcome, AppError> {
     let edges = lookup_edges(registry);
+    let poly_edges = polymorphic_edges(registry);
     let edge_filter: Option<HashSet<String>> =
         req.edge_types.as_ref().map(|v| v.iter().cloned().collect());
 
@@ -672,6 +898,54 @@ async fn walk(
                     .await?,
                 );
             }
+            // O6-T1: polymorphic pairs each way, and many-to-many links
+            // (which have no direction of their own).
+            if matches!(req.direction, Direction::Outbound | Direction::Both) {
+                candidates.extend(
+                    polymorphic_candidates(
+                        &mut tx,
+                        &poly_edges,
+                        registry,
+                        ctx,
+                        entity,
+                        &ids,
+                        true,
+                        edge_filter.as_ref(),
+                        MAX_FANOUT_PER_HOP,
+                        &mut truncated,
+                    )
+                    .await?,
+                );
+            }
+            if matches!(req.direction, Direction::Inbound | Direction::Both) {
+                candidates.extend(
+                    polymorphic_candidates(
+                        &mut tx,
+                        &poly_edges,
+                        registry,
+                        ctx,
+                        entity,
+                        &ids,
+                        false,
+                        edge_filter.as_ref(),
+                        MAX_FANOUT_PER_HOP,
+                        &mut truncated,
+                    )
+                    .await?,
+                );
+            }
+            candidates.extend(
+                link_candidates(
+                    &mut tx,
+                    registry,
+                    entity,
+                    &ids,
+                    edge_filter.as_ref(),
+                    MAX_FANOUT_PER_HOP,
+                    &mut truncated,
+                )
+                .await?,
+            );
             if matches!(req.direction, Direction::Inbound | Direction::Both) {
                 candidates.extend(
                     inbound_lookup_candidates(
@@ -1180,6 +1454,25 @@ mod path_tests {
             to_id: Uuid::from_u128(b.1),
             edge_type: t.into(),
         }
+    }
+
+    #[test]
+    fn graph_paths_cross_polymorphic_and_link_edges() {
+        // task -regarding-> account <-link:account_contacts-> contact
+        let edges = vec![
+            edge(("task", 1), ("account", 2), "polymorphic:regarding_id"),
+            edge(("account", 2), ("contact", 3), "link:account_contacts"),
+        ];
+        let found = paths_between(
+            &edges,
+            ("task", Uuid::from_u128(1)),
+            ("contact", Uuid::from_u128(3)),
+            3,
+            10,
+        );
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0][0].edge_type, "polymorphic:regarding_id");
+        assert_eq!(found[0][1].edge_type, "link:account_contacts");
     }
 
     #[test]
