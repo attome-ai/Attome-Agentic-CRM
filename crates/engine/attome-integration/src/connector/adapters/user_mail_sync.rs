@@ -33,7 +33,7 @@ use attome_audit::security::{
 };
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -749,7 +749,7 @@ async fn disconnect(
 )]
 async fn microsoft_admin_consent(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
 ) -> Result<Json<SignInUrl>, AppError> {
     let app = app(&state, Provider::Microsoft).await?;
     let back = format!(

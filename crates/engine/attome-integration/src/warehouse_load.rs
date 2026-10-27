@@ -24,7 +24,7 @@
 //! schema version changes.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -339,7 +339,7 @@ async fn columns_for(state: &EngineState, entity: &str) -> Result<Vec<String>, A
 )]
 async fn get_load_script(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Integrations>>,
     Path(entity): Path<String>,
     Query(query): Query<LoadScriptQuery>,
 ) -> Result<Json<WarehouseLoadScript>, AppError> {

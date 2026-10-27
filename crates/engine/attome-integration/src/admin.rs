@@ -21,7 +21,7 @@
 
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -121,7 +121,7 @@ struct TestConnectionResponse {
 )]
 async fn create_system(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Json(body): Json<CreateSystemBody>,
 ) -> Result<(StatusCode, Json<SystemCreatedResponse>), AppError> {
     if body.name.trim().is_empty() {
@@ -244,7 +244,7 @@ async fn create_system(
 )]
 async fn rotate_credential(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
     Json(body): Json<RotateCredentialBody>,
 ) -> Result<Json<RotateCredentialResponse>, AppError> {
@@ -329,7 +329,7 @@ async fn rotate_credential(
 )]
 async fn test_connection(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Integrations>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<TestConnectionResponse>, AppError> {
     let row = system::load(&state.base.db, id)
