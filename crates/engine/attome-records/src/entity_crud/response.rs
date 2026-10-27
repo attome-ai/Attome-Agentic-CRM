@@ -566,7 +566,7 @@ pub(super) fn build_response(
         std::collections::HashMap::new();
     let sensitive: std::collections::HashSet<&str> = attrs
         .iter()
-        .filter(|a| a.is_sensitive && !ctx.has_field_read_grant(entity_name, &a.logicalname))
+        .filter(|a| a.is_read_gated() && !ctx.has_field_read_grant(entity_name, &a.logicalname))
         .filter(|a| {
             match attome_security::field_gate::field_mask(ctx, entity_name, &a.logicalname) {
                 Some(format) => {

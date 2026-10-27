@@ -66,7 +66,7 @@ fn odata(body: Value) -> Response {
 
 /// Whether `ctx` may read `entity`'s attribute `attr`.
 fn attribute_visible(ctx: &SecurityContext, entity: &str, attr: &attome_core::AttrInfo) -> bool {
-    !attr.is_sensitive
+    !attr.is_read_gated()
         || ctx.is_admin
         || ctx
             .field_grants

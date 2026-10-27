@@ -114,7 +114,7 @@ fn attribute<'a>(entity: &'a EntityMeta, name: &str) -> Result<&'a AttrInfo, App
                 entity.logicalname
             ))
         })?;
-    if attr.is_sensitive {
+    if attr.is_read_gated() {
         return Err(invalid(format!(
             "{name:?} is sensitive; a metric is shown to everyone who may read it"
         )));

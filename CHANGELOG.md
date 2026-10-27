@@ -21,6 +21,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Changed
+- Field security follows sensitivity labels (Q15-T2): a field whose confirmed label is Personal, Financial,
+  Health or Secret now needs a field-security read grant, like an `is_sensitive` field, on every surface.
+  Labels mapped by the A1-T1 migration are unconfirmed and change nothing until a builder confirms them;
+  confirming one hides the field from roles without a grant.
 - Notification and document templates render through the template engine (Z13-T8): the old
   `merge_placeholders` is gone and `Template::placeholders` reads the same `{{ name }}` form with each
   caller's rule for unknown names. Two differences, both stricter: in HTML a value inside a URL
@@ -28,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Controlled-by-parent access (Q14-T3): entity settings take
+  `"access": { "mode": "controlled_by_parent", "lookup": "<attribute id>" }`, and the entity's records then
+  follow the parent record that lookup names (level, unit, owner, shares, rules and deny of the parent;
+  the child's own deny still wins). One hop only.
 - A Sharing tab on every record (Q14-T6): the owner and business unit, the record's shares (added and
   removed by anyone holding `{entity}.share`), and "Why can they see this?", which explains a chosen
   person's access through the access explainer. The permission sets, conflict rules and role templates

@@ -963,7 +963,7 @@ async fn check_business(
         for field in condition.leaf_fields() {
             if attrs
                 .iter()
-                .any(|a| a.logicalname == field && a.is_sensitive)
+                .any(|a| a.logicalname == field && a.is_read_gated())
                 && !ctx.has_field_read_grant(&input.entity, field)
             {
                 out.issues.push(issue(

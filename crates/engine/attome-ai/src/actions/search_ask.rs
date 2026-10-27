@@ -187,7 +187,7 @@ pub fn readable_schema(
             let attrs: Vec<String> = e
                 .attrs
                 .iter()
-                .filter(|a| !a.is_sensitive || ctx.is_admin)
+                .filter(|a| !a.is_read_gated() || ctx.is_admin)
                 .take(MAX_PROMPT_ATTRS)
                 .map(|a| format!("{} ({})", a.logicalname, a.field_type().as_str()))
                 .collect();

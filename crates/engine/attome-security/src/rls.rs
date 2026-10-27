@@ -5,6 +5,7 @@
 //! code).
 
 use attome_core::AttrInfo;
+use attome_db::ident::quote_ident;
 use attome_server::security::{AccessLevel, SecurityContext};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -459,9 +460,6 @@ fn build_predicate(
     let p_subordinates = alloc.next();
 
     let record_id_col = col(id_column);
-    let org_col = col("organization_ref");
-    let owner_col = col("owner_ref");
-    let owner_type_col = col("owner_type");
 
     // Every placeholder carries an explicit `::type` cast — a no-op for a
     // caller (e.g. `entity_crud.rs`) that binds real typed values via
@@ -472,85 +470,90 @@ fn build_predicate(
     // that caller can splice this same fragment in and stringify its binds
     // (`Uuid::to_string()`, a Postgres `{u1,u2}` array literal) rather than
     // this module needing a second, duplicated fragment-builder.
-    let caller_ph = format!("${p_caller}::uuid");
-    let teams_ph = format!("${p_teams}::uuid[]");
-    let subordinates_ph = format!("${p_subordinates}::uuid[]");
+    let ph = Placeholders {
+        cap: format!("${p_cap}::smallint"),
+        orgs: format!("${p_orgs}::uuid[]"),
+        caller: format!("${p_caller}::uuid"),
+        teams: format!("${p_teams}::uuid[]"),
+        subordinates: format!("${p_subordinates}::uuid[]"),
+    };
 
-    // Q14-T2: published sharing rules, one more allow arm inside the deny
-    // guard. Only on a real table, which has the organisation and owner
-    // columns the rules compare.
-    let rule_arm = if allow_bu_tier {
-        crate::sharing_rules::rule_arm(
-            ctx,
-            entity_ref,
-            required,
-            &org_col,
-            &owner_col,
-            &owner_type_col,
-        )
+    // Q14-T3: a record controlled by its parent is visible exactly when its
+    // parent is, through one lookup; `access_level` is already the caller's
+    // level on the parent (`db::resolve_entity_access_level`). Only on a
+    // real table, which has the lookup column. The record's own deny share
+    // still wins.
+    let parent = if allow_bu_tier {
+        crate::parent_access::link_for(entity_ref)
     } else {
         None
     };
-    let allow = format!(
-        r#"(
-            ({bu_tier})
-            OR ({owner_arm})
-            OR ({rule_arm})
-            OR EXISTS (
-                SELECT 1 FROM {SHARE_ROWS} s
-                WHERE s.record_id = {record_id_col} AND s.entity_ref = ${p_entity}::uuid
-                  AND s.capability BETWEEN ${p_cap}::smallint AND 1
-                  AND ({share_disjunction})
-            )
-            OR EXISTS (
-                SELECT 1 FROM entity_default_share d
-                WHERE d.entity_ref = ${p_entity}::uuid
-                  AND d.capability BETWEEN ${p_cap}::smallint AND 1
-                  AND ({default_share_disjunction})
-            )
-        )"#,
-        bu_tier = if allow_bu_tier && access_level == AccessLevel::BusinessUnit {
-            format!("{org_col} = ANY(${p_orgs}::uuid[])")
-        } else {
-            // Team tier (or None, which never reaches here — see below), or
-            // a caller that doesn't support the org fast path at all
-            // (`allow_bu_tier = false`): BU comparison is never true, so the
-            // allow-chain falls through to the share/default-share EXISTS
-            // checks, which already cover the Team tier via principal_type
-            // = 1 team matches.
-            "FALSE".to_owned()
-        },
-        owner_arm = if owner_visible {
-            format!("{owner_col} = ${p_caller}::uuid AND {owner_type_col} = 0")
-        } else {
-            "FALSE".to_owned()
-        },
-        rule_arm = rule_arm.as_deref().unwrap_or("FALSE"),
-        share_disjunction =
-            principal_disjunction_sql("s", &caller_ph, &teams_ph, Some(&subordinates_ph)),
-        default_share_disjunction = principal_disjunction_sql("d", &caller_ph, &teams_ph, None),
-    );
-
-    // `AccessLevel::None` holds no role at all — no BU/Team tier match is
-    // possible, but an explicit share can still grant access (D-133: share
-    // rows are independent of the ladder, not gated behind holding a role).
-    // The `allow` fragment above already expresses that correctly for
-    // `None` too (BU tier is `FALSE`, share/default-share EXISTS still run).
-
-    let deny = deny_clause_sql(
+    let child_deny = deny_clause_sql(
         "s",
         &record_id_col,
         &format!("${p_entity}::uuid"),
-        &caller_ph,
-        &teams_ph,
+        &ph.caller,
+        &ph.teams,
     );
-
-    let sql = format!("AND {allow} AND {deny}");
+    let (sql, scope_entity) = match &parent {
+        Some(link) => {
+            let alias = "rls_parent";
+            let parent_col = |name: &str| format!("{alias}.{name}");
+            let (allow, deny) = allow_and_deny(
+                ctx,
+                &RecordColumns {
+                    entity_ref: link.parent,
+                    entity_expr: format!("'{}'::uuid", link.parent),
+                    record_id: parent_col("id"),
+                    org: parent_col("organization_ref"),
+                    owner: parent_col("owner_ref"),
+                    owner_type: parent_col("owner_type"),
+                },
+                true,
+                owner_visible,
+                access_level,
+                required,
+                &ph,
+            );
+            let lookup = if table_alias.is_empty() {
+                quote_ident(&link.lookup_column)
+            } else {
+                format!("{table_alias}.{}", quote_ident(&link.lookup_column))
+            };
+            (
+                format!(
+                    "AND EXISTS (SELECT 1 FROM {table} {alias} WHERE {alias}.id = {lookup} \
+                     AND {allow} AND {deny}) AND {child_deny}",
+                    table = quote_ident(&link.parent_name),
+                ),
+                link.parent,
+            )
+        }
+        None => {
+            let (allow, _) = allow_and_deny(
+                ctx,
+                &RecordColumns {
+                    entity_ref,
+                    entity_expr: format!("${p_entity}::uuid"),
+                    record_id: record_id_col.clone(),
+                    org: col("organization_ref"),
+                    owner: col("owner_ref"),
+                    owner_type: col("owner_type"),
+                },
+                allow_bu_tier,
+                owner_visible,
+                access_level,
+                required,
+                &ph,
+            );
+            (format!("AND {allow} AND {child_deny}"), entity_ref)
+        }
+    };
 
     let own_units_only = access_level == AccessLevel::BusinessUnit
         && operations
             .iter()
-            .any(|op| ctx.unit_scope.excludes_children(entity_ref, op));
+            .any(|op| ctx.unit_scope.excludes_children(scope_entity, op));
     let org_ids = if own_units_only {
         &ctx.unit_scope.own_org_ids
     } else {
@@ -568,6 +571,105 @@ fn build_predicate(
             subordinate_user_ids: ctx.subordinate_user_ids.clone(),
         },
     })
+}
+
+/// The placeholder expressions [`build_predicate`] allocated, cast.
+struct Placeholders {
+    cap: String,
+    orgs: String,
+    caller: String,
+    teams: String,
+    subordinates: String,
+}
+
+/// The columns of the record an allow/deny pair checks: the filtered record
+/// itself, or (Q14-T3) its parent through one lookup.
+struct RecordColumns {
+    /// The entity whose sharing rules apply.
+    entity_ref: Uuid,
+    /// SQL for the entity id the share rows are keyed by.
+    entity_expr: String,
+    record_id: String,
+    org: String,
+    owner: String,
+    owner_type: String,
+}
+
+/// The allow arms (business-unit tier, ownership, sharing rules, shares,
+/// default shares) and the deny guard for one record.
+#[allow(clippy::too_many_arguments)]
+fn allow_and_deny(
+    ctx: &SecurityContext,
+    record: &RecordColumns,
+    allow_bu_tier: bool,
+    owner_visible: bool,
+    access_level: AccessLevel,
+    required: Capability,
+    ph: &Placeholders,
+) -> (String, String) {
+    let RecordColumns {
+        entity_ref,
+        entity_expr,
+        record_id,
+        org,
+        owner,
+        owner_type,
+    } = record;
+    // Q14-T2: published sharing rules, one more allow arm inside the deny
+    // guard. Only on a real table, which has the organisation and owner
+    // columns the rules compare.
+    let rule_arm = if allow_bu_tier {
+        crate::sharing_rules::rule_arm(ctx, *entity_ref, required, org, owner, owner_type)
+    } else {
+        None
+    };
+    let cap = &ph.cap;
+    let allow = format!(
+        r#"(
+            ({bu_tier})
+            OR ({owner_arm})
+            OR ({rule_arm})
+            OR EXISTS (
+                SELECT 1 FROM {SHARE_ROWS} s
+                WHERE s.record_id = {record_id} AND s.entity_ref = {entity_expr}
+                  AND s.capability BETWEEN {cap} AND 1
+                  AND ({share_disjunction})
+            )
+            OR EXISTS (
+                SELECT 1 FROM entity_default_share d
+                WHERE d.entity_ref = {entity_expr}
+                  AND d.capability BETWEEN {cap} AND 1
+                  AND ({default_share_disjunction})
+            )
+        )"#,
+        bu_tier = if allow_bu_tier && access_level == AccessLevel::BusinessUnit {
+            format!("{org} = ANY({})", ph.orgs)
+        } else {
+            // Team tier (or None, which never reaches here — see below), or
+            // a caller that doesn't support the org fast path at all
+            // (`allow_bu_tier = false`): BU comparison is never true, so the
+            // allow-chain falls through to the share/default-share EXISTS
+            // checks, which already cover the Team tier via principal_type
+            // = 1 team matches.
+            "FALSE".to_owned()
+        },
+        owner_arm = if owner_visible {
+            format!("{owner} = {} AND {owner_type} = 0", ph.caller)
+        } else {
+            "FALSE".to_owned()
+        },
+        rule_arm = rule_arm.as_deref().unwrap_or("FALSE"),
+        share_disjunction =
+            principal_disjunction_sql("s", &ph.caller, &ph.teams, Some(&ph.subordinates)),
+        default_share_disjunction = principal_disjunction_sql("d", &ph.caller, &ph.teams, None),
+    );
+    // `AccessLevel::None` holds no role at all — no BU/Team tier match is
+    // possible, but an explicit share can still grant access (D-133: share
+    // rows are independent of the ladder, not gated behind holding a role).
+    // The `allow` fragment above already expresses that correctly for
+    // `None` too (BU tier is `FALSE`, share/default-share EXISTS still run).
+    let deny = deny_clause_sql("s", record_id, entity_expr, &ph.caller, &ph.teams);
+    (allow, deny)
 }
 
 /// Opt-in BusinessUnit fast tier for [`polymorphic_audit_predicate`]
@@ -981,6 +1083,106 @@ mod tests {
             "only the team the rule targets"
         );
         crate::sharing_rules::install([]);
+    }
+
+    /// Q14-T3: a record controlled by its parent is filtered through one
+    /// lookup to the parent record, by the parent's shares, rules and deny;
+    /// the record's own deny still applies. A Global level on the parent
+    /// filters nothing, a surface without the record's own table (by column)
+    /// does not hop, and an entity cannot be its own parent.
+    #[test]
+    fn controlled_by_parent_filters_through_the_parent_record() {
+        use crate::parent_access::{ParentLink, install};
+        let (child, parent, itself) = (Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7());
+        install([
+            ParentLink {
+                child,
+                lookup_column: "parent_account_ref".into(),
+                parent,
+                parent_name: "account".into(),
+            },
+            ParentLink {
+                child: itself,
+                lookup_column: "parent_ref".into(),
+                parent: itself,
+                parent_name: "same".into(),
+            },
+        ]);
+        let reader = ctx(false);
+
+        let pred = rls_predicate(&reader, child, "c", AccessLevel::Team, Capability::View, 1)
+            .expect("a Team level filters");
+        assert!(
+            pred.sql.starts_with(
+                r#"AND EXISTS (SELECT 1 FROM "account" rls_parent WHERE rls_parent.id = c."parent_account_ref""#
+            ),
+            "{}",
+            pred.sql
+        );
+        assert!(
+            pred.sql.contains(&format!(
+                "s.record_id = rls_parent.id AND s.entity_ref = '{parent}'::uuid"
+            )),
+            "the parent's shares: {}",
+            pred.sql
+        );
+        assert!(
+            pred.sql.ends_with(&deny_clause_sql(
+                "s",
+                "c.id",
+                "$1::uuid",
+                "$2::uuid",
+                "$3::uuid[]"
+            )),
+            "the record's own deny: {}",
+            pred.sql
+        );
+        assert_eq!(pred.binds.entity_ref, child);
+
+        let unit = rls_predicate(
+            &reader,
+            child,
+            "c",
+            AccessLevel::BusinessUnit,
+            Capability::Action,
+            1,
+        )
+        .expect("a business-unit level filters");
+        assert!(
+            unit.sql
+                .contains("rls_parent.organization_ref = ANY($5::uuid[])"),
+            "the parent's unit: {}",
+            unit.sql
+        );
+        assert!(!unit.sql.contains("c.organization_ref"), "{}", unit.sql);
+
+        assert!(
+            rls_predicate(
+                &reader,
+                child,
+                "c",
+                AccessLevel::Global,
+                Capability::View,
+                1
+            )
+            .is_none()
+        );
+        let by_column = rls_predicate_by_column(
+            &reader,
+            child,
+            "t",
+            "contact_id",
+            AccessLevel::Team,
+            Capability::View,
+            1,
+        )
+        .expect("a Team level filters");
+        assert!(!by_column.sql.contains("rls_parent"), "{}", by_column.sql);
+
+        let own = rls_predicate(&reader, itself, "c", AccessLevel::Team, Capability::View, 1)
+            .expect("a Team level filters");
+        assert!(!own.sql.contains("rls_parent"), "{}", own.sql);
+        install([]);
     }
 
     /// Same as `ctx`, but with F138 position hierarchy turned on and a given
@@ -1408,6 +1610,7 @@ mod tests {
             on_target_delete: Default::default(),
             data_classification: Default::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }]
     }

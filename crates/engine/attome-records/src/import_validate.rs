@@ -305,6 +305,7 @@ fn plain_attr(name: &str, field_type: FieldType) -> AttrInfo {
         on_target_delete: Default::default(),
         data_classification: Default::default(),
         sensitivity: Default::default(),
+        sensitivity_confirmed: false,
         options: None,
     }
 }

@@ -88,7 +88,7 @@ const FIELD_TYPE_RICH_TEXT: i32 = 17;
 pub fn indexable_attributes(attrs: &[AttrInfo]) -> Vec<&AttrInfo> {
     attrs
         .iter()
-        .filter(|a| !a.is_sensitive)
+        .filter(|a| !a.is_read_gated())
         .filter(|a| {
             a.field_type_int == FIELD_TYPE_TEXT
                 || a.field_type_int == FIELD_TYPE_CHOICE
@@ -405,6 +405,7 @@ mod tests {
             on_target_delete: OnTargetDelete::default(),
             data_classification: DataClassification::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

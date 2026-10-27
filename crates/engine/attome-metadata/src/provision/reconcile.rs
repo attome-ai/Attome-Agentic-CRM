@@ -1155,6 +1155,7 @@ async fn fetch_live_attr_infos(
                 on_target_delete: Default::default(),
                 data_classification: Default::default(),
                 sensitivity: Default::default(),
+                sensitivity_confirmed: false,
                 options,
             },
         )

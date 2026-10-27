@@ -115,6 +115,7 @@ pub async fn refresh_cooked(state: &EngineState) -> Result<(), AppError> {
     attome_db::tx::commit(tx).await?;
     cooked().load_version(db, switched.to, manifest).await?;
     load_custom_actions();
+    load_parent_access(db).await;
     attome_model::switch::record_node_switch(db, node(), switched.to).await?;
     Ok(())
 }
@@ -191,6 +192,7 @@ pub(crate) async fn follow_cooked(db: &attome_db::DbPool) -> bool {
         Ok(Some(version)) => {
             tracing::info!(version, "switched to metadata version");
             load_custom_actions();
+            load_parent_access(db).await;
             true
         }
         Ok(None) => true,
@@ -221,8 +223,39 @@ pub(crate) async fn ensure_cooked(state: &EngineState) -> Result<(), AppError> {
     // `follow_cooked` makes; make them here too.
     if cooked().snapshot().version != 0 {
         load_custom_actions();
+        load_parent_access(&state.base.db).await;
     }
     Ok(())
+}
+
+/// Q14-T3: hands the loaded version's controlled-by-parent entities to the
+/// record filter, each resolved to its lookup column and parent table. On a
+/// database error the previous set stays, and the next load retries.
+pub(crate) async fn load_parent_access(db: &attome_db::DbPool) {
+    let cooked = cooked();
+    let snapshot = cooked.snapshot();
+    let prefix = format!("{}:", attome_model::kinds::ENTITY_SETTINGS.0);
+    let pairs: Vec<(uuid::Uuid, uuid::Uuid)> = snapshot
+        .manifest
+        .artefacts
+        .keys()
+        .filter(|key| key.starts_with(&prefix))
+        .filter_map(|key| {
+            cooked.get::<serde_json::Value>(attome_model::kinds::ENTITY_SETTINGS.0, key)
+        })
+        .filter_map(|doc| attome_model::kinds::entity_settings::parent_lookup(&doc))
+        .collect();
+    match attome_security::parent_access::resolve(db, &pairs).await {
+        Ok(links) => {
+            let parent_controlled = links.len();
+            attome_security::parent_access::install(links);
+            tracing::info!(parent_controlled, "controlled-by-parent entities loaded");
+        }
+        Err(error) => tracing::error!(
+            %error,
+            "could not load controlled-by-parent entities; the previous set stays until the next load"
+        ),
+    }
 }
 
 fn kind(name: &str) -> Result<&'static Arc<dyn Kind>, AppError> {

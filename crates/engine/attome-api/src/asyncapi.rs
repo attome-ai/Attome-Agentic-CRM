@@ -246,6 +246,7 @@ mod tests {
             on_target_delete: OnTargetDelete::default(),
             data_classification: DataClassification::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

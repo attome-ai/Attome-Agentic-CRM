@@ -348,6 +348,7 @@ mod tests {
             on_target_delete: attome_core::OnTargetDelete::default(),
             data_classification: attome_core::DataClassification::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

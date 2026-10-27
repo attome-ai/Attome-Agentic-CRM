@@ -2230,7 +2230,7 @@ pub fn change_payload(
             continue;
         }
         names.push(name.to_owned());
-        let withheld = attr.is_sensitive
+        let withheld = attr.is_read_gated()
             || attr.data_classification
                 == attome_core::DataClassification::SensitiveSpecialCategory;
         let shown = |v: &Value| {
@@ -2336,7 +2336,7 @@ async fn record_reference_write(
             let Some(attr) = attrs_by_name.get(field.as_str()).copied() else {
                 continue;
             };
-            if attr.is_sensitive {
+            if attr.is_read_gated() {
                 continue;
             }
             let value = portable_record_value(tx, Some(attr), value.clone()).await?;
@@ -4429,6 +4429,7 @@ mod insert_bind_tests {
             on_target_delete: OnTargetDelete::default(),
             data_classification: DataClassification::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

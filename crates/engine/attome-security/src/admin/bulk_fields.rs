@@ -91,7 +91,7 @@ fn validate(state: &EngineState, fields: &[BulkField]) -> Result<(), AppError> {
                 f.entity, f.attribute
             )));
         };
-        if attr.is_sensitive {
+        if attr.is_read_gated() {
             return Err(AppError::Validation(format!(
                 "{}.{} is sensitive: expose it with a field-security profile, which applies \
                  on every surface",

@@ -70,10 +70,27 @@ gives nothing. A set never takes access away and never carries `system.admin` (r
   that would pick records by a condition is refused at save. Search and audit lists, which filter many
   entities at once, do not apply rules yet: they show less, never more.
 
+## Controlled by parent
+
+An entity's settings can make its records follow a parent record:
+`"access": { "mode": "controlled_by_parent", "lookup": "<attribute id>" }` names one of the entity's
+many-to-one lookups. A person then sees and changes a child record exactly when they may see or change its
+parent record: their level is their level on the parent entity (through the parent's privilege), and the
+filter checks the parent record's unit, owner, shares, sharing rules and deny. A deny share on the child
+record still wins, and a child whose lookup is empty is visible only at Global level.
+
+It is one hop: the parent's own roles decide, and a parent that is itself controlled by its parent is not
+followed further. The lookup is checked when the settings are saved and again when the version is loaded;
+one that no longer resolves is left out (the entity keeps its own access) and named in the log. Search and
+audit lists, which filter many entities at once, apply the child's own levels: they show less, never more.
+
 ## Fields
 
-A sensitive field (`is_sensitive`) needs a **field-security** grant: a profile, assigned to roles, that
-grants `can_read` and `can_update` per field. A grant may instead **mask** the field (`mask_format`:
+A sensitive field needs a **field-security** grant: a profile, assigned to roles, that grants `can_read`
+and `can_update` per field. A field is sensitive when it is marked `is_sensitive` (read as Secret) or its
+sensitivity label is Personal, Financial, Health or Secret and a builder confirmed the label (setting it
+through the admin field routes confirms it). Labels the A1-T1 migration mapped from `data_classification`
+stay unconfirmed and gate nothing until confirmed, so no field disappears on upgrade. A grant may instead **mask** the field (`mask_format`:
 `last4`, `email`, `phone` or `full`): the database computes the mask, so the value never reaches the
 client in full; record reads and lists show the mask, export and other bulk surfaces hide the field, and a
 masked field cannot be changed. A grant in full from any profile wins over a mask.

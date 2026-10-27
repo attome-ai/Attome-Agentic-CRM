@@ -263,7 +263,7 @@ fn lookup_edges(registry: &EntityMetaRegistry) -> Vec<LookupEdgeMeta> {
             out.push(LookupEdgeMeta {
                 from_entity: meta.logicalname.clone(),
                 field: attr.logicalname.clone(),
-                is_sensitive: attr.is_sensitive,
+                is_sensitive: attr.is_read_gated(),
                 to_entity: target.logicalname.clone(),
                 is_hierarchy: target_id == meta.entity_id,
             });
@@ -905,6 +905,7 @@ mod tests {
             on_target_delete: OnTargetDelete::Orphan,
             data_classification: Default::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

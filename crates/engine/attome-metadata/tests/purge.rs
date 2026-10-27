@@ -74,6 +74,7 @@ fn attrs_for(logicalname_attr: &str) -> Vec<AttrInfo> {
         on_target_delete: Default::default(),
         data_classification: Default::default(),
         sensitivity: Default::default(),
+        sensitivity_confirmed: false,
         options: None,
     }]
 }

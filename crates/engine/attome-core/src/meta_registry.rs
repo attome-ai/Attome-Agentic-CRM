@@ -106,6 +106,15 @@ impl Sensitivity {
         Self::ALL.into_iter().find(|l| l.as_str() == s.trim())
     }
 
+    /// Q15-T2: whether a field with this label needs a field-security read
+    /// grant: Personal, Financial, Health and Secret.
+    pub fn is_gated(self) -> bool {
+        matches!(
+            self,
+            Self::Personal | Self::Financial | Self::Health | Self::Secret
+        )
+    }
+
     /// The label an older `data_classification` maps to.
     pub fn from_classification(c: DataClassification) -> Self {
         match c {
@@ -204,6 +213,13 @@ pub struct AttrInfo {
     #[serde(default)]
     pub sensitivity: Sensitivity,
 
+    /// A1-T1: whether a builder set the label (the migration mapped older
+    /// fields from `data_classification` unconfirmed). Q15-T2 gates reads by
+    /// a confirmed label only. `#[serde(default)]`: an older snapshot reads
+    /// as unconfirmed, so it gates nothing it did not gate before.
+    #[serde(default)]
+    pub sensitivity_confirmed: bool,
+
     /// F004/F012 (migration 0029): type-specific config — `ChoiceOptions` for
     /// Choice fields, `TextOptions` for masked Text fields (see `attome-field`).
     /// `#[serde(default)]` for the same pre-existing-snapshot reason as
@@ -224,6 +240,16 @@ impl AttrInfo {
     /// grant.
     pub fn requires_field_write_grant(&self) -> bool {
         self.is_sensitive || self.is_write_restricted
+    }
+
+    /// Q15-T2: the one read rule for field-level security. Reading this
+    /// field needs a field-security read grant when it is `is_sensitive`
+    /// (kept as Secret) or its confirmed label is Personal, Financial, Health
+    /// or Secret. A label the migration mapped and nobody confirmed gates
+    /// nothing, so existing deployments see no field disappear until a
+    /// builder confirms its label.
+    pub fn is_read_gated(&self) -> bool {
+        self.is_sensitive || (self.sensitivity_confirmed && self.sensitivity.is_gated())
     }
 
     /// The declared [`FieldType`](crate::FieldType) (`field_type_int`
@@ -458,11 +484,12 @@ impl EntityMetaRegistry {
 
     /// Conservative response guard for custom stored queries, which may not
     /// have a single entity scope from which to derive field sensitivity.
+    /// Q15-T2: every field whose reads are gated ([`AttrInfo::is_read_gated`]).
     pub fn sensitive_field_names(&self) -> std::collections::HashSet<&str> {
         self.by_logicalname
             .values()
             .flat_map(|entity| entity.attrs.iter())
-            .filter(|attr| attr.is_sensitive)
+            .filter(|attr| attr.is_read_gated())
             .map(|attr| attr.logicalname.as_str())
             .collect()
     }
@@ -537,6 +564,7 @@ struct AttrRow {
     on_target_delete: String,
     data_classification: String,
     sensitivity: String,
+    sensitivity_confirmed: bool,
     options: Option<serde_json::Value>,
 }
 
@@ -555,6 +583,7 @@ impl From<AttrRow> for AttrInfo {
             on_target_delete: OnTargetDelete::from_db_str(&row.on_target_delete),
             data_classification: DataClassification::from_db_str(&row.data_classification),
             sensitivity: Sensitivity::from_db_str(&row.sensitivity),
+            sensitivity_confirmed: row.sensitivity_confirmed,
             options: row.options,
         }
     }
@@ -606,6 +635,7 @@ pub async fn build_registry(db: &DbPool) -> Result<EntityMetaRegistry, AppError>
                   COALESCE(on_target_delete, 'orphan') AS on_target_delete,
                   COALESCE(data_classification, 'general') AS data_classification,
                   COALESCE(sensitivity, 'internal') AS sensitivity,
+                  COALESCE(sensitivity_confirmed, false) AS sensitivity_confirmed,
                   {OPTIONS_SQL} AS options
            FROM attribute_info
            WHERE (is_active IS NULL OR is_active = true)
@@ -801,6 +831,7 @@ pub async fn fetch_entity_snapshots(
                   COALESCE(on_target_delete, 'orphan') AS on_target_delete,
                   COALESCE(data_classification, 'general') AS data_classification,
                   COALESCE(sensitivity, 'internal') AS sensitivity,
+                  COALESCE(sensitivity_confirmed, false) AS sensitivity_confirmed,
                   {OPTIONS_SQL} AS options
            FROM attribute_info
            WHERE (is_active IS NULL OR is_active = true)
@@ -1033,6 +1064,7 @@ mod tests {
             on_target_delete: OnTargetDelete::Orphan,
             data_classification: DataClassification::General,
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

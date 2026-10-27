@@ -292,7 +292,7 @@ pub fn validate_grant(
             .iter()
             .find(|a| a.logicalname == f.field)
             .ok_or_else(|| invalid(format!("'{}' is not a field of '{entity}'", f.field)))?;
-        if attr.is_sensitive && !f.allow_sensitive {
+        if attr.is_read_gated() && !f.allow_sensitive {
             return Err(invalid(format!(
                 "'{}' is sensitive; set allow_sensitive to expose it to a portal",
                 f.field

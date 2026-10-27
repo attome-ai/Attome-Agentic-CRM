@@ -1534,6 +1534,7 @@ mod tests {
             on_target_delete: Default::default(),
             data_classification: Default::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: Some(serde_json::json!({"expression": "a", "result_type": "number"})),
         };
         assert_eq!(data_type_of_attr(&attr), "number");

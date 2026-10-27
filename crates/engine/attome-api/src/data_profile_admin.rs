@@ -354,7 +354,7 @@ async fn hide_unreadable(
         f["field"].as_str().is_some_and(|name| {
             attrs.iter().any(|a| {
                 a.logicalname == name
-                    && (!a.is_sensitive || ctx.has_field_read_grant(&entity, &a.logicalname))
+                    && (!a.is_read_gated() || ctx.has_field_read_grant(&entity, &a.logicalname))
             })
         })
     });
@@ -941,7 +941,7 @@ async fn one_scan(
 
 /// L6-T1: an attribute whose values a profile must not keep.
 fn is_labelled(attr: &attome_core::AttrInfo) -> bool {
-    attr.is_sensitive || attr.data_classification != attome_core::DataClassification::General
+    attr.is_read_gated() || attr.data_classification != attome_core::DataClassification::General
 }
 
 /// L6-T1: a value's shape: digits become `9`, letters `A`, the rest stays

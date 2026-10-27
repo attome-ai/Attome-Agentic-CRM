@@ -1830,3 +1830,157 @@ async fn unused_operation_gets_draft_proposal() {
             .expect("count");
     assert_eq!(count, 1, "one draft per role and privilege");
 }
+
+// ── Q14-T3: controlled by parent ──
+
+/// A throwaway entity row and its plain table with the columns the record
+/// filter reads, plus `extra` columns.
+async fn bare_entity_table(db: &DbPool, prefix: &str, extra: &str) -> (Uuid, String) {
+    let id = Uuid::now_v7();
+    let name = attome_testkit::unique_logicalname(prefix);
+    sqlx::query(
+        "INSERT INTO entity_info (id, logicalname, name, is_active, owner_layer) \
+         VALUES ($1, $2, $2, true, 'project')",
+    )
+    .bind(id)
+    .bind(&name)
+    .execute(db)
+    .await
+    .expect("insert throwaway entity_info");
+    sqlx::query(&format!(
+        "CREATE TABLE \"{name}\" (id uuid PRIMARY KEY, organization_ref uuid, owner_ref uuid, \
+         owner_type smallint{extra})"
+    ))
+    .execute(db)
+    .await
+    .expect("create throwaway entity table");
+    (id, name)
+}
+
+/// A person who can read an account (through a Team-level role and a share
+/// of that account) reads the contacts controlled by it, and not the
+/// contacts of an account they cannot read, without holding any level of
+/// their own on contacts.
+#[tokio::test]
+async fn controlled_by_parent_reader_of_the_account_reads_its_contacts() {
+    use attome_security::parent_access;
+    use attome_security::rls::{Capability, rls_predicate};
+
+    let db = skip_if_no_db!(test_db().await);
+    let (account, account_name) = bare_entity_table(&db, "q14t3_account", "").await;
+    let (contact, contact_name) =
+        bare_entity_table(&db, "q14t3_contact", ", account_ref uuid").await;
+    let lookup = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO attribute_info (id, entity_ref, logicalname, \"type\", lookup_entity_ref, \
+         is_active, owner_layer) VALUES ($1, $2, 'account_ref', 11, $3, true, 'project')",
+    )
+    .bind(lookup)
+    .bind(contact)
+    .bind(account)
+    .execute(&db)
+    .await
+    .expect("insert the lookup attribute");
+
+    // Read on accounts at Team level; nothing at all on contacts.
+    let privilege = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO privilege (id, key, name, is_active, created_at, owner_layer) \
+         VALUES ($1, $2, 'Read accounts', true, NOW(), 'project')",
+    )
+    .bind(privilege)
+    .bind(format!("{account_name}.read"))
+    .execute(&db)
+    .await
+    .expect("insert the account read privilege");
+    let user_id = seed_bare_user(&db).await;
+    let role_id = seed_role(&db).await;
+    link_user_to_role(&db, user_id, role_id).await;
+    grant_privilege_to_role(&db, role_id, privilege).await;
+    set_role_entity_depth(&db, role_id, account, 1).await;
+
+    let (shared, unshared) = (Uuid::now_v7(), Uuid::now_v7());
+    for id in [shared, unshared] {
+        sqlx::query(&format!("INSERT INTO \"{account_name}\" (id) VALUES ($1)"))
+            .bind(id)
+            .execute(&db)
+            .await
+            .expect("insert an account");
+    }
+    sqlx::query(
+        "INSERT INTO record_share (record_id, entity_ref, principal_type, principal_id, capability) \
+         VALUES ($1, $2, 0, $3, 0)",
+    )
+    .bind(shared)
+    .bind(account)
+    .bind(user_id)
+    .execute(&db)
+    .await
+    .expect("share one account");
+    let (visible, hidden) = (Uuid::now_v7(), Uuid::now_v7());
+    for (id, parent) in [(visible, shared), (hidden, unshared)] {
+        sqlx::query(&format!(
+            "INSERT INTO \"{contact_name}\" (id, account_ref) VALUES ($1, $2)"
+        ))
+        .bind(id)
+        .bind(parent)
+        .execute(&db)
+        .await
+        .expect("insert a contact");
+    }
+
+    let links = parent_access::resolve(&db, &[(contact, lookup)])
+        .await
+        .expect("resolve the parent link");
+    assert_eq!(links.len(), 1, "the lookup resolves");
+    // A lookup that is not this entity's is left out.
+    assert!(
+        parent_access::resolve(&db, &[(account, lookup)])
+            .await
+            .expect("resolve")
+            .is_empty()
+    );
+    parent_access::install(links);
+
+    let level =
+        resolve_entity_access_level(&db, user_id, contact, &contact_name, RecordAction::Read)
+            .await
+            .expect("resolve the level");
+    assert_eq!(level, AccessLevel::Team, "the level on the account");
+
+    let ctx = attome_server::security::SecurityContext {
+        user_id,
+        is_admin: false,
+        privileges: Default::default(),
+        field_grants: Default::default(),
+        field_write_grants: Default::default(),
+        field_masks: Default::default(),
+        bulk_fields: Default::default(),
+        epoch: 0,
+        accessible_org_ids: Vec::new(),
+        team_ids: Vec::new(),
+        position_hierarchy_enabled: false,
+        subordinate_user_ids: Vec::new(),
+        condition_grants: Default::default(),
+        role_ids: None,
+        unit_scope: Default::default(),
+        service_principal: false,
+    };
+    let pred = rls_predicate(&ctx, contact, "c", level, Capability::View, 1)
+        .expect("a Team level filters");
+    let sql = format!(
+        "SELECT c.id FROM \"{contact_name}\" c WHERE TRUE {} ORDER BY c.id",
+        pred.sql
+    );
+    let seen: Vec<Uuid> =
+        attome_security::rls_fragment::bind_rls_predicate(sqlx::query_scalar(&sql), &pred.binds)
+            .fetch_all(&db)
+            .await
+            .expect("run the filter");
+    parent_access::install([]);
+    assert_eq!(
+        seen,
+        vec![visible],
+        "only the contact of the readable account"
+    );
+}

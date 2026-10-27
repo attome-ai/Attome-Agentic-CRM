@@ -1046,7 +1046,7 @@ pub fn related_refs(
         let last = &segments[segments.len() - 1];
         let Some(kind) = current
             .iter()
-            .find(|a| &a.logicalname == last && !a.is_sensitive)
+            .find(|a| &a.logicalname == last && !a.is_read_gated())
             .and_then(ConditionFieldKind::of_attr)
         else {
             continue;
@@ -1839,7 +1839,7 @@ pub fn validate_rule(
             for field in &c.fields {
                 if attrs
                     .iter()
-                    .any(|a| &a.logicalname == field && a.is_sensitive)
+                    .any(|a| &a.logicalname == field && a.is_read_gated())
                 {
                     issues.push(RuleIssue::new(
                         "policies",

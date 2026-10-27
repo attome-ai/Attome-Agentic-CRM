@@ -101,7 +101,7 @@ pub fn select_columns_filtered(
 ) -> String {
     let mut cols: Vec<String> = ALL_SYSTEM_COLS.iter().map(|c| (*c).to_owned()).collect();
     for attr in attrs {
-        if attr.is_sensitive && !can_read(attr) {
+        if attr.is_read_gated() && !can_read(attr) {
             continue;
         }
         cols.push(quote_ident(&attr.logicalname));
@@ -196,6 +196,7 @@ mod tests {
             on_target_delete: Default::default(),
             data_classification: Default::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

@@ -252,7 +252,7 @@ pub fn check_field_read_access(
         attrs.iter().map(|a| (a.logicalname.as_str(), a)).collect();
     for field in referenced_fields(expr) {
         if let Some(attr) = by_name.get(field.as_str())
-            && attr.is_sensitive
+            && attr.is_read_gated()
             && !ctx.has_field_read_grant(entity, &field)
         {
             return Err(AppError::Validation(format!(
@@ -582,6 +582,7 @@ mod tests {
             on_target_delete: OnTargetDelete::default(),
             data_classification: DataClassification::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

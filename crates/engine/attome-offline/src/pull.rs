@@ -339,7 +339,7 @@ pub async fn pull(
             .map(|m| {
                 m.attrs
                     .iter()
-                    .filter(|a| a.is_sensitive)
+                    .filter(|a| a.is_read_gated())
                     .map(|a| a.logicalname.clone())
                     .collect()
             })

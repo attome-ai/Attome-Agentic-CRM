@@ -872,7 +872,7 @@ async fn provenance(
         .filter(|row| {
             meta.attrs.iter().any(|a| {
                 a.logicalname == row.attribute
-                    && (!a.is_sensitive || ctx.has_field_read_grant(&entity, &a.logicalname))
+                    && (!a.is_read_gated() || ctx.has_field_read_grant(&entity, &a.logicalname))
             })
         })
         .map(|row| ProvenanceItem {

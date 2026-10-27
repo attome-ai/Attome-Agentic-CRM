@@ -884,7 +884,25 @@ pub(crate) fn role_depth_sql(action: &str) -> String {
 /// all (neither path matches) resolves to `None`, not `Global` — safe by
 /// construction, since every real caller reaches this function only after
 /// `ctx.require(entity, action)` already confirmed the privilege exists.
+///
+/// Q14-T3: for an entity whose records are controlled by a parent
+/// ([`crate::parent_access`]), the level is the caller's level on the parent
+/// entity, through the parent's privilege; the record filter then checks the
+/// parent record. One hop: the parent's own roles decide.
 pub async fn resolve_entity_access_level(
+    db: &DbPool,
+    user_id: Uuid,
+    entity_ref: Uuid,
+    entity_name: &str,
+    action: RecordAction,
+) -> Result<AccessLevel, AppError> {
+    match crate::parent_access::link_for(entity_ref) {
+        Some(link) => entity_level(db, user_id, link.parent, &link.parent_name, action).await,
+        None => entity_level(db, user_id, entity_ref, entity_name, action).await,
+    }
+}
+
+async fn entity_level(
     db: &DbPool,
     user_id: Uuid,
     entity_ref: Uuid,
@@ -993,7 +1011,23 @@ pub async fn resolve_entity_access_level(
 /// from the ladder (an absent depth row still resolves to `Global`); silence
 /// here means "no widening," matching `read_owner_visible`'s own
 /// `DEFAULT FALSE`.
+///
+/// Q14-T3: for an entity controlled by a parent, the parent's flag, since
+/// the record filter checks the parent record's owner.
 pub async fn resolve_owner_visible(
+    db: &DbPool,
+    user_id: Uuid,
+    entity_ref: Uuid,
+    entity_name: &str,
+    action: RecordAction,
+) -> Result<bool, AppError> {
+    match crate::parent_access::link_for(entity_ref) {
+        Some(link) => owner_visible(db, user_id, link.parent, &link.parent_name, action).await,
+        None => owner_visible(db, user_id, entity_ref, entity_name, action).await,
+    }
+}
+
+async fn owner_visible(
     db: &DbPool,
     user_id: Uuid,
     entity_ref: Uuid,

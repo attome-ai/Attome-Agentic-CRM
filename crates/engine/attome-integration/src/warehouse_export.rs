@@ -97,7 +97,7 @@ pub fn columns_of(attrs: &[AttrInfo]) -> Vec<String> {
         .collect();
     for attr in attrs {
         let name = attr.logicalname.as_str();
-        if !attr.is_sensitive && !columns.iter().any(|c| c == name) {
+        if !attr.is_read_gated() && !columns.iter().any(|c| c == name) {
             columns.push(name.to_owned());
         }
     }

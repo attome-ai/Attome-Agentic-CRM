@@ -24,6 +24,7 @@ fn attr(field_type_int: i32, options: Option<Value>) -> AttrInfo {
         on_target_delete: OnTargetDelete::Orphan,
         data_classification: Default::default(),
         sensitivity: Default::default(),
+        sensitivity_confirmed: false,
         options,
     }
 }

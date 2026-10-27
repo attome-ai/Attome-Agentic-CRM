@@ -659,6 +659,7 @@ mod t37_property {
             on_target_delete: Default::default(),
             data_classification: Default::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }
@@ -848,6 +849,7 @@ mod self_plan_tests {
             on_target_delete: Default::default(),
             data_classification: Default::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

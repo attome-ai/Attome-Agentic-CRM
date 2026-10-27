@@ -340,7 +340,7 @@ async fn conflict_details(
             details.iter().filter(|d| d.0 == *header_id)
         {
             let shown = readable_attr(ctx, &entity_name, &attrs, field)
-                .filter(|a| !a.is_sensitive && !row_sensitive.unwrap_or(false))
+                .filter(|a| !a.is_read_gated() && !row_sensitive.unwrap_or(false))
                 .filter(|_| !value_withheld(state, *value_mode));
             if shown.is_none() {
                 hidden += 1;
@@ -676,7 +676,7 @@ pub async fn record_history(
             continue;
         }
         // D-540: see `value_withheld`.
-        let masked = attr.is_sensitive
+        let masked = attr.is_read_gated()
             || row_sensitive.unwrap_or(false)
             || value_withheld(state, value_mode);
         let field_type = FieldType::from_int(attr.field_type_int).map(|t| t.as_str().to_owned());
@@ -893,7 +893,7 @@ async fn values_before(
         let Some(attr) = readable.get(field.as_str()) else {
             continue;
         };
-        if attr.is_sensitive || row_sensitive.unwrap_or(false) || value_withheld(state, value_mode)
+        if attr.is_read_gated() || row_sensitive.unwrap_or(false) || value_withheld(state, value_mode)
         {
             return Err(AppError::Validation(format!(
                 "{field}: a withheld value cannot be restored"
@@ -1128,7 +1128,7 @@ pub async fn search_history(
     let (entity_id, entity, attrs, append_only) = resolve_entity(state, &query.entity).await?;
     ctx.require(&entity, "read")?;
     let attr = readable_attr(ctx, &entity, &attrs, query.field.trim()).ok_or(AppError::NotFound)?;
-    if attr.is_sensitive {
+    if attr.is_read_gated() {
         return Err(AppError::Validation(
             "a sensitive field's values cannot be searched".into(),
         ));
@@ -1319,7 +1319,7 @@ pub async fn values_at(
         let Some(attr) = readable_attr(ctx, &entity_name, &attrs, &field) else {
             continue;
         };
-        if attr.is_sensitive || row_sensitive.unwrap_or(false) || value_withheld(state, value_mode)
+        if attr.is_read_gated() || row_sensitive.unwrap_or(false) || value_withheld(state, value_mode)
         {
             values.remove(&field);
             withheld.push(field);

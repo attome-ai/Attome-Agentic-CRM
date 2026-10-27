@@ -219,13 +219,13 @@ fn offline_entity(
     let sensitive: HashSet<&str> = meta
         .attrs
         .iter()
-        .filter(|a| a.is_sensitive)
+        .filter(|a| a.is_read_gated())
         .map(|a| a.logicalname.as_str())
         .collect();
     let attributes = meta
         .attrs
         .iter()
-        .filter(|a| !a.is_sensitive)
+        .filter(|a| !a.is_read_gated())
         .map(|a| OfflineAttribute {
             logicalname: a.logicalname.clone(),
             field_type: FieldType::from_int(a.field_type_int)
@@ -241,7 +241,7 @@ fn offline_entity(
         .filter(|n| {
             meta.attrs
                 .iter()
-                .any(|a| &a.logicalname == n && !a.is_sensitive)
+                .any(|a| &a.logicalname == n && !a.is_read_gated())
         })
         .collect();
 

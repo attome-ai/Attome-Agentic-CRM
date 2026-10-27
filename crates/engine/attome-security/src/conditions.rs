@@ -51,7 +51,7 @@ pub fn eligible_condition_field<'a>(
         .iter()
         .find(|a| a.logicalname == field_logicalname)
         .ok_or("field does not belong to this entity")?;
-    if attr.is_sensitive {
+    if attr.is_read_gated() {
         return Err("condition may not reference a sensitive field");
     }
     if !attr.is_filterable {
@@ -253,6 +253,7 @@ mod tests {
             on_target_delete: Default::default(),
             data_classification: Default::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
     }

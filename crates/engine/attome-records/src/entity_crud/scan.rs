@@ -75,7 +75,7 @@ pub(crate) fn scan_attributes<'a>(
                     .get("enabled")
                     .and_then(serde_json::Value::as_bool)
                     .unwrap_or(true);
-                if !enabled || attr.is_sensitive {
+                if !enabled || attr.is_read_gated() {
                     return None;
                 }
                 let numeric = match attr.storage_type() {
@@ -514,6 +514,7 @@ mod tests {
             on_target_delete: OnTargetDelete::Orphan,
             data_classification: Default::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options,
         }
     }

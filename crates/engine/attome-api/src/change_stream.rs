@@ -620,7 +620,7 @@ pub fn passes_filters(sub: &Subscription, operation: &str, changed: &[String]) -
 pub fn shown_attributes(attrs: &[attome_core::AttrInfo], allow_personal: bool) -> HashSet<String> {
     attrs
         .iter()
-        .filter(|a| !a.is_sensitive)
+        .filter(|a| !a.is_read_gated())
         .filter(|a| {
             allow_personal || a.data_classification == attome_core::DataClassification::General
         })

@@ -612,7 +612,7 @@ pub(super) fn readable_attr<'a>(
     attrs
         .iter()
         .find(|a| a.logicalname == field)
-        .filter(|a| !a.is_sensitive || ctx.has_field_read_grant(entity_name, &a.logicalname))
+        .filter(|a| !a.is_read_gated() || ctx.has_field_read_grant(entity_name, &a.logicalname))
 }
 
 // ── Entry point ──────────────────────────────────────────────────────────────
@@ -1144,7 +1144,7 @@ async fn fetch_state_transitions(
     let Some(attr) = readable_attr(ctx, &target.entity, &target.attrs, &state_field) else {
         return Ok(Vec::new());
     };
-    let attr_sensitive = attr.is_sensitive;
+    let attr_sensitive = attr.is_read_gated();
 
     let mut binds = Vec::new();
     let entity = ph(&mut binds, SourceBind::Text(target.entity.clone()));

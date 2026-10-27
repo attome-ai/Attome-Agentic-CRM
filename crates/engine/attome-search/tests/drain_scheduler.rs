@@ -73,6 +73,7 @@ fn registry_for(entity: &str) -> attome_core::EntityMetaRegistry {
         on_target_delete: OnTargetDelete::default(),
         data_classification: DataClassification::default(),
         sensitivity: Default::default(),
+        sensitivity_confirmed: false,
         options: None,
     };
     attome_core::EntityMetaRegistry::from_entities(vec![EntityMeta {

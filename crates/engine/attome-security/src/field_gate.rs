@@ -5,6 +5,9 @@
 //! - [`Surface::Interactive`]: record get/list, related lists, hierarchy and
 //!   merge preview. D-111 is unchanged there: a non-sensitive field follows
 //!   record access, and a sensitive field needs its field-security grant.
+//!
+//! Q15-T2: "sensitive" is [`AttrInfo::is_read_gated`]: `is_sensitive`, or a
+//! confirmed Personal, Financial, Health or Secret label.
 //! - [`Surface::Bulk`]: export, `query/execute` and stored queries, reports,
 //!   document generation, dashboards, AI context and tools, search aggregates
 //!   and graph, webhook payloads, bundle record sets. A non-sensitive field is
@@ -59,7 +62,7 @@ pub fn projection(
     if readable(ctx, entity, attr, primary_name, surface) {
         ColumnAccess::Full
     } else if surface == Surface::Interactive
-        && attr.is_sensitive
+        && attr.is_read_gated()
         && let Some(format) = field_mask(ctx, entity, &attr.logicalname)
     {
         ColumnAccess::Masked(format)
@@ -80,14 +83,15 @@ pub fn readable(
         ctx,
         entity,
         &attr.logicalname,
-        attr.is_sensitive,
+        attr.is_read_gated(),
         primary_name,
         surface,
     )
 }
 
 /// [`readable`] for a caller that knows the field's name and sensitivity but
-/// holds no `AttrInfo` (a graph edge, a webhook snapshot).
+/// holds no `AttrInfo` (a graph edge, a webhook snapshot). `is_sensitive` is
+/// the field's [`AttrInfo::is_read_gated`] when the caller can tell.
 pub fn field_readable(
     ctx: &SecurityContext,
     entity: &str,
@@ -169,8 +173,75 @@ mod tests {
             on_target_delete: Default::default(),
             data_classification: Default::default(),
             sensitivity: Default::default(),
+            sensitivity_confirmed: false,
             options: None,
         }
+    }
+
+    /// Q15-T2: a field labelled Financial (confirmed) is hidden from a role
+    /// without a read grant on every surface and shown with one; the same
+    /// label still unconfirmed (mapped by the A1-T1 migration) gates
+    /// nothing; `is_sensitive` stays gated as Secret; Public and Internal
+    /// never gate.
+    #[test]
+    fn label_default_gates_confirmed_sensitive_labels() {
+        use attome_core::Sensitivity;
+        let labelled = |sensitivity: Sensitivity, confirmed: bool| AttrInfo {
+            is_sensitive: false,
+            sensitivity,
+            sensitivity_confirmed: confirmed,
+            ..sensitive_attr("salary")
+        };
+        let financial = labelled(Sensitivity::Financial, true);
+        let none = ctx(BulkFields::Legacy, &[]);
+        for surface in [Surface::Interactive, Surface::Bulk] {
+            assert!(
+                !readable(&none, "employee", &financial, None, surface),
+                "{surface:?}"
+            );
+            assert_eq!(
+                projection(&none, "employee", &financial, None, surface),
+                ColumnAccess::Hidden
+            );
+        }
+        let granted = ctx(BulkFields::Legacy, &["employee.salary"]);
+        assert!(readable(
+            &granted,
+            "employee",
+            &financial,
+            None,
+            Surface::Interactive
+        ));
+        assert!(readable(
+            &granted,
+            "employee",
+            &financial,
+            None,
+            Surface::Bulk
+        ));
+
+        let unconfirmed = labelled(Sensitivity::Financial, false);
+        assert!(readable(
+            &none,
+            "employee",
+            &unconfirmed,
+            None,
+            Surface::Interactive
+        ));
+        for label in [
+            Sensitivity::Personal,
+            Sensitivity::Health,
+            Sensitivity::Secret,
+        ] {
+            assert!(labelled(label, true).is_read_gated(), "{label:?}");
+        }
+        for label in [Sensitivity::Public, Sensitivity::Internal] {
+            assert!(!labelled(label, true).is_read_gated(), "{label:?}");
+        }
+        assert!(
+            sensitive_attr("ssn").is_read_gated(),
+            "is_sensitive reads as Secret"
+        );
     }
 
     /// Q15-T1: a masked grant shows the field masked on an interactive read,
