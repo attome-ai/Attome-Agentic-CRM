@@ -153,20 +153,61 @@ async fn token_of(state: &EngineState, connection: &Connection) -> Result<Secret
     Ok(credential.with_value(|v| Secret::new(v.to_owned())))
 }
 
+/// An opened migration source: its settings, address, token and the
+/// guarded transport its connector borrows.
+pub struct NamedSource {
+    pub kind: SourceKind,
+    settings: SourceSettings,
+    base_url: String,
+    token: Secret,
+    transport: GuardedTransport,
+}
+
+impl std::fmt::Debug for NamedSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NamedSource")
+            .field("kind", &self.kind)
+            .field("base_url", &self.base_url)
+            .finish_non_exhaustive()
+    }
+}
+
+impl NamedSource {
+    /// The source the integration system `system` names.
+    pub async fn open(state: &EngineState, system: &str) -> Result<Self, AppError> {
+        let connection = Connection::resolve(&state.base.db, system).await?;
+        let settings = settings_of(connection.config())?;
+        let token = token_of(state, &connection).await?;
+        let client = attome_server::ssrf_guard::GuardedClient::new(SOURCE_TIMEOUT_SECS)
+            .map_err(AppError::internal)?;
+        Ok(Self {
+            kind: settings.kind,
+            settings,
+            base_url: connection.base_url.clone(),
+            token,
+            transport: GuardedTransport(client),
+        })
+    }
+
+    /// A connector over this source.
+    pub fn connector(&self) -> Box<dyn SourceConnector + '_> {
+        source(
+            &self.settings,
+            &self.base_url,
+            self.token.clone(),
+            &self.transport,
+        )
+    }
+}
+
 /// The model of the source the integration system `system` names.
 pub async fn describe_named(
     state: &EngineState,
     system: &str,
 ) -> Result<(SourceKind, SourceModel), AppError> {
-    let connection = Connection::resolve(&state.base.db, system).await?;
-    let settings = settings_of(connection.config())?;
-    let token = token_of(state, &connection).await?;
-    let client = attome_server::ssrf_guard::GuardedClient::new(SOURCE_TIMEOUT_SECS)
-        .map_err(AppError::internal)?;
-    let transport = GuardedTransport(client);
-    let mut connector = source(&settings, &connection.base_url, token, &transport);
-    let model = connector.describe_model().await?;
-    Ok((settings.kind, model))
+    let opened = NamedSource::open(state, system).await?;
+    let model = opened.connector().describe_model().await?;
+    Ok((opened.kind, model))
 }
 
 #[cfg(test)]

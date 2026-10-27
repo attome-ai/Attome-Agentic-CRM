@@ -66,7 +66,10 @@ pub(crate) use attribute::{
     ACTION_SCHEMA_CHANGE, CreateAttributeBody, StructureAction, UpdateAttributeBody,
     do_create_attribute_recorded, do_update_attribute_recorded, run_structure_change,
 };
-pub(crate) use entity::{ACTION_ENTITY_DELETE, ACTION_ENTITY_HARD_DELETE, do_delete_entity};
+pub(crate) use entity::{
+    ACTION_ENTITY_DELETE, ACTION_ENTITY_HARD_DELETE, CreateEntityBody, create_entity_core,
+    do_delete_entity,
+};
 
 /// P1.15 §4(d): best-effort (see doc comment below), but still bounded — an
 /// unreachable Redis must add at most this much latency to a metadata write,

@@ -1608,3 +1608,126 @@ mod tests {
         assert!(file_name_ok("").is_err());
     }
 }
+
+/// One CSV field (RFC 4180: quoted when it holds a comma, quote or line
+/// break). Pure.
+fn csv_field(text: &str) -> String {
+    if text.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", text.replace('"', "\"\""))
+    } else {
+        text.to_owned()
+    }
+}
+
+/// `header` and `rows` as CSV text. Pure.
+pub fn rows_csv(header: &[String], rows: &[Vec<String>]) -> String {
+    let line = |cells: &[String]| {
+        cells
+            .iter()
+            .map(|c| csv_field(c))
+            .collect::<Vec<_>>()
+            .join(",")
+    };
+    let mut out = line(header);
+    out.push('\n');
+    for row in rows {
+        out.push_str(&line(row));
+        out.push('\n');
+    }
+    out
+}
+
+/// A24-T4: an import of rows a caller already holds (a migration wave's page
+/// of source records), through the same pipeline as an uploaded file: the
+/// rows are stored as a CSV file, the job is recorded and audited, and
+/// staging is queued. `mapping` is an `ImportMapping` checked against the
+/// entity's live attributes. Answers the job's id; the same rows for the
+/// same entity answer the job already made for them.
+#[allow(clippy::too_many_arguments)]
+pub async fn create_rows_import(
+    state: &EngineState,
+    entity: &str,
+    file_name: &str,
+    header: &[String],
+    rows: &[Vec<String>],
+    mapping: Value,
+    match_mode: &str,
+    match_columns: Vec<String>,
+    actor: Uuid,
+) -> Result<Uuid, AppError> {
+    let (_, entity, attrs, _) =
+        attome_records::entity_crud::resolve_entity_from_db(&state.base.db, entity).await?;
+    let parsed: attome_records::import_validate::ImportMapping =
+        serde_json::from_value(mapping.clone())
+            .map_err(|e| AppError::Validation(format!("mapping: {e}")))?;
+    parsed.check(&attrs)?;
+    let file_name = file_name_ok(file_name)?;
+    let bytes = rows_csv(header, rows).into_bytes();
+    let sha = hex::encode(Sha256::digest(&bytes));
+    let existing: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM import_job \
+          WHERE entity_logicalname = $1 AND file_sha256 = $2 \
+            AND status NOT IN ('failed', 'cancelled', 'undone')",
+    )
+    .bind(&entity)
+    .bind(&sha)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if let Some(job_id) = existing {
+        return Ok(job_id);
+    }
+    let job_id = Uuid::now_v7();
+    let key = format!("imports/{job_id}/{file_name}");
+    attome_storage::mirror::write_object(&state.base.storage, &key, bytes)
+        .await
+        .map_err(AppError::internal)?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row = sqlx::query_scalar::<_, Uuid>(
+        "INSERT INTO import_job (id, entity_logicalname, storage_key, file_name, \
+                                 file_sha256, encoding, sheet, mapping, match_mode, \
+                                 match_columns, all_or_nothing, triggers_on, status, \
+                                 counts, created_by) \
+         VALUES ($1, $2, $3, $4, $5, NULL, NULL, $6, $7, $8, false, false, 'uploaded', $9, $10) \
+         ON CONFLICT (entity_logicalname, file_sha256) \
+             WHERE status NOT IN ('failed', 'cancelled', 'undone') DO NOTHING \
+         RETURNING id",
+    )
+    .bind(job_id)
+    .bind(&entity)
+    .bind(&key)
+    .bind(&file_name)
+    .bind(&sha)
+    .bind(&mapping)
+    .bind(match_mode)
+    .bind(&match_columns)
+    .bind(serde_json::json!({ "source": "migration" }))
+    .bind(actor)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if row.is_none() {
+        return Err(AppError::Conflict("these rows are already being imported"));
+    }
+    import_event(
+        &mut tx,
+        state,
+        actor,
+        job_id,
+        AuditOperation::Create,
+        "import.created",
+        format!("{file_name} for {entity} (migration)"),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    import_jobs::enqueue(
+        &state.base.db,
+        Phase::Stage,
+        &PhaseJob {
+            job_id,
+            dry_run: false,
+        },
+    )
+    .await?;
+    Ok(job_id)
+}

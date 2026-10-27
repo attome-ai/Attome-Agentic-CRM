@@ -951,6 +951,8 @@ pub fn routes() -> Router<EngineState> {
         )
         // A24-T3: the project's model mapping.
         .merge(crate::migration_model::routes())
+        // A24-T4: the project's waves.
+        .merge(crate::migration_run::routes())
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -973,6 +975,7 @@ struct ApiDocFragment;
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(crate::migration_model::openapi_fragment());
+    doc.merge(crate::migration_run::openapi_fragment());
     doc
 }
 

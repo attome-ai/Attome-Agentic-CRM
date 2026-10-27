@@ -28,6 +28,11 @@
 //! SSH library is linked into the binary (the Rust ones pull in `rsa` with
 //! RUSTSEC-2023-0071). `--dry-run` prints every step instead.
 
+#![allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
+
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};

@@ -101,7 +101,7 @@ fn choices_of(options: Option<&Value>) -> Vec<String> {
 }
 
 /// This deployment's entities and attributes, from the live registry.
-fn targets(state: &EngineState) -> Vec<TargetEntity> {
+pub(crate) fn targets(state: &EngineState) -> Vec<TargetEntity> {
     let registry = state.entities.load();
     let mut out: Vec<TargetEntity> = registry
         .iter()

@@ -173,6 +173,8 @@ pub mod metrics;
 pub mod migration;
 /// A24-T3: a migration project's model mapping (draft, read, save).
 mod migration_model;
+/// A24-T4: a migration project's waves, and the job that runs one.
+pub mod migration_run;
 pub mod model_admin;
 /// A1-T11 — `/api/v1/admin/model/health`.
 pub mod model_health;

@@ -142,7 +142,7 @@ impl std::fmt::Debug for EntityDetail {
 // ── Request types ─────────────────────────────────────────────────────────────
 
 #[derive(Deserialize, ToSchema)]
-pub(super) struct CreateEntityBody {
+pub(crate) struct CreateEntityBody {
     logicalname: String,
     name: String,
     primary_name_attribute: Option<String>,
@@ -299,6 +299,18 @@ pub(super) async fn create_entity(
     recording: RecordingCtx,
     Json(body): Json<CreateEntityBody>,
 ) -> Result<(StatusCode, Json<EntityMeta>), AppError> {
+    let meta = create_entity_core(&state, ctx.user_id, &recording, body).await?;
+    Ok((StatusCode::CREATED, Json(meta)))
+}
+
+/// A24-T4: the entity create itself, for the route and a migration wave's
+/// metadata steps (which record into their own automatic changeset).
+pub(crate) async fn create_entity_core(
+    state: &EngineState,
+    user_id: Uuid,
+    recording: &Recording,
+    body: CreateEntityBody,
+) -> Result<EntityMeta, AppError> {
     let logicalname = body.logicalname.trim().to_lowercase();
     if !valid_identifier(&logicalname) {
         return Err(AppError::Validation(format!(
@@ -382,7 +394,7 @@ pub(super) async fn create_entity(
         },
         ReconcilePolicy::Admin,
         None,
-        Some(RecordAs::op(&recording, Op::CreateEntity)),
+        Some(RecordAs::op(recording, Op::CreateEntity)),
     )
     .await?;
     let layer = recording.stamp()?;
@@ -395,11 +407,10 @@ pub(super) async fn create_entity(
     provision::ensure_entity_list_views(&state.base.db_migrator, id, &logicalname, &display_name)
         .await?;
 
-    let (user_ctx, org_ref) =
-        attome_records::entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    let (user_ctx, org_ref) = attome_records::entity_crud::fetch_audit_ctx(state, user_id).await;
     {
         let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
-        audit_service(&state)
+        audit_service(state)
             .write_in_tx(
                 &mut tx,
                 AuditEvent {
@@ -448,30 +459,27 @@ pub(super) async fn create_entity(
     // admin's own field create runs.
     let mut attribute_count = 0;
     if let Some(base_id) = body.extends_entity_id {
-        attribute_count = inherit_from(&state, id, base_id, ctx.user_id, Some(&*recording)).await?;
+        attribute_count = inherit_from(state, id, base_id, user_id, Some(recording)).await?;
     }
 
     notify_metadata_change(&state.base.redis).await;
-    pin_write_best_effort(&state, ctx.user_id, "create entity").await;
+    pin_write_best_effort(state, user_id, "create entity").await;
 
-    Ok((
-        StatusCode::CREATED,
-        Json(EntityMeta {
-            id,
-            logicalname,
-            name: display_name,
-            primary_name_attribute: primary,
-            is_active: true,
-            is_append_only: body.is_append_only,
-            category: None,
-            attribute_count,
-            owner_layer,
-            business_key: None,
-            is_reference_data: false,
-            extends_entity_id: body.extends_entity_id,
-            business_key_index_sync: None,
-        }),
-    ))
+    Ok(EntityMeta {
+        id,
+        logicalname,
+        name: display_name,
+        primary_name_attribute: primary,
+        is_active: true,
+        is_append_only: body.is_append_only,
+        category: None,
+        attribute_count,
+        owner_layer,
+        business_key: None,
+        is_reference_data: false,
+        extends_entity_id: body.extends_entity_id,
+        business_key_index_sync: None,
+    })
 }
 
 /// One entity

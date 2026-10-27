@@ -3552,6 +3552,10 @@ pub const IMPORT_APPLY: attome_jobs::JobType =
 pub const IMPORT_UNDO: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_document::import_jobs::UNDO_JOB, 1);
 
+/// A24-T4: one migration wave (metadata, then a queued import per page).
+pub const MIGRATION_WAVE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::migration_run::WAVE_JOB, 1);
+
 /// P13-T1: the warehouse export, every five minutes when entities are named.
 pub const WAREHOUSE_EXPORT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_integration::warehouse_export::JOB, 1);
@@ -4882,6 +4886,18 @@ pub fn register_job_types() {
                     tracing::info!(files, "warehouse export wrote files");
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        // A24-T4: a migration wave.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MIGRATION_WAVE,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_api::migration_run::WaveJob = job.payload()?;
+                attome_api::migration_run::run_wave(&state, payload.wave_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
             },
         ) {
             tracing::error!(%error, "job type registration failed");

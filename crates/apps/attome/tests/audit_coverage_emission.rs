@@ -7305,6 +7305,22 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(source_model()),
             )
         }
+        "POST /api/v1/admin/migration-projects/{id}/waves" => {
+            let id = migration_project(fx).await;
+            admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/migration-projects/{id}/model-mapping/draft"),
+                Some(source_model()),
+            )
+            .await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/migration-projects/{id}/waves"),
+                t,
+                Some(json!({ "system": uniq("source-system") })),
+            )
+        }
         "PUT /api/v1/admin/migration-projects/{id}/model-mapping" => {
             let id = migration_project(fx).await;
             let draft = admin(
