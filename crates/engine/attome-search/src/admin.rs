@@ -17,7 +17,7 @@
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -228,7 +228,7 @@ async fn read_settings(
 )]
 async fn get_entity_settings(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity): Path<String>,
 ) -> Result<Json<SearchEntitySettings>, AppError> {
     require_entity(&state, &entity)?;
@@ -262,7 +262,7 @@ async fn get_entity_settings(
 )]
 async fn put_entity_settings(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(entity): Path<String>,
     headers: HeaderMap,
     Json(body): Json<SearchEntitySettingsBody>,
@@ -408,7 +408,7 @@ fn check_lang(lang: Option<&str>) -> Result<(), AppError> {
 )]
 async fn list_synonyms(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<SearchSynonym>>, AppError> {
     let window = page.window();
@@ -452,7 +452,7 @@ async fn list_synonyms(
 )]
 async fn create_synonym(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<SearchSynonymBody>,
 ) -> Result<(StatusCode, Json<SearchSynonym>), AppError> {
     let terms = clean_terms(&body.terms)?;
@@ -503,7 +503,7 @@ async fn create_synonym(
 )]
 async fn delete_synonym(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     remove(
@@ -570,7 +570,7 @@ pub struct SearchStopword {
 )]
 async fn list_stopwords(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<SearchStopword>>, AppError> {
     let window = page.window();
@@ -613,7 +613,7 @@ async fn list_stopwords(
 )]
 async fn create_stopword(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<SearchStopword>,
 ) -> Result<(StatusCode, Json<SearchStopword>), AppError> {
     let word = crate::normalize_ar(&clean_term(&body.word)?);
@@ -669,7 +669,7 @@ async fn create_stopword(
 )]
 async fn delete_stopword(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(word): Path<String>,
 ) -> Result<StatusCode, AppError> {
     let word = crate::normalize_ar(word.trim());
@@ -725,7 +725,7 @@ pub struct SearchPinBody {
 )]
 async fn list_pins(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(page): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<SearchPin>>, AppError> {
     let window = page.window();
@@ -771,7 +771,7 @@ async fn list_pins(
 )]
 async fn create_pin(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<SearchPinBody>,
 ) -> Result<(StatusCode, Json<SearchPin>), AppError> {
     let query_norm = crate::normalize_ar(&clean_term(&body.query)?);
@@ -832,7 +832,7 @@ async fn create_pin(
 )]
 async fn delete_pin(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::DataModel>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     remove(
@@ -877,7 +877,7 @@ pub struct SearchIndexSize {
 )]
 async fn get_size(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
 ) -> Result<Json<SearchIndexSize>, AppError> {
     let db = &state.base.db;
     let entities: Vec<(String, i64)> = sqlx::query_as(

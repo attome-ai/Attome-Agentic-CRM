@@ -25,7 +25,7 @@
 use std::sync::LazyLock;
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_server::security::{AccessLevel, SecurityContext};
 use attome_types::{
     AppError, DEFAULT_PAGE_SIZE, ErrorResponse, OnePageQuery, PageBase, PageWindow,
@@ -1324,7 +1324,7 @@ const MAX_RELATED_KNOWLEDGE_LIMIT: i64 = 20;
 )]
 async fn related_knowledge(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(params): Query<RelatedKnowledgeParams>,
 ) -> Result<Json<RelatedKnowledgeResponse>, AppError> {
     let limit = params
@@ -1419,7 +1419,7 @@ struct GapQuery {
 )]
 async fn explain_knowledge(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Query(params): Query<KnowledgeParams>,
 ) -> Result<Json<crate::knowledge::KnowledgeExplanation>, AppError> {
     let q = validate_query(&params.q)?;
@@ -1451,7 +1451,7 @@ async fn explain_knowledge(
 )]
 async fn list_gaps(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(q): Query<GapQuery>,
 ) -> Result<Json<PaginatedResponse<GapTopic>>, AppError> {
     let PageWindow {
@@ -1496,7 +1496,7 @@ struct TriageGapBody {
 )]
 async fn triage_gap(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
     Json(body): Json<TriageGapBody>,
 ) -> Result<Json<GapTopic>, AppError> {
@@ -1542,7 +1542,7 @@ async fn triage_gap(
 )]
 async fn knowledge_coverage(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<crate::knowledge_coverage::CollectionCoverage>>, AppError> {
     let PageWindow {
@@ -1576,7 +1576,7 @@ async fn knowledge_coverage(
 )]
 async fn knowledge_indexer_status(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<crate::knowledge_coverage::IndexerStatus>, AppError> {
     let status = crate::knowledge_coverage::indexer_status(
         &state.base.db,
@@ -1621,7 +1621,7 @@ pub struct SearchStatus {
 )]
 async fn search_status(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<SearchStatus>, AppError> {
     let backlog = crate::drain::backlog(&state.base.db).await?;
     let sizes: Vec<IndexSize> = sqlx::query_as(

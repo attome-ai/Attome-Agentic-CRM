@@ -11,7 +11,7 @@
 //! refined. The log keeps query fingerprints only, never query text.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -134,7 +134,7 @@ pub async fn quality(state: &EngineState, days: i64) -> Result<SearchQuality, Ap
 )]
 async fn get_quality(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
     Query(query): Query<QualityQuery>,
 ) -> Result<Json<SearchQuality>, AppError> {
     Ok(Json(
