@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_audit::{AuditOperation, AuditOutcome};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 
 use super::{HumanSession, record, require_step_up, version_conflict_if_none};
@@ -505,7 +505,7 @@ fn local_action(
 )]
 async fn list_deployments(
     State(state): State<FleetState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Query(filter): Query<DeploymentFilter>,
     Query(paging): Query<OnePageQuery>,
@@ -553,7 +553,7 @@ async fn list_deployments(
 )]
 async fn register_deployment(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     session: HumanSession,
     Json(body): Json<RegisterDeploymentBody>,
 ) -> ConsoleResult<(StatusCode, Json<DeploymentView>)> {
@@ -639,7 +639,7 @@ async fn register_deployment(
 )]
 async fn get_deployment(
     State(state): State<FleetState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path(id): Path<Uuid>,
 ) -> ConsoleResult<Json<DeploymentView>> {
@@ -667,7 +667,7 @@ async fn get_deployment(
 )]
 async fn update_deployment(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     session: HumanSession,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateDeploymentBody>,
@@ -770,7 +770,7 @@ async fn update_deployment(
 )]
 async fn set_credential(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     session: HumanSession,
     Path(id): Path<Uuid>,
     Json(body): Json<SetCredentialBody>,
@@ -833,7 +833,7 @@ async fn set_credential(
 )]
 async fn sync_deployment(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path(id): Path<Uuid>,
 ) -> ConsoleResult<Json<DeploymentView>> {
@@ -880,7 +880,7 @@ async fn sync_deployment(
 )]
 async fn sync_all(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
 ) -> ConsoleResult<(StatusCode, Json<SyncQueued>)> {
     let action = local_action(ctx.user_id, None, "sync_all", json!({}));
@@ -923,7 +923,7 @@ async fn sync_all(
 )]
 async fn list_actions(
     State(state): State<FleetState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path(id): Path<Uuid>,
     Query(paging): Query<OnePageQuery>,
@@ -958,7 +958,7 @@ async fn list_actions(
 )]
 async fn list_changesets(
     State(state): State<FleetState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Query(paging): Query<OnePageQuery>,
 ) -> ConsoleResult<Json<PaginatedResponse<ChangesetFile>>> {

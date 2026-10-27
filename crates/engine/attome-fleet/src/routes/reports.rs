@@ -19,7 +19,7 @@ use uuid::Uuid;
 
 use attome_audit::security::{MandatoryCategory, SecurityEvent};
 use attome_audit::{AuditOperation, AuditOutcome};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 
 use super::{HumanSession, record};
@@ -135,7 +135,7 @@ async fn customer(
 )]
 async fn list_reports(
     State(state): State<FleetState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path(id): Path<Uuid>,
     Query(filter): Query<ReportFilter>,
@@ -175,7 +175,7 @@ async fn list_reports(
 )]
 async fn list_items(
     State(state): State<FleetState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path((id, report_id)): Path<(Uuid, Uuid)>,
     Query(filter): Query<ItemFilter>,
@@ -279,7 +279,7 @@ async fn decide(
 )]
 async fn accept_item(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path((id, item_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<DecideItemBody>,
@@ -318,7 +318,7 @@ async fn accept_item(
 )]
 async fn use_mine_item(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path((id, item_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<UseMineItemBody>,
@@ -357,7 +357,7 @@ async fn use_mine_item(
 )]
 async fn dismiss_item(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path((id, item_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<DecideItemBody>,
@@ -462,7 +462,7 @@ pub fn sort_oldest_first(items: &mut [OpenItemView]) {
 )]
 async fn fleet_open_items(
     State(state): State<FleetState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Query(paging): Query<OnePageQuery>,
 ) -> ConsoleResult<Json<PaginatedResponse<OpenItemView>>> {

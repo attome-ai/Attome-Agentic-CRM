@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_audit::{AuditOperation, AuditOutcome};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 
 use super::{HumanSession, require_step_up, version_conflict_if_none};
@@ -333,7 +333,7 @@ pub fn check_start(
 )]
 async fn list_rollouts(
     State(state): State<FleetState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Query(paging): Query<OnePageQuery>,
 ) -> ConsoleResult<Json<PaginatedResponse<RolloutView>>> {
@@ -367,7 +367,7 @@ async fn list_rollouts(
 )]
 async fn start_rollout(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     session: HumanSession,
     Json(body): Json<StartRolloutBody>,
 ) -> ConsoleResult<(StatusCode, Json<RolloutDetail>)> {
@@ -451,7 +451,7 @@ async fn start_rollout(
 )]
 async fn get_rollout(
     State(state): State<FleetState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path(id): Path<Uuid>,
 ) -> ConsoleResult<Json<RolloutDetail>> {
@@ -481,7 +481,7 @@ async fn get_rollout(
 )]
 async fn apply_target(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     session: HumanSession,
     Path((id, target_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<ApplyTargetBody>,
@@ -655,7 +655,7 @@ async fn apply_target(
 )]
 async fn skip_target(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path((id, target_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<RowVersionBody>,
@@ -844,7 +844,7 @@ async fn change_rollout(
 )]
 async fn halt_rollout(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path(id): Path<Uuid>,
     Json(body): Json<RowVersionBody>,
@@ -870,7 +870,7 @@ async fn halt_rollout(
 )]
 async fn resume_rollout(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     session: HumanSession,
     Path(id): Path<Uuid>,
     Json(body): Json<RowVersionBody>,
@@ -904,7 +904,7 @@ async fn resume_rollout(
 )]
 async fn cancel_rollout(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path(id): Path<Uuid>,
     Json(body): Json<RowVersionBody>,
@@ -935,7 +935,7 @@ async fn cancel_rollout(
 )]
 async fn refresh_rollout(
     State(state): State<FleetState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Deployment>>,
     _session: HumanSession,
     Path(id): Path<Uuid>,
 ) -> ConsoleResult<(StatusCode, Json<StepsQueued>)> {
