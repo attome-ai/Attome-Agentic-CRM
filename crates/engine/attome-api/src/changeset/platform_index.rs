@@ -437,6 +437,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
         name: "attome-project-queue",
         json: include_str!("../../../../../changesets/platform/0075-attome-project-queue.json"),
     },
+    PlatformChangeset {
+        file: "0076-attome-service-queue-skills.json",
+        name: "attome-service-queue-skills",
+        json: include_str!(
+            "../../../../../changesets/platform/0076-attome-service-queue-skills.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

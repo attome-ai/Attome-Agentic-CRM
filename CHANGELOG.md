@@ -45,6 +45,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Service queues run on the V7 queues (G4-T1). A `skill_match` queue now assigns the least loaded
+  available member who holds every skill the ticket needs at its level: the queue's
+  `required_skills` plus the new `queue_item_skill` rows of the ticket's queue item, against the
+  member's `resource_skill` rows, which gain a `kind` (skill, language, certification, product).
+  Before, `skill_match` behaved like `manual`. Claims and assigns move the ticket's queue item to
+  `picked` (platform changeset 0076).
 - Queries filter through a polymorphic lookup (A8-T2): `regarding_id.city` joins each allowed
   target entity that has a readable `city`, on the pair naming that entity, so
   `regarding_entity = account AND regarding_id.city = Riyadh` filters as written. The targets must

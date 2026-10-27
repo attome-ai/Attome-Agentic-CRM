@@ -1212,6 +1212,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-dashboard-variable-expression",
         // V7-T1: the generic queue and its items over any record.
         "attome-project-queue",
+        // G4-T1: a skill's kind, and the skills a queue item needs.
+        "attome-service-queue-skills",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

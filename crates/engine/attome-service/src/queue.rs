@@ -37,6 +37,20 @@
 //! [`Distribution::SkillMatch`]'s doc comment) or computes one
 //! (`round_robin`/`least_loaded`).
 //!
+//! **G4-T1: skill match and V7 queue items.** A `skill_match` queue routes
+//! to an available member who holds every skill the ticket needs, at its
+//! level: the queue's `required_skills` (`skill` or `skill:level`, comma
+//! separated, as `schedule_candidates::parse_skills` reads them) plus the
+//! `queue_item_skill` rows of the ticket's queue item (platform changeset
+//! 0076), against the member's `resource_skill` rows (whose new `kind`
+//! says whether a skill is a skill, language, certification or product);
+//! the least loaded such member gets it, and an explicit `assignee_id` must
+//! hold them too. Every claim and assign also moves the ticket's
+//! `queue_item` (V7-T1, `attome_project::queue`) to `picked` with the
+//! assignee, creating it when the ticket was queued after the last boot's
+//! migration. The V7 `queue` rows carry the same ids as the service queues,
+//! so `work_queue_ref` values name both.
+//!
 //! **`calendar_ref` is schema-ready, not consumed here** — same "reserved
 //! for a later phase" posture `service_offering.intake_form_ref`/
 //! `approval_policy_ref` already use. Idle-item escalation
@@ -44,6 +58,8 @@
 //! wiring it through `attome_calendar::BusinessCalendar` the way
 //! `sla.rs::compute_due` does (through `attome_core::calendar`, D-517) is
 //! real follow-up work, not silently dropped.
+
+use std::collections::HashMap;
 
 use attome_audit::AuditOperation;
 use attome_core::EngineState;
@@ -61,6 +77,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::auth::TicketUpdate;
+use crate::schedule_candidates::{NeededSkill, parse_skills, skills_cover};
 
 // ── Distribution strategy vocabulary (checklist's exact terms) ────────────
 
@@ -77,20 +94,10 @@ pub enum Distribution {
     /// (`assignee_id = member AND status NOT IN (resolved, closed)`) tickets
     /// in this queue, again skipping anyone at/over `capacity`.
     LeastLoaded,
-    /// Recognized but **not yet functional** — gated on M45 Phase 2's
-    /// routing-rule metadata, which does not exist yet
-    /// (`routing.rs`'s module doc: no `attome-rules`/`xrm-rules` crate, no
-    /// `kind = routing` table, verified 2026-08-27). Building bespoke
-    /// skill-matching logic against `required_skills` here, with nothing
-    /// governing which skill "counts" as a match or how ties break, would be
-    /// exactly the "invented product surface with no real rule behind it"
-    /// this crate's own `routing.rs` already declined to do. `/assign`
-    /// treats a `skill_match` queue exactly like `manual` (an explicit
-    /// `assignee_id` is required) and logs a warning naming the queue — a
-    /// deliberate, visible fallback, not a silent misroute. TODO(M45 Phase
-    /// 2): once routing-rule metadata exists, replace this arm with a real
-    /// skill-aware pick over `required_skills` vs. each member's
-    /// `resource_skill` rows.
+    /// G4-T1: the least loaded available member who holds every skill the
+    /// ticket needs (the queue's `required_skills` plus its queue item's
+    /// `queue_item_skill` rows) at its level, from their `resource_skill`
+    /// rows; an explicit `assignee_id` must hold them too.
     SkillMatch,
 }
 
@@ -285,6 +292,164 @@ async fn next_open_ticket(
     .map_err(AppError::internal)
 }
 
+// ── G4-T1: skills and the V7 queue item ────────────────────────────────────
+
+/// Whether `table` is provisioned (the V7 queue tables come from a platform
+/// changeset; a bare test database may lack them).
+async fn has_table(tx: &mut Transaction<'_, Postgres>, table: &str) -> Result<bool, AppError> {
+    sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+        .bind(table)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(AppError::internal)
+}
+
+/// The skills a ticket needs: its queue's `required_skills`, then its queue
+/// item's `queue_item_skill` rows (a name in both keeps the higher level).
+async fn required_skills(
+    tx: &mut Transaction<'_, Postgres>,
+    queue_id: Uuid,
+    ticket_id: Uuid,
+) -> Result<Vec<NeededSkill>, AppError> {
+    let raw: Option<String> =
+        sqlx::query_scalar("SELECT required_skills FROM service_work_queue WHERE id = $1")
+            .bind(queue_id)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(AppError::internal)?
+            .flatten();
+    let mut need = parse_skills(raw.as_deref());
+    if has_table(tx, "queue_item_skill").await? && has_table(tx, "queue_item").await? {
+        let rows: Vec<(String, Option<f64>)> = sqlx::query_as(
+            "SELECT s.skill, s.min_level::float8 FROM queue_item_skill s \
+               JOIN queue_item i ON i.id = s.queue_item_ref \
+              WHERE i.record_entity = 'service_ticket' AND i.record_id = $1 \
+                AND i.queue_ref = $2 AND i.is_active IS NOT FALSE \
+                AND s.is_active IS NOT FALSE",
+        )
+        .bind(ticket_id.to_string())
+        .bind(queue_id)
+        .fetch_all(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+        need = merge_needed(need, rows);
+    }
+    Ok(need)
+}
+
+/// `need` plus the (skill, level) rows, one entry per lower-cased name,
+/// keeping the higher level. Pure.
+fn merge_needed(mut need: Vec<NeededSkill>, rows: Vec<(String, Option<f64>)>) -> Vec<NeededSkill> {
+    for (skill, level) in rows {
+        let skill = skill.trim().to_lowercase();
+        if skill.is_empty() {
+            continue;
+        }
+        match need.iter_mut().find(|n| n.skill == skill) {
+            Some(n) => {
+                n.min_level = match (n.min_level, level) {
+                    (Some(a), Some(b)) => Some(a.max(b)),
+                    (a, b) => a.or(b),
+                }
+            }
+            None => need.push(NeededSkill {
+                skill,
+                min_level: level,
+            }),
+        }
+    }
+    need
+}
+
+/// Each member's skills (lower-cased name to their highest level).
+async fn member_skills(
+    tx: &mut Transaction<'_, Postgres>,
+    members: &[Uuid],
+) -> Result<HashMap<Uuid, HashMap<String, Option<f64>>>, AppError> {
+    let mut out: HashMap<Uuid, HashMap<String, Option<f64>>> = HashMap::new();
+    if members.is_empty() || !has_table(tx, "resource_skill").await? {
+        return Ok(out);
+    }
+    let rows: Vec<(Uuid, String, Option<f64>)> = sqlx::query_as(
+        "SELECT user_id, skill, skill_level::float8 FROM resource_skill \
+          WHERE user_id = ANY($1) AND is_active IS NOT FALSE",
+    )
+    .bind(members)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    for (user, skill, level) in rows {
+        let entry = out
+            .entry(user)
+            .or_default()
+            .entry(skill.trim().to_lowercase())
+            .or_insert(level);
+        if level > *entry {
+            *entry = level;
+        }
+    }
+    Ok(out)
+}
+
+/// The members of `loads` who hold every needed skill, order kept. Pure.
+fn qualified_loads(
+    loads: Vec<(Uuid, i64)>,
+    skills: &HashMap<Uuid, HashMap<String, Option<f64>>>,
+    need: &[NeededSkill],
+) -> Vec<(Uuid, i64)> {
+    let none = HashMap::new();
+    loads
+        .into_iter()
+        .filter(|(user, _)| skills_cover(skills.get(user).unwrap_or(&none), need))
+        .collect()
+}
+
+/// V7-T1: the ticket's queue item is `picked` by `user`; one is created when
+/// the ticket was queued after the boot migration made the others.
+async fn pick_queue_item(
+    tx: &mut Transaction<'_, Postgres>,
+    queue_id: Uuid,
+    ticket_id: Uuid,
+    user: Uuid,
+) -> Result<(), AppError> {
+    if !(has_table(tx, "queue_item").await? && has_table(tx, "queue").await?) {
+        return Ok(());
+    }
+    let updated = sqlx::query(
+        "UPDATE queue_item SET status = 'picked', assigned_ref = $3, modified_at = now(), \
+                row_version = row_version + 1 \
+          WHERE record_entity = 'service_ticket' AND record_id = $2 AND queue_ref = $1 \
+            AND is_active IS NOT FALSE",
+    )
+    .bind(queue_id)
+    .bind(ticket_id.to_string())
+    .bind(user)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if updated == 0 {
+        sqlx::query(
+            "INSERT INTO queue_item \
+               (id, queue_ref, record_entity, record_id, priority, status, assigned_ref, \
+                entered_at, created_by, owner_ref, owner_type, organization_ref, \
+                created_at, modified_at) \
+             SELECT uuidv7(), q.id, 'service_ticket', t.id::text, \
+                    COALESCE(t.priority::text, 'medium'), 'picked', $3, t.created_at, \
+                    t.created_by, t.owner_ref, t.owner_type, t.organization_ref, now(), now() \
+               FROM service_ticket t JOIN queue q ON q.id = $1 \
+              WHERE t.id = $2",
+        )
+        .bind(queue_id)
+        .bind(ticket_id)
+        .bind(user)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    Ok(())
+}
+
 // ── Pure distribution pickers (DB-free, directly unit-testable) ───────────
 
 /// The next member after `last_assigned` in `members` (wrapping), or the
@@ -403,6 +568,7 @@ pub async fn claim_next_ticket(
             "ticket vanished or was claimed between read and update",
         ));
     }
+    pick_queue_item(&mut tx, queue_id, ticket_id, actor).await?;
     tx.commit().await.map_err(AppError::internal)?;
 
     write_audit(
@@ -424,10 +590,9 @@ pub async fn claim_next_ticket(
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct AssignRequest {
     pub ticket_id: Uuid,
-    /// Required when the queue's distribution is `manual` (or `skill_match`,
-    /// which falls back to manual — see [`Distribution::SkillMatch`]'s doc
-    /// comment); must be omitted for `round_robin`/`least_loaded`, whose
-    /// target is computed automatically.
+    /// Required when the queue's distribution is `manual`; optional for
+    /// `skill_match` (the member must hold the skills); must be omitted for
+    /// `round_robin`/`least_loaded`, whose target is computed automatically.
     pub assignee_id: Option<Uuid>,
 }
 
@@ -495,19 +660,47 @@ pub async fn assign_ticket(
     }
 
     let target = match queue.distribution {
-        Distribution::Manual | Distribution::SkillMatch => {
-            if queue.distribution == Distribution::SkillMatch {
-                tracing::warn!(
-                    queue_id = %queue_id,
-                    "queue: skill_match distribution is not yet functional (M45 Phase 2 \
-                     routing-rule metadata doesn't exist) — falling back to manual"
-                );
+        Distribution::SkillMatch => {
+            let need = required_skills(&mut tx, queue_id, ticket_id).await?;
+            match requested_assignee {
+                Some(target) => {
+                    if !is_active_member(&mut tx, queue_id, target).await? {
+                        return Err(AppError::Validation(
+                            "assignee_id is not an active member of this queue".to_string(),
+                        ));
+                    }
+                    let skills = member_skills(&mut tx, &[target]).await?;
+                    if !skills_cover(skills.get(&target).unwrap_or(&HashMap::new()), &need) {
+                        return Err(AppError::Validation(
+                            "assignee_id does not hold the skills this ticket needs".to_string(),
+                        ));
+                    }
+                    if let Some(capacity) = queue.capacity {
+                        let current = open_item_count(&mut tx, queue_id, target).await?;
+                        if current >= capacity {
+                            return Err(AppError::Conflict(
+                                "target member is at capacity for this queue",
+                            ));
+                        }
+                    }
+                    target
+                }
+                None => {
+                    let loads = available_loads(state, member_loads(&mut tx, queue_id).await?);
+                    let members: Vec<Uuid> = loads.iter().map(|(id, _)| *id).collect();
+                    let skills = member_skills(&mut tx, &members).await?;
+                    let qualified = qualified_loads(loads, &skills, &need);
+                    least_loaded_member(&qualified, queue.capacity).ok_or(AppError::Conflict(
+                        "no available member of this queue holds the skills this ticket needs \
+                         and has spare capacity",
+                    ))?
+                }
             }
+        }
+        Distribution::Manual => {
             let Some(target) = requested_assignee else {
                 return Err(AppError::Validation(
-                    "assignee_id is required: this queue's distribution is manual \
-                     (skill_match falls back to manual until M45 routing-rule metadata exists)"
-                        .to_string(),
+                    "assignee_id is required: this queue's distribution is manual".to_string(),
                 ));
             };
             if !is_active_member(&mut tx, queue_id, target).await? {
@@ -562,6 +755,7 @@ pub async fn assign_ticket(
             "ticket vanished or was assigned between read and update",
         ));
     }
+    pick_queue_item(&mut tx, queue_id, ticket_id, target).await?;
 
     if queue.distribution == Distribution::RoundRobin {
         sqlx::query("UPDATE service_work_queue SET last_assigned_member_ref = $2 WHERE id = $1")
@@ -902,6 +1096,60 @@ pub async fn run_escalation_sweep(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── G4-T1: skill match on V7 queues ─────────────────────────────────
+    #[test]
+    fn queue_on_v7_item_skills_join_the_queue_skills() {
+        let need = merge_needed(
+            parse_skills(Some("Arabic:3, billing")),
+            vec![
+                ("arabic".into(), Some(4.0)),
+                ("Billing".into(), Some(2.0)),
+                (" SAP ".into(), None),
+                ("  ".into(), Some(1.0)),
+            ],
+        );
+        assert_eq!(
+            need,
+            vec![
+                NeededSkill {
+                    skill: "arabic".into(),
+                    min_level: Some(4.0)
+                },
+                NeededSkill {
+                    skill: "billing".into(),
+                    min_level: Some(2.0)
+                },
+                NeededSkill {
+                    skill: "sap".into(),
+                    min_level: None
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn queue_on_v7_skill_match_keeps_only_qualified_members() {
+        let (a, b, c) = (Uuid::from_u128(1), Uuid::from_u128(2), Uuid::from_u128(3));
+        let mut skills: HashMap<Uuid, HashMap<String, Option<f64>>> = HashMap::new();
+        skills.insert(
+            a,
+            HashMap::from([("arabic".into(), Some(5.0)), ("billing".into(), None)]),
+        );
+        skills.insert(
+            b,
+            HashMap::from([("arabic".into(), Some(2.0)), ("billing".into(), None)]),
+        );
+        let need = parse_skills(Some("arabic:3,billing"));
+        let qualified = qualified_loads(vec![(a, 4), (b, 0), (c, 0)], &skills, &need);
+        // b's Arabic is below the level and c has no skills: a gets it,
+        // even though a is the busiest.
+        assert_eq!(qualified, vec![(a, 4)]);
+        assert_eq!(least_loaded_member(&qualified, Some(4)), None);
+        assert_eq!(least_loaded_member(&qualified, Some(5)), Some(a));
+        // No skills needed: everyone qualifies.
+        assert_eq!(qualified_loads(vec![(c, 1)], &skills, &[]), vec![(c, 1)]);
+    }
 
     // ── next_round_robin_member ────────────────────────────────────────
     #[test]

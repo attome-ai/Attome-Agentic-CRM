@@ -155,15 +155,19 @@ pub struct Candidate {
 }
 
 fn has_skills(job: &Job, tech: &Technician) -> bool {
-    job.skills
-        .iter()
-        .all(|need| match tech.skills.get(&need.skill) {
-            None => false,
-            Some(level) => match need.min_level {
-                None => true,
-                Some(min) => level.is_some_and(|l| l >= min),
-            },
-        })
+    skills_cover(&tech.skills, &job.skills)
+}
+
+/// Whether `have` (skill name in lower case to level) holds every `need`,
+/// each at its minimum level when one is set. Pure.
+pub fn skills_cover(have: &HashMap<String, Option<f64>>, need: &[NeededSkill]) -> bool {
+    need.iter().all(|need| match have.get(&need.skill) {
+        None => false,
+        Some(level) => match need.min_level {
+            None => true,
+            Some(min) => level.is_some_and(|l| l >= min),
+        },
+    })
 }
 
 fn missing_parts(job: &Job, tech: &Technician) -> Vec<Uuid> {
