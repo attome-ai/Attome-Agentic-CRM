@@ -165405,6 +165405,13 @@
             "type": "object",
             "description": "Each group field's value (a bucket's start for a date bucket)."
           },
+          "rolled_up": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "P1-T2: on a total row, the group fields it adds up over (their keys\nare null); absent on an ordinary group."
+          },
           "values": {
             "type": "object",
             "description": "Each aggregate's value, by alias."
@@ -224102,6 +224109,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -224153,7 +224162,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  }
 }

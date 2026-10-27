@@ -38189,6 +38189,11 @@ export interface components {
         Group: {
             /** @description Each group field's value (a bucket's start for a date bucket). */
             keys: Record<string, never>;
+            /**
+             * @description P1-T2: on a total row, the group fields it adds up over (their keys
+             *     are null); absent on an ordinary group.
+             */
+            rolled_up?: string[];
             /** @description Each aggregate's value, by alias. */
             values: Record<string, never>;
         };
