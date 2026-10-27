@@ -1597,6 +1597,7 @@ fn role_desc(r: &RoleDef) -> security::RoleDesc {
                 read_owner_visible: a.read_owner_visible,
                 write_owner_visible: a.write_owner_visible,
                 delete_owner_visible: a.delete_owner_visible,
+                operations: a.operations,
             })
             .collect(),
         field_security_profiles: r.field_security_profiles.clone(),

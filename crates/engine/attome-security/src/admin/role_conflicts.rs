@@ -60,6 +60,7 @@ async fn exists(db: &attome_db::DbPool, kind: &str, id: Uuid) -> Result<bool, Ap
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/role-conflicts/rules",
+    operation_id = "list_role_conflict_rules",
     tag = "admin-security",
     params(OnePageQuery),
     responses(
@@ -96,6 +97,7 @@ pub(super) async fn list_rules(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/security/role-conflicts/rules",
+    operation_id = "create_role_conflict_rule",
     tag = "admin-security",
     request_body = CreateConflictRuleBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Create)])))),
@@ -185,6 +187,7 @@ pub(super) async fn create_rule(
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/security/role-conflicts/rules/{id}",
+    operation_id = "delete_role_conflict_rule",
     tag = "admin-security",
     params(("id" = Uuid, Path, description = "The rule")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::SoftDelete)])))),

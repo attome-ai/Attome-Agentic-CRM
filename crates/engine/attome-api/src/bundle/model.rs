@@ -609,6 +609,10 @@ pub struct RoleEntityAccess {
     pub write_owner_visible: bool,
     #[serde(default)]
     pub delete_owner_visible: bool,
+    /// Q10-T12: create, assign, share, export and bulk levels and the
+    /// child-unit flags; missing ones take the table defaults.
+    #[serde(flatten)]
+    pub operations: attome_security::db::OperationLevels,
 }
 
 /// `privilege` — privileges are platform-minted per entity

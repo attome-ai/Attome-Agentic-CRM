@@ -66,8 +66,8 @@ pub use attome_core::reconcile::{ReconcileOutcome, ReconcilePolicy};
 use attome_core::reconcile::{RowStatus, WriteStep, decide_step};
 
 use crate::db::{
-    ensure_privilege, ensure_privilege_with_id, upsert_profile_field, upsert_role_entity_access,
-    upsert_role_privilege_grant, users_holding_role,
+    OperationLevels, ensure_privilege, ensure_privilege_with_id, upsert_profile_field,
+    upsert_role_entity_access, upsert_role_privilege_grant, users_holding_role,
 };
 use attome_core::changeset::Layer;
 
@@ -129,6 +129,9 @@ pub struct RoleEntityAccessDesc {
     pub read_owner_visible: bool,
     pub write_owner_visible: bool,
     pub delete_owner_visible: bool,
+    /// Q10-T12: create, assign, share, export and bulk levels and the
+    /// child-unit flags.
+    pub operations: OperationLevels,
 }
 
 /// One `privilege` row. Privileges carry no `is_customized` and are
@@ -273,7 +276,7 @@ type ConditionKey = (String, i16, String);
 /// Live grants of a role: privilege key -> (grant row id, condition set).
 type GrantMap = BTreeMap<String, (Uuid, BTreeSet<ConditionKey>)>;
 /// Live entity-access rows of a role: entity logicalname -> (row id, levels).
-type EntityAccessLevels = (i16, i16, i16, bool, bool, bool);
+type EntityAccessLevels = (i16, i16, i16, bool, bool, bool, OperationLevels);
 type EntityAccessMap = BTreeMap<String, (Uuid, EntityAccessLevels)>;
 
 async fn fetch_role_grants(db: &DbPool, role_id: Uuid) -> Result<GrantMap, AppError> {
@@ -317,13 +320,28 @@ async fn fetch_role_grants(db: &DbPool, role_id: Uuid) -> Result<GrantMap, AppEr
 }
 
 /// One `role_mm_entity_access` row joined to its entity logicalname.
-type EntityAccessRow = (Uuid, String, i16, i16, i16, bool, bool, bool);
+#[derive(sqlx::FromRow)]
+struct EntityAccessRow {
+    id: Uuid,
+    logicalname: String,
+    read_access_level: i16,
+    write_access_level: i16,
+    delete_access_level: i16,
+    read_owner_visible: bool,
+    write_owner_visible: bool,
+    delete_owner_visible: bool,
+    #[sqlx(flatten)]
+    operations: OperationLevels,
+}
 
 async fn fetch_role_entity_access(db: &DbPool, role_id: Uuid) -> Result<EntityAccessMap, AppError> {
     let rows: Vec<EntityAccessRow> = sqlx::query_as(
         "SELECT ea.id, ei.logicalname, ea.read_access_level, ea.write_access_level, \
                 ea.delete_access_level, ea.read_owner_visible, ea.write_owner_visible, \
-                ea.delete_owner_visible \
+                ea.delete_owner_visible, ea.create_access_level, ea.assign_access_level, \
+                ea.share_access_level, ea.export_access_level, ea.bulk_access_level, \
+                ea.read_bu_children, ea.write_bu_children, ea.delete_bu_children, \
+                ea.assign_bu_children, ea.share_bu_children \
          FROM role_mm_entity_access ea \
          JOIN entity_info ei ON ei.id = ea.entity_ref \
          WHERE ea.role_ref = $1 AND ea.is_deleted = false",
@@ -334,7 +352,23 @@ async fn fetch_role_entity_access(db: &DbPool, role_id: Uuid) -> Result<EntityAc
     .map_err(AppError::internal)?;
     Ok(rows
         .into_iter()
-        .map(|(id, entity, r, w, d, ro, wo, dlo)| (entity, (id, (r, w, d, ro, wo, dlo))))
+        .map(|r| {
+            (
+                r.logicalname,
+                (
+                    r.id,
+                    (
+                        r.read_access_level,
+                        r.write_access_level,
+                        r.delete_access_level,
+                        r.read_owner_visible,
+                        r.write_owner_visible,
+                        r.delete_owner_visible,
+                        r.operations,
+                    ),
+                ),
+            )
+        })
         .collect())
 }
 
@@ -404,6 +438,7 @@ pub async fn reconcile_role(
         validate_access_level(&what, ea.read_access_level)?;
         validate_access_level(&what, ea.write_access_level)?;
         validate_access_level(&what, ea.delete_access_level)?;
+        ea.operations.validate()?;
     }
 
     // Desired state, canonical form.
@@ -434,6 +469,7 @@ pub async fn reconcile_role(
                         ea.read_owner_visible,
                         ea.write_owner_visible,
                         ea.delete_owner_visible,
+                        ea.operations,
                     ),
                 )
             })
@@ -681,6 +717,7 @@ pub async fn reconcile_role(
                     levels.3,
                     levels.4,
                     levels.5,
+                    &levels.6,
                     policy_layer(policy),
                 )
                 .await?;

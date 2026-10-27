@@ -51765,7 +51765,7 @@
         ],
         "summary": "Conflict rules",
         "description": "Every live rule naming two roles, privileges or permission sets one person must not hold together. Administrators only.",
-        "operationId": "list_rules",
+        "operationId": "list_role_conflict_rules",
         "parameters": [
           {
             "name": "page",
@@ -51842,7 +51842,7 @@
         ],
         "summary": "Add a conflict rule",
         "description": "From now on, a grant that would give one person both sides is refused (`refuse`) or needs a second administrator (`approval`). Administrators only; audited.",
-        "operationId": "create_rule",
+        "operationId": "create_role_conflict_rule",
         "requestBody": {
           "content": {
             "application/json": {
@@ -51927,7 +51927,7 @@
         ],
         "summary": "Remove a conflict rule",
         "description": "Grants stop being checked against it. Administrators only; audited.",
-        "operationId": "delete_rule",
+        "operationId": "delete_role_conflict_rule",
         "parameters": [
           {
             "name": "id",
@@ -52847,7 +52847,7 @@
         ],
         "summary": "Suggested roles",
         "description": "The roles the licensed, installed modules suggest, to install as editable copies. Administrators only.",
-        "operationId": "list_templates",
+        "operationId": "list_role_templates",
         "responses": {
           "200": {
             "description": "Success",
@@ -174075,6 +174075,69 @@
           }
         }
       },
+      "OperationLevels": {
+        "type": "object",
+        "description": "Q10-T12: the levels of a role's entity grant beyond read, write and\ndelete, and whether each business-unit level reaches child units\n(Q10-T1's columns on `role_mm_entity_access`). Missing fields take the\ntable's defaults: create, assign and share follow the write level,\nexport and bulk are denied, child units are included.",
+        "properties": {
+          "assign_access_level": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Null: the write level.",
+            "default": null
+          },
+          "assign_bu_children": {
+            "type": "boolean",
+            "default": true
+          },
+          "bulk_access_level": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "create_access_level": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Null: the write level.",
+            "default": null
+          },
+          "delete_bu_children": {
+            "type": "boolean",
+            "default": true
+          },
+          "export_access_level": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "read_bu_children": {
+            "type": "boolean",
+            "default": true
+          },
+          "share_access_level": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Null: the write level.",
+            "default": null
+          },
+          "share_bu_children": {
+            "type": "boolean",
+            "default": true
+          },
+          "write_bu_children": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
       "OpsNode": {
         "type": "object",
         "description": "One node, from its heartbeat in the metrics store.",
@@ -191054,64 +191117,72 @@
           "items": {
             "type": "array",
             "items": {
-              "type": "object",
-              "required": [
-                "id",
-                "role_id",
-                "entity",
-                "read_access_level",
-                "write_access_level",
-                "delete_access_level",
-                "read_owner_visible",
-                "write_owner_visible",
-                "delete_owner_visible",
-                "owner_layer"
-              ],
-              "properties": {
-                "delete_access_level": {
-                  "type": "integer",
-                  "format": "int32"
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/OperationLevels",
+                  "description": "Q10-T12: create, assign, share, export and bulk levels and the\nchild-unit flags."
                 },
-                "delete_owner_visible": {
-                  "type": "boolean"
-                },
-                "entity": {
-                  "type": "string"
-                },
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "owner_layer": {
-                  "type": "string",
-                  "description": "Solution 7 (D-785): the layer that owns this access row."
-                },
-                "read_access_level": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "read_owner_visible": {
-                  "type": "boolean",
-                  "description": "D-371 (amends D-357 ruling 2): orthogonal \"I own this record\"\nvisibility per action, independent of the depth columns above."
-                },
-                "role_id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "role_name": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "write_access_level": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "write_owner_visible": {
-                  "type": "boolean"
+                {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "role_id",
+                    "entity",
+                    "read_access_level",
+                    "write_access_level",
+                    "delete_access_level",
+                    "read_owner_visible",
+                    "write_owner_visible",
+                    "delete_owner_visible",
+                    "owner_layer"
+                  ],
+                  "properties": {
+                    "delete_access_level": {
+                      "type": "integer",
+                      "format": "int32"
+                    },
+                    "delete_owner_visible": {
+                      "type": "boolean"
+                    },
+                    "entity": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "owner_layer": {
+                      "type": "string",
+                      "description": "Solution 7 (D-785): the layer that owns this access row."
+                    },
+                    "read_access_level": {
+                      "type": "integer",
+                      "format": "int32"
+                    },
+                    "read_owner_visible": {
+                      "type": "boolean",
+                      "description": "D-371 (amends D-357 ruling 2): orthogonal \"I own this record\"\nvisibility per action, independent of the depth columns above."
+                    },
+                    "role_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "role_name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "write_access_level": {
+                      "type": "integer",
+                      "format": "int32"
+                    },
+                    "write_owner_visible": {
+                      "type": "boolean"
+                    }
+                  }
                 }
-              }
+              ]
             }
           },
           "page": {
@@ -205146,100 +205217,116 @@
         }
       },
       "RoleEntityAccess": {
-        "type": "object",
-        "description": "One `role_mm_entity_access` row (D-133 per-entity depth,\n0130's owner-visible flags).",
-        "required": [
-          "entity",
-          "read_access_level",
-          "write_access_level",
-          "delete_access_level"
-        ],
-        "properties": {
-          "delete_access_level": {
-            "type": "integer",
-            "format": "int32"
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OperationLevels",
+            "description": "Q10-T12: create, assign, share, export and bulk levels and the\nchild-unit flags; missing ones take the table defaults."
           },
-          "delete_owner_visible": {
-            "type": "boolean"
-          },
-          "entity": {
-            "type": "string"
-          },
-          "read_access_level": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "read_owner_visible": {
-            "type": "boolean"
-          },
-          "write_access_level": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "write_owner_visible": {
-            "type": "boolean"
+          {
+            "type": "object",
+            "required": [
+              "entity",
+              "read_access_level",
+              "write_access_level",
+              "delete_access_level"
+            ],
+            "properties": {
+              "delete_access_level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "delete_owner_visible": {
+                "type": "boolean"
+              },
+              "entity": {
+                "type": "string"
+              },
+              "read_access_level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "read_owner_visible": {
+                "type": "boolean"
+              },
+              "write_access_level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "write_owner_visible": {
+                "type": "boolean"
+              }
+            }
           }
-        }
+        ],
+        "description": "One `role_mm_entity_access` row (D-133 per-entity depth,\n0130's owner-visible flags)."
       },
       "RoleEntityAccessItem": {
-        "type": "object",
-        "required": [
-          "id",
-          "role_id",
-          "entity",
-          "read_access_level",
-          "write_access_level",
-          "delete_access_level",
-          "read_owner_visible",
-          "write_owner_visible",
-          "delete_owner_visible",
-          "owner_layer"
-        ],
-        "properties": {
-          "delete_access_level": {
-            "type": "integer",
-            "format": "int32"
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OperationLevels",
+            "description": "Q10-T12: create, assign, share, export and bulk levels and the\nchild-unit flags."
           },
-          "delete_owner_visible": {
-            "type": "boolean"
-          },
-          "entity": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "owner_layer": {
-            "type": "string",
-            "description": "Solution 7 (D-785): the layer that owns this access row."
-          },
-          "read_access_level": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "read_owner_visible": {
-            "type": "boolean",
-            "description": "D-371 (amends D-357 ruling 2): orthogonal \"I own this record\"\nvisibility per action, independent of the depth columns above."
-          },
-          "role_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "role_name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "write_access_level": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "write_owner_visible": {
-            "type": "boolean"
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "role_id",
+              "entity",
+              "read_access_level",
+              "write_access_level",
+              "delete_access_level",
+              "read_owner_visible",
+              "write_owner_visible",
+              "delete_owner_visible",
+              "owner_layer"
+            ],
+            "properties": {
+              "delete_access_level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "delete_owner_visible": {
+                "type": "boolean"
+              },
+              "entity": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "owner_layer": {
+                "type": "string",
+                "description": "Solution 7 (D-785): the layer that owns this access row."
+              },
+              "read_access_level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "read_owner_visible": {
+                "type": "boolean",
+                "description": "D-371 (amends D-357 ruling 2): orthogonal \"I own this record\"\nvisibility per action, independent of the depth columns above."
+              },
+              "role_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "role_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "write_access_level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "write_owner_visible": {
+                "type": "boolean"
+              }
+            }
           }
-        }
+        ]
       },
       "RoleGrant": {
         "type": "object",
@@ -219926,44 +220013,52 @@
         }
       },
       "UpsertEntityAccessGrantBody": {
-        "type": "object",
-        "required": [
-          "role_id",
-          "entity"
-        ],
-        "properties": {
-          "delete_access_level": {
-            "type": "integer",
-            "format": "int32"
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OperationLevels",
+            "description": "Q10-T12: each missing one takes the table default (create, assign\nand share follow the write level; export and bulk denied; child\nunits included)."
           },
-          "delete_owner_visible": {
-            "type": "boolean"
-          },
-          "entity": {
-            "type": "string",
-            "description": "Entity logicalname, resolved to `entity_info.id` server-side\n(`resolve_entity_ref`) — never a client-supplied UUID, same\nconvention `shares::create_record_share`/`shares::create_entity_default_share`\nuse."
-          },
-          "read_access_level": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Each defaults to `Global` (3) on a brand-new grant row — matching\n`role_mm_entity_access`'s own DB column default, so creating a\ngrant that only narrows (say) `delete_access_level` doesn't silently\nnarrow read/write too."
-          },
-          "read_owner_visible": {
-            "type": "boolean",
-            "description": "D-371: each defaults to `false` — matching the DB column default, so\nupserting a grant that only narrows a depth doesn't silently opt the\nrole into owner-visibility too."
-          },
-          "role_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "write_access_level": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "write_owner_visible": {
-            "type": "boolean"
+          {
+            "type": "object",
+            "required": [
+              "role_id",
+              "entity"
+            ],
+            "properties": {
+              "delete_access_level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "delete_owner_visible": {
+                "type": "boolean"
+              },
+              "entity": {
+                "type": "string",
+                "description": "Entity logicalname, resolved to `entity_info.id` server-side\n(`resolve_entity_ref`) — never a client-supplied UUID, same\nconvention `shares::create_record_share`/`shares::create_entity_default_share`\nuse."
+              },
+              "read_access_level": {
+                "type": "integer",
+                "format": "int32",
+                "description": "Each defaults to `Global` (3) on a brand-new grant row — matching\n`role_mm_entity_access`'s own DB column default, so creating a\ngrant that only narrows (say) `delete_access_level` doesn't silently\nnarrow read/write too."
+              },
+              "read_owner_visible": {
+                "type": "boolean",
+                "description": "D-371: each defaults to `false` — matching the DB column default, so\nupserting a grant that only narrows a depth doesn't silently opt the\nrole into owner-visibility too."
+              },
+              "role_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "write_access_level": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "write_owner_visible": {
+                "type": "boolean"
+              }
+            }
           }
-        }
+        ]
       },
       "UsageBatch": {
         "type": "object",

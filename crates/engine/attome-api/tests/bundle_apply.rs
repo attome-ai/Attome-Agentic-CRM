@@ -495,6 +495,7 @@ impl Graph {
                 read_owner_visible: false,
                 write_owner_visible: false,
                 delete_owner_visible: false,
+                operations: Default::default(),
             }],
             field_security_profiles: vec![self.profile.clone()],
         });

@@ -137,6 +137,69 @@ export type CreateFieldSecurityProfileBody = ApiComponents['schemas']['CreateFie
 export type FieldSecurityProfileFieldItem = ApiComponents['schemas']['FieldSecurityProfileFieldItem'];
 export type SetFieldProfileFieldBody = ApiComponents['schemas']['SetFieldProfileFieldBody'];
 
+// Q10-T12: permission sets (Q10-T5), conflict rules (Q10-T8) and role
+// templates (Q10-T7).
+export type PermissionSetItem = ApiComponents['schemas']['PermissionSetItem'];
+export type PermissionSetDetail = ApiComponents['schemas']['PermissionSetDetail'];
+export type CreatePermissionSetBody = ApiComponents['schemas']['CreatePermissionSetBody'];
+export type UpdatePermissionSetBody = ApiComponents['schemas']['UpdatePermissionSetBody'];
+export type SetEntityAccessItem = ApiComponents['schemas']['SetEntityAccessItem'];
+export type PermissionSetAssignment = ApiComponents['schemas']['AssignmentItem'];
+export type CreatePermissionSetAssignmentBody = ApiComponents['schemas']['CreateAssignmentBody'];
+export type ConflictRule = ApiComponents['schemas']['ConflictRule'];
+export type CreateConflictRuleBody = ApiComponents['schemas']['CreateConflictRuleBody'];
+export type CurrentConflict = ApiComponents['schemas']['CurrentConflict'];
+export type RoleTemplateItem = ApiComponents['schemas']['RoleTemplateItem'];
+export type InstalledRole = ApiComponents['schemas']['InstalledRole'];
+
+/// Q10-T12: the feature switches the advanced access screens sit behind
+/// (`attome_core::feature_flag_catalog::q10_flags`), all off on a new
+/// deployment so it shows only roles.
+export const SECURITY_FLAGS = {
+  permissionSets: 'security.permission_sets',
+  roleConflicts:  'security.role_conflicts',
+  grantEndDates:  'security.grant_end_dates',
+  childUnits:     'security.child_units',
+} as const;
+
+/**
+ * Q10-T12: a grant's create, assign, share, export and bulk levels and its
+ * child-unit flags, or the table defaults for a new grant. A screen that edits
+ * only read, write and delete sends these back unchanged, because an upsert
+ * sets every column.
+ */
+export function operationLevelsOf(g?: RoleEntityAccessItem | null): Pick<
+  UpsertEntityAccessGrantBody,
+  | 'create_access_level' | 'assign_access_level' | 'share_access_level'
+  | 'export_access_level' | 'bulk_access_level'
+  | 'read_bu_children' | 'write_bu_children' | 'delete_bu_children'
+  | 'assign_bu_children' | 'share_bu_children'
+> {
+  return {
+    create_access_level: g?.create_access_level ?? null,
+    assign_access_level: g?.assign_access_level ?? null,
+    share_access_level:  g?.share_access_level ?? null,
+    export_access_level: g?.export_access_level ?? 0,
+    bulk_access_level:   g?.bulk_access_level ?? 0,
+    read_bu_children:    g?.read_bu_children ?? true,
+    write_bu_children:   g?.write_bu_children ?? true,
+    delete_bu_children:  g?.delete_bu_children ?? true,
+    assign_bu_children:  g?.assign_bu_children ?? true,
+    share_bu_children:   g?.share_bu_children ?? true,
+  };
+}
+
+/**
+ * A `yyyy-mm-dd` end date as the end of that day in the viewer's time zone,
+ * in UTC ISO-8601; none for an empty input.
+ */
+export function endOfDay(day: string): string | null {
+  if (!day) return null;
+  const [y, m, d] = day.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d, 23, 59, 59).toISOString();
+}
+
 @Injectable({ providedIn: 'root' })
 export class SecurityAdminService {
   private readonly api = inject(ApiService);
@@ -353,6 +416,90 @@ export class SecurityAdminService {
 
   deleteEntityDefaultShare(id: string): Observable<void> {
     return this.api.delete(`/api/v1/admin/security/entity-default-shares/${id}`);
+  }
+
+  // ── Permission sets (Q10-T5) ────────────────────────────────────────────
+
+  listPermissionSets(): Observable<PermissionSetItem[]> {
+    return this.api.getAllPages<PermissionSetItem>('/api/v1/admin/security/permission-sets');
+  }
+
+  getPermissionSet(id: string): Observable<PermissionSetDetail> {
+    return this.api.get<PermissionSetDetail>(`/api/v1/admin/security/permission-sets/${id}`);
+  }
+
+  createPermissionSet(body: CreatePermissionSetBody): Observable<PermissionSetItem> {
+    return this.api.post<PermissionSetItem>('/api/v1/admin/security/permission-sets', body);
+  }
+
+  updatePermissionSet(id: string, body: UpdatePermissionSetBody, rowVersion: number): Observable<PermissionSetItem> {
+    return this.api.patch<PermissionSetItem>(`/api/v1/admin/security/permission-sets/${id}`, body, rowVersion);
+  }
+
+  deletePermissionSet(id: string): Observable<void> {
+    return this.api.delete(`/api/v1/admin/security/permission-sets/${id}`);
+  }
+
+  setPermissionSetEntityAccess(id: string, body: SetEntityAccessItem): Observable<SetEntityAccessItem> {
+    return this.api.post<SetEntityAccessItem>(`/api/v1/admin/security/permission-sets/${id}/entity-access`, body);
+  }
+
+  clearPermissionSetEntityAccess(id: string, entity: string): Observable<void> {
+    return this.api.delete(
+      `/api/v1/admin/security/permission-sets/${id}/entity-access/${encodeURIComponent(entity)}`,
+    );
+  }
+
+  addPermissionSetPrivilege(id: string, privilegeKey: string): Observable<void> {
+    return this.api.post<void>(`/api/v1/admin/security/permission-sets/${id}/privileges`, { privilege_key: privilegeKey });
+  }
+
+  removePermissionSetPrivilege(id: string, privilegeKey: string): Observable<void> {
+    return this.api.delete(
+      `/api/v1/admin/security/permission-sets/${id}/privileges/${encodeURIComponent(privilegeKey)}`,
+    );
+  }
+
+  listPermissionSetAssignments(id: string): Observable<PermissionSetAssignment[]> {
+    return this.api.getAllPages<PermissionSetAssignment>(`/api/v1/admin/security/permission-set-assignments/${id}`);
+  }
+
+  assignPermissionSet(id: string, body: CreatePermissionSetAssignmentBody): Observable<PermissionSetAssignment> {
+    return this.api.post<PermissionSetAssignment>(`/api/v1/admin/security/permission-set-assignments/${id}`, body);
+  }
+
+  removePermissionSetAssignment(id: string, assignmentId: string): Observable<void> {
+    return this.api.delete(`/api/v1/admin/security/permission-set-assignments/${id}/${assignmentId}`);
+  }
+
+  // ── Conflict rules (Q10-T8) ─────────────────────────────────────────────
+
+  listConflictRules(): Observable<ConflictRule[]> {
+    return this.api.getAllPages<ConflictRule>('/api/v1/admin/security/role-conflicts/rules');
+  }
+
+  createConflictRule(body: CreateConflictRuleBody): Observable<ConflictRule> {
+    return this.api.post<ConflictRule>('/api/v1/admin/security/role-conflicts/rules', body);
+  }
+
+  deleteConflictRule(id: string): Observable<void> {
+    return this.api.delete(`/api/v1/admin/security/role-conflicts/rules/${id}`);
+  }
+
+  listCurrentConflicts(): Observable<CurrentConflict[]> {
+    return this.api.getAllPages<CurrentConflict>('/api/v1/admin/security/role-conflicts/current');
+  }
+
+  // ── Role templates (Q10-T7) ─────────────────────────────────────────────
+
+  listRoleTemplates(): Observable<RoleTemplateItem[]> {
+    return this.api.get<RoleTemplateItem[]>('/api/v1/admin/security/role-templates');
+  }
+
+  installRoleTemplate(key: string, name: string | null): Observable<InstalledRole> {
+    return this.api.post<InstalledRole>(
+      `/api/v1/admin/security/role-templates/${encodeURIComponent(key)}/install`, { name },
+    );
   }
 
   // ── Effective-access preview ────────────────────────────────────────────

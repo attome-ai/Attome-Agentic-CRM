@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Fixed
+- The OpenAPI document gave two routes each the operation ids `list_rules`, `create_rule`,
+  `delete_rule` and `list_templates`, which broke the generated `api-types.ts` and the Angular build.
+  The role conflict rule routes are now `list_role_conflict_rules`, `create_role_conflict_rule` and
+  `delete_role_conflict_rule`, and the role templates list is `list_role_templates`; the paths are
+  unchanged.
 - Deal split amounts now follow a change to the deal's `amount` made through an ordinary record
   update (the deal-close sweep recalculates them); before, only the line, split and owner routes
   did, and `docs/deal-teams.md` said otherwise.
@@ -23,6 +28,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Access screens (Q10-T12): role access levels show and set the create, assign, share, export and
+  bulk levels and, behind `security.child_units`, the include-child-units choice;
+  `POST /api/v1/admin/security/role-entity-access` and its list carry those columns, and bundles and
+  changesets carry them with defaults for older files. New pages for permission sets, conflict rules
+  and role templates, and end dates and reasons on role grants. Four feature switches, all off
+  (`security.permission_sets`, `security.role_conflicts`, `security.grant_end_dates`,
+  `security.child_units`), hide the advanced screens so a new deployment shows only roles.
 - Unused-privilege proposals (Q10-T9): each node counts privilege use per person and day (migration
   `0297`, `privilege_usage_daily`, flushed every five minutes), and a daily job drafts a removal
   proposal for each role privilege none of the role's holders used in 90 days, listed at

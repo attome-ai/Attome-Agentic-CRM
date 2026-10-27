@@ -26,7 +26,44 @@ pub(crate) fn all() -> Vec<FeatureFlag> {
     all.extend(d6_flags());
     all.extend(d7_flags());
     all.extend(f11_flags());
+    all.extend(q10_flags());
     all
+}
+
+/// Q10-T12: the advanced access screens stay hidden until switched on, so a
+/// new deployment shows only roles. They hide screens only; the routes are
+/// administrator-gated like every other security route.
+fn q10_flags() -> Vec<FeatureFlag> {
+    vec![
+        FeatureFlag::new(
+            "security.permission_sets",
+            MODULE_CORE,
+            "Permission sets: additive bundles of privileges and levels assigned to users or teams.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "security.role_conflicts",
+            MODULE_CORE,
+            "Conflict rules: pairs of roles, privileges or sets one person must not hold together.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "security.grant_end_dates",
+            MODULE_CORE,
+            "End dates and reasons on role and set assignments.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "security.child_units",
+            MODULE_CORE,
+            "The include-child-units choice beside each business-unit level on a role's entity access.",
+            false,
+            &[],
+        ),
+    ]
 }
 
 /// F11-T11: revenue recognition stays off until switched on; every part of
@@ -392,6 +429,23 @@ mod tests {
             registry.get("content.seo_clusters").map(|f| f.requires),
             Some(&["content.seo_audit"][..])
         );
+    }
+
+    /// Q10-T12: the access screen flags exist and are off.
+    #[test]
+    fn q10_flags_registered_and_off_by_default() {
+        let registry = crate::feature_flag_descriptor::registry();
+        for key in [
+            "security.permission_sets",
+            "security.role_conflicts",
+            "security.grant_end_dates",
+            "security.child_units",
+        ] {
+            let flag = registry
+                .get(key)
+                .unwrap_or_else(|| panic!("{key} is registered"));
+            assert!(!flag.default, "{key} is off by default");
+        }
     }
 
     /// B16-T9: the scan flags exist and are off until switched on.

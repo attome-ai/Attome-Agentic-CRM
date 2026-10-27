@@ -10014,13 +10014,13 @@ export interface paths {
          * Conflict rules
          * @description Every live rule naming two roles, privileges or permission sets one person must not hold together. Administrators only.
          */
-        get: operations["list_rules"];
+        get: operations["list_role_conflict_rules"];
         put?: never;
         /**
          * Add a conflict rule
          * @description From now on, a grant that would give one person both sides is refused (`refuse`) or needs a second administrator (`approval`). Administrators only; audited.
          */
-        post: operations["create_rule"];
+        post: operations["create_role_conflict_rule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10041,7 +10041,7 @@ export interface paths {
          * Remove a conflict rule
          * @description Grants stop being checked against it. Administrators only; audited.
          */
-        delete: operations["delete_rule"];
+        delete: operations["delete_role_conflict_rule"];
         options?: never;
         head?: never;
         patch?: never;
@@ -10200,7 +10200,7 @@ export interface paths {
          * Suggested roles
          * @description The roles the licensed, installed modules suggest, to install as editable copies. Administrators only.
          */
-        get: operations["list_templates"];
+        get: operations["list_role_templates"];
         put?: never;
         post?: never;
         delete?: never;
@@ -41662,6 +41662,53 @@ export interface components {
         OpenShareLinkRequest: {
             password?: string | null;
         };
+        /**
+         * @description Q10-T12: the levels of a role's entity grant beyond read, write and
+         *     delete, and whether each business-unit level reaches child units
+         *     (Q10-T1's columns on `role_mm_entity_access`). Missing fields take the
+         *     table's defaults: create, assign and share follow the write level,
+         *     export and bulk are denied, child units are included.
+         */
+        OperationLevels: {
+            /**
+             * Format: int32
+             * @description Null: the write level.
+             * @default null
+             */
+            assign_access_level: number | null;
+            /** @default true */
+            assign_bu_children: boolean;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            bulk_access_level: number;
+            /**
+             * Format: int32
+             * @description Null: the write level.
+             * @default null
+             */
+            create_access_level: number | null;
+            /** @default true */
+            delete_bu_children: boolean;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            export_access_level: number;
+            /** @default true */
+            read_bu_children: boolean;
+            /**
+             * Format: int32
+             * @description Null: the write level.
+             * @default null
+             */
+            share_access_level: number | null;
+            /** @default true */
+            share_bu_children: boolean;
+            /** @default true */
+            write_bu_children: boolean;
+        };
         /** @description One node, from its heartbeat in the metrics store. */
         OpsNode: {
             /** @description It stored its metrics in the last three minutes. */
@@ -48049,7 +48096,7 @@ export interface components {
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_RoleEntityAccessItem: {
-            items: {
+            items: (components["schemas"]["OperationLevels"] & {
                 /** Format: int32 */
                 delete_access_level: number;
                 delete_owner_visible: boolean;
@@ -48071,7 +48118,7 @@ export interface components {
                 /** Format: int32 */
                 write_access_level: number;
                 write_owner_visible: boolean;
-            }[];
+            })[];
             /** Format: int64 */
             page: number;
             /** Format: int64 */
@@ -53552,7 +53599,7 @@ export interface components {
          * @description One `role_mm_entity_access` row (D-133 per-entity depth,
          *     0130's owner-visible flags).
          */
-        RoleEntityAccess: {
+        RoleEntityAccess: components["schemas"]["OperationLevels"] & {
             /** Format: int32 */
             delete_access_level: number;
             delete_owner_visible?: boolean;
@@ -53564,7 +53611,7 @@ export interface components {
             write_access_level: number;
             write_owner_visible?: boolean;
         };
-        RoleEntityAccessItem: {
+        RoleEntityAccessItem: components["schemas"]["OperationLevels"] & {
             /** Format: int32 */
             delete_access_level: number;
             delete_owner_visible: boolean;
@@ -59096,7 +59143,7 @@ export interface components {
             session_id: string;
             upload_url: string;
         };
-        UpsertEntityAccessGrantBody: {
+        UpsertEntityAccessGrantBody: components["schemas"]["OperationLevels"] & {
             /** Format: int32 */
             delete_access_level?: number;
             delete_owner_visible?: boolean;
@@ -91477,7 +91524,7 @@ export interface operations {
             };
         };
     };
-    list_rules: {
+    list_role_conflict_rules: {
         parameters: {
             query?: {
                 /**
@@ -91526,7 +91573,7 @@ export interface operations {
             };
         };
     };
-    create_rule: {
+    create_role_conflict_rule: {
         parameters: {
             query?: never;
             header?: never;
@@ -91577,7 +91624,7 @@ export interface operations {
             };
         };
     };
-    delete_rule: {
+    delete_role_conflict_rule: {
         parameters: {
             query?: never;
             header?: never;
@@ -92156,7 +92203,7 @@ export interface operations {
             };
         };
     };
-    list_templates: {
+    list_role_templates: {
         parameters: {
             query?: never;
             header?: never;

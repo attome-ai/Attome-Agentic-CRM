@@ -104,6 +104,23 @@ when the grant would complete the pair:
   person's level on an entity: roles direct and through teams, permission sets, conditional grants, the
   position for hierarchy roles, and direct grants.
 
+## Screens
+
+Security administration has a page for each part: role access levels (every operation's level),
+permission sets, conflict rules, role templates, and user access (a direct role grant's end date and
+reason). A new deployment shows only roles: these feature switches, all off by default, reveal the rest
+(`/api/v1/admin/features`):
+
+| Switch | Shows |
+| --- | --- |
+| `security.permission_sets` | The permission sets page |
+| `security.role_conflicts` | The conflict rules page |
+| `security.grant_end_dates` | End dates and reasons on role and set assignments |
+| `security.child_units` | The include-child-units choice beside each business-unit level |
+
+The switches hide screens only. The routes stay open to administrators whatever the switches say, and a
+hidden child-unit choice is saved as included.
+
 ## Unused privileges
 
 Each node counts privilege use per person and day (the four central privilege checks; a few engine

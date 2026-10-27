@@ -22,6 +22,7 @@ import {
   RoleUserItem,
   SecurityAdminService,
   UpsertEntityAccessGrantBody,
+  operationLevelsOf,
 } from './security-admin.service';
 import { OwnerLayerBadgeComponent } from '@attome/xrm/core/generic/components';
 
@@ -357,6 +358,8 @@ export class RoleFormComponent implements OnInit {
       read_owner_visible:   cur?.read_owner_visible   ?? false,
       write_owner_visible:  cur?.write_owner_visible  ?? false,
       delete_owner_visible: cur?.delete_owner_visible ?? false,
+      // Q10-T12: this tab edits only read, write and delete; keep the rest.
+      ...operationLevelsOf(cur),
     };
   }
 
@@ -670,6 +673,7 @@ export class RoleFormComponent implements OnInit {
       read_owner_visible: this.newAccessReadOwnerVisible,
       write_owner_visible: this.newAccessWriteOwnerVisible,
       delete_owner_visible: this.newAccessDeleteOwnerVisible,
+      ...operationLevelsOf(this.accessGrants().find(x => x.entity === this.newAccessEntity)),
     };
     this.savingAccess.set(true);
     this.accessError.set(null);

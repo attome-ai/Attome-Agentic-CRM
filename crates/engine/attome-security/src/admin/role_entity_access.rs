@@ -25,7 +25,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::db::{upsert_role_entity_access, users_holding_role};
+use crate::db::{OperationLevels, upsert_role_entity_access, users_holding_role};
 
 use super::shared::{
     ROLE_SNAPSHOT, invalidate_sync_all, lock_live_role, mark_role_customized, parse_owner_layer,
@@ -37,15 +37,29 @@ use super::shared::{
 pub(super) const ENTITY_ACCESS_SNAPSHOT: &str = "SELECT ea.id, ea.role_ref, r.name AS role, \
      ea.entity_ref, ei.logicalname AS entity, ea.read_access_level, ea.write_access_level, \
      ea.delete_access_level, ea.read_owner_visible, ea.write_owner_visible, \
-     ea.delete_owner_visible, ea.is_deleted, ea.row_version, ea.owner_layer \
+     ea.delete_owner_visible, ea.create_access_level, ea.assign_access_level, \
+     ea.share_access_level, ea.export_access_level, ea.bulk_access_level, ea.read_bu_children, \
+     ea.write_bu_children, ea.delete_bu_children, ea.assign_bu_children, ea.share_bu_children, \
+     ea.is_deleted, ea.row_version, ea.owner_layer \
      FROM role_mm_entity_access ea \
      JOIN role r ON r.id = ea.role_ref \
      JOIN entity_info ei ON ei.id = ea.entity_ref \
      WHERE ea.id = $1";
 
-/// An access row's stored state: (is_deleted, owner_layer, read, write,
-/// delete, read_owner_visible, write_owner_visible, delete_owner_visible).
-type AccessState = (bool, String, i16, i16, i16, bool, bool, bool);
+/// An access row's stored state.
+#[derive(sqlx::FromRow)]
+struct AccessState {
+    is_deleted: bool,
+    owner_layer: String,
+    read_access_level: i16,
+    write_access_level: i16,
+    delete_access_level: i16,
+    read_owner_visible: bool,
+    write_owner_visible: bool,
+    delete_owner_visible: bool,
+    #[sqlx(flatten)]
+    operations: OperationLevels,
+}
 use attome_types::ErrorResponse;
 use utoipa::ToSchema;
 
@@ -77,6 +91,10 @@ pub struct RoleEntityAccessItem {
     read_owner_visible: bool,
     write_owner_visible: bool,
     delete_owner_visible: bool,
+    /// Q10-T12: create, assign, share, export and bulk levels and the
+    /// child-unit flags.
+    #[serde(flatten)]
+    operations: OperationLevels,
     /// Solution 7 (D-785): the layer that owns this access row.
     owner_layer: String,
 }
@@ -88,26 +106,25 @@ impl std::fmt::Debug for RoleEntityAccessItem {
     }
 }
 
-/// (id, role_ref, role_name, entity logicalname, read, write, delete,
-/// read_owner_visible, write_owner_visible, delete_owner_visible,
-/// owner_layer) — the
-/// projection `list_entity_access_grants`/`upsert_entity_access_grant` both
-/// return, joined through `entity_info` for the logicalname since
-/// `role_mm_entity_access.entity_ref` is a bare FK (D-133's convention),
-/// never a denormalized name column.
-type EntityAccessRow = (
-    Uuid,
-    Uuid,
-    Option<String>,
-    String,
-    i16,
-    i16,
-    i16,
-    bool,
-    bool,
-    bool,
-    String,
-);
+/// The projection `list_entity_access_grants` returns, joined through
+/// `entity_info` for the logicalname since `role_mm_entity_access.entity_ref`
+/// is a bare FK (D-133's convention), never a denormalized name column.
+#[derive(sqlx::FromRow)]
+struct EntityAccessRow {
+    id: Uuid,
+    role_ref: Uuid,
+    role_name: Option<String>,
+    logicalname: String,
+    read_access_level: i16,
+    write_access_level: i16,
+    delete_access_level: i16,
+    read_owner_visible: bool,
+    write_owner_visible: bool,
+    delete_owner_visible: bool,
+    #[sqlx(flatten)]
+    operations: OperationLevels,
+    owner_layer: String,
+}
 
 /// List role entity access
 ///
@@ -134,10 +151,13 @@ pub(super) async fn list_entity_access_grants(
 
     let rows: Vec<EntityAccessRow> = sqlx::query_as(
         r#"
-        SELECT ea.id, ea.role_ref, r.name, ei.logicalname,
+        SELECT ea.id, ea.role_ref, r.name AS role_name, ei.logicalname,
                ea.read_access_level, ea.write_access_level, ea.delete_access_level,
                ea.read_owner_visible, ea.write_owner_visible, ea.delete_owner_visible,
-               ea.owner_layer
+               ea.create_access_level, ea.assign_access_level, ea.share_access_level,
+               ea.export_access_level, ea.bulk_access_level, ea.read_bu_children,
+               ea.write_bu_children, ea.delete_bu_children, ea.assign_bu_children,
+               ea.share_bu_children, ea.owner_layer
         FROM role_mm_entity_access ea
         JOIN entity_info ei ON ei.id = ea.entity_ref
         LEFT JOIN role r ON r.id = ea.role_ref
@@ -159,35 +179,20 @@ pub(super) async fn list_entity_access_grants(
 
     let items = rows
         .into_iter()
-        .map(
-            |(
-                id,
-                role_id,
-                role_name,
-                entity,
-                read,
-                write,
-                delete,
-                read_ow,
-                write_ow,
-                delete_ow,
-                owner_layer,
-            )| {
-                RoleEntityAccessItem {
-                    id,
-                    role_id,
-                    role_name,
-                    entity,
-                    read_access_level: read,
-                    write_access_level: write,
-                    delete_access_level: delete,
-                    read_owner_visible: read_ow,
-                    write_owner_visible: write_ow,
-                    delete_owner_visible: delete_ow,
-                    owner_layer,
-                }
-            },
-        )
+        .map(|r| RoleEntityAccessItem {
+            id: r.id,
+            role_id: r.role_ref,
+            role_name: r.role_name,
+            entity: r.logicalname,
+            read_access_level: r.read_access_level,
+            write_access_level: r.write_access_level,
+            delete_access_level: r.delete_access_level,
+            read_owner_visible: r.read_owner_visible,
+            write_owner_visible: r.write_owner_visible,
+            delete_owner_visible: r.delete_owner_visible,
+            operations: r.operations,
+            owner_layer: r.owner_layer,
+        })
         .collect();
     Ok(Json(PaginatedResponse::new(
         items,
@@ -224,6 +229,11 @@ pub(super) struct UpsertEntityAccessGrantBody {
     write_owner_visible: bool,
     #[serde(default)]
     delete_owner_visible: bool,
+    /// Q10-T12: each missing one takes the table default (create, assign
+    /// and share follow the write level; export and bulk denied; child
+    /// units included).
+    #[serde(flatten)]
+    operations: OperationLevels,
 }
 
 fn default_access_level() -> i16 {
@@ -264,6 +274,7 @@ pub(super) async fn upsert_entity_access_grant(
     validate_access_level(body.read_access_level)?;
     validate_access_level(body.write_access_level)?;
     validate_access_level(body.delete_access_level)?;
+    body.operations.validate()?;
 
     let role_name: Option<String> =
         sqlx::query_scalar("SELECT name FROM role WHERE id = $1 AND is_deleted = false")
@@ -299,7 +310,9 @@ pub(super) async fn upsert_entity_access_grant(
     let existing: Option<AccessState> = sqlx::query_as(
         "SELECT is_deleted, owner_layer, read_access_level, write_access_level, \
                 delete_access_level, read_owner_visible, write_owner_visible, \
-                delete_owner_visible \
+                delete_owner_visible, create_access_level, assign_access_level, \
+                share_access_level, export_access_level, bulk_access_level, read_bu_children, \
+                write_bu_children, delete_bu_children, assign_bu_children, share_bu_children \
          FROM role_mm_entity_access WHERE role_ref = $1 AND entity_ref = $2 \
          FOR UPDATE",
     )
@@ -315,13 +328,23 @@ pub(super) async fn upsert_entity_access_grant(
         body.read_owner_visible,
         body.write_owner_visible,
         body.delete_owner_visible,
+        body.operations,
     );
     let changes = match &existing {
         None => true,
-        Some((is_deleted, owner, r, w, d, ro, wo, dow)) => {
-            let same = !is_deleted && (*r, *w, *d, *ro, *wo, *dow) == wanted;
+        Some(row) => {
+            let current = (
+                row.read_access_level,
+                row.write_access_level,
+                row.delete_access_level,
+                row.read_owner_visible,
+                row.write_owner_visible,
+                row.delete_owner_visible,
+                row.operations,
+            );
+            let same = !row.is_deleted && current == wanted;
             if !same {
-                recording.check_owner(parse_owner_layer(owner)?)?;
+                recording.check_owner(parse_owner_layer(&row.owner_layer)?)?;
             }
             !same
         }
@@ -336,6 +359,7 @@ pub(super) async fn upsert_entity_access_grant(
         body.read_owner_visible,
         body.write_owner_visible,
         body.delete_owner_visible,
+        &body.operations,
         layer,
     )
     .await?;
@@ -381,6 +405,7 @@ pub(super) async fn upsert_entity_access_grant(
             read_owner_visible: body.read_owner_visible,
             write_owner_visible: body.write_owner_visible,
             delete_owner_visible: body.delete_owner_visible,
+            operations: body.operations,
             owner_layer,
         }),
     ))

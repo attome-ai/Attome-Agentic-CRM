@@ -1,13 +1,16 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiError, TranslatePipe } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
+import { FeatureFlagsService } from '@attome/xrm/core/admin/data';
 
 import {
   EffectiveAccessPreview,
   OrganizationItem,
   RoleItem,
+  SECURITY_FLAGS,
   SecurityAdminService,
+  endOfDay,
 } from './security-admin.service';
 
 interface UserLookupResult {
@@ -119,7 +122,21 @@ interface UserLookupResult {
               }
             </select>
           </div>
+          @if (showEndDates()) {
+            <div class="field">
+              <label for="ua-assign-until">{{ 'userAccess.validUntil' | translate }}</label>
+              <input id="ua-assign-until" type="date" [(ngModel)]="assignUntil">
+            </div>
+          }
         </div>
+        @if (showEndDates()) {
+          <div class="form-row-1">
+            <div class="field">
+              <label for="ua-assign-reason">{{ 'userAccess.reason' | translate }}</label>
+              <input id="ua-assign-reason" [(ngModel)]="assignReason">
+            </div>
+          </div>
+        }
         <div class="btn-row">
           <button class="btn-sm btn-primary" (click)="addRole()" [disabled]="savingRole()">
             {{ savingRole() ? 'Assigning…' : 'Assign' }}
@@ -235,6 +252,7 @@ interface UserLookupResult {
 export class UserAccessComponent {
   private readonly svc = inject(SecurityAdminService);
   private readonly dialogSvc = inject(DialogService);
+  private readonly flags = inject(FeatureFlagsService);
 
   searchEmail = '';
 
@@ -256,8 +274,13 @@ export class UserAccessComponent {
 
   assignRoleId = '';
   assignOrgId  = '';
+  /** Q10-T12: the grant's end date (`yyyy-mm-dd`) and reason, behind `security.grant_end_dates`. */
+  assignUntil  = '';
+  assignReason = '';
+  readonly showEndDates = computed(() => this.flags.flags()[SECURITY_FLAGS.grantEndDates] === true);
 
   constructor() {
+    this.flags.ensureLoaded();
     this.svc.listRoles().subscribe({ next: rs => this.roles.set(rs) });
     this.svc.listOrganizations().subscribe({ next: os => this.organizations.set(os) });
   }
@@ -303,8 +326,17 @@ export class UserAccessComponent {
     }
     this.savingRole.set(true);
     this.roleError.set(null);
-    this.svc.assignUserRole(p.user_id, { role_id: this.assignRoleId }).subscribe({
-      next:  () => { this.savingRole.set(false); this.assignRoleId = ''; this.loadPreview(p.user_id); },
+    const withDates = this.showEndDates();
+    this.svc.assignUserRole(p.user_id, {
+      role_id: this.assignRoleId,
+      valid_until: withDates ? endOfDay(this.assignUntil) : null,
+      reason: withDates ? this.assignReason.trim() || null : null,
+    }).subscribe({
+      next:  () => {
+        this.savingRole.set(false);
+        this.assignRoleId = ''; this.assignUntil = ''; this.assignReason = '';
+        this.loadPreview(p.user_id);
+      },
       error: (e: ApiError) => { this.savingRole.set(false); this.roleError.set(e.message); },
     });
   }

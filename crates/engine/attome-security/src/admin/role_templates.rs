@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::db::{upsert_role_entity_access, upsert_role_privilege_grant};
+use crate::db::{OperationLevels, upsert_role_entity_access, upsert_role_privilege_grant};
 
 use super::shared::{ROLE_SNAPSHOT, map_unique_violation, security_op, snapshot_row};
 
@@ -80,6 +80,7 @@ fn licensed(state: &EngineState) -> Vec<(attome_modules::ModuleId, RoleTemplate)
 #[utoipa::path(
     get,
     path = "/api/v1/admin/security/role-templates",
+    operation_id = "list_role_templates",
     tag = "admin-security",
     responses(
         (status = 200, description = "Success", body = Vec<RoleTemplateItem>),
@@ -230,7 +231,17 @@ pub(super) async fn install_template(
             continue;
         };
         let access_id = upsert_role_entity_access(
-            &mut *tx, role_id, entity_ref, *read, *write, *delete, false, false, false, layer,
+            &mut *tx,
+            role_id,
+            entity_ref,
+            *read,
+            *write,
+            *delete,
+            false,
+            false,
+            false,
+            &OperationLevels::default(),
+            layer,
         )
         .await?;
         let snapshot = snapshot_row(

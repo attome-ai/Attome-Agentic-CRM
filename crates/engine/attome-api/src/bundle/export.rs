@@ -270,6 +270,9 @@ pub(crate) struct EntityAccessRow {
     pub(crate) read_owner_visible: bool,
     pub(crate) write_owner_visible: bool,
     pub(crate) delete_owner_visible: bool,
+    #[sqlx(flatten)]
+    #[serde(flatten)]
+    pub(crate) operations: attome_security::db::OperationLevels,
 }
 
 /// `role_mm_entity_access` row -> [`RoleEntityAccess`].
@@ -282,6 +285,7 @@ pub(crate) fn role_entity_access(a: EntityAccessRow) -> RoleEntityAccess {
         read_owner_visible: a.read_owner_visible,
         write_owner_visible: a.write_owner_visible,
         delete_owner_visible: a.delete_owner_visible,
+        operations: a.operations,
     }
 }
 
@@ -806,7 +810,10 @@ async fn export_roles(db: &DbPool, bundle: &mut Bundle) -> Result<(), AppError> 
     let access: Vec<EntityAccessRow> = sqlx::query_as(
         "SELECT ea.role_ref, e.logicalname AS entity, ea.read_access_level, ea.write_access_level,
                 ea.delete_access_level, ea.read_owner_visible, ea.write_owner_visible,
-                ea.delete_owner_visible
+                ea.delete_owner_visible, ea.create_access_level, ea.assign_access_level,
+                ea.share_access_level, ea.export_access_level, ea.bulk_access_level,
+                ea.read_bu_children, ea.write_bu_children, ea.delete_bu_children,
+                ea.assign_bu_children, ea.share_bu_children
          FROM role_mm_entity_access ea
          JOIN entity_info e ON e.id = ea.entity_ref
          WHERE ea.is_deleted = false AND COALESCE(e.is_active, true) = true",

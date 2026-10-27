@@ -462,6 +462,82 @@ where
     .map_err(attome_db::classify)
 }
 
+/// Q10-T12: the levels of a role's entity grant beyond read, write and
+/// delete, and whether each business-unit level reaches child units
+/// (Q10-T1's columns on `role_mm_entity_access`). Missing fields take the
+/// table's defaults: create, assign and share follow the write level,
+/// export and bulk are denied, child units are included.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    sqlx::FromRow,
+    utoipa::ToSchema,
+)]
+#[serde(default)]
+pub struct OperationLevels {
+    /// Null: the write level.
+    pub create_access_level: Option<i16>,
+    /// Null: the write level.
+    pub assign_access_level: Option<i16>,
+    /// Null: the write level.
+    pub share_access_level: Option<i16>,
+    pub export_access_level: i16,
+    pub bulk_access_level: i16,
+    pub read_bu_children: bool,
+    pub write_bu_children: bool,
+    pub delete_bu_children: bool,
+    pub assign_bu_children: bool,
+    pub share_bu_children: bool,
+}
+
+impl Default for OperationLevels {
+    fn default() -> Self {
+        Self {
+            create_access_level: None,
+            assign_access_level: None,
+            share_access_level: None,
+            export_access_level: 0,
+            bulk_access_level: 0,
+            read_bu_children: true,
+            write_bu_children: true,
+            delete_bu_children: true,
+            assign_bu_children: true,
+            share_bu_children: true,
+        }
+    }
+}
+
+impl OperationLevels {
+    /// Every set level in 0..=3.
+    pub fn validate(&self) -> Result<(), AppError> {
+        let levels = [self.export_access_level, self.bulk_access_level]
+            .into_iter()
+            .chain(
+                [
+                    self.create_access_level,
+                    self.assign_access_level,
+                    self.share_access_level,
+                ]
+                .into_iter()
+                .flatten(),
+            );
+        for level in levels {
+            if !(0..=3).contains(&level) {
+                return Err(AppError::Validation(
+                    "access level must be 0 (None), 1 (Team), 2 (BusinessUnit), or 3 (Global)"
+                        .into(),
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Atomic role x entity access-level grant upsert (C-19): the one `ON
 /// CONFLICT` statement `reconcile_role` and
 /// `admin::role_entity_access::upsert_entity_access_grant` both write against
@@ -482,17 +558,22 @@ pub async fn upsert_role_entity_access<'c, E>(
     read_owner_visible: bool,
     write_owner_visible: bool,
     delete_owner_visible: bool,
+    ops: &OperationLevels,
     owner_layer: attome_core::changeset::Layer,
 ) -> Result<Uuid, AppError>
 where
     E: sqlx::PgExecutor<'c>,
 {
+    ops.validate()?;
     sqlx::query_scalar(
         "INSERT INTO role_mm_entity_access \
              (id, role_ref, entity_ref, read_access_level, write_access_level, \
               delete_access_level, read_owner_visible, write_owner_visible, \
-              delete_owner_visible, owner_layer) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
+              delete_owner_visible, owner_layer, create_access_level, assign_access_level, \
+              share_access_level, export_access_level, bulk_access_level, read_bu_children, \
+              write_bu_children, delete_bu_children, assign_bu_children, share_bu_children) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, \
+                 $17, $18, $19, $20) \
          ON CONFLICT (role_ref, entity_ref) DO UPDATE SET \
              read_access_level = EXCLUDED.read_access_level, \
              write_access_level = EXCLUDED.write_access_level, \
@@ -500,6 +581,16 @@ where
              read_owner_visible = EXCLUDED.read_owner_visible, \
              write_owner_visible = EXCLUDED.write_owner_visible, \
              delete_owner_visible = EXCLUDED.delete_owner_visible, \
+             create_access_level = EXCLUDED.create_access_level, \
+             assign_access_level = EXCLUDED.assign_access_level, \
+             share_access_level = EXCLUDED.share_access_level, \
+             export_access_level = EXCLUDED.export_access_level, \
+             bulk_access_level = EXCLUDED.bulk_access_level, \
+             read_bu_children = EXCLUDED.read_bu_children, \
+             write_bu_children = EXCLUDED.write_bu_children, \
+             delete_bu_children = EXCLUDED.delete_bu_children, \
+             assign_bu_children = EXCLUDED.assign_bu_children, \
+             share_bu_children = EXCLUDED.share_bu_children, \
              is_deleted = false, updated_at = NOW(), \
              row_version = role_mm_entity_access.row_version + 1 \
          RETURNING id",
@@ -514,6 +605,16 @@ where
     .bind(write_owner_visible)
     .bind(delete_owner_visible)
     .bind(owner_layer.as_str())
+    .bind(ops.create_access_level)
+    .bind(ops.assign_access_level)
+    .bind(ops.share_access_level)
+    .bind(ops.export_access_level)
+    .bind(ops.bulk_access_level)
+    .bind(ops.read_bu_children)
+    .bind(ops.write_bu_children)
+    .bind(ops.delete_bu_children)
+    .bind(ops.assign_bu_children)
+    .bind(ops.share_bu_children)
     .fetch_one(db)
     .await
     // M01 Core C-23: a bad `role_id`/`entity_ref` FK is now `Validation`

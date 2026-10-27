@@ -167,6 +167,7 @@ fn access(entity: &str, level: i16) -> RoleEntityAccessDesc {
         read_owner_visible: false,
         write_owner_visible: false,
         delete_owner_visible: false,
+        operations: Default::default(),
     }
 }
 

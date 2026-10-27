@@ -1344,6 +1344,22 @@ fn feature_flag_settings() -> Vec<SettingDescriptor> {
     };
     vec![
         scan(
+            "feature.security.permission_sets",
+            "Stored policy value for the security.permission_sets feature flag (Q10-T12).",
+        ),
+        scan(
+            "feature.security.role_conflicts",
+            "Stored policy value for the security.role_conflicts feature flag (Q10-T12).",
+        ),
+        scan(
+            "feature.security.grant_end_dates",
+            "Stored policy value for the security.grant_end_dates feature flag (Q10-T12).",
+        ),
+        scan(
+            "feature.security.child_units",
+            "Stored policy value for the security.child_units feature flag (Q10-T12).",
+        ),
+        scan(
             "feature.revrec.basic",
             "Stored policy value for the revrec.basic feature flag (F11-T11).",
         ),

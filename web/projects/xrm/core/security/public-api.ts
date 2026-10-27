@@ -56,7 +56,15 @@ export type {
   EffectiveAccessPreview, ConfiguredAccess, EffectiveAccess,
   EffectiveAccessRoleRef, EffectiveAccessTeamRef, EffectiveAccessOrgRef,
 } from './security-admin.service';
-export { ACCESS_LEVELS } from './security-admin.service';
+export { ACCESS_LEVELS, SECURITY_FLAGS } from './security-admin.service';
+// Q10-T12: permission sets, conflict rules and role templates.
+export { PermissionSetsComponent }        from './permission-sets.component';
+export { RoleConflictsComponent }         from './role-conflicts.component';
+export { RoleTemplatesComponent }         from './role-templates.component';
+export type {
+  PermissionSetItem, PermissionSetDetail, SetEntityAccessItem, PermissionSetAssignment,
+  ConflictRule, CurrentConflict, RoleTemplateItem, InstalledRole,
+} from './security-admin.service';
 
 // The `user_account` form override (UserFormComponent) and
 // registerSecurityEntityForms live in

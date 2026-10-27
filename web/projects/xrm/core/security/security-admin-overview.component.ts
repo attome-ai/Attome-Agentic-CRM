@@ -1,12 +1,19 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@attome/base';
+import { FeatureFlagsService } from '@attome/xrm/core/admin/data';
+
+import { SECURITY_FLAGS } from './security-admin.service';
 
 interface SecurityAdminLink {
   path:  string[];
   title: string;
   desc:  string;
   group: string;
+  /** Q10-T12: `title` and `desc` are catalog keys. */
+  i18n?: boolean;
+  /** Q10-T12: shown only with this feature switch on. */
+  flag?: string;
 }
 
 /// Landing page for the RLS/team/share administration UI (item 19). Ties
@@ -62,9 +69,9 @@ interface SecurityAdminLink {
               @for (l of linksIn(group); track l.title) {
                 <tr>
                   <td style="width: 220px">
-                    <a class="cell-link" [routerLink]="l.path">{{ l.title }}</a>
+                    <a class="cell-link" [routerLink]="l.path">{{ l.i18n ? (l.title | translate) : l.title }}</a>
                   </td>
-                  <td class="cell-muted">{{ l.desc }}</td>
+                  <td class="cell-muted">{{ l.i18n ? (l.desc | translate) : l.desc }}</td>
                 </tr>
               }
             </tbody>
@@ -75,9 +82,14 @@ interface SecurityAdminLink {
   `,
 })
 export class SecurityAdminOverviewComponent {
+  private readonly flags = inject(FeatureFlagsService);
+
   private readonly links: SecurityAdminLink[] = [
     { group: 'Roles', title: 'Roles', desc: 'The unified Role form — privilege grants, record access, assignments, and notes for one role.', path: ['/xrm/core/role/list'] },
     { group: 'Roles', title: 'Role Access Levels', desc: 'How far a role\'s read/write/delete reach extends, per entity (None/Team/Business Unit/Global).', path: ['/xrm/admin/security/role-entity-access'] },
+    { group: 'Roles', title: 'securityOverview.roleTemplates', desc: 'securityOverview.roleTemplatesDesc', path: ['/xrm/admin/security/role-templates'], i18n: true },
+    { group: 'Roles', title: 'securityOverview.permissionSets', desc: 'securityOverview.permissionSetsDesc', path: ['/xrm/admin/security/permission-sets'], i18n: true, flag: SECURITY_FLAGS.permissionSets },
+    { group: 'Roles', title: 'securityOverview.roleConflicts', desc: 'securityOverview.roleConflictsDesc', path: ['/xrm/admin/security/role-conflicts'], i18n: true, flag: SECURITY_FLAGS.roleConflicts },
     { group: 'Roles', title: 'Field Security Profiles', desc: 'Per-field read grants for sensitive attributes, assigned to roles.', path: ['/xrm/admin/security/field-profiles'] },
     { group: 'Users', title: 'User Access', desc: 'Direct role assignment, business-unit membership, and effective access preview for one user.', path: ['/xrm/admin/security/users'] },
     { group: 'Users', title: 'Privileges', desc: 'The full privilege catalog — every key a role or user grant can assign.', path: ['/xrm/core/privilege/list'] },
@@ -89,7 +101,12 @@ export class SecurityAdminOverviewComponent {
 
   readonly groups = ['Roles', 'Users', 'Teams', 'Sharing'];
 
+  constructor() {
+    this.flags.ensureLoaded();
+  }
+
   linksIn(group: string): SecurityAdminLink[] {
-    return this.links.filter(l => l.group === group);
+    const on = this.flags.flags();
+    return this.links.filter(l => l.group === group && (!l.flag || on[l.flag] === true));
   }
 }
