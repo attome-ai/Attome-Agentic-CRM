@@ -182,13 +182,18 @@ pub async fn company_org_ids(db: &DbPool, companies: &[Uuid]) -> Result<Vec<Uuid
     bounded(
         "company organisation tree",
         sqlx::query_scalar(
+            // Q10-T3: a prefix range on the indexed `unit_path`, as
+            // `db::resolve_accessible_org_ids` reads it.
             r#"
-            WITH RECURSIVE tree AS (
-                SELECT o.id FROM organization o WHERE o.id = ANY($1)
-                UNION
-                SELECT o.id FROM organization o JOIN tree t ON o.organization_ref = t.id
-            )
-            SELECT id FROM tree
+            SELECT o.id FROM organization o WHERE o.id = ANY($1)
+            UNION
+            SELECT o.id
+            FROM organization w
+            JOIN organization o
+              ON w.unit_path IS NOT NULL
+             AND o.unit_path ~>=~ w.unit_path
+             AND o.unit_path ~<~ (w.unit_path || 'g')
+            WHERE w.id = ANY($1)
             "#,
         )
         .bind(companies)

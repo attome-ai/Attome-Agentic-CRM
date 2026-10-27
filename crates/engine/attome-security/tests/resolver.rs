@@ -2101,3 +2101,96 @@ async fn delegated_admin_never_acts_on_a_full_admin() {
     };
     assert!(require_not_above(&db, &admin, direct).await.is_ok());
 }
+
+async fn unit_path(db: &DbPool, id: Uuid) -> String {
+    sqlx::query_scalar("SELECT unit_path FROM organization WHERE id = $1")
+        .bind(id)
+        .fetch_one(db)
+        .await
+        .expect("read the unit path")
+}
+
+/// Q10-T3: a unit's path follows it, and its whole subtree, when it moves
+/// (migration 0312's trigger), and a unit cannot move under its own subtree.
+#[tokio::test]
+async fn moving_unit_updates_descendant_paths() {
+    let db = skip_if_no_db!(test_db().await);
+
+    let root = seed_org(&db, None).await;
+    let middle = seed_org(&db, Some(root)).await;
+    let leaf = seed_org(&db, Some(middle)).await;
+    let other = seed_org(&db, None).await;
+    assert_eq!(unit_path(&db, root).await, format!("/{root}/"));
+    assert_eq!(
+        unit_path(&db, leaf).await,
+        format!("/{root}/{middle}/{leaf}/")
+    );
+
+    sqlx::query("UPDATE organization SET organization_ref = $2 WHERE id = $1")
+        .bind(middle)
+        .bind(other)
+        .execute(&db)
+        .await
+        .expect("move the middle unit");
+    assert_eq!(unit_path(&db, middle).await, format!("/{other}/{middle}/"));
+    assert_eq!(
+        unit_path(&db, leaf).await,
+        format!("/{other}/{middle}/{leaf}/"),
+        "the subtree moves with it"
+    );
+    assert_eq!(unit_path(&db, root).await, format!("/{root}/"));
+
+    let cycle = sqlx::query("UPDATE organization SET organization_ref = $2 WHERE id = $1")
+        .bind(middle)
+        .bind(leaf)
+        .execute(&db)
+        .await;
+    assert!(
+        cycle.is_err(),
+        "a unit cannot move under its own descendant"
+    );
+    assert_eq!(
+        unit_path(&db, leaf).await,
+        format!("/{other}/{middle}/{leaf}/")
+    );
+}
+
+/// Q10-T3: business-unit reach ("my unit and everything under it") is read
+/// from the path, and follows a unit moved under the caller's unit.
+#[tokio::test]
+async fn child_unit_records_visible_with_children_flag() {
+    let db = skip_if_no_db!(test_db().await);
+
+    let home = seed_org(&db, None).await;
+    let child = seed_org(&db, Some(home)).await;
+    let elsewhere = seed_org(&db, None).await;
+    let moved = seed_org(&db, Some(elsewhere)).await;
+    let grandchild = seed_org(&db, Some(moved)).await;
+    let user_id = seed_bare_user(&db).await;
+    sqlx::query("UPDATE user_account SET organization_ref = $2 WHERE id = $1")
+        .bind(user_id)
+        .bind(home)
+        .execute(&db)
+        .await
+        .expect("set the home unit");
+
+    let reach = attome_security::db::resolve_accessible_org_ids(&db, user_id)
+        .await
+        .expect("resolve the reach");
+    assert!(reach.contains(&home) && reach.contains(&child));
+    assert!(!reach.contains(&moved) && !reach.contains(&elsewhere));
+
+    sqlx::query("UPDATE organization SET organization_ref = $2 WHERE id = $1")
+        .bind(moved)
+        .bind(child)
+        .execute(&db)
+        .await
+        .expect("move a unit under the child unit");
+    let reach = attome_security::db::resolve_accessible_org_ids(&db, user_id)
+        .await
+        .expect("resolve the reach again");
+    for unit in [home, child, moved, grandchild] {
+        assert!(reach.contains(&unit), "{unit} is under the home unit");
+    }
+    assert!(!reach.contains(&elsewhere));
+}

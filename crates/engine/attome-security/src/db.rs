@@ -1684,11 +1684,11 @@ pub async fn resolve_role_ids(db: &DbPool, user_id: Uuid) -> Result<Vec<Uuid>, A
 
 /// Every `organization.id` reachable for `BusinessUnit`-tier scoping:
 /// the caller's own org(s), plus every descendant of each via
-/// `organization.organization_ref`'s self-reference (D-133 §4's
-/// recursive-CTE design) — "my org(s) plus every sub-org," matching the
-/// manager-sees-subordinates requirement. Only worth calling when the
-/// caller's resolved `access_level` is `BusinessUnit` or lower doesn't need
-/// it (`Global` skips filtering entirely; `None`/`Team` never consult this
+/// `organization.organization_ref`'s self-reference (D-133 §4), found
+/// through the materialised `organization.unit_path` (Q10-T3) — "my org(s)
+/// plus every sub-org," matching the manager-sees-subordinates requirement.
+/// Only worth calling when the caller's resolved `access_level` is
+/// `BusinessUnit` or lower doesn't need it (`Global` skips filtering entirely; `None`/`Team` never consult this
 /// set) — callers should gate on that before paying this query.
 ///
 /// The recursive walk is seeded from **two** sources, not one:
@@ -1725,9 +1725,14 @@ pub async fn resolve_accessible_org_ids(db: &DbPool, user_id: Uuid) -> Result<Ve
             // is specified as `non_recursive_term UNION recursive_term`, so
             // keeping the seeds inside a subquery leaves no ambiguity about
             // where that split falls.
+            // Q10-T3: every unit under a seed is one prefix range on the
+            // indexed `unit_path` (migration 0312 keeps it right on every
+            // write), not a recursive walk. Paths are lowercase UUIDs, `-`
+            // and `/`, all below `g`, so `[path, path || 'g')` is exactly
+            // the subtree.
             r#"
-            WITH RECURSIVE org_tree AS (
-                SELECT o.id
+            WITH seeds AS (
+                SELECT o.id, o.unit_path
                 FROM organization o
                 WHERE o.id IN (
                     SELECT m.organization_ref
@@ -1740,14 +1745,15 @@ pub async fn resolve_accessible_org_ids(db: &DbPool, user_id: Uuid) -> Result<Ve
                     FROM user_account u
                     WHERE u.id = $1 AND u.organization_ref IS NOT NULL
                 )
-
-                UNION
-
-                SELECT o.id
-                FROM organization o
-                JOIN org_tree t ON o.organization_ref = t.id
             )
-            SELECT id FROM org_tree
+            SELECT s.id FROM seeds s
+            UNION
+            SELECT o.id
+            FROM seeds s
+            JOIN organization o
+              ON s.unit_path IS NOT NULL
+             AND o.unit_path ~>=~ s.unit_path
+             AND o.unit_path ~<~ (s.unit_path || 'g')
             "#,
         )
         .bind(user_id)
