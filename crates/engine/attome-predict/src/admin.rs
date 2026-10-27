@@ -13,7 +13,7 @@
 //! `retire` mutation (a plain status flip with no job to enqueue).
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -77,7 +77,7 @@ async fn fetch_summary(state: &EngineState, id: Uuid) -> Result<ModelSummary, Ap
 )]
 async fn list_models(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
 ) -> Result<Json<PaginatedResponse<ModelSummary>>, AppError> {
     let rows: Vec<PredictionModelRow> = sqlx::query_as(&format!(
         "SELECT {MODEL_COLUMNS} FROM prediction_model \
@@ -106,7 +106,7 @@ async fn list_models(
 )]
 async fn get_model(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    _ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ModelSummary>, AppError> {
     Ok(Json(fetch_summary(&state, id).await?))
@@ -133,7 +133,7 @@ async fn get_model(
 )]
 async fn create_model(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Json(body): Json<CreateModelBody>,
 ) -> Result<(StatusCode, Json<ModelSummary>), AppError> {
     let name = validate_name(&body.name)?;
@@ -166,7 +166,7 @@ async fn create_model(
 )]
 async fn retrain_model(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     crate::train::enqueue_retrain(&state, id, ctx.user_id).await?;
@@ -191,7 +191,7 @@ async fn retrain_model(
 )]
 async fn retire_model(
     State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<area::Ai>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
