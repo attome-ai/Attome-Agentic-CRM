@@ -49245,6 +49245,16 @@ export interface components {
                 /** Format: date-time */
                 computed_at: string;
                 /**
+                 * @description P9-T9: [`definition_fingerprint`] of the definition fields at compute
+                 *     time; `None` on rows written before P9-T9.
+                 */
+                definition_fingerprint?: string | null;
+                /**
+                 * Format: int32
+                 * @description P9-T9: the definition version the value was computed under.
+                 */
+                definition_version: number;
+                /**
                  * @description P9-T5: `None` on the total row; on a member row, the dimension
                  *     attribute(s), comma-separated.
                  */
@@ -56618,6 +56628,16 @@ export interface components {
             actual?: number | null;
             /** Format: date-time */
             computed_at: string;
+            /**
+             * @description P9-T9: [`definition_fingerprint`] of the definition fields at compute
+             *     time; `None` on rows written before P9-T9.
+             */
+            definition_fingerprint?: string | null;
+            /**
+             * Format: int32
+             * @description P9-T9: the definition version the value was computed under.
+             */
+            definition_version: number;
             /**
              * @description P9-T5: `None` on the total row; on a member row, the dimension
              *     attribute(s), comma-separated.

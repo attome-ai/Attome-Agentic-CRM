@@ -194338,7 +194338,8 @@
                 "metric_ref",
                 "period_start",
                 "computed_at",
-                "status"
+                "status",
+                "definition_version"
               ],
               "properties": {
                 "actual": {
@@ -194351,6 +194352,18 @@
                 "computed_at": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "definition_fingerprint": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "P9-T9: [`definition_fingerprint`] of the definition fields at compute\ntime; `None` on rows written before P9-T9."
+                },
+                "definition_version": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "P9-T9: the definition version the value was computed under."
                 },
                 "dimension_attribute": {
                   "type": [
@@ -213343,7 +213356,8 @@
           "metric_ref",
           "period_start",
           "computed_at",
-          "status"
+          "status",
+          "definition_version"
         ],
         "properties": {
           "actual": {
@@ -213356,6 +213370,18 @@
           "computed_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "definition_fingerprint": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "P9-T9: [`definition_fingerprint`] of the definition fields at compute\ntime; `None` on rows written before P9-T9."
+          },
+          "definition_version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "P9-T9: the definition version the value was computed under."
           },
           "dimension_attribute": {
             "type": [
@@ -223026,8 +223052,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -223079,5 +223103,7 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }
