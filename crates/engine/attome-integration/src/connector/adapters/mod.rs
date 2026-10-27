@@ -1,3 +1,7 @@
+/// E19-T1: Google Ads lead forms, Customer Match and offline conversions.
+pub mod ads_google;
+/// E19-T1: Meta lead ads, hashed custom audiences and offline conversions.
+pub mod ads_meta;
 /// D15-T3: two-way calendar sync of meetings.
 pub mod calendar_sync;
 /// F6-T9: Aramex shipment booking and tracking.

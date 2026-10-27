@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Ads codecs (E19-T1, `connector::adapters::ads_meta` and `ads_google`): Meta lead ads (the
+  `leadgen` webhook and form answers mapped to a lead), Google lead forms (checked by `google_key`),
+  audiences of consenting people only, hashed the way each platform matches (SHA-256 of the normalised
+  e-mail and phone), and won deals as offline conversions.
 - WhatsApp Cloud API adapter (J5-T1, `attome_integration::connector::adapters::whatsapp`): text,
   approved templates, media (link or uploaded id) and interactive buttons and lists as Cloud API
   bodies; the 24-hour window (outside it only a template goes); send answers, and inbound messages
