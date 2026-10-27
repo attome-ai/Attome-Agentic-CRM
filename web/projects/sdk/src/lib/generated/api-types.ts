@@ -2420,6 +2420,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/content/pages/{id}/as-page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A CMS page as a page document.
+         * @description The page's draft blocks mapped onto the page palette (T2-T4), with its
+         *     title and SEO title and description, for the page designer to open.
+         */
+        get: operations["get_content_page_as_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/content/pages/{id}/audience": {
         parameters: {
             query?: never;
@@ -58381,10 +58402,10 @@ export interface components {
          * @description The source an entry came from. Entries sort by their wire name within one
          *     timestamp, so the order is stable and documented: `activity`,
          *     `agent_run`, `approval`, `audit_event`, `communication`, `decision`,
-         *     `flow_run`, `note`, `state_transition`.
+         *     `flow_run`, `note`, `state_transition`, `web_visit`.
          * @enum {string}
          */
-        TimelineEntryKind: "audit_event" | "state_transition" | "communication" | "decision" | "note" | "activity" | "approval" | "flow_run" | "agent_run";
+        TimelineEntryKind: "audit_event" | "state_transition" | "communication" | "decision" | "note" | "activity" | "approval" | "flow_run" | "agent_run" | "web_visit";
         TimesheetDecisionResponse: {
             approval_pending: boolean;
             /** Format: uuid */
@@ -68065,6 +68086,68 @@ export interface operations {
                 };
             };
             /** @description A bad category or product, or a knowledge source the caller cannot see */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_content_page_as_page: {
+        parameters: {
+            query?: {
+                /** @description `public` (default), `portal` or `internal`. */
+                audience?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The CMS page */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page document the page designer opens */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Page not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An audience other than public, portal or internal */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -141355,7 +141438,7 @@ export interface operations {
                 /**
                  * @description Comma-separated kinds to include (`audit_event`, `state_transition`,
                  *     `communication`, `note`, `activity`, `decision`, `approval`,
-                 *     `flow_run`, `agent_run`). Omitted or empty means every kind. An unknown
+                 *     `flow_run`, `agent_run`, `web_visit`). Omitted or empty means every kind. An unknown
                  *     kind is a 422.
                  */
                 kinds?: string;

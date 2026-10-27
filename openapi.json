@@ -12629,6 +12629,103 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/content/pages/{id}/as-page": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A CMS page as a page document.",
+        "description": "The page's draft blocks mapped onto the page palette (T2-T4), with its\ntitle and SEO title and description, for the page designer to open.",
+        "operationId": "get_content_page_as_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The CMS page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "audience",
+            "in": "query",
+            "description": "`public` (default), `portal` or `internal`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page document the page designer opens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An audience other than public, portal or internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/content/pages/{id}/audience": {
       "put": {
         "tags": [
@@ -133284,7 +133381,7 @@
           {
             "name": "kinds",
             "in": "query",
-            "description": "Comma-separated kinds to include (`audit_event`, `state_transition`,\n`communication`, `note`, `activity`, `decision`, `approval`,\n`flow_run`, `agent_run`). Omitted or empty means every kind. An unknown\nkind is a 422.",
+            "description": "Comma-separated kinds to include (`audit_event`, `state_transition`,\n`communication`, `note`, `activity`, `decision`, `approval`,\n`flow_run`, `agent_run`, `web_visit`). Omitted or empty means every kind. An unknown\nkind is a 422.",
             "required": false,
             "schema": {
               "type": "string"
@@ -218237,7 +218334,7 @@
       },
       "TimelineEntryKind": {
         "type": "string",
-        "description": "The source an entry came from. Entries sort by their wire name within one\ntimestamp, so the order is stable and documented: `activity`,\n`agent_run`, `approval`, `audit_event`, `communication`, `decision`,\n`flow_run`, `note`, `state_transition`.",
+        "description": "The source an entry came from. Entries sort by their wire name within one\ntimestamp, so the order is stable and documented: `activity`,\n`agent_run`, `approval`, `audit_event`, `communication`, `decision`,\n`flow_run`, `note`, `state_transition`, `web_visit`.",
         "enum": [
           "audit_event",
           "state_transition",
@@ -218247,7 +218344,8 @@
           "activity",
           "approval",
           "flow_run",
-          "agent_run"
+          "agent_run",
+          "web_visit"
         ]
       },
       "TimesheetDecisionResponse": {
@@ -223657,6 +223755,7 @@
     }
   ],
   "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -223708,6 +223807,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }
