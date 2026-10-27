@@ -45,6 +45,18 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- The rule language runs in the browser (Z11-T13): `attome-rules-wasm` builds the server's own
+  evaluator to WebAssembly (`scripts/build-rules-wasm.ps1`, committed under
+  `web/projects/base/src/lib/rules/wasm`), and `@attome/base`'s `RulesEvaluatorService` validates and
+  evaluates an expression with it, answering as `POST /api/v1/admin/expressions/validate` does. The
+  host app serves the module at `/rules/attome_rules_wasm_bg.wasm`; it loads on first use.
+- One expression editor (Z11-T14) for business-rule expressions, advanced conditions and state-model
+  guards: it checks as you type, underlines the part an error points at and explains it in English
+  or Arabic, completes field and function names, and previews a sample record's value, trace and
+  whether the expression runs in the database.
+- Business units carry a materialised path (Q10-T3): migration `0312_organization_unit_path.sql` adds
+  `organization.unit_path`, kept right by triggers on every write; moving a unit under its own
+  subtree is refused. Business-unit reach reads it as one indexed range.
 - Social conversations reach the person (J8-T2): a Messenger or Instagram direct message is written
   on the sender's new `social_profile` record (channel, handle, name; created on their first
   message), or on the record an agent linked the profile to (its `party_entity`/`party_id`, e.g. a
@@ -703,6 +715,21 @@ that makes it; the release gate's contract step refuses a release that breaks th
   the read-only tools `expression.validate` and `expression.spec`.
 
 ### Security
+- Administration is delegated by area (Q12-T2): 732 administration routes take their area privilege
+  (`admin.users`, `admin.roles`, `admin.security`, `admin.data_model`, `admin.automation`, `admin.ai`,
+  `admin.integrations`, `admin.communication`, `admin.reports`, `admin.compliance`, `admin.audit`,
+  `admin.deployment`) instead of `system.admin`; bundles, changesets, break-glass and stored-query
+  authoring stay `system.admin`. An area-only administrator cannot act on someone holding
+  `system.admin`, give an S2S client `can_act_as_user` or bind it to such a person, point an inbound
+  hook or a published flow at one, or switch a `security.*` feature flag without the Security area.
+- Menus, forms and lists follow the API's own decision (Q10-T11): a menu item shows only when the
+  page behind it admits the caller (an entity's `read`, an admin page's area), and
+  `GET /api/v1/schema/{entity}` now admits anyone who may read the entity (it was administrators
+  only), leaves out fields read-gated for the caller, and carries `allowed_actions`, from which the
+  list and form show their Create, Bulk edit, Delete, Export and Save buttons.
+- Export, bulk changes, owner reassignment and sharing need their own level (Q10-T13): the operation
+  levels a role sets were stored but not enforced; each is now refused without a level other than
+  None, and an export reaches only the records its export level reaches.
 - Phishing-resistant step-up (Q5-T7): with `auth.step_up_phishing_resistant` on (default off),
   creating an API key or granting or taking a user's role from a session needs a fresh passkey
   step-up; a TOTP, recovery-code, password or federated elevation no longer counts for them, and
