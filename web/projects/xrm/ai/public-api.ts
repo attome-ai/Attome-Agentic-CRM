@@ -85,3 +85,5 @@ export type {
   RunsMetric,
   RunsPage,
 } from './admin/agent-performance/ai-agent-performance.service';
+// Y14-T4: this screen's own catalogue.
+export { agentSessionsAr, agentSessionsEn } from './agent-sessions.i18n';

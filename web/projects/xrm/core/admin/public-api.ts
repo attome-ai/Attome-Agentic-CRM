@@ -38,3 +38,5 @@ export { CalendarManagerComponent }   from './calendar-manager/calendar-manager.
 export { DuplicatesManagerComponent } from './duplicates-manager/duplicates-manager.component';
 // D-789 section 10 — the business-rule editor (the rules admin page's route).
 export { RulesManagerComponent }      from './rules-manager/rules-manager.component';
+// Y14-T4: this screen's own catalogue.
+export { businessRulesAr, businessRulesEn } from './rules-manager.i18n';

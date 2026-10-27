@@ -162,7 +162,11 @@ export const xrmShellRoutes: Routes = [
           {
             // M45 Phase 2 (D-472).
             path: 'rules',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/core/admin').then(m => m.businessRulesEn),
+              () => import('@attome/xrm/core/admin').then(m => m.businessRulesAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/core/admin').then(m => m.RulesManagerComponent),
           },
           {
@@ -1071,7 +1075,11 @@ export const xrmShellRoutes: Routes = [
             // A literal route ahead of the entity wildcard below, same shape as
             // 'ai/playground' just above and 'search/lab' before it.
             path: 'ai/sessions',
-            canActivate: [authGuard],
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/ai').then(m => m.agentSessionsEn),
+              () => import('@attome/xrm/ai').then(m => m.agentSessionsAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiAgentSessionsComponent),
           },
           {

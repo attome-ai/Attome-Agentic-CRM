@@ -10,6 +10,8 @@ import { reportBuilderAr, reportBuilderEn } from '@attome/xrm/report/builder';
 import { emailDesignerAr, emailDesignerEn } from '@attome/xrm/marketing/email-designer';
 import { appDesignerAr, appDesignerEn } from '@attome/xrm/core/admin/app-designer';
 import { fleetAr, fleetEn } from '@attome/xrm/fleet';
+import { businessRulesAr, businessRulesEn } from '@attome/xrm/core/admin';
+import { agentSessionsAr, agentSessionsEn } from '@attome/xrm/ai';
 import { searchLabAr, searchLabEn } from '@attome/xrm/search';
 import { migrationAr, migrationEn } from '@attome/xrm/migration';
 import { portalAdminAr, portalAdminEn } from '@attome/xrm/portal';
@@ -98,6 +100,8 @@ const LAYERS = [
   ['emailDesigner', emailDesignerEn, emailDesignerAr],
   ['appDesigner', appDesignerEn, appDesignerAr],
   ['fleet', fleetEn, fleetAr],
+  ['businessRules', businessRulesEn, businessRulesAr],
+  ['agentSessions', agentSessionsEn, agentSessionsAr],
   ['searchLab', searchLabEn, searchLabAr],
   ['migration', migrationEn, migrationAr],
   ['portalAdmin', portalAdminEn, portalAdminAr],
@@ -116,6 +120,8 @@ describe('i18n catalog coverage — all layers', () => {
         provideLayerCatalog(emailDesignerEn, () => Promise.resolve(emailDesignerAr)),
         provideLayerCatalog(appDesignerEn, () => Promise.resolve(appDesignerAr)),
         provideLayerCatalog(fleetEn, () => Promise.resolve(fleetAr)),
+        provideLayerCatalog(businessRulesEn, () => Promise.resolve(businessRulesAr)),
+        provideLayerCatalog(agentSessionsEn, () => Promise.resolve(agentSessionsAr)),
         provideLayerCatalog(searchLabEn, () => Promise.resolve(searchLabAr)),
         provideLayerCatalog(migrationEn, () => Promise.resolve(migrationAr)),
         provideLayerCatalog(portalAdminEn, () => Promise.resolve(portalAdminAr)),
