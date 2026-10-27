@@ -399,8 +399,36 @@ fn probe(auth: &str, method: &str, path: &str) -> Request<Body> {
 /// not because it exposes anything privileged — the response is exactly the
 /// caller's own identity, which they already hold. Path prefix is not the
 /// authority on a route's policy; the handler's signature is.
-const NON_ADMIN_ROUTES_UNDER_ADMIN_PREFIX: &[(&str, &str)] =
-    &[("GET", "/api/v1/admin/security/whoami")];
+///
+/// The rest are `Authorized<SelfService>` with a resource check in the
+/// handler: governance domains, policies, exceptions and certifications admit
+/// the domain's owner or steward (`require_domain_editor`/`readable_policy`,
+/// lists filtered to the caller's domains), a quality issue admits its owner
+/// (`require_issue_editor`), and an agent rollback admits the session's owner
+/// (`require_session`). A non-admin with no such role gets 404, 422 or an
+/// empty list here, never another person's data.
+const NON_ADMIN_ROUTES_UNDER_ADMIN_PREFIX: &[(&str, &str)] = &[
+    ("GET", "/api/v1/admin/security/whoami"),
+    ("GET", "/api/v1/admin/ai/agents/{id}/rollback-preview"),
+    ("POST", "/api/v1/admin/ai/agents/{id}/rollback"),
+    ("PATCH", "/api/v1/admin/data/quality/issues/{id}"),
+    ("GET", "/api/v1/admin/governance/domains/{id}/roles"),
+    ("PUT", "/api/v1/admin/governance/domains/{id}/roles"),
+    ("DELETE", "/api/v1/admin/governance/domains/{id}/roles"),
+    (
+        "PUT",
+        "/api/v1/admin/governance/domains/{id}/governed-change",
+    ),
+    ("GET", "/api/v1/admin/governance/policies"),
+    ("POST", "/api/v1/admin/governance/policies"),
+    ("GET", "/api/v1/admin/governance/policies/{id}"),
+    ("PATCH", "/api/v1/admin/governance/policies/{id}"),
+    ("DELETE", "/api/v1/admin/governance/policies/{id}"),
+    ("GET", "/api/v1/admin/governance/policies/{id}/exceptions"),
+    ("POST", "/api/v1/admin/governance/policies/{id}/exceptions"),
+    ("GET", "/api/v1/admin/governance/certifications"),
+    ("POST", "/api/v1/admin/governance/certifications"),
+];
 
 // ── The test ────────────────────────────────────────────────────────────────
 
