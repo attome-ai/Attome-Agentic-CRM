@@ -8,11 +8,53 @@
   <button type="button" class="btn-secondary" data-testid="grid-discard" [disabled]="!changedRows() || saving()" (click)="discardAll()">
     {{ 'editableGrid.discardAll' | translate }}
   </button>
+  <button type="button" class="btn-secondary" data-testid="grid-add-row" [disabled]="addingRow() || saving()" (click)="addRow()">
+    {{ 'editableGrid.addRow' | translate }}
+  </button>
+  <button type="button" class="btn-secondary" data-testid="grid-undo" [disabled]="!canUndo() || saving()" (click)="undo()">
+    {{ 'editableGrid.undo' | translate }}
+  </button>
   <button type="button" class="btn-secondary" (click)="closed.emit()">{{ 'editableGrid.close' | translate }}</button>
 </div>
 
+@if (pastePlan(); as plan) {
+  <section class="paste-preview" data-testid="paste-preview" [attr.aria-label]="'editableGrid.pasteTitle' | translate">
+    <h3>{{ 'editableGrid.pasteTitle' | translate }}</h3>
+    <p>
+      {{ (plan.byHeader ? 'editableGrid.pasteByHeader' : 'editableGrid.pasteByPosition') | translate }}
+      {{ 'editableGrid.pasteCounts' | translate: { valid: pasteValid(), errors: pasteErrors() } }}
+      @if (plan.overflowRows) { {{ 'editableGrid.pasteOverflow' | translate: { count: plan.overflowRows } }} }
+      @if (plan.unmatched.length) { {{ 'editableGrid.pasteUnmatched' | translate: { headers: plan.unmatched.join(', ') } }} }
+    </p>
+    <table class="grid">
+      <thead>
+        <tr>
+          @for (c of pasteColumns(); track c) { <th scope="col">{{ columns()[c].display_name }}</th> }
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of pasteRows(); track line.row) {
+          <tr>
+            @for (cell of line.cells; track $index) {
+              <td [class.paste-error]="cell?.error" [attr.title]="cell && cell.error ? (pasteErrorKeys[cell.error] | translate) : null">
+                {{ cell?.raw ?? '' }}
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+    <div class="grid-bar">
+      <button type="button" class="btn-primary" data-testid="paste-apply" [disabled]="!pasteValid()" (click)="applyPaste()">
+        {{ 'editableGrid.pasteApply' | translate }}
+      </button>
+      <button type="button" class="btn-secondary" (click)="cancelPaste()">{{ 'editableGrid.pasteCancel' | translate }}</button>
+    </div>
+  </section>
+}
+
 <div class="grid-wrap">
-  <table class="grid" role="grid" tabindex="0" [attr.aria-label]="'editableGrid.label' | translate" (keydown)="onKey($event)">
+  <table class="grid" role="grid" tabindex="0" [attr.aria-label]="'editableGrid.label' | translate" (keydown)="onKey($event)" (paste)="onPaste($event)" (mouseup)="endFill()">
     <thead>
       <tr>
         @for (col of columns(); track col.name) {
@@ -21,19 +63,21 @@
       </tr>
     </thead>
     <tbody>
-      @for (row of records(); track row.id; let r = $index) {
-        <tr [class.row-error]="errors()[row.id]">
+      @for (row of rows(); track row.id; let r = $index) {
+        <tr [class.row-error]="errors()[row.id]" [class.row-new]="isNew(row)">
           @for (col of columns(); track col.name; let c = $index) {
             <td role="gridcell"
                 [class.active]="active().row === r && active().col === c"
                 [class.pending]="isPending(row, col)"
                 [class.readonly]="!isEditable(col)"
+                [class.in-fill]="inFill(r, c)"
                 [attr.aria-readonly]="!isEditable(col)"
                 [attr.data-cell]="r + ':' + c"
                 tabindex="-1"
                 (click)="select(r, c)"
                 (keyup.space)="select(r, c)"
-                (dblclick)="startEdit()">
+                (dblclick)="startEdit()"
+                (mouseenter)="extendFill(r)">
               @if (editing() && active().row === r && active().col === c) {
                 @switch (col.type) {
                   @case ('bool') {
@@ -66,6 +110,11 @@
                 }
               } @else {
                 {{ display(row, col) }}
+                @if (active().row === r && active().col === c && isEditable(col)) {
+                  <button type="button" class="fill-handle" tabindex="-1" data-testid="fill-handle"
+                          [attr.aria-label]="'editableGrid.fillHandle' | translate"
+                          (mousedown)="startFill($event)"></button>
+                }
               }
             </td>
           }

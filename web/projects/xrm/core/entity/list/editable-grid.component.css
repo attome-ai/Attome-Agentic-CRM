@@ -75,3 +75,39 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.grid td { position: relative; }
+
+.grid td.in-fill { outline: 1px dashed var(--color-accent); outline-offset: -2px; }
+
+.row-new td:first-child { box-shadow: inset 3px 0 0 var(--color-accent); }
+
+:host-context([dir='rtl']) .row-new td:first-child { box-shadow: inset -3px 0 0 var(--color-accent); }
+
+.fill-handle {
+  position: absolute;
+  inset-inline-end: -4px;
+  inset-block-end: -4px;
+  inline-size: 8px;
+  block-size: 8px;
+  padding: 0;
+  border: 1px solid var(--color-bg);
+  background: var(--color-accent);
+  cursor: crosshair;
+}
+
+.paste-preview {
+  margin-block-end: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-alt);
+}
+
+.paste-preview h3 { margin: 0 0 0.25rem; font-size: 0.95rem; }
+
+.paste-preview p { margin: 0 0 0.5rem; color: var(--color-text-secondary); font-size: 0.85rem; }
+
+.paste-preview .grid-bar { margin-block: 0.5rem 0; }
+
+.grid td.paste-error { color: var(--color-danger); text-decoration: underline wavy var(--color-danger); }
