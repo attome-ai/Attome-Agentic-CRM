@@ -119,6 +119,7 @@ async fn require_other_side_access(
         ("id" = Uuid, Path, description = "The record"),
         ("relationship" = String, Path, description = "The relationship's name"),
         OnePageQuery,
+        LinkFilter,
     ),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<EntityRecordResponse>),
@@ -134,6 +135,7 @@ pub(super) async fn list_related(
     ctx: Authorized<RecordScoped<Read>>,
     Path((entity_input, record_id, relationship)): Path<(String, Uuid, String)>,
     Query(q): Query<OnePageQuery>,
+    Query(links): Query<LinkFilter>,
 ) -> Result<Json<PaginatedResponse<EntityRecordResponse>>, AppError> {
     let (entity_id, entity_name, _, _) = resolve_entity(&state, &entity_input).await?;
     require_record_access(
@@ -212,20 +214,37 @@ pub(super) async fn list_related(
         )
     });
 
+    // A7-T4: links valid on `as_of` (today by default), with `role` when given.
+    ensure_link_columns_once(&state, &def.join_table).await?;
+    let as_of = links
+        .as_of
+        .unwrap_or_else(|| chrono::Utc::now().date_naive());
+    let role = links
+        .role
+        .as_deref()
+        .map(str::trim)
+        .filter(|r| !r.is_empty());
+    let as_of_idx = next_idx;
+    let role_idx = next_idx + 1;
+    let link_sql = format!(
+        "AND (j.valid_from IS NULL OR j.valid_from <= ${as_of_idx}) \
+         AND (j.valid_to IS NULL OR j.valid_to >= ${as_of_idx}) \
+         AND (${role_idx}::text IS NULL OR j.role = ${role_idx}::text)"
+    );
     let count_sql = format!(
         "SELECT COUNT(*) FROM {join_table} j \
          JOIN {other_table} t ON t.id = j.{other_col} \
          WHERE j.{this_col} = $1 AND j.is_active = true \
-           AND (t.is_active IS NULL OR t.is_active = true) {pred_sql}"
+           AND (t.is_active IS NULL OR t.is_active = true) {pred_sql} {link_sql}"
     );
     let select_sql = format!(
         "SELECT row_to_json(t) FROM {join_table} j \
          JOIN (SELECT {cols} FROM {other_table}) t ON t.id = j.{other_col} \
          WHERE j.{this_col} = $1 AND j.is_active = true \
-           AND (t.is_active IS NULL OR t.is_active = true) {pred_sql} \
+           AND (t.is_active IS NULL OR t.is_active = true) {pred_sql} {link_sql} \
          ORDER BY t.id LIMIT ${limit_idx} OFFSET ${offset_idx}",
-        limit_idx = next_idx,
-        offset_idx = next_idx + 1,
+        limit_idx = next_idx + 2,
+        offset_idx = next_idx + 3,
     );
 
     // sqlx's query builder has no `.bind_all(iter)` and the predicate's bind
@@ -246,7 +265,9 @@ pub(super) async fn list_related(
                 q = q.bind(bind);
             }
         }
-        q.fetch_one(&state.base.db)
+        q.bind(as_of)
+            .bind(role)
+            .fetch_one(&state.base.db)
             .await
             .map_err(AppError::internal)?
     };
@@ -262,6 +283,8 @@ pub(super) async fn list_related(
         }
     }
     let rows: Vec<serde_json::Value> = sq
+        .bind(as_of)
+        .bind(role)
         .bind(window.page_size)
         .bind(window.offset)
         .fetch_all(&state.base.db)
@@ -297,6 +320,87 @@ pub(super) async fn list_related(
 pub(super) struct LinkBody {
     /// The other side's record id to link/unlink.
     id: Uuid,
+    /// A7-T4: the link's role (`decision_maker`), at most 100 characters.
+    #[serde(default)]
+    role: Option<String>,
+    /// A7-T4: the first day the link holds; open when absent.
+    #[serde(default)]
+    valid_from: Option<chrono::NaiveDate>,
+    /// A7-T4: the last day the link holds; open when absent.
+    #[serde(default)]
+    valid_to: Option<chrono::NaiveDate>,
+    /// A7-T4: the link's further values, a JSON object of at most 50 keys.
+    #[serde(default)]
+    #[schema(value_type = Option<Object>)]
+    attributes: Option<serde_json::Value>,
+}
+
+/// A7-T4: what a link may carry. Pure.
+pub(crate) fn check_link(
+    role: Option<&str>,
+    valid_from: Option<chrono::NaiveDate>,
+    valid_to: Option<chrono::NaiveDate>,
+    attributes: Option<&serde_json::Value>,
+) -> Result<(), AppError> {
+    if role.is_some_and(|r| r.trim().is_empty() || r.chars().count() > 100) {
+        return Err(AppError::Validation(
+            "role must be 1 to 100 characters".into(),
+        ));
+    }
+    if let (Some(from), Some(to)) = (valid_from, valid_to)
+        && to < from
+    {
+        return Err(AppError::Validation(
+            "valid_to must not be before valid_from".into(),
+        ));
+    }
+    if let Some(a) = attributes {
+        match a.as_object() {
+            Some(map) if map.len() <= 50 => {}
+            _ => {
+                return Err(AppError::Validation(
+                    "attributes must be a JSON object of at most 50 keys".into(),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// A7-T4: join tables whose link columns this process has made sure of.
+/// Reconstructable on restart; the columns themselves are the truth.
+static LINK_COLUMNS_ENSURED: std::sync::LazyLock<
+    std::sync::Mutex<std::collections::HashSet<String>>,
+> = std::sync::LazyLock::new(Default::default);
+
+/// Makes sure `join_table` has its link columns (a table provisioned before
+/// they existed gets them on first use).
+async fn ensure_link_columns_once(state: &EngineState, join_table: &str) -> Result<(), AppError> {
+    let known = LINK_COLUMNS_ENSURED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .contains(join_table);
+    if known {
+        return Ok(());
+    }
+    attome_metadata::provision::ensure_link_columns(&state.base.db_migrator, join_table).await?;
+    LINK_COLUMNS_ENSURED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .insert(join_table.to_owned());
+    Ok(())
+}
+
+/// A7-T4: `?as_of=` and `?role=` of the related list.
+#[derive(Debug, Default, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub(super) struct LinkFilter {
+    /// Links valid on this day (default today, UTC).
+    #[serde(default)]
+    as_of: Option<chrono::NaiveDate>,
+    /// Only links with this role.
+    #[serde(default)]
+    role: Option<String>,
 }
 
 /// `POST /api/v1/{entity}/{id}/related/{relationship}` — links the anchor
@@ -388,11 +492,24 @@ pub(super) async fn link_related(
         } else {
             ("", "")
         };
+    let role = body.role.as_deref().map(str::trim).map(str::to_owned);
+    check_link(
+        role.as_deref(),
+        body.valid_from,
+        body.valid_to,
+        body.attributes.as_ref(),
+    )?;
+    ensure_link_columns_once(&state, &def.join_table).await?;
     let sql = format!(
-        "INSERT INTO {join_table} ({this_col}, {other_col}, created_by{layer_col}) \
-         VALUES ($1, $2, $3{layer_val}) \
+        "INSERT INTO {join_table} ({this_col}, {other_col}, created_by, role, valid_from, valid_to, \
+                                   attributes{layer_col}) \
+         VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::jsonb, '{{}}'::jsonb){layer_val}) \
          ON CONFLICT ({this_col}, {other_col}) \
-         DO UPDATE SET is_active = true, row_version = {join_table}.row_version + 1"
+         DO UPDATE SET is_active = true, row_version = {join_table}.row_version + 1, \
+             role = COALESCE(EXCLUDED.role, {join_table}.role), \
+             valid_from = COALESCE(EXCLUDED.valid_from, {join_table}.valid_from), \
+             valid_to = COALESCE(EXCLUDED.valid_to, {join_table}.valid_to), \
+             attributes = CASE WHEN $7::jsonb IS NULL THEN {join_table}.attributes ELSE EXCLUDED.attributes END"
     );
 
     // C-09 (M01 §7): a link is a real mutation, not a bare join-row write —
@@ -425,6 +542,10 @@ pub(super) async fn link_related(
         .bind(record_id)
         .bind(body.id)
         .bind(ctx.user_id)
+        .bind(&role)
+        .bind(body.valid_from)
+        .bind(body.valid_to)
+        .bind(&body.attributes)
         .execute(&mut *tx)
         .await
         .map_err(AppError::internal)?;
@@ -638,4 +759,27 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn link_attributes_are_checked() {
+        let day = |d: &str| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok();
+        assert!(
+            check_link(
+                Some("decision_maker"),
+                day("2026-01-01"),
+                day("2026-12-31"),
+                None
+            )
+            .is_ok()
+        );
+        assert!(check_link(Some(" "), None, None, None).is_err());
+        assert!(check_link(None, day("2026-12-31"), day("2026-01-01"), None).is_err());
+        assert!(check_link(None, None, None, Some(&serde_json::json!(["x"]))).is_err());
+        assert!(check_link(None, None, None, Some(&serde_json::json!({ "weight": 3 }))).is_ok());
+    }
 }

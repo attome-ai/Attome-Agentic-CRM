@@ -94,9 +94,9 @@ pub use reconcile::{
     retire_entity_recorded,
 };
 pub use relationship::{
-    RelationshipDesc, RelationshipDetail, drop_join_table, provision_join_table,
-    reconcile_relationship, reconcile_relationship_recorded, retire_relationship,
-    retire_relationship_by_name, retire_relationship_by_name_recorded,
+    RelationshipDesc, RelationshipDetail, drop_join_table, ensure_link_columns,
+    provision_join_table, reconcile_relationship, reconcile_relationship_recorded,
+    retire_relationship, retire_relationship_by_name, retire_relationship_by_name_recorded,
     retire_relationship_recorded,
 };
 pub use schema_change::{

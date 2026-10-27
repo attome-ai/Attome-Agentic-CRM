@@ -158,11 +158,44 @@ pub async fn provision_join_table(
         AppError::internal(e)
     })?;
 
+    ensure_link_columns(db, join_table).await?;
+
     // Same read-only-role grant every provisioned table gets (D-126) — a
     // relationship's join rows must be reachable through
     // `/api/v1/query/execute`'s relationship-join support, which runs under
     // `attome_readonly`, exactly like an ordinary entity table.
     grant_readonly_select(db, join_table).await
+}
+
+/// A7-T4: a link's own columns — its `role`, its validity dates
+/// (`valid_from`, `valid_to`; open when null) and further `attributes` — on
+/// `join_table`, added when missing. Each is nullable or has a constant
+/// default, so adding them changes metadata only and rewrites no row.
+pub async fn ensure_link_columns(db: &DbPool, join_table: &str) -> Result<(), AppError> {
+    if !join_table
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+    {
+        return Err(AppError::internal(format!(
+            "invalid join table identifier: {join_table}"
+        )));
+    }
+    exec_ddl_locked(
+        db,
+        &[],
+        &format!(
+            r#"ALTER TABLE "{join_table}"
+                   ADD COLUMN IF NOT EXISTS role TEXT,
+                   ADD COLUMN IF NOT EXISTS valid_from DATE,
+                   ADD COLUMN IF NOT EXISTS valid_to DATE,
+                   ADD COLUMN IF NOT EXISTS attributes JSONB NOT NULL DEFAULT '{{}}'::jsonb"#
+        ),
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!(error = %e, join_table = %join_table, "adding a join table's link columns failed");
+        AppError::internal(e)
+    })
 }
 
 /// C-21 (M01 §7) guard — `Ok(())` when `join_table` doesn't exist yet (the
