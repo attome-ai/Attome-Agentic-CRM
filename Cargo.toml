@@ -10,6 +10,7 @@ members = [
     "crates/foundation/attome-html",
     "crates/foundation/attome-calendar",
     "crates/foundation/attome-rules",
+    "crates/foundation/attome-rules-wasm",
     "crates/foundation/attome-storage",
     "crates/foundation/attome-inference",
     "crates/foundation/attome-profiler",
@@ -242,6 +243,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 url           = "2"
 utoipa        = { version = "5", features = ["macros", "uuid", "chrono"] }
 uuid          = { version = "1", features = ["v4", "v5", "v7", "serde"] }
+wasm-bindgen  = "0.2.129"
 # Y4-T1: engine manifests' platform ranges (already in the tree).
 semver        = "1"
 # Z5-T8: HTTP/3 behind the attome crate's `http3` feature (quinn on rustls/ring).

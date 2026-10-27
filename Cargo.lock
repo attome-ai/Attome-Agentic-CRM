@@ -2187,6 +2187,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "attome-rules-wasm"
+version = "0.1.0"
+dependencies = [
+ "attome-calendar",
+ "attome-rules",
+ "chrono",
+ "chrono-tz",
+ "serde_json",
+ "uuid",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "attome-s2s"
 version = "0.1.0"
 dependencies = [

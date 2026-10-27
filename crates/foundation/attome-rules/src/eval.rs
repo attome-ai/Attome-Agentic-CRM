@@ -39,6 +39,8 @@
 //! trace a record of what actually ran.
 
 use std::cmp::Ordering;
+use std::time::Duration;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
 
 use chrono::{DateTime, Datelike, MappedLocalTime, Months, NaiveDateTime, TimeZone, Utc};
@@ -76,6 +78,32 @@ pub(crate) fn eval_traced(
     run(expr, ctx, budgets, schema, regexes, true)
 }
 
+/// When an evaluation started, for the wall-clock budget. Z11-T13:
+/// wasm32-unknown-unknown has no clock (`Instant::now` panics there), so in
+/// the browser the step budget alone bounds an evaluation.
+#[derive(Clone, Copy)]
+struct Started(#[cfg(not(target_arch = "wasm32"))] Instant);
+
+impl Started {
+    fn now() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        return Self(Instant::now());
+        #[cfg(target_arch = "wasm32")]
+        return Self();
+    }
+
+    #[cfg_attr(target_arch = "wasm32", allow(clippy::unused_self))]
+    fn over(self, budget: Duration) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        return self.0.elapsed() > budget;
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = budget;
+            false
+        }
+    }
+}
+
 /// Z11-T6: the compiled `matches` patterns, keyed by pattern text.
 pub(crate) type Regexes = std::collections::HashMap<String, regex::Regex>;
 
@@ -93,7 +121,7 @@ fn run(
         schema,
         regexes,
         steps: 0,
-        start: Instant::now(),
+        start: Started::now(),
         record_trace,
         scope: Vec::new(),
     };
@@ -108,7 +136,7 @@ struct Evaluator<'a> {
     schema: &'a Schema,
     regexes: &'a Regexes,
     steps: usize,
-    start: Instant,
+    start: Started,
     record_trace: bool,
     /// Z11-T3: the lambda parameters in scope, innermost last.
     scope: Vec<(String, Value)>,
@@ -120,7 +148,7 @@ impl Evaluator<'_> {
         if self.steps > self.budgets.max_eval_steps {
             return Err(RulesError::Budget(BudgetKind::EvalSteps));
         }
-        if self.start.elapsed() > self.budgets.max_wall_clock {
+        if self.start.over(self.budgets.max_wall_clock) {
             return Err(RulesError::Budget(BudgetKind::WallClock));
         }
         Ok(())

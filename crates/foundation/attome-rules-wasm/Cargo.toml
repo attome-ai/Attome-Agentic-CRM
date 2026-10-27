@@ -1,0 +1,31 @@
+[package]
+name         = "attome-rules-wasm"
+description  = "attome-rules for the browser: validate and evaluate an expression over JSON, built to WebAssembly so a screen answers exactly as the server does."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+attome-calendar.workspace = true
+attome-rules.workspace    = true
+chrono.workspace          = true
+chrono-tz.workspace       = true
+serde_json.workspace      = true
+uuid.workspace            = true
+wasm-bindgen.workspace    = true
+
+# The workspace's uuid carries v4/v7, which need a source of randomness on
+# wasm32-unknown-unknown; nothing here generates an id.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+uuid = { workspace = true, features = ["js"] }
+
+[lints]
+workspace = true

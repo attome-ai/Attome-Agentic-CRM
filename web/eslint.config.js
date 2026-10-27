@@ -6,7 +6,7 @@ const angular = require("angular-eslint");
 
 module.exports = defineConfig([
   {
-    ignores: ["**/generated/**"],
+    ignores: ["**/generated/**", "**/rules/wasm/**"],
   },
   {
     files: ["**/*.ts"],

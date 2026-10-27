@@ -111,3 +111,6 @@ export { TourService }                                from './lib/tours/tour.ser
 export type { ActiveTour }                            from './lib/tours/tour.service';
 export { TOURS_SEEN_SETTING, autoTour, localText, routeMatches, tourFor } from './lib/tours/tour';
 export type { LocalText, Tour, TourPlacement, TourStep } from './lib/tours/tour';
+// Z11-T13: the server's expression evaluator, built to WebAssembly.
+export { RULES_WASM_SOURCE, RulesEvaluatorService }  from './lib/rules/rules-evaluator.service';
+export type { RulesAnswer, RulesContext, RulesDiagnostic, RulesSchema } from './lib/rules/rules-evaluator.service';

@@ -183,6 +183,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*.wasm",
+                "input": "projects/base/src/lib/rules/wasm",
+                "output": "rules"
               }
             ],
             "styles": [
