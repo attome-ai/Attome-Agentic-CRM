@@ -15,8 +15,8 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use serde_json::Value;
 
 use super::migration_source::{
-    MAX_ENTITIES, RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField, SourceFile,
-    SourceFuture, SourceModel, SourceRecord, plain_name, send_with_backoff,
+    MAX_ENTITIES, MAX_USERS, RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField,
+    SourceFile, SourceFuture, SourceModel, SourceRecord, SourceUser, plain_name, send_with_backoff,
 };
 use crate::connector::sdk::{Request, Response, Secret, Transport};
 
@@ -289,7 +289,10 @@ impl<'a> ZohoSource<'a> {
         for (name, label, custom) in modules {
             entities.push(self.describe(&name, &label, custom).await?);
         }
-        Ok(SourceModel { entities })
+        Ok(SourceModel {
+            entities,
+            users: Vec::new(),
+        })
     }
 
     async fn page(
@@ -360,7 +363,48 @@ impl<'a> ZohoSource<'a> {
     }
 }
 
+impl ZohoSource<'_> {
+    async fn users(&mut self) -> Result<Vec<SourceUser>, AppError> {
+        let mut out = Vec::new();
+        for page in 1..=50 {
+            let body = self
+                .get(
+                    &format!("/users?type=AllUsers&per_page=200&page={page}"),
+                    None,
+                )
+                .await?;
+            out.extend(
+                body["users"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|u| {
+                        let id = match &u["id"] {
+                            serde_json::Value::String(s) => s.clone(),
+                            serde_json::Value::Number(n) => n.to_string(),
+                            _ => return None,
+                        };
+                        Some(SourceUser {
+                            id,
+                            name: u["full_name"].as_str().unwrap_or_default().to_owned(),
+                            email: u["email"].as_str().map(str::to_owned),
+                            active: u["status"].as_str() != Some("disabled"),
+                        })
+                    }),
+            );
+            if body["info"]["more_records"] != true || out.len() >= MAX_USERS {
+                break;
+            }
+        }
+        Ok(out)
+    }
+}
+
 impl SourceConnector for ZohoSource<'_> {
+    fn read_users<'a>(&'a mut self) -> SourceFuture<'a, Vec<SourceUser>> {
+        Box::pin(self.users())
+    }
+
     fn describe_model<'a>(&'a mut self) -> SourceFuture<'a, SourceModel> {
         Box::pin(self.model())
     }

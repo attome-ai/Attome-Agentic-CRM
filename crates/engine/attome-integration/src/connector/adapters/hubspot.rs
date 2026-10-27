@@ -16,8 +16,8 @@ use chrono::{DateTime, Utc};
 use serde_json::{Map, Value, json};
 
 use super::migration_source::{
-    RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField, SourceFile, SourceFuture,
-    SourceModel, SourceRecord, plain_name, send_with_backoff,
+    MAX_USERS, RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField, SourceFile,
+    SourceFuture, SourceModel, SourceRecord, SourceUser, plain_name, send_with_backoff,
 };
 use crate::connector::sdk::{Request, Secret, Transport};
 
@@ -208,7 +208,10 @@ impl<'a> HubSpotSource<'a> {
         for object in objects {
             entities.push(self.describe(&object).await?);
         }
-        Ok(SourceModel { entities })
+        Ok(SourceModel {
+            entities,
+            users: Vec::new(),
+        })
     }
 
     async fn page(
@@ -321,7 +324,48 @@ impl<'a> HubSpotSource<'a> {
     }
 }
 
+impl HubSpotSource<'_> {
+    async fn users(&mut self) -> Result<Vec<SourceUser>, AppError> {
+        let mut after: Option<String> = None;
+        let mut out = Vec::new();
+        loop {
+            let mut path = "/crm/v3/owners?limit=500".to_owned();
+            if let Some(a) = &after {
+                path.push_str(&format!("&after={a}"));
+            }
+            let page = self.call("GET", &path, None).await?;
+            out.extend(
+                page["results"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|u| {
+                        let name = format!(
+                            "{} {}",
+                            u["firstName"].as_str().unwrap_or_default(),
+                            u["lastName"].as_str().unwrap_or_default()
+                        );
+                        Some(SourceUser {
+                            id: u["id"].as_str()?.to_owned(),
+                            name: name.trim().to_owned(),
+                            email: u["email"].as_str().map(str::to_owned),
+                            active: u["archived"] != true,
+                        })
+                    }),
+            );
+            match page["paging"]["next"]["after"].as_str() {
+                Some(a) if out.len() < MAX_USERS && digits(a) => after = Some(a.to_owned()),
+                _ => return Ok(out),
+            }
+        }
+    }
+}
+
 impl SourceConnector for HubSpotSource<'_> {
+    fn read_users<'a>(&'a mut self) -> SourceFuture<'a, Vec<SourceUser>> {
+        Box::pin(self.users())
+    }
+
     fn describe_model<'a>(&'a mut self) -> SourceFuture<'a, SourceModel> {
         Box::pin(self.model())
     }

@@ -206,7 +206,14 @@ pub async fn describe_named(
     system: &str,
 ) -> Result<(SourceKind, SourceModel), AppError> {
     let opened = NamedSource::open(state, system).await?;
-    let model = opened.connector().describe_model().await?;
+    let mut connector = opened.connector();
+    let mut model = connector.describe_model().await?;
+    // The people are a convenience for the mapping: a source that refuses
+    // to list them still describes its model.
+    match connector.read_users().await {
+        Ok(users) => model.users = users,
+        Err(e) => tracing::warn!(system, error = %e, "the source did not list its users"),
+    }
     Ok((opened.kind, model))
 }
 

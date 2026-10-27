@@ -21,8 +21,9 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use serde_json::{Map, Value};
 
 use super::migration_source::{
-    MAX_ENTITIES, RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField, SourceFile,
-    SourceFuture, SourceModel, SourceRecord, csv_rows, header, plain_name, send_with_backoff,
+    MAX_ENTITIES, MAX_USERS, RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField,
+    SourceFile, SourceFuture, SourceModel, SourceRecord, SourceUser, csv_rows, header, plain_name,
+    send_with_backoff,
 };
 use crate::connector::sdk::{Request, Response, Secret, Transport};
 
@@ -343,7 +344,10 @@ impl<'a> SalesforceSource<'a> {
         for name in names {
             entities.push(self.describe(&name).await?);
         }
-        Ok(SourceModel { entities })
+        Ok(SourceModel {
+            entities,
+            users: Vec::new(),
+        })
     }
 
     /// Starts the query job of a first page and waits for it.
@@ -469,7 +473,42 @@ impl<'a> SalesforceSource<'a> {
     }
 }
 
+impl SalesforceSource<'_> {
+    async fn users(&mut self) -> Result<Vec<SourceUser>, AppError> {
+        let q = "SELECT Id, Name, Email, IsActive FROM User";
+        let mut url = self.api(&format!("/query?q={}", encode(q)));
+        let mut out = Vec::new();
+        loop {
+            let page = self.json("GET", url, None).await?;
+            out.extend(
+                page["records"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|u| {
+                        Some(SourceUser {
+                            id: u["Id"].as_str()?.to_owned(),
+                            name: u["Name"].as_str().unwrap_or_default().to_owned(),
+                            email: u["Email"].as_str().map(str::to_owned),
+                            active: u["IsActive"] != false,
+                        })
+                    }),
+            );
+            match page["nextRecordsUrl"].as_str() {
+                Some(next) if out.len() < MAX_USERS && next.starts_with("/services/data/") => {
+                    url = format!("{}{next}", self.instance_url);
+                }
+                _ => return Ok(out),
+            }
+        }
+    }
+}
+
 impl SourceConnector for SalesforceSource<'_> {
+    fn read_users<'a>(&'a mut self) -> SourceFuture<'a, Vec<SourceUser>> {
+        Box::pin(self.users())
+    }
+
     fn describe_model<'a>(&'a mut self) -> SourceFuture<'a, SourceModel> {
         Box::pin(self.model())
     }

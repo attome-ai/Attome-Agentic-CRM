@@ -3,7 +3,7 @@ import { ApiError, LangService, TranslatePipe } from '@attome/base';
 
 import {
   AttributeMapping, CREATE_TYPES, EntityMapping, MapAction, MappingDoc, MigrationWave, ModelMapping, ModelMappingService,
-  counts, merges, withAttribute, withEntity,
+  counts, merges, withAttribute, withEntity, withUser,
 } from './model-mapping';
 
 /**
@@ -177,6 +177,10 @@ export class MappingComponent implements OnInit {
 
   setType(e: number, a: number, event: Event): void {
     this.edit(m => withAttribute(m, e, a, { field_type: (event.target as HTMLSelectElement).value, type_mismatch: false }));
+  }
+
+  setUser(u: number, event: Event): void {
+    this.edit(m => withUser(m, u, (event.target as HTMLInputElement).value));
   }
 
   private edit(change: (m: ModelMapping) => ModelMapping): void {

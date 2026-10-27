@@ -22,8 +22,8 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use serde_json::{Map, Value};
 
 use super::migration_source::{
-    MAX_ENTITIES, RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField, SourceFile,
-    SourceFuture, SourceModel, SourceRecord, plain_name, send_with_backoff,
+    MAX_ENTITIES, MAX_USERS, RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField,
+    SourceFile, SourceFuture, SourceModel, SourceRecord, SourceUser, plain_name, send_with_backoff,
 };
 use crate::connector::sdk::{Request, Response, Secret, Transport};
 
@@ -378,7 +378,10 @@ impl<'a> DynamicsSource<'a> {
         for name in names {
             entities.push(self.describe(&name).await?);
         }
-        Ok(SourceModel { entities })
+        Ok(SourceModel {
+            entities,
+            users: Vec::new(),
+        })
     }
 
     async fn page(
@@ -449,7 +452,44 @@ impl<'a> DynamicsSource<'a> {
     }
 }
 
+impl DynamicsSource<'_> {
+    async fn users(&mut self) -> Result<Vec<SourceUser>, AppError> {
+        let mut url =
+            self.api("systemusers?$select=systemuserid,fullname,internalemailaddress,isdisabled");
+        let mut out = Vec::new();
+        loop {
+            let page = self.get(url).await?;
+            out.extend(
+                page["value"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|u| {
+                        Some(SourceUser {
+                            id: u["systemuserid"].as_str()?.to_owned(),
+                            name: u["fullname"].as_str().unwrap_or_default().to_owned(),
+                            email: u["internalemailaddress"].as_str().map(str::to_owned),
+                            active: u["isdisabled"] != true,
+                        })
+                    }),
+            );
+            match page["@odata.nextLink"].as_str() {
+                Some(next)
+                    if out.len() < MAX_USERS && next.starts_with(&self.api("systemusers")) =>
+                {
+                    url = next.to_owned();
+                }
+                _ => return Ok(out),
+            }
+        }
+    }
+}
+
 impl SourceConnector for DynamicsSource<'_> {
+    fn read_users<'a>(&'a mut self) -> SourceFuture<'a, Vec<SourceUser>> {
+        Box::pin(self.users())
+    }
+
     fn describe_model<'a>(&'a mut self) -> SourceFuture<'a, SourceModel> {
         Box::pin(self.model())
     }

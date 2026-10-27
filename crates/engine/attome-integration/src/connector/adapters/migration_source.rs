@@ -31,6 +31,8 @@ pub const BASE_BACKOFF_SECS: u64 = 2;
 pub const MAX_BACKOFF_SECS: u64 = 120;
 /// The most entities one model description covers.
 pub const MAX_ENTITIES: usize = 200;
+/// The most people one source lists.
+pub const MAX_USERS: usize = 10_000;
 
 /// A boxed future of a source call.
 pub type SourceFuture<'a, T> = Pin<Box<dyn Future<Output = Result<T, AppError>> + Send + 'a>>;
@@ -39,6 +41,18 @@ pub type SourceFuture<'a, T> = Pin<Box<dyn Future<Output = Result<T, AppError>> 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct SourceModel {
     pub entities: Vec<SourceEntity>,
+    /// A24-T3: the source's people, for the mapping's users part.
+    #[serde(default)]
+    pub users: Vec<SourceUser>,
+}
+
+/// One person of the source system.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct SourceUser {
+    pub id: String,
+    pub name: String,
+    pub email: Option<String>,
+    pub active: bool,
 }
 
 /// One entity of the source.
@@ -185,6 +199,9 @@ pub trait SourceConnector: Send {
         entity: &'a str,
         record_id: &'a str,
     ) -> SourceFuture<'a, Vec<SourceFile>>;
+
+    /// The source's people (at most [`MAX_USERS`]).
+    fn read_users<'a>(&'a mut self) -> SourceFuture<'a, Vec<SourceUser>>;
 
     /// What the source last said about its API allowance.
     fn rate_limit(&self) -> RateLimit;

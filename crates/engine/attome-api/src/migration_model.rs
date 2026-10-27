@@ -217,7 +217,19 @@ pub(crate) async fn draft_model_mapping(
             "source_model holds more than {MAX_SOURCE_ENTITIES} entities"
         )));
     }
-    let mapping = migration_mapping::draft_mapping(&body.source_model, &targets(&state));
+    let mut mapping = migration_mapping::draft_mapping(&body.source_model, &targets(&state));
+    // The source's people, matched to accounts here by email.
+    let accounts: Vec<(Uuid, Option<String>)> = sqlx::query_as(
+        "SELECT id, email FROM user_account WHERE is_active IS NOT FALSE AND email IS NOT NULL",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let accounts: Vec<(String, String)> = accounts
+        .into_iter()
+        .filter_map(|(id, email)| Some((id.to_string(), email?)))
+        .collect();
+    mapping.users = migration_mapping::draft_users(&body.source_model.users, &accounts);
     let source_json = serde_json::to_value(&body.source_model).map_err(AppError::internal)?;
     let mapping_json = serde_json::to_value(&mapping).map_err(AppError::internal)?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

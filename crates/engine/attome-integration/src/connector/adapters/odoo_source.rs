@@ -12,8 +12,8 @@ use chrono::{DateTime, Utc};
 use serde_json::{Map, Value, json};
 
 use super::migration_source::{
-    RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField, SourceFile, SourceFuture,
-    SourceModel, SourceRecord,
+    MAX_USERS, RateLimit, RecordPage, SourceConnector, SourceEntity, SourceField, SourceFile,
+    SourceFuture, SourceModel, SourceRecord, SourceUser,
 };
 use super::odoo::OdooClient;
 
@@ -165,7 +165,10 @@ impl<'a> OdooSource<'a> {
         for model in models {
             entities.push(self.describe(&model).await?);
         }
-        Ok(SourceModel { entities })
+        Ok(SourceModel {
+            entities,
+            users: Vec::new(),
+        })
     }
 
     async fn page(
@@ -255,7 +258,41 @@ impl<'a> OdooSource<'a> {
     }
 }
 
+impl OdooSource<'_> {
+    async fn users(&mut self) -> Result<Vec<SourceUser>, AppError> {
+        let rows = self
+            .client
+            .execute(
+                "res.users",
+                "search_read",
+                json!([[["share", "=", false]]]),
+                json!({ "fields": ["name", "login", "email", "active"], "limit": MAX_USERS, "context": { "active_test": false } }),
+            )
+            .await?;
+        Ok(rows
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|u| {
+                Some(SourceUser {
+                    id: u["id"].as_i64()?.to_string(),
+                    name: u["name"].as_str().unwrap_or_default().to_owned(),
+                    email: u["email"]
+                        .as_str()
+                        .or(u["login"].as_str())
+                        .map(str::to_owned),
+                    active: u["active"] != false,
+                })
+            })
+            .collect())
+    }
+}
+
 impl SourceConnector for OdooSource<'_> {
+    fn read_users<'a>(&'a mut self) -> SourceFuture<'a, Vec<SourceUser>> {
+        Box::pin(self.users())
+    }
+
     fn describe_model<'a>(&'a mut self) -> SourceFuture<'a, SourceModel> {
         Box::pin(self.model())
     }

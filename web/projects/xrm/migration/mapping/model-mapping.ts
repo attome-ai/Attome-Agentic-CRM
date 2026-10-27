@@ -34,9 +34,17 @@ export interface EntityMapping {
   attributes: AttributeMapping[];
 }
 
+/** A source person and the user account here they become. */
+export interface UserMapping {
+  source: string;
+  name: string;
+  email: string | null;
+  target: string | null;
+}
+
 export interface ModelMapping {
   entities: EntityMapping[];
-  users: ValueMapping[];
+  users: UserMapping[];
   roles: ValueMapping[];
 }
 
@@ -86,6 +94,12 @@ export function merges(entity: EntityMapping): Set<string> {
     if (a.action !== 'skip') seen.set(a.target, (seen.get(a.target) ?? 0) + 1);
   }
   return new Set([...seen].filter(([, n]) => n > 1).map(([t]) => t));
+}
+
+/** `mapping` with source person `u` becoming account `target` (empty: none). Pure. */
+export function withUser(mapping: ModelMapping, u: number, target: string): ModelMapping {
+  const t = target.trim();
+  return { ...mapping, users: mapping.users.map((x, i) => (i === u ? { ...x, target: t || null } : x)) };
 }
 
 /** How many entities and fields each action covers. Pure. */

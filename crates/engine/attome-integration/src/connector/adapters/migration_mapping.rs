@@ -15,7 +15,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use super::migration_source::{SourceEntity, SourceField, SourceModel};
+use super::migration_source::{SourceEntity, SourceField, SourceModel, SourceUser};
 
 /// What happens to one source entity or field.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -70,6 +70,38 @@ pub struct EntityMapping {
     pub attributes: Vec<AttributeMapping>,
 }
 
+/// One source person and the user account here they become; `target: None`
+/// until the person picks one (a record they owned is then owned by the
+/// wave's runner).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct UserMapping {
+    pub source: String,
+    pub name: String,
+    pub email: Option<String>,
+    /// The user account's id here.
+    pub target: Option<String>,
+}
+
+/// The source's people matched to user accounts here by email (case and
+/// spacing ignored); accounts are `(id, email)`. Pure.
+pub fn draft_users(users: &[SourceUser], accounts: &[(String, String)]) -> Vec<UserMapping> {
+    let norm = |e: &str| e.trim().to_lowercase();
+    users
+        .iter()
+        .map(|u| UserMapping {
+            source: u.id.clone(),
+            name: u.name.clone(),
+            email: u.email.clone(),
+            target: u.email.as_deref().and_then(|e| {
+                accounts
+                    .iter()
+                    .find(|(_, a)| norm(a) == norm(e))
+                    .map(|(id, _)| id.clone())
+            }),
+        })
+        .collect()
+}
+
 /// A whole migration's mapping. `users` and `roles` map the source's
 /// people and roles to this deployment's; the drafts leave them empty, as
 /// the source connectors do not list people yet, and the person fills them.
@@ -77,7 +109,7 @@ pub struct EntityMapping {
 pub struct ModelMapping {
     pub entities: Vec<EntityMapping>,
     #[serde(default)]
-    pub users: Vec<ValueMapping>,
+    pub users: Vec<UserMapping>,
     #[serde(default)]
     pub roles: Vec<ValueMapping>,
 }
@@ -420,6 +452,7 @@ mod tests {
 
     fn fake_model() -> SourceModel {
         SourceModel {
+            users: Vec::new(),
             entities: vec![
                 SourceEntity {
                     name: "Opportunity".into(),
@@ -518,6 +551,27 @@ mod tests {
         assert_eq!(vehicle.attributes[0].target, "plate_number");
         assert_eq!(vehicle.attributes[0].action, MapAction::Create);
         assert!(validate_mapping(&m, &targets()).is_empty());
+    }
+
+    #[test]
+    fn mapping_users_match_by_email() {
+        let users = [
+            SourceUser {
+                id: "005A".into(),
+                name: "Sara".into(),
+                email: Some(" Sara@Acme.com".into()),
+                active: true,
+            },
+            SourceUser {
+                id: "005B".into(),
+                name: "Omar".into(),
+                email: None,
+                active: true,
+            },
+        ];
+        let mapped = draft_users(&users, &[("u-1".into(), "sara@acme.com".into())]);
+        assert_eq!(mapped[0].target.as_deref(), Some("u-1"));
+        assert_eq!(mapped[1].target, None);
     }
 
     #[test]

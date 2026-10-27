@@ -58,6 +58,31 @@
       </ul>
     }
 
+    @if (m.users.length) {
+      <table class="mapping-table" data-testid="mapping-users">
+        <caption>{{ 'modelMapping.users' | translate }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'modelMapping.sourceUser' | translate }}</th>
+            <th scope="col">{{ 'modelMapping.targetUser' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of m.users; track user.source; let u = $index) {
+            <tr [class.skipped]="!user.target">
+              <th scope="row">{{ user.name }} <code>{{ user.email ?? user.source }}</code></th>
+              <td>
+                <label>
+                  <span class="sr-only">{{ 'modelMapping.targetUser' | translate }}</span>
+                  <input type="text" [value]="user.target ?? ''" (change)="setUser(u, $event)" [attr.data-user-target]="user.source" />
+                </label>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
     @for (entity of m.entities; track entity.source; let e = $index) {
       <table class="mapping-table" [attr.data-entity]="entity.source">
         <caption>
