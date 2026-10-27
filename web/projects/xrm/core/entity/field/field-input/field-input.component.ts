@@ -24,6 +24,7 @@ import { UploadPipeline } from '../upload-pipeline';
 import { MultiAttachmentComponent } from '../multi-attachment/multi-attachment.component';
 import { RichTextEditorComponent } from '../rich-text-editor/rich-text-editor.component';
 import { FieldHistoryComponent } from '../field-history/field-history.component';
+import { PolymorphicLookupComponent, type PolymorphicValue } from '../polymorphic-lookup/polymorphic-lookup.component';
 import { ImageUploadComponent } from '../image-upload/image-upload.component';
 import { ScanFieldOptions, scanToValues } from './scan-to-values';
 import { checkFailure } from '../field-checks';
@@ -52,7 +53,7 @@ export function fromLocalDateTimeInput(raw: string): string | null | undefined {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule, TranslatePipe, MultiAttachmentComponent, FileVersionsComponent,
-    RichTextEditorComponent, ImageUploadComponent, FieldHistoryComponent,
+    RichTextEditorComponent, ImageUploadComponent, FieldHistoryComponent, PolymorphicLookupComponent,
   ],
   viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
   // The grid item is this host element, not the .xf-field inside it, so the
@@ -315,6 +316,35 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   // create-session -> PUT -> finalize -> poll, shared with
   // `image-upload.component.ts` (upload-pipeline.ts).
   private readonly pipeline = new UploadPipeline(this.fileSvc);
+
+  // ── A8-T5: a polymorphic id field ───────────────────────────────────────
+  /** The field's polymorphic pair and the entities it may point at, if it is one. */
+  readonly polymorphic = computed(() => {
+    const options = this.field().options as unknown as { polymorphic?: { pair?: string; targets?: string[]; extends?: string } } | null;
+    const poly = options?.polymorphic;
+    if (!poly?.pair) return null;
+    return { pair: poly.pair, targets: poly.targets?.length ? poly.targets : poly.extends ? [poly.extends] : [] };
+  });
+
+  /** The pair as the picker shows it. */
+  polyValue(): PolymorphicValue | null {
+    const poly = this.polymorphic();
+    if (!poly) return null;
+    const form = this.cc.control as FormGroup;
+    const id = form.get(this.field().name)?.value;
+    const entity = form.get(poly.pair)?.value;
+    return typeof id === 'string' && id && typeof entity === 'string' && entity ? { entity, id, label: id } : null;
+  }
+
+  /** Writes both attributes of the pair. */
+  onPolyPicked(value: PolymorphicValue | null): void {
+    const poly = this.polymorphic();
+    if (!poly) return;
+    const form = this.cc.control as FormGroup;
+    form.get(this.field().name)?.setValue(value?.id ?? null);
+    form.get(poly.pair)?.setValue(value?.entity ?? null);
+    form.markAsDirty();
+  }
 
   // ── Form control access ───────────────────────────────────────────────────
   get ctrl(): AbstractControl {

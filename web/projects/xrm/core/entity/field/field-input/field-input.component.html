@@ -31,7 +31,11 @@
   @switch (field().field_type) {
 
     @case ('text') {
-      <div class="scan-row">
+      @if (polymorphic(); as poly) {
+        <!-- A8-T5: a polymorphic id field picks its record (and sets its pair). -->
+        <xrm-polymorphic-lookup [targets]="poly.targets" [value]="polyValue()" (picked)="onPolyPicked($event)" />
+      }
+      <div class="scan-row" [hidden]="!!polymorphic()">
       <input [id]="field().name" [type]="textType()" class="xf-input" dir="auto"
              [class.is-invalid]="showRequiredError()"
              [attr.aria-invalid]="showRequiredError()"
