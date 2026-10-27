@@ -11012,3 +11012,47 @@ fn cascade_preview_shows_the_tree_before_a_delete() {
         assert_eq!(status, StatusCode::OK);
     })
 }
+
+// op: POST /api/v1/{entity}
+#[test]
+fn polymorphic_lookup_accepts_only_allowed_live_targets() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let cookie = seed_admin(&system).await;
+        let state = system.state().clone();
+        let app = full_app(system);
+        let (account, account_id) = create_entity(&app, &cookie, "a8_account").await;
+        create_field(&app, &cookie, &account_id, r#"{"logicalname":"title","name":"Title","field_type":"text"}"#).await;
+        let (other, other_id) = create_entity(&app, &cookie, "a8_other").await;
+        create_field(&app, &cookie, &other_id, r#"{"logicalname":"title","name":"Title","field_type":"text"}"#).await;
+        let (task, task_id) = create_entity(&app, &cookie, "a8_task").await;
+        create_field(&app, &cookie, &task_id, r#"{"logicalname":"regarding_entity","name":"Regarding type","field_type":"text"}"#).await;
+        create_field(
+            &app,
+            &cookie,
+            &task_id,
+            &format!(r#"{{"logicalname":"regarding_id","name":"Regarding","field_type":"text","options":{{"polymorphic":{{"pair":"regarding_entity","targets":["{account}"]}}}}}}"#),
+        )
+        .await;
+        sync_registry(&state).await;
+        let a = cascade_record(&app, &cookie, &account, r#"{"title":"a"}"#.into()).await;
+        let o = cascade_record(&app, &cookie, &other, r#"{"title":"o"}"#.into()).await;
+
+        // An allowed, live, readable target.
+        let (status, body) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{task}"),
+            Some(format!(r#"{{"regarding_entity":"{account}","regarding_id":"{a}"}}"#))).await;
+        assert_eq!(status, StatusCode::CREATED, "{body:?}");
+        // The wrong entity.
+        let (status, _) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{task}"),
+            Some(format!(r#"{{"regarding_entity":"{other}","regarding_id":"{o}"}}"#))).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        // A record that does not exist.
+        let (status, _) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{task}"),
+            Some(format!(r#"{{"regarding_entity":"{account}","regarding_id":"{}"}}"#, Uuid::now_v7()))).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        // Half a pair.
+        let (status, _) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{task}"),
+            Some(format!(r#"{{"regarding_id":"{a}"}}"#))).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    })
+}
