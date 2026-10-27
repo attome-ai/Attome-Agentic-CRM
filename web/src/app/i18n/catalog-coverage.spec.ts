@@ -9,6 +9,7 @@ import { xrmAr } from '@attome/xrm/core/i18n-ar';
 import { reportBuilderAr, reportBuilderEn } from '@attome/xrm/report/builder';
 import { emailDesignerAr, emailDesignerEn } from '@attome/xrm/marketing/email-designer';
 import { appDesignerAr, appDesignerEn } from '@attome/xrm/core/admin/app-designer';
+import { fleetAr, fleetEn } from '@attome/xrm/fleet';
 import { describe, expect, it } from 'vitest';
 import { hostAr } from './ar.catalog';
 import { hostEn } from './en.catalog';
@@ -93,6 +94,7 @@ const LAYERS = [
   ['reportBuilder', reportBuilderEn, reportBuilderAr],
   ['emailDesigner', emailDesignerEn, emailDesignerAr],
   ['appDesigner', appDesignerEn, appDesignerAr],
+  ['fleet', fleetEn, fleetAr],
 ] as const;
 
 describe('i18n catalog coverage — all layers', () => {
@@ -107,6 +109,7 @@ describe('i18n catalog coverage — all layers', () => {
         provideLayerCatalog(reportBuilderEn, () => Promise.resolve(reportBuilderAr)),
         provideLayerCatalog(emailDesignerEn, () => Promise.resolve(emailDesignerAr)),
         provideLayerCatalog(appDesignerEn, () => Promise.resolve(appDesignerAr)),
+        provideLayerCatalog(fleetEn, () => Promise.resolve(fleetAr)),
       ],
     });
     const lang = TestBed.inject(LangService);

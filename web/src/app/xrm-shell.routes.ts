@@ -1222,7 +1222,11 @@ export const xrmShellRoutes: Routes = [
           ...(typeof ATTOME_FLEET_CONSOLE !== 'undefined' && ATTOME_FLEET_CONSOLE
             ? [{
                 path: 'fleet',
-                canActivate: [authGuard],
+                providers: [provideLayerCatalog(
+                  () => import('@attome/xrm/fleet').then(m => m.fleetEn),
+                  () => import('@attome/xrm/fleet').then(m => m.fleetAr),
+                )],
+                canActivate: [authGuard, layerCatalogsReady],
                 loadChildren: () => import('@attome/xrm/fleet').then(m => m.FLEET_ROUTES),
               }]
             : []),

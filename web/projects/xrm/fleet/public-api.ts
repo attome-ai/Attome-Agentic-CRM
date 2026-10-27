@@ -10,6 +10,7 @@
  * build with the gate open, on loopback, for `system.admin`.
  */
 export { FLEET_ROUTES } from './fleet.routes';
+export { fleetAr, fleetEn } from './fleet.i18n';
 export { FleetService, FLEET_API, FLEET_STEP_UP_OPERATION } from './data/fleet.service';
 export type { ItemFilter } from './data/fleet.service';
 export { fleetErrorText, fleetErrorCode, FLEET_ERROR_CODES } from './data/fleet-error-text';
