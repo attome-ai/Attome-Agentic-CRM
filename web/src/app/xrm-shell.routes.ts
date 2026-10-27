@@ -182,6 +182,16 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/migration').then(m => m.MigrationWizardComponent),
           },
           {
+            // A24-T3: a migration project's model mapping.
+            path: 'migration/projects/:id/mapping',
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/migration').then(m => m.migrationEn),
+              () => import('@attome/xrm/migration').then(m => m.migrationAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
+            loadComponent: () => import('@attome/xrm/migration').then(m => m.MappingComponent),
+          },
+          {
             // D-432 / M13 — the duplicate-candidate steward queue.
             path: 'duplicates',
             providers: [provideLayerCatalog(

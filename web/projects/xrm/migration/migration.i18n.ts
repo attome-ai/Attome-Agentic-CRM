@@ -1,8 +1,35 @@
 /**
  * Y14-T4: the migration wizard and its CSV import's own catalogue, registered on its route
- * (`provideLayerCatalog`). Its namespaces, `csvImport`, `importJob`, are owned by this layer only.
+ * (`provideLayerCatalog`). Its namespaces, `csvImport`, `importJob`, `modelMapping`, are owned by this layer only.
  */
 export const migrationEn = {
+  // A24-T3: the model mapping editor.
+  modelMapping: {
+    title: 'Model mapping',
+    loading: 'Loading the mapping…',
+    counts: '{map, plural, one {# field mapped} other {# fields mapped}}, {create, plural, one {# to create} other {# to create}}, {skip, plural, one {# skipped} other {# skipped}}',
+    save: 'Save mapping',
+    revert: 'Undo changes',
+    action: {
+      label: 'What happens',
+      map: 'Map to existing',
+      create: 'Create',
+      skip: 'Skip',
+    },
+    source: 'Source field',
+    target: 'Becomes',
+    type: 'Type',
+    merged: 'Several source fields go into this attribute.',
+    mismatch: 'The source values may not fit this type.',
+    choices: '{count, plural, one {# choice} other {# choices}}, {unmatched} to add',
+    draftIntro: 'Load the source system's model (the JSON its connector describes) to draft a mapping. Every entity and field gets a proposal you can change here.',
+    sourceFile: 'Model file',
+    sourceText: 'Or paste the model',
+    draft: 'Draft mapping',
+    conflict: 'Someone else saved this mapping since you opened it. Reload to see their changes.',
+    unreadable: 'The file could not be read.',
+    notJson: 'The model is not valid JSON.',
+  },
   csvImport: {
     wizardTitle: 'Data import',
     sourceLabel: 'Import from',
@@ -236,6 +263,33 @@ export const migrationEn = {
 };
 
 export const migrationAr = {
+  // A24-T3: the model mapping editor.
+  modelMapping: {
+    title: 'ربط النموذج',
+    loading: 'جارٍ تحميل الربط…',
+    counts: '{map, plural, one {حقل واحد مربوط} two {حقلان مربوطان} other {# حقول مربوطة}}، {create, plural, one {حقل واحد للإنشاء} two {حقلان للإنشاء} other {# حقول للإنشاء}}، {skip, plural, one {حقل واحد متجاوز} two {حقلان متجاوزان} other {# حقول متجاوزة}}',
+    save: 'حفظ الربط',
+    revert: 'التراجع عن التغييرات',
+    action: {
+      label: 'ما يحدث',
+      map: 'ربط بموجود',
+      create: 'إنشاء',
+      skip: 'تجاوز',
+    },
+    source: 'حقل المصدر',
+    target: 'يصبح',
+    type: 'النوع',
+    merged: 'تذهب عدة حقول من المصدر إلى هذه الخاصية.',
+    mismatch: 'قد لا تناسب قيم المصدر هذا النوع.',
+    choices: '{count, plural, one {خيار واحد} two {خياران} other {# خيارات}}، {unmatched} للإضافة',
+    draftIntro: 'حمّل نموذج النظام المصدر (ملف JSON الذي يصفه موصله) لصياغة الربط. يحصل كل كيان وحقل على اقتراح يمكنك تغييره هنا.',
+    sourceFile: 'ملف النموذج',
+    sourceText: 'أو الصق النموذج',
+    draft: 'صياغة الربط',
+    conflict: 'حفظ شخص آخر هذا الربط منذ فتحته. أعد التحميل لرؤية تغييراته.',
+    unreadable: 'تعذرت قراءة الملف.',
+    notJson: 'النموذج ليس JSON صالحًا.',
+  },
   csvImport: {
     wizardTitle: 'استيراد البيانات',
     sourceLabel: 'الاستيراد من',

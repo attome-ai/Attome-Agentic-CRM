@@ -17,8 +17,9 @@ use std::time::Duration;
 
 use attome_types::AppError;
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Map, Value};
+use utoipa::ToSchema;
 
 use crate::connector::sdk::{Request, Response, Transport};
 
@@ -35,13 +36,13 @@ pub const MAX_ENTITIES: usize = 200;
 pub type SourceFuture<'a, T> = Pin<Box<dyn Future<Output = Result<T, AppError>> + Send + 'a>>;
 
 /// The source's model.
-#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct SourceModel {
     pub entities: Vec<SourceEntity>,
 }
 
 /// One entity of the source.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct SourceEntity {
     /// The source's API name (`Account`, `account`).
     pub name: String,
@@ -52,7 +53,7 @@ pub struct SourceEntity {
 }
 
 /// One field of a source entity.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct SourceField {
     pub name: String,
     pub label: String,
@@ -61,6 +62,8 @@ pub struct SourceField {
     /// The Attome field type it becomes (`text`, `number`, `currency`,
     /// `date`, `date_time`, `time`, `bool`, `choice`, `lookup`, `file`,
     /// `image`, `rich_text`).
+    #[serde(deserialize_with = "attome_type_of")]
+    #[schema(value_type = String)]
     pub attome_type: &'static str,
     pub required: bool,
     /// A lookup's target entity, by its source name.
@@ -69,6 +72,33 @@ pub struct SourceField {
     pub choices: Vec<String>,
     /// A choice field that holds several values.
     pub multi: bool,
+}
+
+/// The Attome field types a source field can become.
+pub const ATTOME_TYPES: [&str; 12] = [
+    "text",
+    "number",
+    "currency",
+    "date",
+    "date_time",
+    "time",
+    "bool",
+    "choice",
+    "lookup",
+    "file",
+    "image",
+    "rich_text",
+];
+
+/// A source field's Attome type read back (a model posted to the mapping
+/// draft): one of [`ATTOME_TYPES`].
+fn attome_type_of<'de, D: Deserializer<'de>>(d: D) -> Result<&'static str, D::Error> {
+    let name = String::deserialize(d)?;
+    ATTOME_TYPES
+        .iter()
+        .find(|t| **t == name)
+        .copied()
+        .ok_or_else(|| serde::de::Error::custom(format!("unknown field type {name:?}")))
 }
 
 /// One record as the source holds it.

@@ -949,6 +949,8 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/migration-projects/{project_id}/runs/{run_id}/rollback",
             post(rollback_run),
         )
+        // A24-T3: the project's model mapping.
+        .merge(crate::migration_model::routes())
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -969,7 +971,9 @@ pub fn routes() -> Router<EngineState> {
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
-    <ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(crate::migration_model::openapi_fragment());
+    doc
 }
 
 // ── Rollback job ─────────────────────────────────────────────────────────────

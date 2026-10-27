@@ -1,0 +1,125 @@
+<section class="model-mapping">
+  <h2>{{ 'modelMapping.title' | translate }}</h2>
+
+  @if (error()) {
+    <p class="mapping-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p>{{ 'modelMapping.loading' | translate }}</p>
+  } @else if (mapping(); as m) {
+    <div class="mapping-bar">
+      <span class="mapping-counts" aria-live="polite">
+        {{ 'modelMapping.counts' | translate: { map: counts().map, create: counts().create, skip: counts().skip } }}
+      </span>
+      <button type="button" class="btn-primary" data-testid="mapping-save" [disabled]="!dirty() || busy()" (click)="save()">
+        {{ 'modelMapping.save' | translate }}
+      </button>
+      <button type="button" class="btn-secondary" [disabled]="!dirty() || busy()" (click)="revert()">
+        {{ 'modelMapping.revert' | translate }}
+      </button>
+    </div>
+
+    @if (doc()?.problems?.length) {
+      <ul class="mapping-problems" data-testid="mapping-problems">
+        @for (p of doc()?.problems ?? []; track p) { <li>{{ p }}</li> }
+      </ul>
+    }
+
+    @for (entity of m.entities; track entity.source; let e = $index) {
+      <table class="mapping-table" [attr.data-entity]="entity.source">
+        <caption>
+          <span class="source-name">{{ entity.source_label }} <code>{{ entity.source }}</code></span>
+          <label>
+            <span class="sr-only">{{ 'modelMapping.action.label' | translate }}</span>
+            <select [value]="entity.action" (change)="setEntityAction(e, $event)" data-testid="entity-action">
+              @for (a of actions; track a) {
+                <option [value]="a" [selected]="a === entity.action">{{ actionKeys[a] | translate }}</option>
+              }
+            </select>
+          </label>
+          @if (entity.action !== 'skip') {
+            <label>
+              <span class="sr-only">{{ 'modelMapping.target' | translate }}</span>
+              <input type="text" [value]="entity.target" (change)="setEntityTarget(e, $event)" data-testid="entity-target" />
+            </label>
+          }
+        </caption>
+        @if (entity.action !== 'skip') {
+          <thead>
+            <tr>
+              <th scope="col">{{ 'modelMapping.source' | translate }}</th>
+              <th scope="col">{{ 'modelMapping.action.label' | translate }}</th>
+              <th scope="col">{{ 'modelMapping.target' | translate }}</th>
+              <th scope="col">{{ 'modelMapping.type' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (attr of entity.attributes; track attr.source; let a = $index) {
+              <tr [class.skipped]="attr.action === 'skip'" [class.merged]="merged(entity).has(attr.target) && attr.action !== 'skip'">
+                <th scope="row">
+                  {{ attr.source_label }} <code>{{ attr.source }}</code>
+                  <span class="source-type">{{ attr.source_type }}</span>
+                </th>
+                <td>
+                  <label>
+                    <span class="sr-only">{{ 'modelMapping.action.label' | translate }}</span>
+                    <select [value]="attr.action" (change)="setAction(e, a, $event)" [attr.data-attr-action]="attr.source">
+                      @for (x of actions; track x) {
+                        <option [value]="x" [selected]="x === attr.action">{{ actionKeys[x] | translate }}</option>
+                      }
+                    </select>
+                  </label>
+                </td>
+                <td>
+                  @if (attr.action !== 'skip') {
+                    <label>
+                      <span class="sr-only">{{ 'modelMapping.target' | translate }}</span>
+                      <input type="text" [value]="attr.target" (change)="setTarget(e, a, $event)" [attr.data-attr-target]="attr.source" />
+                    </label>
+                    @if (merged(entity).has(attr.target)) {
+                      <span class="merge-note">{{ 'modelMapping.merged' | translate }}</span>
+                    }
+                  }
+                </td>
+                <td>
+                  @if (attr.action === 'create') {
+                    <label>
+                      <span class="sr-only">{{ 'modelMapping.type' | translate }}</span>
+                      <select [value]="attr.field_type" (change)="setType(e, a, $event)" [attr.data-attr-type]="attr.source">
+                        @for (t of types; track t) { <option [value]="t" [selected]="t === attr.field_type">{{ t }}</option> }
+                      </select>
+                    </label>
+                  } @else if (attr.action === 'map') {
+                    <span>{{ attr.field_type }}</span>
+                    @if (attr.type_mismatch) {
+                      <span class="type-mismatch" role="note">{{ 'modelMapping.mismatch' | translate }}</span>
+                    }
+                  }
+                  @if (attr.choices.length && attr.action !== 'skip') {
+                    <span class="choice-summary">{{ choiceSummary(attr) }}</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        }
+      </table>
+    }
+  } @else {
+    <div class="mapping-draft">
+      <p>{{ 'modelMapping.draftIntro' | translate }}</p>
+      <label class="block-label">
+        <span>{{ 'modelMapping.sourceFile' | translate }}</span>
+        <input type="file" accept="application/json,.json" (change)="onSourceFile($event)" />
+      </label>
+      <label class="block-label">
+        <span>{{ 'modelMapping.sourceText' | translate }}</span>
+        <textarea rows="8" [value]="sourceText()" (input)="onSourceText($event)" data-testid="source-text"></textarea>
+      </label>
+      <button type="button" class="btn-primary" data-testid="mapping-draft" [disabled]="!sourceText().trim() || busy()" (click)="draft()">
+        {{ 'modelMapping.draft' | translate }}
+      </button>
+    </div>
+  }
+</section>

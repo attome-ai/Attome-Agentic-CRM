@@ -171,6 +171,8 @@ pub mod metrics;
 /// calls; the route handlers stay module-private, same shape as
 /// `data_export`/`data_profile_admin`.
 pub mod migration;
+/// A24-T3: a migration project's model mapping (draft, read, save).
+mod migration_model;
 pub mod model_admin;
 /// A1-T11 — `/api/v1/admin/model/health`.
 pub mod model_health;

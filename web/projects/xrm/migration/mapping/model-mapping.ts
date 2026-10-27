@@ -1,0 +1,106 @@
+import { Injectable, inject } from '@angular/core';
+import { ApiService } from '@attome/base';
+import type { Observable } from 'rxjs';
+
+/**
+ * A24-T3: a migration project's model mapping (`/api/v1/admin/migration-projects/{id}/model-mapping`):
+ * each source entity and field and what it becomes here. The draft comes
+ * from the server; the person edits it as a table and saves it.
+ */
+export type MapAction = 'map' | 'create' | 'skip';
+
+export interface ValueMapping {
+  source: string;
+  target: string | null;
+}
+
+export interface AttributeMapping {
+  source: string;
+  source_label: string;
+  source_type: string;
+  action: MapAction;
+  target: string;
+  field_type: string;
+  type_mismatch: boolean;
+  lookup_target: string | null;
+  choices: ValueMapping[];
+}
+
+export interface EntityMapping {
+  source: string;
+  source_label: string;
+  action: MapAction;
+  target: string;
+  attributes: AttributeMapping[];
+}
+
+export interface ModelMapping {
+  entities: EntityMapping[];
+  users: ValueMapping[];
+  roles: ValueMapping[];
+}
+
+export interface MappingDoc {
+  project_id: string;
+  row_version: number;
+  source_model: { entities: unknown[] };
+  mapping: ModelMapping;
+  problems: string[];
+  updated_at: string;
+}
+
+/** The field types a created attribute can take. */
+export const CREATE_TYPES = [
+  'text', 'number', 'currency', 'date', 'date_time', 'time', 'bool', 'choice', 'lookup', 'file', 'image', 'rich_text',
+] as const;
+
+/** `mapping` with entity `e` changed. Pure. */
+export function withEntity(mapping: ModelMapping, e: number, patch: Partial<EntityMapping>): ModelMapping {
+  return { ...mapping, entities: mapping.entities.map((x, i) => (i === e ? { ...x, ...patch } : x)) };
+}
+
+/** `mapping` with attribute `a` of entity `e` changed. Pure. */
+export function withAttribute(mapping: ModelMapping, e: number, a: number, patch: Partial<AttributeMapping>): ModelMapping {
+  return withEntity(mapping, e, {
+    attributes: mapping.entities[e].attributes.map((x, i) => (i === a ? { ...x, ...patch } : x)),
+  });
+}
+
+/** The attributes several source fields go into: a merge, shown so it is deliberate. Pure. */
+export function merges(entity: EntityMapping): Set<string> {
+  const seen = new Map<string, number>();
+  for (const a of entity.attributes) {
+    if (a.action !== 'skip') seen.set(a.target, (seen.get(a.target) ?? 0) + 1);
+  }
+  return new Set([...seen].filter(([, n]) => n > 1).map(([t]) => t));
+}
+
+/** How many entities and fields each action covers. Pure. */
+export function counts(mapping: ModelMapping): Record<MapAction, number> {
+  const out: Record<MapAction, number> = { map: 0, create: 0, skip: 0 };
+  for (const e of mapping.entities) {
+    for (const a of e.attributes) out[e.action === 'skip' ? 'skip' : a.action] += 1;
+  }
+  return out;
+}
+
+@Injectable({ providedIn: 'root' })
+export class ModelMappingService {
+  private readonly api = inject(ApiService);
+
+  private path(projectId: string): string {
+    return `/api/v1/admin/migration-projects/${encodeURIComponent(projectId)}/model-mapping`;
+  }
+
+  get(projectId: string): Observable<MappingDoc> {
+    return this.api.get<MappingDoc>(this.path(projectId));
+  }
+
+  draft(projectId: string, sourceModel: unknown): Observable<MappingDoc> {
+    return this.api.post<MappingDoc>(`${this.path(projectId)}/draft`, { source_model: sourceModel });
+  }
+
+  save(projectId: string, mapping: ModelMapping, rowVersion: number): Observable<MappingDoc> {
+    return this.api.put<MappingDoc>(this.path(projectId), { mapping, row_version: rowVersion });
+  }
+}

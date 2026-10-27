@@ -21,6 +21,8 @@ pub mod linkedin;
 /// J2-T1: the IMAP, Graph and Gmail readers behind `mailbox`.
 pub mod mail;
 pub mod mailbox;
+/// A24-T3: the mapping a migration follows, drafted from the source model.
+pub mod migration_mapping;
 /// A24-T1: the migration source-connector trait.
 pub mod migration_source;
 /// AJ5-T1: SPL National Address lookups and standardisation.

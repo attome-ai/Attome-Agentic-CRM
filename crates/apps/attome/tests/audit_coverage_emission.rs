@@ -7295,6 +7295,32 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        // A24-T3: a project's model mapping.
+        "POST /api/v1/admin/migration-projects/{id}/model-mapping/draft" => {
+            let id = migration_project(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/migration-projects/{id}/model-mapping/draft"),
+                t,
+                Some(source_model()),
+            )
+        }
+        "PUT /api/v1/admin/migration-projects/{id}/model-mapping" => {
+            let id = migration_project(fx).await;
+            let draft = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/migration-projects/{id}/model-mapping/draft"),
+                Some(source_model()),
+            )
+            .await;
+            request(
+                "PUT",
+                &format!("/api/v1/admin/migration-projects/{id}/model-mapping"),
+                t,
+                Some(json!({ "mapping": draft["mapping"], "row_version": draft["row_version"] })),
+            )
+        }
         // ── recovery archive (D-788 rule 9; security review L1/L2) ──────────
         // Each restore writes its Configuration/Update event in its own
         // transaction, so the driver archives a value for an empty record.
@@ -8468,6 +8494,17 @@ async fn calendar(fx: &Fx) -> Uuid {
         )
         .await,
     )
+}
+
+/// A24-T3: a one-entity source model, as a source connector describes it.
+fn source_model() -> Value {
+    json!({ "source_model": { "entities": [{
+        "name": "Account", "label": "Account", "custom": false,
+        "fields": [{
+            "name": "Name", "label": "Name", "source_type": "string", "attome_type": "text",
+            "required": true, "lookup_target": null, "choices": [], "multi": false
+        }]
+    }] } })
 }
 
 /// A migration project targeting `fx.entity`.

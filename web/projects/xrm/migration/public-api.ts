@@ -10,3 +10,5 @@ export { MigrationWizardComponent } from './migration-wizard/migration-wizard.co
 export { CsvImportComponent } from './csv-import/csv-import.component';
 // Y14-T4: this screen's own catalogue.
 export { migrationAr, migrationEn } from './migration.i18n';
+// A24-T3: the model mapping editor.
+export { MappingComponent } from './mapping/mapping.component';
