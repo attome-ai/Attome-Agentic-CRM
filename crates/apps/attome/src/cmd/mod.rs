@@ -6,6 +6,8 @@ pub mod bundle_offline;
 pub mod changeset_replay;
 /// U2-T1: `attome cluster plan`, a deployment profile's files.
 pub mod cluster;
+/// U3-T1: `attome cluster create|expand`, a profile installed over SSH.
+pub mod cluster_ssh;
 /// AB4-T3: drill keys, evidence verification and readiness.
 pub mod drill;
 pub mod healthcheck;

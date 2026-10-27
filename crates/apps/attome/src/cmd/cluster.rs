@@ -22,6 +22,8 @@
 //!   of the server and worker).
 //!
 //! Nothing is written or installed: the command only prints.
+//! `attome cluster create` and `expand` install a profile over SSH
+//! ([`super::cluster_ssh`], U3-T1).
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -60,6 +62,8 @@ attome cluster plan: print the deployment files of a profile
 
 Usage:
   attome cluster plan --profile <solo|team|ha|scale> [--target native|compose|helm] [--dir <dir>]
+  attome cluster create --profile <p> --hosts <user@host,...> --binary <path> [--target native|compose] [--dry-run]
+  attome cluster expand --hosts <user@host,...> --join <user@host> --binary <path> [--dry-run]
 
   --profile  the deployment profile (deploy/profiles/<name>.json)
   --target   native (default: systemd units and a config overlay), compose or helm
@@ -351,6 +355,8 @@ fn plan(args: &[String]) -> Result<(), String> {
 pub fn run(args: &[String]) -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("plan") => plan(&args[1..]),
+        Some("create") => super::cluster_ssh::run_create(&args[1..]),
+        Some("expand") => super::cluster_ssh::run_expand(&args[1..]),
         _ => Err(USAGE.to_owned()),
     };
     match result {
