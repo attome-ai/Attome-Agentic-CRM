@@ -6131,6 +6131,62 @@
           }
         }
       },
+      "MetricParity": {
+        "type": "object",
+        "description": "P7-T2: a drilled KPI's snapshot next to the records listed now.",
+        "required": [
+          "metric_id",
+          "period_start",
+          "listed_total",
+          "counts_records",
+          "as_of_available"
+        ],
+        "properties": {
+          "as_of_available": {
+            "type": "boolean",
+            "description": "Whether the records as they were when the snapshot was taken can be\nlisted; never yet."
+          },
+          "as_of_unavailable_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "counts_records": {
+            "type": "boolean",
+            "description": "Whether the metric counts records, so the snapshot and the listed\ntotal are the same measure and can be compared."
+          },
+          "listed_total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many records the caller may read match the definition now."
+          },
+          "metric_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period_start": {
+            "type": "string",
+            "format": "date",
+            "description": "The period the records were listed for: the metric's current one."
+          },
+          "snapshot_computed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "snapshot_value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The latest snapshot of that period; absent before one is computed."
+          }
+        }
+      },
       "MetricSpec": {
         "type": "object",
         "description": "A metric described by its parts.",
@@ -8423,6 +8479,17 @@
           },
           "drillability": {
             "$ref": "#/components/schemas/Drillability"
+          },
+          "metric_parity": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MetricParity",
+                "description": "P7-T2: for a KPI widget, the snapshot and the records listed now."
+              }
+            ]
           },
           "published_version_number": {
             "type": [

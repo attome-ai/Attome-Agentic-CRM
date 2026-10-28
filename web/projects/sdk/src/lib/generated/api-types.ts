@@ -2199,6 +2199,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/calendars/{id}/holiday-rules/expanded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A calendar's holiday rule dates
+         * @description The days each of the calendar's own holiday rules closes in the years asked for (two from this year by default, at most five), each with its Gregorian and Umm al-Qura date, for an administrator checking a rule before relying on it. A rule that needs a sighting shows its expected dates. Administrators of automation only.
+         */
+        get: operations["expanded_rules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/calendars/{id}/holiday-rules/{rule_id}": {
         parameters: {
             query?: never;
@@ -3665,6 +3685,30 @@ export interface paths {
          * @description Resume a data step run. Administrators only. Audited.
          */
         post: operations["resume_data_step_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data/code-maps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List reference code mappings
+         * @description L1-T8: one code list's mappings in effect now, one per code (retired codes left out), or with `history` every version. Administrators only.
+         */
+        get: operations["list_code_maps"];
+        put?: never;
+        /**
+         * Map a reference code
+         * @description L1-T8: writes a new version of one source code's mapping; earlier versions are kept, and imports use the newest version in effect. A null `value` retires the code. Administrators only. Audited.
+         */
+        post: operations["set_code_map"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6740,6 +6784,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/metadata/app-layers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Installed apps in layer order
+         * @description Y11-T11: every installed app (a pack's product changesets) and its place in the layer order; a later app sits above an earlier one, and the customer above all apps.
+         */
+        get: operations["list_app_layers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/metadata/break-glass": {
         parameters: {
             query?: never;
@@ -6913,6 +6977,46 @@ export interface paths {
          * @description Plan changesets. Needs the metadata rollout privilege. Audited.
          */
         post: operations["plan_changesets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/metadata/conflicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List upgrade conflicts
+         * @description The properties an upgrade changed that the customer (or an app) had also changed, newest first.
+         */
+        get: operations["list_conflicts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/metadata/conflicts/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve an upgrade conflict
+         * @description Keeps the customer's value, takes the platform's (the customer's layer value is removed), or applies a combined value as the customer's. Taking or combining changes the entity or field at once.
+         */
+        post: operations["resolve_conflict"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7312,6 +7416,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/metadata/resets/{reset_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a reset
+         * @description Puts back the customer's values a reset removed, once. Refused when the item was customised again since.
+         */
+        post: operations["undo_reset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/metadata/rollback": {
         parameters: {
             query?: never;
@@ -7376,6 +7500,26 @@ export interface paths {
          *     never opted into a pull source to sync is a no-op, not a mistake.
          */
         post: operations["sync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/metadata/upgrade-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Customisations a release affects
+         * @description Y11-T12: for a platform or app changeset (planned or applied), each customer or app customisation on an entity or field it retires, deletes or renames, with the new name for a rename. Nothing is moved.
+         */
+        get: operations["upgrade_impact"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7462,6 +7606,66 @@ export interface paths {
          * @description Points the deployment at a recorded metadata version; every node loads it on its next catch-up (Y8-T4). Audited.
          */
         post: operations["switch_metadata_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/metadata/{kind}/{key}/layers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An item's layer stack
+         * @description For an entity or a field, each property's value in every layer that sets it and the layer whose value applies.
+         */
+        get: operations["layer_stack"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/metadata/{kind}/{key}/layers/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare two layers of an item
+         * @description The properties of an entity or a field that two layers set differently.
+         */
+        get: operations["layer_diff"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/metadata/{kind}/{key}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset a customisation
+         * @description Puts an entity's or a field's customised properties (all, or the ones named) back to what an app or the platform gives them, removing the customer's values; with `preview=true`, only answers what would change. Undo with the reset id.
+         */
+        post: operations["reset_customisation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10337,6 +10541,50 @@ export interface paths {
         patch: operations["update_oidc_provider"];
         trace?: never;
     };
+    "/api/v1/admin/security/oidc-providers/{id}/group-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sign-in provider group mappings
+         * @description The provider's group mappings: each value of its groups claim and the team or role it gives at sign-in. Administrators only.
+         */
+        get: operations["list_oidc_group_mappings"];
+        put?: never;
+        /**
+         * Add a sign-in provider group mapping
+         * @description Maps a value of the provider's groups claim to a team or a role, given at each sign-in through the provider. A role carrying system administration, or a team with such a role, is refused. Administrators only; audited.
+         */
+        post: operations["create_oidc_group_mapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/oidc-providers/{id}/group-mappings/{mapping_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a sign-in provider group mapping
+         * @description The group no longer gives its team or role. People keep what it gave until their next sign-in through the provider, which removes it. Administrators only; audited.
+         */
+        delete: operations["delete_oidc_group_mapping"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/oidc-providers/{id}/health": {
         parameters: {
             query?: never;
@@ -11194,11 +11442,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Read a role's sign-in policy
+         * @description Q5-T10: a role's single sign-on and second-factor policy, with the defaults for a role that has none stored. Administrators only.
+         */
+        get: operations["get_role_auth_policy"];
         /**
          * Set a role's sign-in policy
-         * @description Sets whether a role signs in only through single sign-on (Q1-T7).
-         *     Administrators only.
+         * @description Sets whether a role signs in only through single sign-on (Q1-T7) and its second-factor policy: mode, allowed factors, grace days, remember-browser days and phishing-resistant only (Q5-T10). Only the fields given change. Administrators only.
          */
         put: operations["put_role_auth_policy"];
         post?: never;
@@ -14520,6 +14771,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/mfa/code/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a sign-in code
+         * @description Q5-T5: with the `MfaRequired` pending token, sends a one-time code by
+         *     `channel` as the second factor, when every role of the person allows that
+         *     weaker factor. Never for an administrator (403), and never to an email
+         *     address that is not verified (403). `email` is the channel today; `sms`
+         *     and `whatsapp` answer 503 until those channels exist. The code works
+         *     once, for a minute; sending again replaces it. The token stays usable for
+         *     `mfa/code/verify`. Bypass-listed like `mfa/verify`; rate limited in the
+         *     `mfa` class.
+         */
+        post: operations["mfa_code_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/code/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finish sign-in with a sent code
+         * @description Q5-T5: like `mfa/verify`, with the one-time code `mfa/code/send` sent
+         *     instead of a TOTP code. The session records the weaker factor
+         *     (`otp_weak`), which no step-up counts as phishing-resistant. Refused when
+         *     the person's roles no longer allow email codes.
+         */
+        post: operations["mfa_code_verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/mfa/confirm": {
         parameters: {
             query?: never;
@@ -14624,6 +14925,31 @@ export interface paths {
          *     session. Bypass-listed for the same reason as `mfa_verify`.
          */
         post: operations["mfa_pending_enroll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/postpone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put off required MFA enrolment
+         * @description Q5-T3: with the `MfaEnrollmentRequired` pending token, signs the person in
+         *     with their password alone and puts enrolment off for a day, never past
+         *     the grace period their roles' policy gives once a second factor becomes
+         *     required. After the grace period it is refused (403) and the person must
+         *     enrol. The token works once. Bypass-listed like `mfa/pending-enroll`;
+         *     rate limited in the `mfa` class.
+         */
+        post: operations["mfa_postpone"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16072,7 +16398,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a calendar's feeds
+         * @description Z12-T13: the calendar's iCal feeds with whether each is on, when it was
+         *     last fetched and why the last fetch failed. Administrators of automation
+         *     only.
+         */
+        get: operations["list_calendar_feeds"];
         put?: never;
         /**
          * Add a calendar feed
@@ -21492,7 +21824,7 @@ export interface paths {
         };
         /**
          * This API's own OpenAPI 3.1 document, as this caller may use it
-         * @description Only the operations of the modules switched on here, and none under `/api/v1/admin` for a caller who is not an administrator (S2-T14). Send the `ETag` back in `If-None-Match` to get a 304 while nothing has changed.
+         * @description Only the operations of the modules switched on here, and none under `/api/v1/admin` for a caller who is not an administrator (S2-T14). Send the `ETag` back in `If-None-Match` to get a 304 while nothing has changed. With `lang=ar` the summaries and tag descriptions are Arabic where the catalog has them (S2-T11).
          */
         get: operations["openapi_json"];
         put?: never;
@@ -24800,27 +25132,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/search/aggregate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Aggregate one entity's records
-         * @description Counts, sums, averages, minimums and maximums over one entity's records grouped by its fields,
-         *     validated against its metadata and limited to the records the caller may read.
-         */
-        post: operations["aggregate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/search/knowledge": {
         parameters: {
             query?: never;
@@ -25284,6 +25595,26 @@ export interface paths {
          *     on one page.
          */
         get: operations["list_service_inbox_mailboxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/oncall/schedules/{id}/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who is on call over a range
+         * @description H7-T2: the stretches of one on-call schedule over at most 62 days, in time order, each with the person on call and whether the rotation or an override put them there; gaps with nobody on call are left out. The whole answer is on page 1.
+         */
+        get: operations["get_calendar"];
         put?: never;
         post?: never;
         delete?: never;
@@ -31032,70 +31363,6 @@ export interface components {
              */
             used: number;
         };
-        AggregateBucket: {
-            /**
-             * @description `null` for rows whose `group_by` field is itself NULL. Always a
-             *     display string (or null) — the group_by column is cast to `text` in
-             *     SQL rather than decoded per its native type, since a bucket label is
-             *     for display, not further computation.
-             */
-            label?: string | null;
-            /** @description A13-T2: the `then_by` value, when the request named one. */
-            label_2?: string | null;
-            /** Format: double */
-            value: number;
-        };
-        AggregateRequest: {
-            /** @description Fallback: entity logicalname string. */
-            entity?: string | null;
-            /**
-             * Format: uuid
-             * @description Entity UUID (`entity_info.id`) — same dual resolution as
-             *     `query/execute`'s `ExecuteQueryRequest`.
-             */
-            entity_logical_name?: string | null;
-            filters?: components["schemas"]["Filter"][];
-            /**
-             * @description Field to bucket on. `None` runs the metric over every row the
-             *     filters/RLS admit as a single ungrouped total (e.g. a Metric widget's
-             *     "Total Revenue" — `SUM(amount)` with no `GROUP BY`) — the response
-             *     carries exactly one bucket with `label: null`.
-             */
-            group_by?: string | null;
-            /** @description Required unless `metric_fn == "count"`. */
-            metric_field?: string | null;
-            /**
-             * @description One of: `count`, `sum`, `avg`, `min`, `max`.
-             * @example sum
-             */
-            metric_fn: string;
-            /**
-             * @description `"value_desc"` (default), `"value_asc"`, `"label_asc"`, `"label_desc"`.
-             *     Ties break on the label, so equal values never swap between runs.
-             * @default value_desc
-             * @example value_desc
-             */
-            order: string;
-            /**
-             * @description A13-T2: a second field to bucket on within each `group_by` bucket
-             *     (needs `group_by`); each bucket then carries `label_2`.
-             */
-            then_by?: string | null;
-        };
-        AggregateResponse: {
-            /** Format: int64 */
-            bucket_count: number;
-            buckets: components["schemas"]["AggregateBucket"][];
-            entity_logical_name: string;
-            group_by?: string | null;
-            metric_fn: string;
-            /**
-             * @description Honest-cap contract mirroring `attome-search::routes`'s `Total::AtLeast`
-             *     reasoning: `true` means real groups exist past [`MAX_GROUP_BUCKETS`],
-             *     not that the count happens to equal the cap.
-             */
-            truncated: boolean;
-        };
         /** @description An aggregate query's result. */
         AggregateResult: {
             groups: components["schemas"]["Group"][];
@@ -31358,6 +31625,16 @@ export interface components {
             /** Format: uuid */
             sidebar_root_ref?: string | null;
         };
+        /** @description A property two apps set. */
+        AppClash: {
+            /** @description The entity's logical name, or `<entity>.<field>`. */
+            object_key: string;
+            /** @description `entity` or `attribute`. */
+            object_kind: string;
+            /** @description The installed app that set it. */
+            other_app: string;
+            property: string;
+        };
         /**
          * @description M65 Phase 1 (D-467) — `app`, keyed by `name`. Apps only filter
          *     navigation, they never authorize — see `app_admin.rs`'s own doc comment.
@@ -31408,6 +31685,17 @@ export interface components {
             row_version: number;
             /** Format: uuid */
             sidebar_root_ref?: string | null;
+        };
+        /** @description An installed app and its place in the layer order. */
+        AppLayer: {
+            app: string;
+            /** Format: date-time */
+            installed_at: string;
+            /**
+             * Format: int32
+             * @description 1 for the first app installed; later apps sit above earlier ones.
+             */
+            position: number;
         };
         AppliedFilter: {
             filter: components["schemas"]["Filter"];
@@ -34460,6 +34748,11 @@ export interface components {
         };
         /** @description `POST …/plan` and `POST …/adopt`. */
         ChangesetDocumentsBody: {
+            /**
+             * @description Y11-T11 (plan only): plan an app's changeset even where it sets
+             *     properties another installed app set; the clashes are still listed.
+             */
+            accept_clashes?: boolean;
             /** @description `attome-changeset/v1` documents, any order. */
             changesets: Record<string, never>[];
         };
@@ -34967,6 +35260,35 @@ export interface components {
         };
         CodeBody: {
             code: string;
+        };
+        /** @description The code list a mapped field's codes come from. */
+        CodeMapRef: {
+            code_list: string;
+            source_system: string;
+        };
+        /** @description One version of one code's mapping. */
+        CodeMapVersion: {
+            code: string;
+            code_list: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+            /** Format: uuid */
+            id: string;
+            source_system: string;
+            /**
+             * Format: date-time
+             * @description When this version takes effect.
+             */
+            valid_from: string;
+            /** @description What the code maps to; absent when this version retires it. */
+            value?: string | null;
+            /**
+             * Format: int32
+             * @description 1 for the first mapping of this code, one more for every edit.
+             */
+            version: number;
         };
         CollectTriggered: {
             enqueued: boolean;
@@ -36224,6 +36546,15 @@ export interface components {
             /** @description Whether people on the domain must sign in through the provider. */
             sso_only?: boolean;
         };
+        /** @description What to map. Exactly one of `team_id` and `role_id`. */
+        CreateOidcGroupMappingBody: {
+            /** @description The value of the provider's groups claim, such as a group id. */
+            claim_value: string;
+            /** Format: uuid */
+            role_id?: string | null;
+            /** Format: uuid */
+            team_id?: string | null;
+        };
         /** @description A new provider. `client_secret` is write-only. */
         CreateOidcProviderBody: {
             /** @description Claim names and provider settings (`email`, `groups`, `mfa_acr`, ...). */
@@ -37422,6 +37753,7 @@ export interface components {
             updated_at: string;
         };
         DataMappingField: {
+            code_map?: null | components["schemas"]["CodeMapRef"];
             /**
              * @description Required (and only meaningful) when `lookup_resolution` is
              *     `"by_natural_key"` — the attribute on the *referenced* lookup entity
@@ -40070,6 +40402,32 @@ export interface components {
          * @enum {string}
          */
         ExitOn: "reply" | "meeting" | "stage_change";
+        /** @description One day a holiday rule closes, in both calendars. */
+        ExpandedDay: {
+            /** Format: date */
+            date: string;
+            /** @description The Umm al-Qura date, `1447-10-01`; `null` outside its range. */
+            hijri?: string | null;
+        };
+        /** @description Z12-T13: a holiday rule and the days it closes in the years asked for. */
+        ExpandedRule: {
+            days: components["schemas"]["ExpandedDay"][];
+            /** @description Why the rule could not be expanded, when it could not. */
+            error?: string | null;
+            name: string;
+            name_ar?: string | null;
+            needs_sighting: boolean;
+            /** Format: uuid */
+            rule_id: string;
+        };
+        /** @description Z12-T13: a calendar's rules and their days, for the years asked for. */
+        ExpandedRules: {
+            /** Format: int32 */
+            from_year: number;
+            rules: components["schemas"]["ExpandedRule"][];
+            /** Format: int32 */
+            years: number;
+        };
         /** @description T6-T1: a flag past its expiry date, for the expiry report. */
         ExpiredFlag: {
             /** Format: date */
@@ -40163,6 +40521,15 @@ export interface components {
             download_url: string;
             /** Format: int64 */
             row_count: number;
+        };
+        /** @description S4-T10: a query queued as a background export. */
+        ExportQueued: {
+            /** Format: uuid */
+            export_id: string;
+            /** @description `pending` until the worker starts it. */
+            status: string;
+            /** @description Where to follow it and, once done, download it. */
+            status_url: string;
         };
         ExportRequestBody: {
             /**
@@ -42707,6 +43074,48 @@ export interface components {
             /** @description Every route seen since this process started, slowest p95 first. */
             routes: components["schemas"]["RouteLatency"][];
         };
+        /** @description An upgrade conflict. */
+        LayerConflictView: {
+            /** Format: date-time */
+            created_at: string;
+            /** @description The value the customer (or an app) holds. */
+            customer?: Record<string, never> | null;
+            /** Format: uuid */
+            id: string;
+            /** @description The platform's value now. */
+            new_platform?: Record<string, never> | null;
+            /** @description The entity's logical name, or `<entity>.<field>`. */
+            object_key: string;
+            /** @description `entity` or `attribute`. */
+            object_kind: string;
+            /** @description The platform's value before the upgrade. */
+            old_platform?: Record<string, never> | null;
+            property: string;
+            /** @description `keep_customer`, `take_platform` or `combine`, once resolved. */
+            resolution?: string | null;
+            /** Format: date-time */
+            resolved_at?: string | null;
+            /** Format: uuid */
+            resolved_by?: string | null;
+            /** @description `open` or `resolved`. */
+            status: string;
+        };
+        /** @description A property two layers set differently. */
+        LayerDifferenceView: {
+            /** @description `null` when the `from` layer does not set it. */
+            from?: Record<string, never> | null;
+            property: string;
+            /** @description `null` when the `to` layer does not set it. */
+            to?: Record<string, never> | null;
+        };
+        /** @description One layer's value for a property. */
+        LayerValueView: {
+            /** @description The app that set it; empty for the platform and the customer. */
+            app: string;
+            /** @description `platform`, `app` or `customer`. */
+            layer: string;
+            value: Record<string, never>;
+        };
         /** @description A conversion undone. */
         LeadConversionUndone: {
             /** Format: uuid */
@@ -44116,6 +44525,39 @@ export interface components {
             period_start: string;
             root: components["schemas"]["MetricLineageNode"];
         };
+        /** @description P7-T2: a drilled KPI's snapshot next to the records listed now. */
+        MetricParity: {
+            /**
+             * @description Whether the records as they were when the snapshot was taken can be
+             *     listed; never yet.
+             */
+            as_of_available: boolean;
+            as_of_unavailable_reason?: string | null;
+            /**
+             * @description Whether the metric counts records, so the snapshot and the listed
+             *     total are the same measure and can be compared.
+             */
+            counts_records: boolean;
+            /**
+             * Format: int64
+             * @description How many records the caller may read match the definition now.
+             */
+            listed_total: number;
+            /** Format: uuid */
+            metric_id: string;
+            /**
+             * Format: date
+             * @description The period the records were listed for: the metric's current one.
+             */
+            period_start: string;
+            /** Format: date-time */
+            snapshot_computed_at?: string | null;
+            /**
+             * Format: double
+             * @description The latest snapshot of that period; absent before one is computed.
+             */
+            snapshot_value?: number | null;
+        };
         /** @description One point: the bucket's start and the average of the samples in it. */
         MetricPoint: {
             /** Format: date-time */
@@ -44146,6 +44588,13 @@ export interface components {
             threshold_crit?: number | null;
             /** Format: double */
             threshold_warn?: number | null;
+        };
+        /** @description Q5-T5: send a one-time sign-in code. */
+        MfaCodeSendBody: {
+            /** @description `email`; `sms` and `whatsapp` once those channels exist. */
+            channel: string;
+            /** @description The `MfaRequired` pending token. */
+            pending_token: string;
         };
         /** @description One active account's second factors. */
         MfaCoverageRow: {
@@ -44196,6 +44645,12 @@ export interface components {
         MfaVerifyBody: {
             code: string;
             pending_token: string;
+            /**
+             * @description Q5-T4: remember this browser so later sign-ins from it skip the
+             *     second factor, for as long as the person's policy allows (never for
+             *     an administrator). Ignored by the recovery-code route.
+             */
+            remember?: boolean;
         };
         MigrationProjectRow: {
             /** Format: date-time */
@@ -45300,6 +45755,22 @@ export interface components {
              */
             verified_at?: string | null;
         };
+        /**
+         * @description One group mapping: a value of the groups claim and the team or the role
+         *     it gives.
+         */
+        OidcGroupMappingItem: {
+            /** @description The value of the provider's groups claim. */
+            claim_value: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            provider_id: string;
+            /** Format: uuid */
+            role_id?: string | null;
+            /** Format: uuid */
+            team_id?: string | null;
+        };
         OidcLinkBody: {
             /** @description The account's TOTP or recovery code, when it has MFA enabled. */
             code?: string | null;
@@ -45397,6 +45868,21 @@ export interface components {
         /** @description Q1-T5: where to send the administrator's browser. */
         OidcTestStart: {
             authorize_url: string;
+        };
+        /** @description One stretch with one person on call. */
+        OnCallStretchView: {
+            /** Format: date-time */
+            end: string;
+            /** @description The rotation layer, lowest first; absent for an override. */
+            layer?: number | null;
+            /** Format: date-time */
+            start: string;
+            /** Format: uuid */
+            user_id: string;
+            /** @description The person's user name, when their account still exists. */
+            user_name?: string | null;
+            /** @description `override` (someone swapped in) or `layer` (the rotation). */
+            via: string;
         };
         /**
          * @description What happens when a step's `sla_minutes` elapses with nobody having
@@ -46565,6 +47051,30 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AppLayer: {
+            items: {
+                app: string;
+                /** Format: date-time */
+                installed_at: string;
+                /**
+                 * Format: int32
+                 * @description 1 for the first app installed; later apps sit above earlier ones.
+                 */
+                position: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ApprovalHistoryItem: {
             items: {
                 action_type: string;
@@ -47203,6 +47713,32 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_CalendarFeed: {
+            items: {
+                /** Format: uuid */
+                calendar_id: string;
+                enabled: boolean;
+                /** Format: uuid */
+                id: string;
+                /** @description Why the last fetch failed: an HTTP status or a parse failure. */
+                last_error?: string | null;
+                /** Format: date-time */
+                last_fetched_at?: string | null;
+                url: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_CapacityRow: {
             items: {
                 /**
@@ -47623,6 +48159,43 @@ export interface components {
                 /** Format: int32 */
                 rate_limit_rpm: number;
                 status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_CodeMapVersion: {
+            items: {
+                code: string;
+                code_list: string;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                created_by: string;
+                /** Format: uuid */
+                id: string;
+                source_system: string;
+                /**
+                 * Format: date-time
+                 * @description When this version takes effect.
+                 */
+                valid_from: string;
+                /** @description What the code maps to; absent when this version retires it. */
+                value?: string | null;
+                /**
+                 * Format: int32
+                 * @description 1 for the first mapping of this code, one more for every edit.
+                 */
+                version: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -50142,6 +50715,66 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_LayerConflictView: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** @description The value the customer (or an app) holds. */
+                customer?: Record<string, never> | null;
+                /** Format: uuid */
+                id: string;
+                /** @description The platform's value now. */
+                new_platform?: Record<string, never> | null;
+                /** @description The entity's logical name, or `<entity>.<field>`. */
+                object_key: string;
+                /** @description `entity` or `attribute`. */
+                object_kind: string;
+                /** @description The platform's value before the upgrade. */
+                old_platform?: Record<string, never> | null;
+                property: string;
+                /** @description `keep_customer`, `take_platform` or `combine`, once resolved. */
+                resolution?: string | null;
+                /** Format: date-time */
+                resolved_at?: string | null;
+                /** Format: uuid */
+                resolved_by?: string | null;
+                /** @description `open` or `resolved`. */
+                status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_LayerDifferenceView: {
+            items: {
+                /** @description `null` when the `from` layer does not set it. */
+                from?: Record<string, never> | null;
+                property: string;
+                /** @description `null` when the `to` layer does not set it. */
+                to?: Record<string, never> | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_LedgerSummary: {
             items: {
                 /** Format: int32 */
@@ -50932,6 +51565,32 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_OidcGroupMappingItem: {
+            items: {
+                /** @description The value of the provider's groups claim. */
+                claim_value: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                provider_id: string;
+                /** Format: uuid */
+                role_id?: string | null;
+                /** Format: uuid */
+                team_id?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_OidcProviderItem: {
             items: {
                 claim_map: Record<string, never>;
@@ -50966,6 +51625,34 @@ export interface components {
                 secret_updated_at?: string | null;
                 tenant_allowlist: string[];
                 trusted_for_mfa: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_OnCallStretchView: {
+            items: {
+                /** Format: date-time */
+                end: string;
+                /** @description The rotation layer, lowest first; absent for an override. */
+                layer?: number | null;
+                /** Format: date-time */
+                start: string;
+                /** Format: uuid */
+                user_id: string;
+                /** @description The person's user name, when their account still exists. */
+                user_name?: string | null;
+                /** @description `override` (someone swapped in) or `layer` (the rotation). */
+                via: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -51606,6 +52293,30 @@ export interface components {
                  * @description `done_by_agent / (done_by_agent + done_by_person)`; none while nothing was done.
                  */
                 share?: number | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PropertyStackView: {
+            items: {
+                property: string;
+                /**
+                 * @description Every layer's value, in merge order: platform, apps in install
+                 *     order, customer.
+                 */
+                values: components["schemas"]["LayerValueView"][];
+                /** @description The layer whose value applies. */
+                winner: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -54073,6 +54784,32 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_UpgradeImpactView: {
+            items: {
+                app: string;
+                /** @description `customer` or `app`. */
+                layer: string;
+                /** @description The item it was made on: the entity's logical name, or `<entity>.<field>`. */
+                object_key: string;
+                /** @description `entity` or `attribute`. */
+                object_kind: string;
+                property: string;
+                /** @description Where it would apply after the release: the renamed item's key; absent for a removal. */
+                suggested_key?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_UserListItem: {
             items: {
                 email?: string | null;
@@ -54839,12 +55576,18 @@ export interface components {
         PlannedChangeset: {
             /**
              * @description Changeset-level blocks (`missing_dependency`, `platform_floor`,
-             *     `module_off`).
+             *     `module_off`, `app_clash`).
              */
             blocked: string[];
             /** Format: uuid */
             changeset_id: string;
             checksum: string;
+            /**
+             * @description Y11-T11: for an app's (`product`) changeset, the properties other
+             *     installed apps already set on what it touches. They block the
+             *     changeset unless the plan request accepts them.
+             */
+            clashes: components["schemas"]["AppClash"][];
             layer: string;
             phases: components["schemas"]["PlannedPhase"][];
             ref: string;
@@ -55794,6 +56537,17 @@ export interface components {
         ProofStep: {
             hash: string;
             side: components["schemas"]["ProofSide"];
+        };
+        /** @description A property across the layers. */
+        PropertyStackView: {
+            property: string;
+            /**
+             * @description Every layer's value, in merge order: platform, apps in install
+             *     order, customer.
+             */
+            values: components["schemas"]["LayerValueView"][];
+            /** @description The layer whose value applies. */
+            winner: string;
         };
         /** @description The proposal sent to billing. */
         Proposal: {
@@ -57646,6 +58400,22 @@ export interface components {
             /** Format: uuid */
             reservation_id: string;
         };
+        /** @description Y11-T9: what to reset; `{}` resets every customised property. */
+        ResetBody: {
+            /** @description The properties to reset; every customised property when absent. */
+            properties?: string[] | null;
+        };
+        /** @description One property a reset changes. */
+        ResetChangeView: {
+            /**
+             * @description The value after the reset: an app's, else the platform's; `null` when
+             *     no lower layer recorded one, so the property is left as it is.
+             */
+            after?: Record<string, never> | null;
+            /** @description The customer's value now. */
+            current: Record<string, never>;
+            property: string;
+        };
         ResetConfirmBody: {
             new_password: string;
             token: string;
@@ -57653,8 +58423,24 @@ export interface components {
         ResetRequestBody: {
             email: string;
         };
+        /** @description A reset, or its preview. */
+        ResetView: {
+            changes: components["schemas"]["ResetChangeView"][];
+            /**
+             * Format: uuid
+             * @description The reset to undo; absent for a preview.
+             */
+            reset_id?: string | null;
+        };
         ResolveBody: {
             keep: components["schemas"]["Keep"];
+        };
+        /** @description How to resolve a conflict. */
+        ResolveConflictBody: {
+            /** @description `keep_customer`, `take_platform` or `combine`. */
+            choice: string;
+            /** @description The value to apply; required for `combine`, refused otherwise. */
+            value?: Record<string, never> | null;
         };
         ResolveVariablesBody: {
             embed?: components["schemas"]["EmbedContext"];
@@ -57892,6 +58678,56 @@ export interface components {
             /** Format: uuid */
             role_id: string;
         };
+        /** @description A role's stored sign-in policy. */
+        RoleAuthPolicy: {
+            /** @description The role grants `system.admin`: weak factors never apply to it. */
+            is_admin_role: boolean;
+            mfa_factors: string[];
+            /** Format: int32 */
+            mfa_grace_days: number;
+            mfa_mode: string;
+            phishing_resistant_only: boolean;
+            /** Format: int32 */
+            remember_device_days: number;
+            /** Format: uuid */
+            role_id: string;
+            /** Format: int64 */
+            row_version: number;
+            sso_only: boolean;
+        };
+        /** @description A role's sign-in policy. Every field is optional; the ones given change. */
+        RoleAuthPolicyBody: {
+            /**
+             * @description Q5-T10: the second factors the role allows: `passkey`, `push`,
+             *     `totp`, `recovery`, `email`, `sms`, `whatsapp`. The weak ones (codes
+             *     sent by email or message) are never used for an administrator.
+             */
+            mfa_factors?: string[] | null;
+            /**
+             * Format: int32
+             * @description Q5-T10: days a holder may put off enrolling once a factor is required
+             *     (0 to 90).
+             */
+            mfa_grace_days?: number | null;
+            /**
+             * @description Q5-T10: `inherit` (the deployment's `auth.mfa_policy`), `off`,
+             *     `optional` or `required`.
+             */
+            mfa_mode?: string | null;
+            /** @description Q5-T10: only phishing-resistant factors (passkeys) count. */
+            phishing_resistant_only?: boolean | null;
+            /**
+             * Format: int32
+             * @description Q5-T10: days a browser stays remembered after a second factor (0 to
+             *     365; 0 never remembers).
+             */
+            remember_device_days?: number | null;
+            /**
+             * @description Only single sign-on, never a password, for every holder of the role
+             *     who is not a break-glass account.
+             */
+            sso_only?: boolean | null;
+        };
         RoleBulkFields: {
             /**
              * @description Meaningful in `listed` mode; kept as stored in `legacy` mode, so
@@ -58046,22 +58882,6 @@ export interface components {
              *     exactly as it did before `update_role` started honoring the header.
              */
             row_version: number;
-        };
-        /** @description A role's stored sign-in policy. */
-        RoleSsoPolicy: {
-            /** Format: uuid */
-            role_id: string;
-            /** Format: int64 */
-            row_version: number;
-            sso_only: boolean;
-        };
-        /** @description A role's sign-in policy. */
-        RoleSsoPolicyBody: {
-            /**
-             * @description Only single sign-on, never a password, for every holder of the role
-             *     who is not a break-glass account.
-             */
-            sso_only: boolean;
         };
         RoleSummary: {
             /** Format: uuid */
@@ -58541,6 +59361,15 @@ export interface components {
             cursor?: string | null;
             /** @description Plan the query and return the plan's summary instead of rows. */
             explain?: boolean;
+            /**
+             * @description S4-T10: run it as a background export instead of in the request:
+             *     the answer is 202 with the export, followed at
+             *     `GET /api/v1/{entity}/export/{id}`. A row query over the interactive
+             *     limit needs it.
+             */
+            export?: boolean;
+            /** @description S4-T10: with `export`, `json` (one row per line, the default) or `csv`. */
+            export_format?: string | null;
             params?: Record<string, never>;
             /**
              * @description The text form: `SELECT … FROM … [WHERE …] [GROUP BY …] [HAVING …]
@@ -58562,7 +59391,7 @@ export interface components {
             spec?: Record<string, never> | null;
         };
         /** @description Rows (a keyset page), aggregate groups, or a plan. */
-        RunResponse: components["schemas"]["CursorPage_RunRow"] | components["schemas"]["AggregateResult"] | components["schemas"]["ExplainResponse"];
+        RunResponse: components["schemas"]["CursorPage_RunRow"] | components["schemas"]["AggregateResult"] | components["schemas"]["ExplainResponse"] | components["schemas"]["ExportQueued"];
         /** @description One result row, its columns by name (a related field by its path). */
         RunRow: Record<string, never>;
         /** @description What a started run returns at once (N7-T1). */
@@ -59989,6 +60818,18 @@ export interface components {
              * @description Seconds an `act_with_undo` action waits before it runs (30 to 86400).
              */
             undo_seconds?: number | null;
+        };
+        SetCodeMapBody: {
+            code: string;
+            code_list: string;
+            source_system: string;
+            /**
+             * Format: date-time
+             * @description When this version takes effect; now when absent.
+             */
+            valid_from?: string | null;
+            /** @description What the code maps to; null retires the code from this version on. */
+            value?: string | null;
         };
         SetCredentialBody: {
             /**
@@ -63608,6 +64449,19 @@ export interface components {
             /** Format: uuid */
             verification_evidence_id?: string | null;
         };
+        /** @description A customisation a release affects. */
+        UpgradeImpactView: {
+            app: string;
+            /** @description `customer` or `app`. */
+            layer: string;
+            /** @description The item it was made on: the entity's logical name, or `<entity>.<field>`. */
+            object_key: string;
+            /** @description `entity` or `attribute`. */
+            object_kind: string;
+            property: string;
+            /** @description Where it would apply after the release: the renamed item's key; absent for a removal. */
+            suggested_key?: string | null;
+        };
         /** @description An upgrade's status change. */
         UpgradeStatus: {
             /**
@@ -64467,6 +65321,7 @@ export interface components {
             definition_fingerprint: string;
             definition_source: components["schemas"]["DefinitionSource"];
             drillability: components["schemas"]["Drillability"];
+            metric_parity?: null | components["schemas"]["MetricParity"];
             /** Format: int64 */
             published_version_number?: number | null;
             records: components["schemas"]["StructuredRecords"];
@@ -70828,6 +71683,70 @@ export interface operations {
             };
         };
     };
+    expanded_rules: {
+        parameters: {
+            query?: {
+                /** @description The first Gregorian year; this year by default. */
+                from_year?: number;
+                /** @description How many years, 1 to 5; 2 by default. */
+                years?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The calendar */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each rule with its days */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpandedRules"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description years outside 1 to 5 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     delete_calendar_rule: {
         parameters: {
             query?: never;
@@ -75720,6 +76639,115 @@ export interface operations {
             };
             /** @description `run_not_paused` */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_code_maps: {
+        parameters: {
+            query: {
+                /** @description The source system whose codes these are. */
+                source_system: string;
+                /** @description The code list within it. */
+                code_list: string;
+                /** @description Every version of every code instead of the mappings in effect now. */
+                history?: boolean;
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CodeMapVersion"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_code_map: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCodeMapBody"];
+            };
+        };
+        responses: {
+            /** @description The new version */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodeMapVersion"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another edit of this code won the version number; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -85125,6 +86153,55 @@ export interface operations {
             };
         };
     };
+    list_app_layers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of installed apps, first installed first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AppLayer"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     break_glass_status: {
         parameters: {
             query?: never;
@@ -85629,6 +86706,138 @@ export interface operations {
                 };
             };
             /** @description A document fails its shape or checksum check, or the order has a cycle */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_conflicts: {
+        parameters: {
+            query?: {
+                /** @description `open` or `resolved`; every conflict when absent. */
+                status?: string;
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of conflicts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_LayerConflictView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A status that is not open or resolved */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resolve_conflict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The conflict's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveConflictBody"];
+            };
+        };
+        responses: {
+            /** @description The resolved conflict */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LayerConflictView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such conflict, or its entity or field is gone */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The conflict is already resolved */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown choice, or a value missing for combine or given otherwise */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -86676,6 +87885,63 @@ export interface operations {
             };
         };
     };
+    undo_reset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The reset's id */
+                reset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The customer's values are back */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such reset, or its item is gone */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already undone, or the item was customised again */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     rollback_metadata_version: {
         parameters: {
             query?: never;
@@ -86799,6 +88065,56 @@ export interface operations {
             };
             /** @description The pulled artifact failed to verify or parse */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upgrade_impact: {
+        parameters: {
+            query: {
+                /** @description The platform (or app) changeset to check, planned or applied. */
+                changeset_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every affected customisation, whole on page 1 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_UpgradeImpactView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No planned or applied changeset with this id */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -87030,6 +88346,192 @@ export interface operations {
             };
             /** @description Another version switch is in progress */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    layer_stack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `entity` or `attribute` */
+                kind: string;
+                /** @description The entity's logical name, or `<entity>.<field>` */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every property the layers set, whole on page 1 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PropertyStackView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    layer_diff: {
+        parameters: {
+            query: {
+                /** @description `platform`, `app` or `customer`. */
+                from: string;
+                /** @description `platform`, `app` or `customer`. */
+                to: string;
+            };
+            header?: never;
+            path: {
+                /** @description `entity` or `attribute` */
+                kind: string;
+                /** @description The entity's logical name, or `<entity>.<field>` */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The differing properties, whole on page 1 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_LayerDifferenceView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A layer that is not platform, app or customer */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reset_customisation: {
+        parameters: {
+            query?: {
+                /** @description Answer what the reset would change, and change nothing. */
+                preview?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description `entity` or `attribute` */
+                kind: string;
+                /** @description The entity's logical name, or `<entity>.<field>` */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetBody"];
+            };
+        };
+        responses: {
+            /** @description What the reset changed, or would change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or field, or nothing to reset */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -95755,6 +97257,189 @@ export interface operations {
             };
         };
     };
+    list_oidc_group_mappings: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The provider added on screen */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OidcGroupMappingItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such provider added on screen */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_oidc_group_mapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The provider added on screen */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOidcGroupMappingBody"];
+            };
+        };
+        responses: {
+            /** @description Mapped */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OidcGroupMappingItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such provider added on screen */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The same mapping exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not exactly one live team or role, an empty claim value, or one that would grant system administration (`mapping_cannot_grant_admin`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_oidc_group_mapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The provider added on screen */
+                id: string;
+                /** @description The group mapping */
+                mapping_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such group mapping on this provider */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     oidc_provider_health: {
         parameters: {
             query?: never;
@@ -98574,7 +100259,7 @@ export interface operations {
             };
         };
     };
-    put_role_auth_policy: {
+    get_role_auth_policy: {
         parameters: {
             query?: never;
             header?: never;
@@ -98584,11 +100269,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RoleSsoPolicyBody"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description The role's policy */
             200: {
@@ -98596,7 +100277,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RoleSsoPolicy"];
+                    "application/json": components["schemas"]["RoleAuthPolicy"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -98619,6 +100300,69 @@ export interface operations {
             };
             /** @description No such role */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_role_auth_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The role */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleAuthPolicyBody"];
+            };
+        };
+        responses: {
+            /** @description The role's policy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleAuthPolicy"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such role */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown mode or factor, no factor, or days out of range */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -108383,6 +110127,113 @@ export interface operations {
             };
         };
     };
+    mfa_code_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaCodeSendBody"];
+            };
+        };
+        responses: {
+            /** @description The code is on its way */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The pending token is not a live sign-in token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The person's roles do not allow this factor, the person is an administrator, or the email address is not verified */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown channel */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The channel is not available on this deployment */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mfa_code_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaVerifyBody"];
+            };
+        };
+        responses: {
+            /** @description Signed in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The pending token or the code was refused */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The person's roles do not allow email codes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     confirm: {
         parameters: {
             query?: never;
@@ -108591,6 +110442,55 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mfa_postpone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaPendingEnrollBody"];
+            };
+        };
+        responses: {
+            /** @description Signed in; enrolment is put off */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The pending token is not a live enrolment token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The grace period is over, or no second factor is required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
             /** @description Request failed validation */
             422: {
@@ -112100,6 +114000,66 @@ export interface operations {
                 };
             };
             /** @description An unknown subject type */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_calendar_feeds: {
+        parameters: {
+            query: {
+                /** @description The calendar. */
+                calendar_id: string;
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the calendar's feeds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CalendarFeed"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A malformed page or page size */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -126170,7 +128130,13 @@ export interface operations {
     };
     openapi_json: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description `ar` for the Arabic summaries where the catalog has them; anything
+                 *     else, or none, is English.
+                 */
+                lang?: string;
+            };
             header?: {
                 /** @description The ETag of a document the client holds */
                 "If-None-Match"?: string | null;
@@ -130456,6 +132422,15 @@ export interface operations {
                     "application/json": components["schemas"]["RunResponse"];
                 };
             };
+            /** @description S4-T10: export is set; the export is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
             /** @description A cursor this deployment did not issue */
             400: {
                 headers: {
@@ -130483,7 +132458,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description A query outside the grammar, an unknown field or operator, or a plan over the cost limit */
+            /** @description Too many exports of this person already pending or running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A query outside the grammar, an unknown field or operator, a plan over the interactive limit without export (`query_too_large`), or as_of while time travel is off */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -135813,37 +137797,6 @@ export interface operations {
             };
         };
     };
-    aggregate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AggregateRequest"];
-            };
-        };
-        responses: {
-            /** @description Grouped metric buckets */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AggregateResponse"];
-                };
-            };
-            /** @description Invalid entity, group_by, metric, or filter */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     knowledge_search: {
         parameters: {
             query: {
@@ -136902,6 +138855,70 @@ export interface operations {
             };
             /** @description Caller lacks service_ticket.read */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_calendar: {
+        parameters: {
+            query: {
+                /** @description The range's start (inclusive). */
+                from: string;
+                /** @description The range's end (exclusive), at most 62 days after `from`. */
+                to: string;
+            };
+            header?: never;
+            path: {
+                /** @description The on-call schedule */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every stretch in the range, whole on page 1 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OnCallStretchView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such schedule for this caller, or on-call is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The range is reversed, longer than 62 days, or holds too many handovers */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -143287,7 +145304,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No such entity, or it has no default view */
+            /** @description No such entity */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -143305,7 +145322,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description A malformed filter, sort or select */
+            /** @description A malformed filter, sort or select, or a page over the interactive cost limit (query_too_large) */
             422: {
                 headers: {
                     [name: string]: unknown;

@@ -1663,6 +1663,114 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/service/oncall/schedules/{id}/calendar": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Who is on call over a range",
+        "description": "H7-T2: the stretches of one on-call schedule over at most 62 days, in time order, each with the person on call and whether the rotation or an override put them there; gaps with nobody on call are left out. The whole answer is on page 1.",
+        "operationId": "get_calendar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The on-call schedule",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The range's start (inclusive).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The range's end (exclusive), at most 62 days after `from`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every stretch in the range, whole on page 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OnCallStretchView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such schedule for this caller, or on-call is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The range is reversed, longer than 62 days, or holds too many handovers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/service/returns/{id}/dispositions": {
       "post": {
         "tags": [
@@ -6176,6 +6284,83 @@
                 },
                 "name": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_OnCallStretchView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One stretch with one person on call.",
+              "required": [
+                "start",
+                "end",
+                "user_id",
+                "via"
+              ],
+              "properties": {
+                "end": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "layer": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "The rotation layer, lowest first; absent for an override.",
+                  "minimum": 0
+                },
+                "start": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "user_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The person's user name, when their account still exists."
+                },
+                "via": {
+                  "type": "string",
+                  "description": "`override` (someone swapped in) or `layer` (the rotation)."
                 }
               }
             }

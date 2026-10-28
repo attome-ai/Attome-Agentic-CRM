@@ -10396,6 +10396,114 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/calendars/{id}/holiday-rules/expanded": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A calendar's holiday rule dates",
+        "description": "The days each of the calendar's own holiday rules closes in the years asked for (two from this year by default, at most five), each with its Gregorian and Umm al-Qura date, for an administrator checking a rule before relying on it. A rule that needs a sighting shows its expected dates. Administrators of automation only.",
+        "operationId": "expanded_rules",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The calendar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from_year",
+            "in": "query",
+            "description": "The first Gregorian year; this year by default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "years",
+            "in": "query",
+            "description": "How many years, 1 to 5; 2 by default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each rule with its days",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpandedRules"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "years outside 1 to 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/calendars/{id}/holiday-rules/{rule_id}": {
       "delete": {
         "tags": [
@@ -18432,6 +18540,205 @@
             }
           ],
           "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/data/code-maps": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List reference code mappings",
+        "description": "L1-T8: one code list's mappings in effect now, one per code (retired codes left out), or with `history` every version. Administrators only.",
+        "operationId": "list_code_maps",
+        "parameters": [
+          {
+            "name": "source_system",
+            "in": "query",
+            "description": "The source system whose codes these are.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code_list",
+            "in": "query",
+            "description": "The code list within it.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "history",
+            "in": "query",
+            "description": "Every version of every code instead of the mappings in effect now.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CodeMapVersion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Map a reference code",
+        "description": "L1-T8: writes a new version of one source code's mapping; earlier versions are kept, and imports use the newest version in effect. A null `value` retires the code. Administrators only. Audited.",
+        "operationId": "set_code_map",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCodeMapBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeMapVersion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another edit of this code won the version number; retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -34041,6 +34348,85 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/metadata/app-layers": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Installed apps in layer order",
+        "description": "Y11-T11: every installed app (a pack's product changesets) and its place in the layer order; a later app sits above an earlier one, and the customer above all apps.",
+        "operationId": "list_app_layers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of installed apps, first installed first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AppLayer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/metadata/break-glass": {
       "get": {
         "tags": [
@@ -34838,6 +35224,221 @@
             {
               "category": "configuration",
               "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/metadata/conflicts": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List upgrade conflicts",
+        "description": "The properties an upgrade changed that the customer (or an app) had also changed, newest first.",
+        "operationId": "list_conflicts",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "`open` or `resolved`; every conflict when absent.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of conflicts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LayerConflictView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A status that is not open or resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/metadata/conflicts/{id}/resolve": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Resolve an upgrade conflict",
+        "description": "Keeps the customer's value, takes the platform's (the customer's layer value is removed), or applies a combined value as the customer's. Taking or combining changes the entity or field at once.",
+        "operationId": "resolve_conflict",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The conflict's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveConflictBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The resolved conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayerConflictView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such conflict, or its entity or field is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The conflict is already resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown choice, or a value missing for combine or given otherwise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
             }
           ],
           "policy": "mandatory"
@@ -36532,6 +37133,96 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/metadata/resets/{reset_id}/undo": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Undo a reset",
+        "description": "Puts back the customer's values a reset removed, once. Refused when the item was customised again since.",
+        "operationId": "undo_reset",
+        "parameters": [
+          {
+            "name": "reset_id",
+            "in": "path",
+            "description": "The reset's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The customer's values are back"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such reset, or its item is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already undone, or the item was customised again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/metadata/rollback": {
       "post": {
         "tags": [
@@ -36732,6 +37423,84 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/metadata/upgrade-impact": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Customisations a release affects",
+        "description": "Y11-T12: for a platform or app changeset (planned or applied), each customer or app customisation on an entity or field it retires, deletes or renames, with the new name for a rename. Nothing is moved.",
+        "operationId": "upgrade_impact",
+        "parameters": [
+          {
+            "name": "changeset_id",
+            "in": "query",
+            "description": "The platform (or app) changeset to check, planned or applied.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every affected customisation, whole on page 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_UpgradeImpactView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No planned or applied changeset with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/admin/metadata/versions": {
@@ -37072,6 +37841,330 @@
           },
           "409": {
             "description": "Another version switch is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/metadata/{kind}/{key}/layers": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "An item's layer stack",
+        "description": "For an entity or a field, each property's value in every layer that sets it and the layer whose value applies.",
+        "operationId": "layer_stack",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "`entity` or `attribute`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The entity's logical name, or `<entity>.<field>`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every property the layers set, whole on page 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PropertyStackView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/metadata/{kind}/{key}/layers/diff": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Compare two layers of an item",
+        "description": "The properties of an entity or a field that two layers set differently.",
+        "operationId": "layer_diff",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "`entity` or `attribute`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The entity's logical name, or `<entity>.<field>`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "`platform`, `app` or `customer`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "`platform`, `app` or `customer`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The differing properties, whole on page 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LayerDifferenceView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A layer that is not platform, app or customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/metadata/{kind}/{key}/reset": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reset a customisation",
+        "description": "Puts an entity's or a field's customised properties (all, or the ones named) back to what an app or the platform gives them, removing the customer's values; with `preview=true`, only answers what would change. Undo with the reset id.",
+        "operationId": "reset_customisation",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "`entity` or `attribute`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The entity's logical name, or `<entity>.<field>`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "preview",
+            "in": "query",
+            "description": "Answer what the reset would change, and change nothing.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the reset changed, or would change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or field, or nothing to reset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
             "content": {
               "application/json": {
                 "schema": {
@@ -51320,6 +52413,310 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/oidc-providers/{id}/group-mappings": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Sign-in provider group mappings",
+        "description": "The provider's group mappings: each value of its groups claim and the team or role it gives at sign-in. Administrators only.",
+        "operationId": "list_oidc_group_mappings",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The provider added on screen",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OidcGroupMappingItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such provider added on screen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Add a sign-in provider group mapping",
+        "description": "Maps a value of the provider's groups claim to a team or a role, given at each sign-in through the provider. A role carrying system administration, or a team with such a role, is refused. Administrators only; audited.",
+        "operationId": "create_oidc_group_mapping",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The provider added on screen",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOidcGroupMappingBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Mapped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcGroupMappingItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such provider added on screen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The same mapping exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not exactly one live team or role, an empty claim value, or one that would grant system administration (`mapping_cannot_grant_admin`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/oidc-providers/{id}/group-mappings/{mapping_id}": {
+      "delete": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Remove a sign-in provider group mapping",
+        "description": "The group no longer gives its team or role. People keep what it gave until their next sign-in through the provider, which removes it. Administrators only; audited.",
+        "operationId": "delete_oidc_group_mapping",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The provider added on screen",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "mapping_id",
+            "in": "path",
+            "description": "The group mapping",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such group mapping on this provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/oidc-providers/{id}/health": {
       "get": {
         "tags": [
@@ -55901,13 +57298,13 @@
       }
     },
     "/api/v1/admin/security/roles/{id}/auth-policy": {
-      "put": {
+      "get": {
         "tags": [
           "admin-security"
         ],
-        "summary": "Set a role's sign-in policy",
-        "description": "Sets whether a role signs in only through single sign-on (Q1-T7).\nAdministrators only.",
-        "operationId": "put_role_auth_policy",
+        "summary": "Read a role's sign-in policy",
+        "description": "Q5-T10: a role's single sign-on and second-factor policy, with the defaults for a role that has none stored. Administrators only.",
+        "operationId": "get_role_auth_policy",
         "parameters": [
           {
             "name": "id",
@@ -55920,23 +57317,13 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RoleSsoPolicyBody"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "The role's policy",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleSsoPolicy"
+                  "$ref": "#/components/schemas/RoleAuthPolicy"
                 }
               }
             }
@@ -55963,6 +57350,102 @@
           },
           "404": {
             "description": "No such role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "put": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Set a role's sign-in policy",
+        "description": "Sets whether a role signs in only through single sign-on (Q1-T7) and its second-factor policy: mode, allowed factors, grace days, remember-browser days and phishing-resistant only (Q5-T10). Only the fields given change. Administrators only.",
+        "operationId": "put_role_auth_policy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The role",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleAuthPolicyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The role's policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAuthPolicy"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown mode or factor, no factor, or days out of range",
             "content": {
               "application/json": {
                 "schema": {
@@ -72174,6 +73657,158 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/auth/mfa/code/send": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Send a sign-in code",
+        "description": "Q5-T5: with the `MfaRequired` pending token, sends a one-time code by\n`channel` as the second factor, when every role of the person allows that\nweaker factor. Never for an administrator (403), and never to an email\naddress that is not verified (403). `email` is the channel today; `sms`\nand `whatsapp` answer 503 until those channels exist. The code works\nonce, for a minute; sending again replaces it. The token stays usable for\n`mfa/code/verify`. Bypass-listed like `mfa/verify`; rate limited in the\n`mfa` class.",
+        "operationId": "mfa_code_send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaCodeSendBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The code is on its way"
+          },
+          "401": {
+            "description": "The pending token is not a live sign-in token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The person's roles do not allow this factor, the person is an administrator, or the email address is not verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown channel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The channel is not available on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "issues a one-time code and queues its email; the sign-in it completes is audited by mfa/code/verify",
+          "reason": "delegated",
+          "via": "EngineJob::SendEmail"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "mfa",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/auth/mfa/code/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Finish sign-in with a sent code",
+        "description": "Q5-T5: like `mfa/verify`, with the one-time code `mfa/code/send` sent\ninstead of a TOTP code. The session records the weaker factor\n(`otp_weak`), which no step-up counts as phishing-resistant. Refused when\nthe person's roles no longer allow email codes.",
+        "operationId": "mfa_code_verify",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaVerifyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in"
+          },
+          "401": {
+            "description": "The pending token or the code was refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The person's roles do not allow email codes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "login"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "mfa",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/auth/mfa/confirm": {
       "post": {
         "tags": [
@@ -72524,6 +74159,79 @@
             {
               "category": "credential",
               "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "mfa",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/auth/mfa/postpone": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Put off required MFA enrolment",
+        "description": "Q5-T3: with the `MfaEnrollmentRequired` pending token, signs the person in\nwith their password alone and puts enrolment off for a day, never past\nthe grace period their roles' policy gives once a second factor becomes\nrequired. After the grace period it is refused (403) and the person must\nenrol. The token works once. Bypass-listed like `mfa/pending-enroll`;\nrate limited in the `mfa` class.",
+        "operationId": "mfa_postpone",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaPendingEnrollBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in; enrolment is put off"
+          },
+          "401": {
+            "description": "The pending token is not a live enrolment token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The grace period is over, or no second factor is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "login"
             }
           ],
           "policy": "mandatory"
@@ -78236,6 +79944,103 @@
       }
     },
     "/api/v1/calendar-feeds": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List a calendar's feeds",
+        "description": "Z12-T13: the calendar's iCal feeds with whether each is on, when it was\nlast fetched and why the last fetch failed. Administrators of automation\nonly.",
+        "operationId": "list_calendar_feeds",
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "query",
+            "description": "The calendar.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the calendar's feeds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CalendarFeed"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A malformed page or page size",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
       "post": {
         "tags": [
           "admin"
@@ -101463,7 +103268,7 @@
           "operations"
         ],
         "summary": "This API's own OpenAPI 3.1 document, as this caller may use it",
-        "description": "Only the operations of the modules switched on here, and none under `/api/v1/admin` for a caller who is not an administrator (S2-T14). Send the `ETag` back in `If-None-Match` to get a 304 while nothing has changed.",
+        "description": "Only the operations of the modules switched on here, and none under `/api/v1/admin` for a caller who is not an administrator (S2-T14). Send the `ETag` back in `If-None-Match` to get a 304 while nothing has changed. With `lang=ar` the summaries and tag descriptions are Arabic where the catalog has them (S2-T11).",
         "operationId": "openapi_json",
         "parameters": [
           {
@@ -101476,6 +103281,15 @@
                 "string",
                 "null"
               ]
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`ar` for the Arabic summaries where the catalog has them; anything\nelse, or none, is English.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -108306,6 +110120,16 @@
               }
             }
           },
+          "202": {
+            "description": "S4-T10: export is set; the export is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "A cursor this deployment did not issue",
             "content": {
@@ -108336,8 +110160,18 @@
               }
             }
           },
+          "409": {
+            "description": "Too many exports of this person already pending or running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
-            "description": "A query outside the grammar, an unknown field or operator, or a plan over the cost limit",
+            "description": "A query outside the grammar, an unknown field or operator, a plan over the interactive limit without export (`query_too_large`), or as_of while time travel is off",
             "content": {
               "application/json": {
                 "schema": {
@@ -108366,9 +110200,9 @@
           }
         ],
         "x-audit-exempt": {
-          "note": "runs one query on the read-only pool, or plans it; persists nothing",
-          "reason": "read_only",
-          "via": null
+          "note": "runs one query on the read-only pool, or plans it; with export it only enqueues an export, which the job audits in the export's completion transaction",
+          "reason": "delegated",
+          "via": "EngineJob::DataExport"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -117307,63 +119141,6 @@
         "x-risk": "low"
       }
     },
-    "/api/v1/search/aggregate": {
-      "post": {
-        "tags": [
-          "search"
-        ],
-        "summary": "Aggregate one entity's records",
-        "description": "Counts, sums, averages, minimums and maximums over one entity's records grouped by its fields,\nvalidated against its metadata and limited to the records the caller may read.",
-        "operationId": "aggregate",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AggregateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Grouped metric buckets",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AggregateResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Invalid entity, group_by, metric, or filter"
-          }
-        },
-        "security": [
-          {
-            "session_cookie": []
-          },
-          {
-            "api_key": []
-          },
-          {
-            "s2s_hmac": []
-          }
-        ],
-        "x-audit-exempt": {
-          "note": "computes grouped metric buckets over a read privilege check; persists nothing",
-          "reason": "read_only",
-          "via": null
-        },
-        "x-cache": "no-store",
-        "x-idempotent": "key",
-        "x-module": "search",
-        "x-privilege": "authenticated",
-        "x-rate-class": "api",
-        "x-risk": "medium"
-      }
-    },
     "/api/v1/search/knowledge": {
       "get": {
         "tags": [
@@ -119119,6 +120896,114 @@
           },
           "403": {
             "description": "Caller lacks service_ticket.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/service/oncall/schedules/{id}/calendar": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Who is on call over a range",
+        "description": "H7-T2: the stretches of one on-call schedule over at most 62 days, in time order, each with the person on call and whether the rotation or an override put them there; gaps with nobody on call are left out. The whole answer is on page 1.",
+        "operationId": "get_calendar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The on-call schedule",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The range's start (inclusive).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The range's end (exclusive), at most 62 days after `from`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every stretch in the range, whole on page 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OnCallStretchView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such schedule for this caller, or on-call is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The range is reversed, longer than 62 days, or holds too many handovers",
             "content": {
               "application/json": {
                 "schema": {
@@ -129773,7 +131658,7 @@
             }
           },
           "404": {
-            "description": "No such entity, or it has no default view",
+            "description": "No such entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -129793,7 +131678,7 @@
             }
           },
           "422": {
-            "description": "A malformed filter, sort or select",
+            "description": "A malformed filter, sort or select, or a page over the interactive cost limit (query_too_large)",
             "content": {
               "application/json": {
                 "schema": {
@@ -145453,131 +147338,6 @@
           }
         }
       },
-      "AggregateBucket": {
-        "type": "object",
-        "required": [
-          "value"
-        ],
-        "properties": {
-          "label": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "`null` for rows whose `group_by` field is itself NULL. Always a\ndisplay string (or null) — the group_by column is cast to `text` in\nSQL rather than decoded per its native type, since a bucket label is\nfor display, not further computation."
-          },
-          "label_2": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "A13-T2: the `then_by` value, when the request named one."
-          },
-          "value": {
-            "type": "number",
-            "format": "double"
-          }
-        }
-      },
-      "AggregateRequest": {
-        "type": "object",
-        "required": [
-          "metric_fn"
-        ],
-        "properties": {
-          "entity": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Fallback: entity logicalname string."
-          },
-          "entity_logical_name": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid",
-            "description": "Entity UUID (`entity_info.id`) — same dual resolution as\n`query/execute`'s `ExecuteQueryRequest`."
-          },
-          "filters": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Filter"
-            }
-          },
-          "group_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Field to bucket on. `None` runs the metric over every row the\nfilters/RLS admit as a single ungrouped total (e.g. a Metric widget's\n\"Total Revenue\" — `SUM(amount)` with no `GROUP BY`) — the response\ncarries exactly one bucket with `label: null`."
-          },
-          "metric_field": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Required unless `metric_fn == \"count\"`."
-          },
-          "metric_fn": {
-            "type": "string",
-            "description": "One of: `count`, `sum`, `avg`, `min`, `max`.",
-            "example": "sum"
-          },
-          "order": {
-            "type": "string",
-            "description": "`\"value_desc\"` (default), `\"value_asc\"`, `\"label_asc\"`, `\"label_desc\"`.\nTies break on the label, so equal values never swap between runs.",
-            "default": "value_desc",
-            "example": "value_desc"
-          },
-          "then_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "A13-T2: a second field to bucket on within each `group_by` bucket\n(needs `group_by`); each bucket then carries `label_2`."
-          }
-        }
-      },
-      "AggregateResponse": {
-        "type": "object",
-        "required": [
-          "entity_logical_name",
-          "metric_fn",
-          "buckets",
-          "bucket_count",
-          "truncated"
-        ],
-        "properties": {
-          "bucket_count": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "buckets": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AggregateBucket"
-            }
-          },
-          "entity_logical_name": {
-            "type": "string"
-          },
-          "group_by": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "metric_fn": {
-            "type": "string"
-          },
-          "truncated": {
-            "type": "boolean",
-            "description": "Honest-cap contract mirroring `attome-search::routes`'s `Total::AtLeast`\nreasoning: `true` means real groups exist past [`MAX_GROUP_BUCKETS`],\nnot that the count happens to equal the cap."
-          }
-        }
-      },
       "AggregateResult": {
         "type": "object",
         "description": "An aggregate query's result.",
@@ -146279,6 +148039,33 @@
           }
         }
       },
+      "AppClash": {
+        "type": "object",
+        "description": "A property two apps set.",
+        "required": [
+          "object_kind",
+          "object_key",
+          "property",
+          "other_app"
+        ],
+        "properties": {
+          "object_key": {
+            "type": "string",
+            "description": "The entity's logical name, or `<entity>.<field>`."
+          },
+          "object_kind": {
+            "type": "string",
+            "description": "`entity` or `attribute`."
+          },
+          "other_app": {
+            "type": "string",
+            "description": "The installed app that set it."
+          },
+          "property": {
+            "type": "string"
+          }
+        }
+      },
       "AppDef": {
         "type": "object",
         "description": "M65 Phase 1 (D-467) — `app`, keyed by `name`. Apps only filter\nnavigation, they never authorize — see `app_admin.rs`'s own doc comment.\n\n`sidebar_root_ref`/`default_dashboard_ref` are deliberately NOT part of\nthis definition even though the live row stores both: each is a\ndeployment-local UUID pointing at another deployment's own\n`sidebar`/dashboard-entity row, with no portable identity a bundle\ncould carry across deployments (same shape `RelationshipDef` already\nexcludes `join_table` for — a derived/local fact, not part of the\nportable definition). An imported app always applies with both null; an\nadmin wires them up post-apply through the admin UI on the target\ndeployment.",
@@ -146361,6 +148148,29 @@
               "null"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "AppLayer": {
+        "type": "object",
+        "description": "An installed app and its place in the layer order.",
+        "required": [
+          "app",
+          "position",
+          "installed_at"
+        ],
+        "properties": {
+          "app": {
+            "type": "string"
+          },
+          "installed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1 for the first app installed; later apps sit above earlier ones."
           }
         }
       },
@@ -154210,6 +156020,10 @@
           "changesets"
         ],
         "properties": {
+          "accept_clashes": {
+            "type": "boolean",
+            "description": "Y11-T11 (plan only): plan an app's changeset even where it sets\nproperties another installed app set; the clashes are still listed."
+          },
           "changesets": {
             "type": "array",
             "items": {
@@ -155627,6 +157441,76 @@
         "properties": {
           "code": {
             "type": "string"
+          }
+        }
+      },
+      "CodeMapRef": {
+        "type": "object",
+        "description": "The code list a mapped field's codes come from.",
+        "required": [
+          "source_system",
+          "code_list"
+        ],
+        "properties": {
+          "code_list": {
+            "type": "string"
+          },
+          "source_system": {
+            "type": "string"
+          }
+        }
+      },
+      "CodeMapVersion": {
+        "type": "object",
+        "description": "One version of one code's mapping.",
+        "required": [
+          "id",
+          "source_system",
+          "code_list",
+          "code",
+          "version",
+          "valid_from",
+          "created_by",
+          "created_at"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "code_list": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source_system": {
+            "type": "string"
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When this version takes effect."
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What the code maps to; absent when this version retires it."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1 for the first mapping of this code, one more for every edit."
           }
         }
       },
@@ -158763,6 +160647,33 @@
           }
         }
       },
+      "CreateOidcGroupMappingBody": {
+        "type": "object",
+        "description": "What to map. Exactly one of `team_id` and `role_id`.",
+        "required": [
+          "claim_value"
+        ],
+        "properties": {
+          "claim_value": {
+            "type": "string",
+            "description": "The value of the provider's groups claim, such as a group id."
+          },
+          "role_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "team_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "CreateOidcProviderBody": {
         "type": "object",
         "description": "A new provider. `client_secret` is write-only.",
@@ -161708,6 +163619,17 @@
           "target"
         ],
         "properties": {
+          "code_map": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CodeMapRef",
+                "description": "L1-T8: the cell is a source system's code in one of its code lists,\nstored as the value it maps to now ([`code_map`]). An unmapped code\nrejects the record."
+              }
+            ]
+          },
           "lookup_match_field": {
             "type": [
               "string",
@@ -168110,6 +170032,92 @@
           "stage_change"
         ]
       },
+      "ExpandedDay": {
+        "type": "object",
+        "description": "One day a holiday rule closes, in both calendars.",
+        "required": [
+          "date"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "hijri": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The Umm al-Qura date, `1447-10-01`; `null` outside its range."
+          }
+        }
+      },
+      "ExpandedRule": {
+        "type": "object",
+        "description": "Z12-T13: a holiday rule and the days it closes in the years asked for.",
+        "required": [
+          "rule_id",
+          "name",
+          "needs_sighting",
+          "days"
+        ],
+        "properties": {
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpandedDay"
+            }
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the rule could not be expanded, when it could not."
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "needs_sighting": {
+            "type": "boolean"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ExpandedRules": {
+        "type": "object",
+        "description": "Z12-T13: a calendar's rules and their days, for the years asked for.",
+        "required": [
+          "from_year",
+          "years",
+          "rules"
+        ],
+        "properties": {
+          "from_year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpandedRule"
+            }
+          },
+          "years": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "ExpiredFlag": {
         "type": "object",
         "description": "T6-T1: a flag past its expiry date, for the expiry report.",
@@ -168410,6 +170418,29 @@
           "row_count": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "ExportQueued": {
+        "type": "object",
+        "description": "S4-T10: a query queued as a background export.",
+        "required": [
+          "export_id",
+          "status",
+          "status_url"
+        ],
+        "properties": {
+          "export_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending` until the worker starts it."
+          },
+          "status_url": {
+            "type": "string",
+            "description": "Where to follow it and, once done, download it."
           }
         }
       },
@@ -174777,6 +176808,133 @@
           }
         }
       },
+      "LayerConflictView": {
+        "type": "object",
+        "description": "An upgrade conflict.",
+        "required": [
+          "id",
+          "object_kind",
+          "object_key",
+          "property",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "customer": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The value the customer (or an app) holds."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "new_platform": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The platform's value now."
+          },
+          "object_key": {
+            "type": "string",
+            "description": "The entity's logical name, or `<entity>.<field>`."
+          },
+          "object_kind": {
+            "type": "string",
+            "description": "`entity` or `attribute`."
+          },
+          "old_platform": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The platform's value before the upgrade."
+          },
+          "property": {
+            "type": "string"
+          },
+          "resolution": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`keep_customer`, `take_platform` or `combine`, once resolved."
+          },
+          "resolved_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "resolved_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`open` or `resolved`."
+          }
+        }
+      },
+      "LayerDifferenceView": {
+        "type": "object",
+        "description": "A property two layers set differently.",
+        "required": [
+          "property"
+        ],
+        "properties": {
+          "from": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "`null` when the `from` layer does not set it."
+          },
+          "property": {
+            "type": "string"
+          },
+          "to": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "`null` when the `to` layer does not set it."
+          }
+        }
+      },
+      "LayerValueView": {
+        "type": "object",
+        "description": "One layer's value for a property.",
+        "required": [
+          "layer",
+          "app",
+          "value"
+        ],
+        "properties": {
+          "app": {
+            "type": "string",
+            "description": "The app that set it; empty for the platform and the customer."
+          },
+          "layer": {
+            "type": "string",
+            "description": "`platform`, `app` or `customer`."
+          },
+          "value": {
+            "type": "object"
+          }
+        }
+      },
       "LeadConversionUndone": {
         "type": "object",
         "description": "A conversion undone.",
@@ -178631,6 +180789,62 @@
           }
         }
       },
+      "MetricParity": {
+        "type": "object",
+        "description": "P7-T2: a drilled KPI's snapshot next to the records listed now.",
+        "required": [
+          "metric_id",
+          "period_start",
+          "listed_total",
+          "counts_records",
+          "as_of_available"
+        ],
+        "properties": {
+          "as_of_available": {
+            "type": "boolean",
+            "description": "Whether the records as they were when the snapshot was taken can be\nlisted; never yet."
+          },
+          "as_of_unavailable_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "counts_records": {
+            "type": "boolean",
+            "description": "Whether the metric counts records, so the snapshot and the listed\ntotal are the same measure and can be compared."
+          },
+          "listed_total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many records the caller may read match the definition now."
+          },
+          "metric_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period_start": {
+            "type": "string",
+            "format": "date",
+            "description": "The period the records were listed for: the metric's current one."
+          },
+          "snapshot_computed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "snapshot_value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The latest snapshot of that period; absent before one is computed."
+          }
+        }
+      },
       "MetricPoint": {
         "type": "object",
         "description": "One point: the bucket's start and the average of the samples in it.",
@@ -178715,6 +180929,24 @@
               "null"
             ],
             "format": "double"
+          }
+        }
+      },
+      "MfaCodeSendBody": {
+        "type": "object",
+        "description": "Q5-T5: send a one-time sign-in code.",
+        "required": [
+          "pending_token",
+          "channel"
+        ],
+        "properties": {
+          "channel": {
+            "type": "string",
+            "description": "`email`; `sms` and `whatsapp` once those channels exist."
+          },
+          "pending_token": {
+            "type": "string",
+            "description": "The `MfaRequired` pending token."
           }
         }
       },
@@ -178864,6 +181096,10 @@
           },
           "pending_token": {
             "type": "string"
+          },
+          "remember": {
+            "type": "boolean",
+            "description": "Q5-T4: remember this browser so later sign-ins from it skip the\nsecond factor, for as long as the person's policy allows (never for\nan administrator). Ignored by the recovery-code route."
           }
         }
       },
@@ -181818,6 +184054,43 @@
           }
         }
       },
+      "OidcGroupMappingItem": {
+        "type": "object",
+        "description": "One group mapping: a value of the groups claim and the team or the role\nit gives.",
+        "required": [
+          "id",
+          "provider_id",
+          "claim_value"
+        ],
+        "properties": {
+          "claim_value": {
+            "type": "string",
+            "description": "The value of the provider's groups claim."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "team_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "OidcLinkBody": {
         "type": "object",
         "required": [
@@ -182078,6 +184351,49 @@
         "properties": {
           "authorize_url": {
             "type": "string"
+          }
+        }
+      },
+      "OnCallStretchView": {
+        "type": "object",
+        "description": "One stretch with one person on call.",
+        "required": [
+          "start",
+          "end",
+          "user_id",
+          "via"
+        ],
+        "properties": {
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "layer": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "The rotation layer, lowest first; absent for an override.",
+            "minimum": 0
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The person's user name, when their account still exists."
+          },
+          "via": {
+            "type": "string",
+            "description": "`override` (someone swapped in) or `layer` (the rotation)."
           }
         }
       },
@@ -185172,6 +187488,63 @@
           }
         }
       },
+      "PaginatedResponse_AppLayer": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "An installed app and its place in the layer order.",
+              "required": [
+                "app",
+                "position",
+                "installed_at"
+              ],
+              "properties": {
+                "app": {
+                  "type": "string"
+                },
+                "installed_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "position": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "1 for the first app installed; later apps sit above earlier ones."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_ApprovalHistoryItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -186875,6 +189248,80 @@
           }
         }
       },
+      "PaginatedResponse_CalendarFeed": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A feed.",
+              "required": [
+                "id",
+                "calendar_id",
+                "url",
+                "enabled"
+              ],
+              "properties": {
+                "calendar_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "last_error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Why the last fetch failed: an HTTP status or a parse failure."
+                },
+                "last_fetched_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_CapacityRow": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -188004,6 +190451,94 @@
                 },
                 "status": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_CodeMapVersion": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One version of one code's mapping.",
+              "required": [
+                "id",
+                "source_system",
+                "code_list",
+                "code",
+                "version",
+                "valid_from",
+                "created_by",
+                "created_at"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "code_list": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "created_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "source_system": {
+                  "type": "string"
+                },
+                "valid_from": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When this version takes effect."
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "What the code maps to; absent when this version retires it."
+                },
+                "version": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "1 for the first mapping of this code, one more for every edit."
                 }
               }
             }
@@ -194436,6 +196971,179 @@
           }
         }
       },
+      "PaginatedResponse_LayerConflictView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "An upgrade conflict.",
+              "required": [
+                "id",
+                "object_kind",
+                "object_key",
+                "property",
+                "status",
+                "created_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "customer": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "The value the customer (or an app) holds."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "new_platform": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "The platform's value now."
+                },
+                "object_key": {
+                  "type": "string",
+                  "description": "The entity's logical name, or `<entity>.<field>`."
+                },
+                "object_kind": {
+                  "type": "string",
+                  "description": "`entity` or `attribute`."
+                },
+                "old_platform": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "The platform's value before the upgrade."
+                },
+                "property": {
+                  "type": "string"
+                },
+                "resolution": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "`keep_customer`, `take_platform` or `combine`, once resolved."
+                },
+                "resolved_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "resolved_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`open` or `resolved`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_LayerDifferenceView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A property two layers set differently.",
+              "required": [
+                "property"
+              ],
+              "properties": {
+                "from": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "`null` when the `from` layer does not set it."
+                },
+                "property": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "`null` when the `to` layer does not set it."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_LedgerSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -196597,6 +199305,77 @@
           }
         }
       },
+      "PaginatedResponse_OidcGroupMappingItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One group mapping: a value of the groups claim and the team or the role\nit gives.",
+              "required": [
+                "id",
+                "provider_id",
+                "claim_value"
+              ],
+              "properties": {
+                "claim_value": {
+                  "type": "string",
+                  "description": "The value of the provider's groups claim."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "provider_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "role_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "team_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_OidcProviderItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -196719,6 +199498,83 @@
                 },
                 "trusted_for_mfa": {
                   "type": "boolean"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_OnCallStretchView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One stretch with one person on call.",
+              "required": [
+                "start",
+                "end",
+                "user_id",
+                "via"
+              ],
+              "properties": {
+                "end": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "layer": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "The rotation layer, lowest first; absent for an override.",
+                  "minimum": 0
+                },
+                "start": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "user_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The person's user name, when their account still exists."
+                },
+                "via": {
+                  "type": "string",
+                  "description": "`override` (someone swapped in) or `layer` (the rotation)."
                 }
               }
             }
@@ -198488,6 +201344,65 @@
                   ],
                   "format": "double",
                   "description": "`done_by_agent / (done_by_agent + done_by_person)`; none while nothing was done."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_PropertyStackView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A property across the layers.",
+              "required": [
+                "property",
+                "winner",
+                "values"
+              ],
+              "properties": {
+                "property": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LayerValueView"
+                  },
+                  "description": "Every layer's value, in merge order: platform, apps in install\norder, customer."
+                },
+                "winner": {
+                  "type": "string",
+                  "description": "The layer whose value applies."
                 }
               }
             }
@@ -205019,6 +207934,78 @@
           }
         }
       },
+      "PaginatedResponse_UpgradeImpactView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A customisation a release affects.",
+              "required": [
+                "object_kind",
+                "object_key",
+                "property",
+                "layer",
+                "app"
+              ],
+              "properties": {
+                "app": {
+                  "type": "string"
+                },
+                "layer": {
+                  "type": "string",
+                  "description": "`customer` or `app`."
+                },
+                "object_key": {
+                  "type": "string",
+                  "description": "The item it was made on: the entity's logical name, or `<entity>.<field>`."
+                },
+                "object_kind": {
+                  "type": "string",
+                  "description": "`entity` or `attribute`."
+                },
+                "property": {
+                  "type": "string"
+                },
+                "suggested_key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Where it would apply after the release: the renamed item's key; absent for a removal."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_UserListItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -206999,7 +209986,8 @@
           "checksum",
           "status",
           "blocked",
-          "phases"
+          "phases",
+          "clashes"
         ],
         "properties": {
           "blocked": {
@@ -207007,7 +209995,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Changeset-level blocks (`missing_dependency`, `platform_floor`,\n`module_off`)."
+            "description": "Changeset-level blocks (`missing_dependency`, `platform_floor`,\n`module_off`, `app_clash`)."
           },
           "changeset_id": {
             "type": "string",
@@ -207015,6 +210003,13 @@
           },
           "checksum": {
             "type": "string"
+          },
+          "clashes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppClash"
+            },
+            "description": "Y11-T11: for an app's (`product`) changeset, the properties other\ninstalled apps already set on what it touches. They block the\nchangeset unless the plan request accepts them."
           },
           "layer": {
             "type": "string"
@@ -209307,6 +212302,31 @@
           },
           "side": {
             "$ref": "#/components/schemas/ProofSide"
+          }
+        }
+      },
+      "PropertyStackView": {
+        "type": "object",
+        "description": "A property across the layers.",
+        "required": [
+          "property",
+          "winner",
+          "values"
+        ],
+        "properties": {
+          "property": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LayerValueView"
+            },
+            "description": "Every layer's value, in merge order: platform, apps in install\norder, customer."
+          },
+          "winner": {
+            "type": "string",
+            "description": "The layer whose value applies."
           }
         }
       },
@@ -214055,6 +217075,47 @@
           }
         }
       },
+      "ResetBody": {
+        "type": "object",
+        "description": "Y11-T9: what to reset; `{}` resets every customised property.",
+        "properties": {
+          "properties": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "The properties to reset; every customised property when absent."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ResetChangeView": {
+        "type": "object",
+        "description": "One property a reset changes.",
+        "required": [
+          "property",
+          "current"
+        ],
+        "properties": {
+          "after": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The value after the reset: an app's, else the platform's; `null` when\nno lower layer recorded one, so the property is left as it is."
+          },
+          "current": {
+            "type": "object",
+            "description": "The customer's value now."
+          },
+          "property": {
+            "type": "string"
+          }
+        }
+      },
       "ResetConfirmBody": {
         "type": "object",
         "required": [
@@ -214081,6 +217142,29 @@
           }
         }
       },
+      "ResetView": {
+        "type": "object",
+        "description": "A reset, or its preview.",
+        "required": [
+          "changes"
+        ],
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResetChangeView"
+            }
+          },
+          "reset_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The reset to undo; absent for a preview."
+          }
+        }
+      },
       "ResolveBody": {
         "type": "object",
         "required": [
@@ -214091,6 +217175,27 @@
             "$ref": "#/components/schemas/Keep"
           }
         }
+      },
+      "ResolveConflictBody": {
+        "type": "object",
+        "description": "How to resolve a conflict.",
+        "required": [
+          "choice"
+        ],
+        "properties": {
+          "choice": {
+            "type": "string",
+            "description": "`keep_customer`, `take_platform` or `combine`."
+          },
+          "value": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The value to apply; required for `combine`, refused otherwise."
+          }
+        },
+        "additionalProperties": false
       },
       "ResolveVariablesBody": {
         "type": "object",
@@ -214650,6 +217755,112 @@
           }
         }
       },
+      "RoleAuthPolicy": {
+        "type": "object",
+        "description": "A role's stored sign-in policy.",
+        "required": [
+          "role_id",
+          "sso_only",
+          "mfa_mode",
+          "mfa_factors",
+          "mfa_grace_days",
+          "remember_device_days",
+          "phishing_resistant_only",
+          "is_admin_role",
+          "row_version"
+        ],
+        "properties": {
+          "is_admin_role": {
+            "type": "boolean",
+            "description": "The role grants `system.admin`: weak factors never apply to it."
+          },
+          "mfa_factors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mfa_grace_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mfa_mode": {
+            "type": "string"
+          },
+          "phishing_resistant_only": {
+            "type": "boolean"
+          },
+          "remember_device_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sso_only": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RoleAuthPolicyBody": {
+        "type": "object",
+        "description": "A role's sign-in policy. Every field is optional; the ones given change.",
+        "properties": {
+          "mfa_factors": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Q5-T10: the second factors the role allows: `passkey`, `push`,\n`totp`, `recovery`, `email`, `sms`, `whatsapp`. The weak ones (codes\nsent by email or message) are never used for an administrator."
+          },
+          "mfa_grace_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Q5-T10: days a holder may put off enrolling once a factor is required\n(0 to 90)."
+          },
+          "mfa_mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Q5-T10: `inherit` (the deployment's `auth.mfa_policy`), `off`,\n`optional` or `required`."
+          },
+          "phishing_resistant_only": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Q5-T10: only phishing-resistant factors (passkeys) count."
+          },
+          "remember_device_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Q5-T10: days a browser stays remembered after a second factor (0 to\n365; 0 never remembers)."
+          },
+          "sso_only": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Only single sign-on, never a password, for every holder of the role\nwho is not a break-glass account."
+          }
+        },
+        "additionalProperties": false
+      },
       "RoleBulkFields": {
         "type": "object",
         "required": [
@@ -215005,42 +218216,6 @@
             "description": "C-19: send back as `If-Match` on the next `PATCH` to guard against a\nlost update. Additive — a caller that ignores this keeps behaving\nexactly as it did before `update_role` started honoring the header."
           }
         }
-      },
-      "RoleSsoPolicy": {
-        "type": "object",
-        "description": "A role's stored sign-in policy.",
-        "required": [
-          "role_id",
-          "sso_only",
-          "row_version"
-        ],
-        "properties": {
-          "role_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "row_version": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "sso_only": {
-            "type": "boolean"
-          }
-        }
-      },
-      "RoleSsoPolicyBody": {
-        "type": "object",
-        "description": "A role's sign-in policy.",
-        "required": [
-          "sso_only"
-        ],
-        "properties": {
-          "sso_only": {
-            "type": "boolean",
-            "description": "Only single sign-on, never a password, for every holder of the role\nwho is not a break-glass account."
-          }
-        },
-        "additionalProperties": false
       },
       "RoleSummary": {
         "type": "object",
@@ -216211,6 +219386,17 @@
             "type": "boolean",
             "description": "Plan the query and return the plan's summary instead of rows."
           },
+          "export": {
+            "type": "boolean",
+            "description": "S4-T10: run it as a background export instead of in the request:\nthe answer is 202 with the export, followed at\n`GET /api/v1/{entity}/export/{id}`. A row query over the interactive\nlimit needs it."
+          },
+          "export_format": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "S4-T10: with `export`, `json` (one row per line, the default) or `csv`."
+          },
           "params": {
             "type": "object"
           },
@@ -216249,6 +219435,10 @@
           },
           {
             "$ref": "#/components/schemas/ExplainResponse"
+          },
+          {
+            "$ref": "#/components/schemas/ExportQueued",
+            "description": "S4-T10: `export: true` queued it."
           }
         ],
         "description": "Rows (a keyset page), aggregate groups, or a plan."
@@ -220221,6 +223411,40 @@
           }
         },
         "additionalProperties": false
+      },
+      "SetCodeMapBody": {
+        "type": "object",
+        "required": [
+          "source_system",
+          "code_list",
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "code_list": {
+            "type": "string"
+          },
+          "source_system": {
+            "type": "string"
+          },
+          "valid_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When this version takes effect; now when absent."
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What the code maps to; null retires the code from this version on."
+          }
+        }
       },
       "SetCredentialBody": {
         "type": "object",
@@ -229910,6 +233134,44 @@
           }
         }
       },
+      "UpgradeImpactView": {
+        "type": "object",
+        "description": "A customisation a release affects.",
+        "required": [
+          "object_kind",
+          "object_key",
+          "property",
+          "layer",
+          "app"
+        ],
+        "properties": {
+          "app": {
+            "type": "string"
+          },
+          "layer": {
+            "type": "string",
+            "description": "`customer` or `app`."
+          },
+          "object_key": {
+            "type": "string",
+            "description": "The item it was made on: the entity's logical name, or `<entity>.<field>`."
+          },
+          "object_kind": {
+            "type": "string",
+            "description": "`entity` or `attribute`."
+          },
+          "property": {
+            "type": "string"
+          },
+          "suggested_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where it would apply after the release: the renamed item's key; absent for a removal."
+          }
+        }
+      },
       "UpgradeStatus": {
         "type": "object",
         "description": "An upgrade's status change.",
@@ -231934,6 +235196,17 @@
           "drillability": {
             "$ref": "#/components/schemas/Drillability"
           },
+          "metric_parity": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MetricParity",
+                "description": "P7-T2: for a KPI widget, the snapshot and the records listed now."
+              }
+            ]
+          },
           "published_version_number": {
             "type": [
               "integer",
@@ -232427,6 +235700,6 @@
       }
     }
   },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }
