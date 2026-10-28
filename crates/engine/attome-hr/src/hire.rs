@@ -44,6 +44,11 @@ type OfferRow = (
     Option<String>,
 );
 
+/// Hire from an accepted offer
+///
+/// Creates the employee from the candidate, the offer's salary and start date and the posting's title,
+/// as the caller, and links an existing user account with the candidate's email. An offer hires once.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/hr/offers/{id}/hire",

@@ -154,6 +154,10 @@ async fn reachable(
         .map_err(AppError::internal)
 }
 
+/// Count a marketing list
+///
+/// How many people the list holds, estimated or exact, and how many can be reached for a purpose,
+/// computed as the caller.
 #[utoipa::path(
     get,
     path = "/api/v1/marketing/lists/{id}/count",
@@ -229,6 +233,9 @@ pub struct MarketingListSample {
     pub person_ids: Vec<Uuid>,
 }
 
+/// Sample a marketing list
+///
+/// A few of the list's people the caller may read.
 #[utoipa::path(
     get,
     path = "/api/v1/marketing/lists/{id}/sample",
@@ -286,6 +293,9 @@ pub struct MarketingListExplanation {
     pub steps: Vec<ExplainStep>,
 }
 
+/// Explain a list membership
+///
+/// Why one person is or is not in the list, condition by condition.
 #[utoipa::path(
     get,
     path = "/api/v1/marketing/lists/{id}/explain/{person_id}",
@@ -390,6 +400,9 @@ pub struct AsOfQuery {
     pub page_size: Option<i64>,
 }
 
+/// Read a list's past members
+///
+/// Who was in the list on a past date, as the caller may read them.
 #[utoipa::path(
     get,
     path = "/api/v1/marketing/lists/{id}/members-as-of",

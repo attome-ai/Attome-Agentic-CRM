@@ -217,6 +217,11 @@ async fn rows(
         .collect())
 }
 
+/// Export payroll inputs
+///
+/// One CSV for the period in a template's column layout: each active employee's base salary, unpaid
+/// leave days and approved commission payouts. Needs the field grants for salaries and national ids;
+/// every cell is guarded against formula injection. Audited.
 #[utoipa::path(
     get,
     path = "/api/v1/hr/payroll-export",
@@ -303,6 +308,10 @@ pub struct HrPayrollHandoffBody {
     pub template: Option<PayrollTemplate>,
 }
 
+/// Hand payroll inputs over
+///
+/// The period's payroll CSV, as the export gives it, and the approved commission payouts in it become
+/// `exported`, so they are never handed over twice. Needs `employee.read`. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/hr/payroll-handoff",
@@ -399,6 +408,10 @@ pub struct HrPayrollConfirmed {
     pub payouts_paid: u64,
 }
 
+/// Confirm payroll ran
+///
+/// Records that payroll ran for the period: its exported commission payouts become `paid`. Needs
+/// `employee.read`. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/hr/payroll-handoff/confirm",

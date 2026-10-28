@@ -107,6 +107,11 @@ pub struct HrLeaveSubmitted {
     pub approval_request_id: Uuid,
 }
 
+/// Submit a leave request
+///
+/// Counts the request's working days on the default business calendar, checks the employee's balance
+/// for that leave type and year, and opens an approval; approving moves the days from remaining to
+/// taken. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/hr/leave-requests/{id}/submit",
@@ -438,6 +443,9 @@ pub struct HrAvailability {
     pub away: Vec<NaiveDate>,
 }
 
+/// Read who is away
+///
+/// Which days the users asked about are away on approved leave.
 #[utoipa::path(
     get,
     path = "/api/v1/hr/availability",

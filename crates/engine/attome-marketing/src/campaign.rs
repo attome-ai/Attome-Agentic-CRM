@@ -432,6 +432,9 @@ async fn post_from_list(
     Ok((StatusCode::ACCEPTED, Json(queued)))
 }
 
+/// Count a campaign's members by status
+///
+/// How many of the campaign's members are in each status.
 #[utoipa::path(
     get,
     path = "/api/v1/marketing/campaigns/{id}/members/summary",
@@ -446,7 +449,7 @@ async fn post_from_list(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// A campaign's members by status.
+// A campaign's members by status.
 async fn get_summary(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<MemberRead>>,

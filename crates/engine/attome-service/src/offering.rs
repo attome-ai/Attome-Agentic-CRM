@@ -325,6 +325,9 @@ pub async fn create_work_request_from_offering(
     })
 }
 
+/// List active service offerings
+///
+/// The catalogue offerings a requester can pick from.
 #[utoipa::path(
     get,
     path = "/api/v1/service-offering/active",
@@ -353,11 +356,14 @@ async fn list_active_offerings(
     Ok(Json(rows))
 }
 
+/// Request a service offering
+///
+/// Creates a work request that takes the offering's defaults (priority, SLA policy, queue). Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/service-offering/{id}/create-work-request",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The service offering")),
     request_body = CreateWorkRequestFromOfferingRequest,
     responses(
         (status = 201, description = "Success", body = CreateWorkRequestFromOfferingResponse),
@@ -560,7 +566,7 @@ pub async fn publish_offering(
     post,
     path = "/api/v1/service-offering/{id}/publish",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The service offering")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
         (attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update),
         (attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Create),

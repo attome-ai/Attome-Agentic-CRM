@@ -132,6 +132,10 @@ fn compute_next_run_at(rrule: &str) -> Result<chrono::DateTime<Utc>, AppError> {
     })
 }
 
+/// Schedule a report
+///
+/// Runs a report on a recurrence rule as a named user, who must be active and not an administrator, so
+/// a schedule never sees more than an ordinary person would. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/reports/schedules",
@@ -182,11 +186,14 @@ async fn create_schedule(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
+/// Change a report schedule
+///
+/// Changes the fields given under the same rules; the next run time is computed again. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/reports/schedules/{id}",
     tag = "report",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The schedule")),
     request_body = UpdateScheduleBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
     responses(

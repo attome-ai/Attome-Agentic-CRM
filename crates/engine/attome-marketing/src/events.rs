@@ -162,6 +162,9 @@ pub struct MarketingRegistration {
     pub ticket_code: String,
 }
 
+/// Register for a marketing event
+///
+/// Registers a person up to the event's capacity, and puts them on the waitlist after that. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/marketing/events/{id}/registrations",
@@ -261,6 +264,9 @@ pub struct MarketingCancelled {
     pub promoted: Option<Uuid>,
 }
 
+/// Cancel an event registration
+///
+/// Cancels the registration and promotes the first person waiting. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/marketing/events/{id}/registrations/{registration_id}/cancel",
@@ -361,6 +367,9 @@ pub struct MarketingCheckedIn {
     pub first_check_in: bool,
 }
 
+/// Check in to a marketing event
+///
+/// Checks a registered person in by the code on their ticket. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/marketing/events/{id}/check-in",

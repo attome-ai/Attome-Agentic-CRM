@@ -186,6 +186,10 @@ pub async fn run(state: &EngineState, ctx: &SecurityContext) -> Result<u64, AppE
     Ok(written)
 }
 
+/// Preview the warranty date backfill
+///
+/// Counts the assets whose warranty expiry date would change from their active warranty entitlements,
+/// and shows a few. Writes nothing.
 #[utoipa::path(
     post,
     path = "/api/v1/service/warranty-backfill/preview",
@@ -203,7 +207,7 @@ pub async fn run(state: &EngineState, ctx: &SecurityContext) -> Result<u64, AppE
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Previews the warranty date backfill.
+// Previews the warranty date backfill.
 async fn post_preview(
     State(state): State<EngineState>,
     _ctx: Authorized<Privilege<AssetUpdate>>,
@@ -218,6 +222,10 @@ pub struct WarrantyBackfillBody {
     pub confirm: bool,
 }
 
+/// Backfill warranty dates
+///
+/// With `confirm: true`, queues the job that writes each asset's warranty expiry date through the
+/// record engine as the person who confirmed, 500 assets a batch. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/service/warranty-backfill",
@@ -233,7 +241,7 @@ pub struct WarrantyBackfillBody {
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Runs the warranty date backfill once confirmed.
+// Runs the warranty date backfill once confirmed.
 async fn post_backfill(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<AssetUpdate>>,

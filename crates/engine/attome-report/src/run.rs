@@ -160,11 +160,15 @@ pub(crate) async fn create_run(
     Ok(run_id)
 }
 
+/// Run a report
+///
+/// Queues a run (202) that executes the report's stored query as the caller, under the caller's own
+/// record rules, and renders the file.
 #[utoipa::path(
     post,
     path = "/api/v1/reports/{id}/run",
     tag = "report",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The report")),
     request_body = RunReportBody,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Delegated,
@@ -222,11 +226,14 @@ async fn run_report(
     ))
 }
 
+/// Read a report run
+///
+/// A run's status, row count or error, and, once done, a download URL for its file.
 #[utoipa::path(
     get,
     path = "/api/v1/reports/runs/{run_id}",
     tag = "report",
-    params(("run_id" = Uuid, Path)),
+    params(("run_id" = Uuid, Path, description = "The report run")),
     responses(
         (status = 200, description = "Success", body = RunStatusResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

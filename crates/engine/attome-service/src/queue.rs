@@ -789,11 +789,14 @@ pub async fn assign_ticket(
 
 // ── HTTP ────────────────────────────────────────────────────────────────
 
+/// Claim the next ticket in a queue
+///
+/// The caller takes the queue's next waiting ticket. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/queues/{id}/claim",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The queue")),
     responses(
         (status = 200, description = "Success (claimed may be false if the queue has nothing open)", body = ClaimResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -813,11 +816,14 @@ async fn claim_route(
     Ok(Json(response))
 }
 
+/// Assign a queued ticket
+///
+/// Assigns one ticket already in the queue by the queue's distribution strategy. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/queues/{id}/assign",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The queue")),
     request_body = AssignRequest,
     responses(
         (status = 200, description = "Success", body = AssignResponse),

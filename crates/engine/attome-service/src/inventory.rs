@@ -562,6 +562,10 @@ async fn audit(
     Ok(())
 }
 
+/// Record a stock movement
+///
+/// An append-only movement and the balance it changes, in one transaction under the balance row's
+/// lock, so the balance is always the sum of its movements. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/service/stock/movements",
@@ -578,7 +582,7 @@ async fn audit(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Records a stock movement and its balance change.
+// Records a stock movement and its balance change.
 async fn post_movement(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<StockMove>>,
@@ -616,6 +620,10 @@ pub struct ReservationHeld {
     pub reservation_id: Uuid,
 }
 
+/// Reserve stock
+///
+/// Holds a quantity of a product at a location for a reference, until it is released or expires.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/service/stock/reservations",
@@ -632,7 +640,7 @@ pub struct ReservationHeld {
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Holds stock for a reference.
+// Holds stock for a reference.
 async fn post_reservation(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<StockReserve>>,
@@ -671,6 +679,9 @@ async fn post_reservation(
     ))
 }
 
+/// Release a stock reservation
+///
+/// The held quantity is free again. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/service/stock/reservations/{id}/release",
@@ -686,7 +697,7 @@ async fn post_reservation(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Releases a held reservation.
+// Releases a held reservation.
 async fn post_release(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<StockReserve>>,

@@ -67,6 +67,9 @@ pub struct HandoffCreated {
     pub ticket_id: Uuid,
 }
 
+/// List my hand-offs
+///
+/// The hand-offs waiting for the caller: to them, or to a queue they are a member of.
 #[utoipa::path(
     get,
     path = "/api/v1/service/handoffs",
@@ -89,6 +92,9 @@ async fn list_handoffs(
     ))
 }
 
+/// List a ticket's hand-offs
+///
+/// Every hand-off of the ticket, between agents and people, with its outcome.
 #[utoipa::path(
     get,
     path = "/api/v1/service/tickets/{id}/handoffs",
@@ -113,6 +119,9 @@ async fn list_ticket_handoffs(
     ))
 }
 
+/// Accept a hand-off
+///
+/// Takes the handed-off work, with the hand-off's `If-Match` row version. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/service/handoffs/{id}/accept",
@@ -144,6 +153,9 @@ async fn accept_handoff(
     ))
 }
 
+/// Return a hand-off
+///
+/// Gives the work back with a note, with the hand-off's `If-Match` row version. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/service/handoffs/{id}/return",
@@ -177,6 +189,9 @@ async fn return_handoff(
     ))
 }
 
+/// Hand a ticket off
+///
+/// A person hands the ticket to another person or a queue, with a summary of where it stands. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/service/tickets/{id}/handoff",

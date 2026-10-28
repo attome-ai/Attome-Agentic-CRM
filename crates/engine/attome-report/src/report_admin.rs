@@ -84,6 +84,10 @@ async fn query_ref_exists(db: &attome_db::DbPool, query_id: Uuid) -> Result<bool
     Ok(found.is_some())
 }
 
+/// Create a report
+///
+/// A report on a live stored query, in CSV, XLSX or PPTX, written through the record engine so field
+/// grants, lookups and audit apply. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/reports",
@@ -135,11 +139,14 @@ async fn create_report(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
+/// Change a report
+///
+/// Changes the fields given; a stored query must still be live. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/reports/{id}",
     tag = "report",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The report")),
     request_body = UpdateReportBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
     responses(
