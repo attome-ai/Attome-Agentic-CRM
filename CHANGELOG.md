@@ -45,6 +45,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Planned maintenance (AB11-T5): `POST /api/v1/ops/maintenance`, `PATCH /api/v1/ops/maintenance/{id}` and
+  `POST /api/v1/ops/maintenance/{id}/cancel` (`ops.incident.publish`, `If-Match` on changes; both titles,
+  a future start and a later end), audited; `GET /api/v1/ops/maintenance?from=&to=` lists the windows in a
+  range for any signed-in user (internal ones need `ops.read`).
 - Incidents (AB11-T3): `POST /api/v1/ops/incidents` opens a draft and `PATCH /api/v1/ops/incidents/{id}`
   (`If-Match`) changes it while it is a draft (`ops.read`); `POST /api/v1/ops/incidents/{id}/updates`
   (`ops.incident.publish`) publishes an update in English and Arabic (both required), moving the

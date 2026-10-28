@@ -29,6 +29,8 @@ pub mod freshness;
 pub mod incidents;
 /// AB3-T2: the live recovery point from three sources.
 pub mod live_rpo;
+/// AB11-T5: planned maintenance windows and their SLA exclusions.
+pub mod maintenance;
 pub mod model;
 /// AB11-T2: component status and the status banner for signed-in users.
 pub mod public_status;
@@ -56,6 +58,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(status::openapi_fragment());
     doc.merge(public_status::openapi_fragment());
     doc.merge(incidents::openapi_fragment());
+    doc.merge(maintenance::openapi_fragment());
     doc.merge(drills::openapi_fragment());
     doc.merge(drill_schedules::openapi_fragment());
     doc.merge(auditor_pack::openapi_fragment());

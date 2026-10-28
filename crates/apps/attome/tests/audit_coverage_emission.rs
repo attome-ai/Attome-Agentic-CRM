@@ -4381,6 +4381,42 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 ),
             )
         }
+        // AB11-T5: a window planned a day ahead, changed, then cancelled.
+        "POST /api/v1/ops/maintenance" => request(
+            "POST",
+            "/api/v1/ops/maintenance",
+            t,
+            Some(json!({
+                "title_en": "Database upgrade",
+                "title_ar": "ترقية قاعدة البيانات",
+                "starts_at": (chrono::Utc::now() + chrono::Duration::days(1)).to_rfc3339(),
+                "ends_at": (chrono::Utc::now() + chrono::Duration::days(1) + chrono::Duration::hours(1)).to_rfc3339(),
+            })),
+        ),
+        "PATCH /api/v1/ops/maintenance/{id}" => {
+            let id = ops_maintenance(fx).await;
+            with_if_match(
+                request(
+                    "PATCH",
+                    &format!("/api/v1/ops/maintenance/{id}"),
+                    t,
+                    Some(json!({"title_en": "Database upgrade, extended"})),
+                ),
+                1,
+            )
+        }
+        "POST /api/v1/ops/maintenance/{id}/cancel" => {
+            let id = ops_maintenance(fx).await;
+            with_if_match(
+                request(
+                    "POST",
+                    &format!("/api/v1/ops/maintenance/{id}/cancel"),
+                    t,
+                    None,
+                ),
+                1,
+            )
+        }
         "POST /api/v1/ops/disasters/{id}/close" => {
             let id = ops_disaster(fx).await;
             with_if_match(
@@ -8651,6 +8687,17 @@ async fn ops_disaster(fx: &Fx) -> Uuid {
     .fetch_one(&fx.base.db)
     .await
     .expect("insert a disaster")
+}
+
+/// AB11-T5: a maintenance window a day ahead.
+async fn ops_maintenance(fx: &Fx) -> Uuid {
+    sqlx::query_scalar(
+        "INSERT INTO ops_maintenance (title_en, title_ar, starts_at, ends_at, created_by)          VALUES ('drill window', 'نافذة', now() + interval '1 day', now() + interval '25 hours', $1)          RETURNING id",
+    )
+    .bind(fx.admin_id)
+    .fetch_one(&fx.base.db)
+    .await
+    .expect("insert a maintenance window")
 }
 
 /// AB11-T3: an incident draft.
