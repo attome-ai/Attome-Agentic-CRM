@@ -262,6 +262,7 @@ export const xrmEn = {
       tags: 'Tags', consent: 'Consent', relationships: 'Relationships',
       timeline: 'Timeline', history: 'History', approvals: 'Approvals', sharing: 'Sharing', golden: 'Golden record',
       fulfilment: 'Fulfilment', lines: 'Lines', team: 'Team', splits: 'Splits', convert: 'Convert',
+      whitespace: 'Whitespace',
     },
     entity: {
       document: 'Document', note: 'Note', organization: 'Organization', privilege: 'Privilege',
@@ -3663,6 +3664,13 @@ export const xrmEn = {
   // ── D6-T10: an opportunity's lines ──
   xrm: {
     sales: {
+      whitespace: {
+        addDepartment: 'Add a department', openValue: 'Open opportunity value: {value}', product: 'Product',
+        empty: 'No product is on this plan yet. Choose a status for a product and department to start.',
+        unset: '—', cell: '{product} in {department}', loadFailed: 'The whitespace grid could not be loaded.',
+        saveFirst: 'Save the plan first.',
+        status: { owned: 'Owned', in_progress: 'In progress', opportunity: 'Opportunity', not_a_fit: 'Not a fit', competitor: 'Competitor' },
+      },
       lines: {
         off: 'Opportunity lines are not turned on (feature sales.opportunity_lines).',
         loading: 'Loading lines…',

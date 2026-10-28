@@ -1,0 +1,22 @@
+:host { display: block; }
+
+.ws { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.ws-bar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+
+.ws-total { margin-inline-start: auto; font-weight: 600; }
+
+.ws-scroll { overflow-x: auto; }
+
+.ws-table { border-collapse: collapse; min-inline-size: 100%; }
+
+.ws-table th, .ws-table td {
+  padding-block: 0.35rem;
+  padding-inline: 0.5rem;
+  border-block-end: 1px solid var(--color-border);
+  text-align: start;
+}
+
+.ws-table td[data-status='owned'] { background: var(--color-success-soft, transparent); }
+.ws-table td[data-status='opportunity'] { background: var(--color-accent-soft, transparent); }
+.ws-table td[data-status='competitor'] { background: var(--color-danger-soft, transparent); }

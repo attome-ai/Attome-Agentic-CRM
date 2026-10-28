@@ -239,6 +239,7 @@ export const xrmAr = {
       tags: 'الوسوم', consent: 'الموافقة', relationships: 'العلاقات',
       timeline: 'الخط الزمني', history: 'سجل التغييرات', approvals: 'الموافقات', sharing: 'المشاركة', golden: 'السجل الذهبي',
       fulfilment: 'التنفيذ', lines: 'البنود', team: 'الفريق', splits: 'التقسيمات', convert: 'التحويل',
+      whitespace: 'شبكة الفرص',
     },
     entity: {
       document: 'مستند', note: 'ملاحظة', organization: 'مؤسسة', privilege: 'صلاحية',
@@ -3586,6 +3587,13 @@ export const xrmAr = {
   // ── D6-T10 — بنود الفرصة ──
   xrm: {
     sales: {
+      whitespace: {
+        addDepartment: 'إضافة قسم', openValue: 'قيمة الفرص المفتوحة: {value}', product: 'المنتج',
+        empty: 'لا يوجد منتج في هذه الخطة بعد. اختر حالة لمنتج وقسم للبدء.',
+        unset: '—', cell: '{product} في {department}', loadFailed: 'تعذّر تحميل شبكة الفرص.',
+        saveFirst: 'احفظ الخطة أولاً.',
+        status: { owned: 'مملوك', in_progress: 'قيد التنفيذ', opportunity: 'فرصة', not_a_fit: 'غير مناسب', competitor: 'منافس' },
+      },
       lines: {
         off: 'بنود الفرص غير مفعّلة (الميزة sales.opportunity_lines).',
         loading: 'جاري تحميل البنود…',

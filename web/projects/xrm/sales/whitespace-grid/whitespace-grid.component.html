@@ -1,0 +1,42 @@
+<section class="ws">
+  @if (error(); as message) { <p class="xf-hint" role="alert">{{ message }}</p> }
+  <div class="ws-bar">
+    <label>
+      <span class="sr-only">{{ 'xrm.sales.whitespace.addDepartment' | translate }}</span>
+      <input type="text" [placeholder]="'xrm.sales.whitespace.addDepartment' | translate"
+             (keydown.enter)="addDepartment($event)" (change)="addDepartment($event)" data-testid="ws-add-department" />
+    </label>
+    <span class="ws-total">{{ 'xrm.sales.whitespace.openValue' | translate: { value: formatValue(grid().open_value) } }}</span>
+  </div>
+
+  @if (!grid().products.length) {
+    <p class="xf-hint" data-none>{{ 'xrm.sales.whitespace.empty' | translate }}</p>
+  } @else {
+    <div class="ws-scroll">
+      <table class="ws-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'xrm.sales.whitespace.product' | translate }}</th>
+            @for (d of grid().departments; track d) { <th scope="col" dir="auto">{{ d }}</th> }
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of grid().products; track p.id) {
+            <tr [attr.data-product]="p.id">
+              <th scope="row" dir="auto">{{ p.name }}</th>
+              @for (d of grid().departments; track d) {
+                <td [attr.data-status]="cell(p.id, d)?.status ?? 'none'">
+                  <select [value]="cell(p.id, d)?.status ?? ''" (change)="setStatus(p.id, d, $event)"
+                          [attr.aria-label]="'xrm.sales.whitespace.cell' | translate: { product: p.name, department: d }">
+                    <option value="">{{ 'xrm.sales.whitespace.unset' | translate }}</option>
+                    @for (s of statuses; track s) { <option [value]="s">{{ ('xrm.sales.whitespace.status.' + s) | translate }}</option> }
+                  </select>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

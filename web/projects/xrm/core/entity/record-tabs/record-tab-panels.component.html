@@ -214,6 +214,24 @@
   </div>
 }
 
+@if (has('whitespace')) {
+  <div [id]="panelId('whitespace')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('whitespace')" [hidden]="activeTab() !== 'whitespace'"
+       data-testid="whitespace-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'whitespace') {
+        @if (sales(); as m) {
+          <ng-container *ngComponentOutlet="m.WhitespaceGridComponent; inputs: activityInputs()" />
+        } @else if (salesLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'xrm.sales.whitespace.loadFailed' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrm.sales.whitespace.saveFirst' | translate }}</p>
+    }
+  </div>
+}
+
 @if (has('team')) {
   <div [id]="panelId('team')" class="xf-tab-panel" role="tabpanel"
        [attr.aria-labelledby]="tabId('team')" [hidden]="activeTab() !== 'team'"

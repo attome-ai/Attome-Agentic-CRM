@@ -13,6 +13,9 @@ export { SalesTeamApiService } from './team-api';
 export type { PickOption, SplitRow, SplitType, SplitsOutcome, TeamAccess, TeamMember } from './team-api';
 export { TEAM_FLAG, TeamPanelComponent } from './team-panel/team-panel.component';
 export { SPLITS_FLAG, SplitsPanelComponent, typeTotals, unbalancedTypes } from './splits-panel/splits-panel.component';
+// D27-T2: an account plan's Whitespace tab.
+export { WHITESPACE_STATUSES, WhitespaceGridComponent, cellKey, pivot } from './whitespace-grid/whitespace-grid.component';
+export type { WhitespaceCell, WhitespaceGrid, WhitespaceStatus } from './whitespace-grid/whitespace-grid.component';
 // D3-T3: a lead's Convert tab, and bulk convert or disqualify from the lead list.
 export { DISQUALIFY_REASONS, LeadConvertApiService } from './lead-convert-api';
 export type {

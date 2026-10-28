@@ -127,7 +127,8 @@ export class RecordTabPanelsComponent {
     });
     effect(() => {
       const tab = this.activeTab();
-      if ((tab === 'lines' || tab === 'team' || tab === 'splits' || tab === 'convert') && this.recordId() && !this.salesRequested) {
+      if ((tab === 'lines' || tab === 'team' || tab === 'splits' || tab === 'convert' || tab === 'whitespace')
+          && this.recordId() && !this.salesRequested) {
         this.salesRequested = true;
         import('@attome/xrm/sales').then(
           m => this.sales.set(m),
