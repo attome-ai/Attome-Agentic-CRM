@@ -192,7 +192,8 @@ pub async fn do_assign_user_role(
         "INSERT INTO user_account_mm_role (id, user_ref, role_ref, valid_until, grant_reason) \
          VALUES ($1, $2, $3, $4, $5) \
          ON CONFLICT (user_ref, role_ref) DO UPDATE SET is_deleted = false, updated_at = NOW(), \
-             valid_until = EXCLUDED.valid_until, grant_reason = EXCLUDED.grant_reason \
+             valid_until = EXCLUDED.valid_until, grant_reason = EXCLUDED.grant_reason, \
+             source_provider_ref = NULL \
          RETURNING id",
     )
     .bind(Uuid::now_v7())

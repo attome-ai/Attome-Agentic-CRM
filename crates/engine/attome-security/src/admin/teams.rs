@@ -298,7 +298,8 @@ pub(super) async fn add_team_member(
     .await?;
     let id: Uuid = sqlx::query_scalar(
         "INSERT INTO user_account_mm_team (id, user_ref, team_ref) VALUES ($1, $2, $3) \
-         ON CONFLICT (user_ref, team_ref) DO UPDATE SET is_deleted = false, updated_at = NOW() \
+         ON CONFLICT (user_ref, team_ref) DO UPDATE SET is_deleted = false, updated_at = NOW(), \
+             source_provider_ref = NULL \
          RETURNING id",
     )
     .bind(Uuid::now_v7())

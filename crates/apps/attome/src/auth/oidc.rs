@@ -460,6 +460,36 @@ async fn oidc_callback_inner(
         &active_license,
     )
     .await?;
+    // Q1-T9: a provider added on screen applies its group mappings and
+    // profile claims at each sign-in, in one transaction with their events,
+    // before the session exists.
+    if entry.source == attome_auth::oidc_registry::ProviderSource::Database
+        && let Some(provider_id) = entry.id
+    {
+        let groups = attome_security::oidc_mapping::groups_of(&identity.claims, &entry.claim_map);
+        let mut tx = attome_db::tx::begin(&state.db).await?;
+        let changes = attome_security::oidc_mapping::apply_mappings_in_tx(
+            &mut tx,
+            &auditor.service(),
+            provider_id,
+            provider,
+            user_id,
+            &groups,
+        )
+        .await?;
+        attome_security::oidc_mapping::apply_profile_in_tx(
+            &mut tx,
+            user_id,
+            &identity.claims,
+            &entry.claim_map,
+        )
+        .await?;
+        tx.commit().await.map_err(AppError::internal)?;
+        if !changes.is_empty() {
+            tracing::info!(provider, %user_id, ?changes, "oidc sign-in: group mappings applied");
+            state.security.invalidate_sync(user_id).await?;
+        }
+    }
     // D-510 rule 2: the validated ID token's own authentication time, or none.
     let method = format!("oidc:{provider}");
     let cookies = issue_session_cookies_for(

@@ -2638,6 +2638,52 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             );
             request("DELETE", &format!("{S}/oidc-providers/{id}"), t, None)
         }
+        // ── sign-in provider group mappings (Q1-T9) ─────────────────────────
+        "POST /api/v1/admin/security/oidc-providers/{id}/group-mappings" => {
+            let provider = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("{S}/oidc-providers"),
+                    Some(oidc_provider_body()),
+                )
+                .await,
+            );
+            let team = team(fx).await;
+            request(
+                "POST",
+                &format!("{S}/oidc-providers/{provider}/group-mappings"),
+                t,
+                Some(json!({"claim_value": "coverage-group", "team_id": team})),
+            )
+        }
+        "DELETE /api/v1/admin/security/oidc-providers/{id}/group-mappings/{mapping_id}" => {
+            let provider = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("{S}/oidc-providers"),
+                    Some(oidc_provider_body()),
+                )
+                .await,
+            );
+            let team = team(fx).await;
+            let mapping = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("{S}/oidc-providers/{provider}/group-mappings"),
+                    Some(json!({"claim_value": "coverage-group", "team_id": team})),
+                )
+                .await,
+            );
+            request(
+                "DELETE",
+                &format!("{S}/oidc-providers/{provider}/group-mappings/{mapping}"),
+                t,
+                None,
+            )
+        }
         // ── sign-in domains (Q1-T6) ─────────────────────────────────────────
         "POST /api/v1/admin/security/oidc-domains" => {
             let provider = id_of(

@@ -80,6 +80,22 @@ Once a domain is verified, `POST /api/v1/auth/oidc/discover` with an email on th
 answers the provider's key, so the sign-in page can send the person straight to it. Any
 other email answers `null`. The route never says whether an account exists.
 
+**Groups to teams and roles.** A provider added on screen can map values of its groups
+claim (named by `claim_map.groups`, `groups` by default) to a team or a role:
+`POST /api/v1/admin/security/oidc-providers/{id}/group-mappings` with `claim_value` and
+`team_id` or `role_id`.
+
+- **At each sign-in** the person gets what their groups map to, and loses what this
+  provider gave earlier that their groups no longer map to.
+- **Administrator grants stay.** A team or role an administrator gave is never removed,
+  and when an administrator grants one the provider gave, it becomes theirs.
+- **Never administration.** A mapping to a role with system administration, or to a team
+  with such a role, is refused (`mapping_cannot_grant_admin`), and skipped at sign-in if
+  the role gains it later.
+- **Exempt accounts.** Break-glass and service accounts are left alone.
+- **Profile.** The `name` and `phone` claims in the claim map update the person's name and
+  phone. Attome has no title, department or manager field to fill.
+
 **Entra tenants.** A provider's `tenant_allowlist` limits it to those tenants. A token
 whose `tid` is missing or not listed is refused, and the person lands on the login page
 with `tenant_not_allowed`.

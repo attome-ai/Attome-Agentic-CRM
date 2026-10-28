@@ -35,6 +35,7 @@ mod invitations;
 mod mfa;
 mod mfa_coverage;
 mod oidc_domains;
+mod oidc_group_mappings;
 mod oidc_providers;
 mod organizations;
 mod permission_sets;
@@ -90,6 +91,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         role_conflicts::openapi_fragment(),
         oidc_providers::openapi_fragment(),
         oidc_domains::openapi_fragment(),
+        oidc_group_mappings::openapi_fragment(),
         role_entity_access::openapi_fragment(),
         user_roles::openapi_fragment(),
         positions::openapi_fragment(),
@@ -130,6 +132,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(role_conflicts::routes())
         .merge(oidc_providers::routes())
         .merge(oidc_domains::routes())
+        .merge(oidc_group_mappings::routes())
         .merge(role_entity_access::routes())
         .merge(user_roles::routes())
         .merge(positions::routes())

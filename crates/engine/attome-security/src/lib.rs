@@ -23,6 +23,7 @@ pub mod mfa_policy;
 pub mod model;
 /// T2-T2: the caller's own role names.
 pub mod my_roles;
+pub mod oidc_mapping;
 pub mod parent_access;
 pub mod permission_sets;
 pub mod reconcile;
