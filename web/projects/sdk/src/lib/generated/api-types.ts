@@ -20526,6 +20526,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ops/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List incidents
+         * @description AB11-T3: open incidents first, newest first. Needs `ops.read`.
+         */
+        get: operations["list_ops_incidents"];
+        put?: never;
+        /**
+         * Open an incident draft
+         * @description AB11-T3: a draft nobody but `ops.read` holders sees until its first
+         *     update is published. Audited.
+         */
+        post: operations["create_ops_incident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/incidents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read an incident
+         * @description AB11-T3: the incident and its updates, oldest first; a correction
+         *     follows the update it corrects. Needs `ops.read`.
+         */
+        get: operations["get_ops_incident"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change an incident draft
+         * @description AB11-T3: title, components, impact and audience, while the incident is a
+         *     draft. `If-Match` names the row version. Audited.
+         */
+        patch: operations["update_ops_incident"];
+        trace?: never;
+    };
+    "/api/v1/ops/incidents/{id}/updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish an incident update
+         * @description AB11-T3: text in English and Arabic (both required). The incident moves
+         *     to the stage (`note` keeps it; a correction never moves it), the first
+         *     update publishes it, `resolved` resolves it. A correction names an
+         *     earlier update of the same incident. Needs `ops.incident.publish`.
+         *     Audited.
+         */
+        post: operations["publish_ops_incident_update"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/maintenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List maintenance
+         * @description AB11-T5: windows overlapping `from`..`to` (the next 30 days when
+         *     absent; at most 400 days), cancelled ones included and marked. Any
+         *     signed-in user; internal windows need `ops.read`.
+         */
+        get: operations["list_ops_maintenance"];
+        put?: never;
+        /**
+         * Plan maintenance
+         * @description AB11-T5: both titles, a future start and a later end. Needs
+         *     `ops.incident.publish`. Audited.
+         */
+        post: operations["create_ops_maintenance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/maintenance/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change maintenance
+         * @description AB11-T5: a window not cancelled and not over. `If-Match` names the row
+         *     version. Needs `ops.incident.publish`. Audited.
+         */
+        patch: operations["update_ops_maintenance"];
+        trace?: never;
+    };
+    "/api/v1/ops/maintenance/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel maintenance
+         * @description AB11-T5: `If-Match` names the row version. Needs
+         *     `ops.incident.publish`. Audited.
+         */
+        post: operations["cancel_ops_maintenance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ops/recovery-targets": {
         parameters: {
             query?: never;
@@ -39626,6 +39770,43 @@ export interface components {
             id: string;
             name: string;
         };
+        /** @description An incident. */
+        Incident: {
+            /** @description `internal` or `public`. */
+            audience: string;
+            auto_created: boolean;
+            components: string[];
+            /** Format: uuid */
+            created_by?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description `degraded`, `partial` or `major`. */
+            impact: string;
+            /** Format: date-time */
+            published_at?: string | null;
+            /** Format: date-time */
+            resolved_at?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: date-time */
+            started_at: string;
+            /** @description `draft`, `investigating`, `identified`, `monitoring` or `resolved`. */
+            state: string;
+            title_ar?: string | null;
+            title_en: string;
+        };
+        /** @description A draft's changes; an absent field is kept. */
+        IncidentChange: {
+            audience?: string | null;
+            components?: string[] | null;
+            impact?: string | null;
+            title_ar?: string | null;
+            title_en?: string | null;
+        };
+        /** @description An incident with its updates, oldest first. */
+        IncidentDetail: components["schemas"]["Incident"] & {
+            updates: components["schemas"]["IncidentUpdate"][];
+        };
         /** @description An open incident. */
         IncidentSummary: {
             /** @description `internal` or `public`. */
@@ -39641,6 +39822,25 @@ export interface components {
             state: string;
             title_ar?: string | null;
             title_en: string;
+        };
+        /** @description One published update. */
+        IncidentUpdate: {
+            body_ar?: string | null;
+            body_en: string;
+            /**
+             * Format: uuid
+             * @description The update this one corrects; shown after it, labelled a correction.
+             */
+            corrects_update_id?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            incident_id: string;
+            /** Format: date-time */
+            published_at: string;
+            /** Format: uuid */
+            published_by?: string | null;
+            stage: string;
         };
         /** @description One event's inclusion proof. */
         InclusionProof: {
@@ -40772,6 +40972,37 @@ export interface components {
             id: string;
             provider: string;
             scopes: string;
+        };
+        /** @description A maintenance window. */
+        Maintenance: {
+            /** @description `internal` or `public`. */
+            audience: string;
+            /** Format: date-time */
+            cancelled_at?: string | null;
+            components: string[];
+            /** Format: uuid */
+            created_by?: string | null;
+            /** Format: date-time */
+            ends_at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: date-time */
+            starts_at: string;
+            title_ar?: string | null;
+            title_en: string;
+        };
+        /** @description A window's changes; an absent field is kept. */
+        MaintenanceChange: {
+            audience?: string | null;
+            components?: string[] | null;
+            /** Format: date-time */
+            ends_at?: string | null;
+            /** Format: date-time */
+            starts_at?: string | null;
+            title_ar?: string | null;
+            title_en?: string | null;
         };
         /** @description Maintenance not yet over. */
         MaintenanceSummary: {
@@ -42189,6 +42420,29 @@ export interface components {
             signers: components["schemas"]["NewSigner"][];
             title: string;
         };
+        /** @description A new draft. */
+        NewIncident: {
+            /** @description `internal` (the default) or `public`. */
+            audience?: string | null;
+            /** @description Component keys (`ops_status_component.key`). */
+            components?: string[];
+            /** @description `degraded` (the default), `partial` or `major`. */
+            impact?: string | null;
+            title_ar?: string | null;
+            title_en: string;
+        };
+        /** @description An update to publish. */
+        NewIncidentUpdate: {
+            body_ar: string;
+            body_en: string;
+            /**
+             * Format: uuid
+             * @description The earlier update of this incident that this one corrects.
+             */
+            corrects_update_id?: string | null;
+            /** @description One of [`STAGES`]. */
+            stage: string;
+        };
         /** @description An inter-company posting. */
         NewIntercompany: {
             /** @description A positive decimal string. */
@@ -42226,6 +42480,18 @@ export interface components {
             credit?: string | null;
             debit?: string | null;
             memo?: string | null;
+        };
+        /** @description A window to plan. */
+        NewMaintenance: {
+            /** @description `public` (the default) or `internal`. */
+            audience?: string | null;
+            components?: string[];
+            /** Format: date-time */
+            ends_at: string;
+            /** Format: date-time */
+            starts_at: string;
+            title_ar: string;
+            title_en: string;
         };
         NewMcpServer: {
             allow_external?: boolean;
@@ -47278,6 +47544,44 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Incident: {
+            items: {
+                /** @description `internal` or `public`. */
+                audience: string;
+                auto_created: boolean;
+                components: string[];
+                /** Format: uuid */
+                created_by?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** @description `degraded`, `partial` or `major`. */
+                impact: string;
+                /** Format: date-time */
+                published_at?: string | null;
+                /** Format: date-time */
+                resolved_at?: string | null;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: date-time */
+                started_at: string;
+                /** @description `draft`, `investigating`, `identified`, `monitoring` or `resolved`. */
+                state: string;
+                title_ar?: string | null;
+                title_en: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_InstanceListItem: {
             items: {
                 /** Format: date-time */
@@ -47648,6 +47952,39 @@ export interface components {
                 id: string;
                 provider: string;
                 scopes: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Maintenance: {
+            items: {
+                /** @description `internal` or `public`. */
+                audience: string;
+                /** Format: date-time */
+                cancelled_at?: string | null;
+                components: string[];
+                /** Format: uuid */
+                created_by?: string | null;
+                /** Format: date-time */
+                ends_at: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: date-time */
+                starts_at: string;
+                title_ar?: string | null;
+                title_en: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -123895,6 +124232,543 @@ export interface operations {
             };
             /** @description Caller lacks ops.read */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ops_incidents: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of incidents */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Incident"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_ops_incident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewIncident"];
+            };
+        };
+        responses: {
+            /** @description The draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Incident"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An empty title, or an unknown audience, impact or component */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ops_incident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The incident */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The incident and its updates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentDetail"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such incident */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_ops_incident: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The incident's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The incident */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentChange"];
+            };
+        };
+        responses: {
+            /** @description The changed draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Incident"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such incident */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No longer a draft, or a stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing, or an invalid field */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    publish_ops_incident_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The incident */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewIncidentUpdate"];
+            };
+        };
+        responses: {
+            /** @description The published update */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentUpdate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.incident.publish */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such incident */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The incident is resolved */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown stage, a missing language, or a correction of another incident's update */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ops_maintenance: {
+        parameters: {
+            query?: {
+                /** @description Windows ending after this moment. */
+                from?: string;
+                /** @description Windows starting before this moment. */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The windows in the range, earliest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Maintenance"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description to before from, or a range over 400 days */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_ops_maintenance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewMaintenance"];
+            };
+        };
+        responses: {
+            /** @description The planned window */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Maintenance"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.incident.publish */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing title, a past start, an end before the start, or an unknown component */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_ops_maintenance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The window's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The window */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceChange"];
+            };
+        };
+        responses: {
+            /** @description The changed window */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Maintenance"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.incident.publish */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such window */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Cancelled or over, or a stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing, or an invalid field */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_ops_maintenance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The window's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The window */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cancelled window */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Maintenance"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.incident.publish */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such window */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already cancelled, or a stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match is missing or not a row_version */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
