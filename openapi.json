@@ -50532,6 +50532,88 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/oidc-providers/{id}/test": {
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Test a sign-in provider",
+        "description": "Starts a sign-in through the provider for the administrator to check it: the returned address opens the provider, and the ordinary sign-in callback then shows the claims it returned and signs nobody in. The flow is bound to this browser like a sign-in. Administrators only; writes nothing durable.",
+        "operationId": "test_oidc_provider",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The provider's id, or a configured provider's key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The address to open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcTestStart"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "starts a test sign-in: a single-use state in the cache and a binding cookie; nothing durable, no session",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/organizations": {
       "get": {
         "tags": [
@@ -178335,6 +178417,18 @@
           }
         }
       },
+      "OidcTestStart": {
+        "type": "object",
+        "description": "Q1-T5: where to send the administrator's browser.",
+        "required": [
+          "authorize_url"
+        ],
+        "properties": {
+          "authorize_url": {
+            "type": "string"
+          }
+        }
+      },
       "OnTimeout": {
         "type": "string",
         "description": "What happens when a step's `sla_minutes` elapses with nobody having\ndecided it yet — applied by `apply_step_timeout_with`, driven by the sweep\nthat reuses M51's notification-escalation poller\n(`xrm_notification::poller`; see that crate's `approval_timeouts` module).",
@@ -228098,6 +228192,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -228150,6 +228245,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }
