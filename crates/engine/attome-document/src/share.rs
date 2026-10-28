@@ -273,12 +273,17 @@ async fn write_audit(
     Ok(())
 }
 
+/// Share a file outside the deployment
+///
+/// A link to the file as stored now, for someone without an account: it expires, may need a password
+/// and may allow only so many downloads. The token is shown once. Needs update rights on the record.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/files/{field}/share-links",
     tag = "entity",
     operation_id = "create_file_share_link",
-    params(("entity" = String, Path), ("id" = Uuid, Path), ("field" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record"), ("field" = String, Path, description = "The file field")),
     request_body = CreateShareLinkRequest,
     responses(
         (status = 201, description = "The link; its token is shown only now", body = CreatedShareLink),
@@ -381,12 +386,15 @@ async fn create_share_link(
     Ok((StatusCode::CREATED, Json(created)).into_response())
 }
 
+/// List a file's share links
+///
+/// The external links to the file, newest first; never their tokens. Anyone who may read the record.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/files/{field}/share-links",
     tag = "entity",
     operation_id = "list_file_share_links",
-    params(("entity" = String, Path), ("id" = Uuid, Path), ("field" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record"), ("field" = String, Path, description = "The file field")),
     responses(
         (status = 200, description = "The field's links, newest first (page 1 holds them all)", body = PaginatedResponse<ShareLinkSummary>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -432,16 +440,19 @@ async fn list_share_links(
     }))
 }
 
+/// Revoke a share link
+///
+/// The link stops working at once. Needs update rights on the record. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/{entity}/{id}/files/{field}/share-links/{link_id}",
     tag = "entity",
     operation_id = "revoke_file_share_link",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("field" = String, Path),
-        ("link_id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("field" = String, Path, description = "The file field"),
+        ("link_id" = Uuid, Path, description = "The link"),
     ),
     responses(
         (status = 204, description = "Revoked"),

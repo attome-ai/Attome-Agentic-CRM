@@ -131,12 +131,16 @@ async fn audit(
     Ok(())
 }
 
+/// Read a file's check-out
+///
+/// Who holds the lock on the file, since when and with what note, and whether it is the caller.
+/// Anyone who may read the record.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/files/{field}/checkout",
     tag = "entity",
     operation_id = "get_file_checkout",
-    params(("entity" = String, Path), ("id" = Uuid, Path), ("field" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record"), ("field" = String, Path, description = "The file field")),
     responses(
         (status = 200, description = "Who holds the file's check-out, if anyone", body = FileCheckoutStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -169,12 +173,16 @@ async fn get_checkout(
     }))
 }
 
+/// Check out a record's file
+///
+/// Takes the lock on the file for the caller (taking it again is a no-op); while it is held nobody
+/// else, administrators included, may store a new version. Needs update rights on the record. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/files/{field}/checkout",
     tag = "entity",
     operation_id = "check_out_file",
-    params(("entity" = String, Path), ("id" = Uuid, Path), ("field" = String, Path)),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record"), ("field" = String, Path, description = "The file field")),
     request_body = CheckoutRequest,
     responses(
         (status = 200, description = "Checked out to the caller", body = FileCheckout),
@@ -250,12 +258,16 @@ async fn check_out(
     Ok(Json(taken))
 }
 
+/// Check in a record's file
+///
+/// Releases the caller's lock after storing the new version; an administrator may break someone
+/// else's lock with `force=true`. Needs update rights on the record. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/{entity}/{id}/files/{field}/checkout",
     tag = "entity",
     operation_id = "check_in_file",
-    params(("entity" = String, Path), ("id" = Uuid, Path), ("field" = String, Path), CheckinQuery),
+    params(("entity" = String, Path, description = "The entity's logical name"), ("id" = Uuid, Path, description = "The record"), ("field" = String, Path, description = "The file field"), CheckinQuery),
     responses(
         (status = 204, description = "Released"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

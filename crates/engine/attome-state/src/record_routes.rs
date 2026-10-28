@@ -130,6 +130,10 @@ async fn record_type_of(
     .map_err(AppError::internal)
 }
 
+/// List a record's available transitions
+///
+/// The transitions the record's state model allows from its current state, each with its name and
+/// target state. Anyone who may read the record.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/transitions",
@@ -303,6 +307,11 @@ pub async fn apply_transition_at(
     })
 }
 
+/// Move a record to another state
+///
+/// Takes one transition of the record's state model, checking its conditions; a transition that
+/// needs approval parks the record and submits the request instead. `If-Match` is optional. Needs
+/// update rights on the record. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/transition",
@@ -345,13 +354,11 @@ async fn transition_record(
     Ok(Json(result))
 }
 
-/// M07 Phase F (D-770) — withdraws the record's open transition approval and
-/// returns the record to the state it came from. Only the request's own
-/// requester may cancel an open request (`403` otherwise); when the request
-/// already closed without executing (rejected, expired, invalidated) but the
-/// record is still parked, the requester or an administrator may release it
-/// here (a rejection goes to its `on_reject_state`, the rest to the origin).
-/// See `crate::approval`.
+/// Cancel a transition approval
+///
+/// Withdraws the record's open transition approval and returns the record to the state it came from;
+/// only the requester may. When the request already closed without running but the record is still
+/// parked, the requester or an administrator releases it here. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/transition/cancel",

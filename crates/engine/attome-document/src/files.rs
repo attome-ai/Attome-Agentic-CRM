@@ -650,14 +650,19 @@ async fn warn_near_quota(state: &EngineState, uses: &[QuotaUse]) {
 // policy, then returns a presigned PUT targeting the quarantine key. Nothing
 // is trusted until `finalize` (below) HEAD-verifies the upload and the async
 // scan job (files_scan.rs) promotes a clean result.
+/// Start a file upload
+///
+/// Opens an upload session and returns a short-lived URL to PUT the bytes to, in quarantine; nothing
+/// is trusted until the session is finalised and the scan passes. Refused while someone else has the
+/// file checked out. Needs update rights on the record.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/files/{field}/upload-session",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("field" = String, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("field" = String, Path, description = "The file field"),
     ),
     request_body = UploadSessionRequest,
     responses(
@@ -996,15 +1001,19 @@ impl From<SessionRowTuple> for SessionRow {
 // decisive state transition is a single row_version-CAS UPDATE, issued only
 // after the HEAD result is known, so two concurrent finalize calls for the
 // same session can never both win.
+/// Finish a file upload
+///
+/// Checks the uploaded object is there and queues its scan; once clean, the file can be set on the
+/// field through the record API. Needs update rights on the record.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/files/{field}/upload-session/{session_id}/finalize",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("field" = String, Path),
-        ("session_id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("field" = String, Path, description = "The file field"),
+        ("session_id" = Uuid, Path, description = "The upload session"),
     ),
     responses(
         (status = 200, description = "Success", body = FinalizeResponse),
@@ -1271,15 +1280,18 @@ impl std::fmt::Debug for SessionStatusResponse {
 // Status poll for the async scan job (same shape as F024's bulk-operation
 // status poll). Owner-or-admin only — this is per-user upload progress, not
 // record data, so `ctx.require(entity, "read")` alone isn't a sufficient gate.
+/// Read an upload session
+///
+/// The upload session's status. Anyone who may read the record.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/files/{field}/upload-session/{session_id}",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("field" = String, Path),
-        ("session_id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("field" = String, Path, description = "The file field"),
+        ("session_id" = Uuid, Path, description = "The upload session"),
     ),
     responses(
         (status = 200, description = "Success", body = SessionStatusResponse),
@@ -1443,14 +1455,18 @@ struct DownloadUrlQuery {
 // `JSONB` column through the one query — the branch on the decoded shape
 // (string vs array) is what actually distinguishes them, not two SQL
 // statements guessing the physical type up front.
+/// Get a file's download URL
+///
+/// A short-lived URL to download the field's file, one of a multi-file field's files (`key`), or an
+/// earlier version (`version`). Anyone who may read the record.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/files/{field}/download-url",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("field" = String, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("field" = String, Path, description = "The file field"),
         DownloadUrlQuery,
     ),
     responses(
@@ -1628,14 +1644,17 @@ impl From<FileVersionRowTuple> for FileVersionResponse {
 // it has been PATCHed, the same "return the whole capped result in one
 // response" reasoning guidelines §12 gives for a depth-bounded structural
 // walk, so `page`/`page_size` are fixed rather than driven by a query param.
+/// List a file's versions
+///
+/// Every stored version of the field's file, newest first. Anyone who may read the record.
 #[utoipa::path(
     get,
     path = "/api/v1/{entity}/{id}/files/{field}/versions",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("field" = String, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("field" = String, Path, description = "The file field"),
     ),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<FileVersionResponse>),
@@ -1706,15 +1725,18 @@ struct RestoreVersionResponse {
 // dedicated hand-written statement plus a manual change-feed emission and
 // audit event, rather than a generic mutation primitive built for a
 // different contract.
+/// Restore a file version
+///
+/// Makes an earlier version the field's current file. Needs update rights on the record. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/files/{field}/versions/{version_no}/restore",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("field" = String, Path),
-        ("version_no" = i32, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("field" = String, Path, description = "The file field"),
+        ("version_no" = i32, Path, description = "The version number"),
     ),
     responses(
         (status = 200, description = "Success", body = RestoreVersionResponse),
@@ -2015,15 +2037,18 @@ pub(crate) async fn purge_file_version(
 }
 
 // ── DELETE .../files/{field}/versions/{version_no} ──────────────────────────
+/// Purge a file version
+///
+/// Deletes a stored version of the file for good. Needs delete rights on the record. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/{entity}/{id}/files/{field}/versions/{version_no}",
     tag = "entity",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
-        ("field" = String, Path),
-        ("version_no" = i32, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("field" = String, Path, description = "The file field"),
+        ("version_no" = i32, Path, description = "The version number"),
     ),
     responses(
         (status = 204, description = "Version permanently purged"),

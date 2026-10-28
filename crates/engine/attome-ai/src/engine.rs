@@ -630,17 +630,18 @@ pub fn is_record_bound(input_schema: &str) -> bool {
         })
 }
 
-/// S1-T12: invokes a record-bound action on the record in the path, through
-/// the same gate as `/api/v1/actions/{id}/invoke`; `entity` and `record_id`
-/// come from the path and replace any in the body. An action that does not
-/// work on one record answers 404 here.
+/// Invoke an action on a record
+///
+/// Runs a record-bound AI action on the record in the path through the same gate as
+/// `/api/v1/actions/{id}/invoke`; the path's entity and record replace any in the body. An action that
+/// does not work on one record is 404. Anyone who may read the record; the action's own rules apply.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/{id}/actions/{name}",
     tag = "action",
     params(
-        ("entity" = String, Path),
-        ("id" = Uuid, Path),
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
         ("name" = String, Path, description = "Action id, e.g. record.summarize"),
     ),
     request_body = InvokeRequest,
