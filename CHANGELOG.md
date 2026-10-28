@@ -45,6 +45,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Status notices and the incidents console (AB11-T9, AB11-T10): the shell's status bar also shows the status
+  page notice (read every minute while the tab is visible, dismissible); `/xrm/ops/incidents` lists incidents,
+  opens drafts and publishes updates with English and Arabic side by side (corrections, never edits), and
+  `/xrm/ops/maintenance` plans and cancels windows. Agent actions `ops.status` and `ops.draft_incident_update`
+  read the status and suggest bilingual update text; neither publishes.
 - Automatic draft incidents (AB11-T4): with the setting `ops.status_watch` on, a status component down
   for three minutes gets one internal draft incident while none is open for it (migration 0315 keeps
   `degraded_since`); `ops.status_auto_publish_minutes` (0, off, by default) publishes such a draft with a

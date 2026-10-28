@@ -22,6 +22,15 @@ export const OPS_ROUTES: Routes = [
     path: 'drills',
     loadComponent: () => import('./drills/drill-history.component').then(m => m.DrillHistoryComponent),
   },
+  // AB11-T9: incidents and planned maintenance on the status page.
+  {
+    path: 'incidents',
+    loadComponent: () => import('./incidents/incidents.component').then(m => m.IncidentsComponent),
+  },
+  {
+    path: 'maintenance',
+    loadComponent: () => import('./incidents/maintenance.component').then(m => m.MaintenanceComponent),
+  },
   {
     path: 'drills/:id',
     loadComponent: () => import('./drills/drill-detail.component').then(m => m.DrillDetailComponent),
