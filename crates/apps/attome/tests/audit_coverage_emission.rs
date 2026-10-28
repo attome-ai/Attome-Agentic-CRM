@@ -872,6 +872,28 @@ fn with_cookies(mut req: Request<Body>, cookies: &[String]) -> Request<Body> {
 }
 
 /// A pending-MFA token of `typ` for `user_id`, minted the way login mints one.
+/// Y11-T9: the fixture entity's `title` field with a platform label and a
+/// customer relabel in its layers, so it has a customisation to reset.
+/// Returns the field's layer key.
+async fn layered_title(fx: &Fx) -> String {
+    let key = format!("{}.title", fx.entity);
+    for (layer, value) in [("platform", "Title"), ("customer", "Heading")] {
+        sqlx::query(
+            "INSERT INTO metadata_property_layer (object_kind, object_key, property, layer, value) \
+             VALUES ('attribute', $1, 'name', $2, to_jsonb($3::text)) \
+             ON CONFLICT (object_kind, object_key, property, layer, app) \
+             DO UPDATE SET value = EXCLUDED.value",
+        )
+        .bind(&key)
+        .bind(layer)
+        .bind(value)
+        .execute(&fx.base.db)
+        .await
+        .expect("a layer row");
+    }
+    key
+}
+
 /// Q5-T5: a sign-in code issued to `user_id`, captured instead of sent.
 async fn sign_in_code(fx: &Fx, user_id: Uuid) -> String {
     struct Capture(std::sync::Mutex<String>);
@@ -2713,6 +2735,34 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
         }
         // ── sign-in domains (Q1-T6) ─────────────────────────────────────────
+        "POST /api/v1/admin/metadata/{kind}/{key}/reset" => {
+            // Y11-T9: a field the customer relabelled after the platform
+            // labelled it.
+            let key = layered_title(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/metadata/attribute/{key}/reset"),
+                t,
+                Some(json!({})),
+            )
+        }
+        "POST /api/v1/admin/metadata/resets/{reset_id}/undo" => {
+            let key = layered_title(fx).await;
+            let reset = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/metadata/attribute/{key}/reset"),
+                Some(json!({})),
+            )
+            .await;
+            let reset_id = reset["reset_id"].as_str().expect("a reset id").to_owned();
+            request(
+                "POST",
+                &format!("/api/v1/admin/metadata/resets/{reset_id}/undo"),
+                t,
+                None,
+            )
+        }
         "POST /api/v1/admin/metadata/conflicts/{id}/resolve" => {
             // Y11-T7: an open conflict on a property no row needs to exist
             // for when the customer's value is kept.

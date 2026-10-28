@@ -1199,3 +1199,78 @@ async fn take_platform_removes_customer_row() {
         "{again:?}"
     );
 }
+
+/// Y11-T9: resetting a customised label puts the platform's back, and
+/// undoing the reset restores the customer's.
+#[tokio::test]
+async fn reset_then_undo_restores_label() {
+    use attome_metadata::provision::layer_reset;
+    let db = skip_if_no_db!(test_db().await);
+    let entity_ln = unique_logicalname("test_layer");
+    let (entity_id, _) = reconcile_entity(
+        &db,
+        &entity_desc(&entity_ln, "Layers"),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("create entity");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 20),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("seed attribute");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Mobile", 20),
+        ReconcilePolicy::Admin,
+    )
+    .await
+    .expect("the customer relabels it");
+    let key = format!("{entity_ln}.title");
+
+    let preview = layer_reset::preview(&db, "attribute", &key, None)
+        .await
+        .unwrap();
+    assert_eq!(preview.len(), 1, "{preview:?}");
+    assert_eq!(preview[0].property, "name");
+    assert_eq!(preview[0].current, serde_json::json!("Mobile"));
+    assert_eq!(preview[0].after, Some(serde_json::json!("Phone")));
+    assert_eq!(
+        attr_probe(&db, entity_id, "title").await.name.as_deref(),
+        Some("Mobile"),
+        "a preview changes nothing"
+    );
+
+    let actor = Uuid::now_v7();
+    let mut tx = attome_db::tx::begin(&db).await.unwrap();
+    let (reset_id, changes) = layer_reset::reset_in_tx(&mut tx, "attribute", &key, None, actor)
+        .await
+        .expect("reset");
+    tx.commit().await.unwrap();
+    assert_eq!(changes.len(), 1);
+    assert_eq!(
+        attr_probe(&db, entity_id, "title").await.name.as_deref(),
+        Some("Phone")
+    );
+
+    let mut tx = attome_db::tx::begin(&db).await.unwrap();
+    layer_reset::undo_in_tx(&mut tx, reset_id, actor)
+        .await
+        .expect("undo");
+    tx.commit().await.unwrap();
+    assert_eq!(
+        attr_probe(&db, entity_id, "title").await.name.as_deref(),
+        Some("Mobile")
+    );
+
+    let mut tx = attome_db::tx::begin(&db).await.unwrap();
+    let again = layer_reset::undo_in_tx(&mut tx, reset_id, actor).await;
+    assert!(
+        matches!(again, Err(attome_types::AppError::Conflict(m)) if m == layer_reset::ALREADY_UNDONE),
+        "{again:?}"
+    );
+}

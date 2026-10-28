@@ -2744,6 +2744,14 @@ pub fn routes() -> Router<EngineState> {
             post(layers::resolve_conflict),
         )
         .route(
+            "/api/v1/admin/metadata/{kind}/{key}/reset",
+            post(layers::reset_customisation),
+        )
+        .route(
+            "/api/v1/admin/metadata/resets/{reset_id}/undo",
+            post(layers::undo_reset),
+        )
+        .route(
             "/api/v1/admin/metadata/{kind}/{key}/layers/diff",
             get(layers::layer_diff),
         )
@@ -2831,6 +2839,8 @@ pub fn routes() -> Router<EngineState> {
         layers::layer_diff,
         layers::list_conflicts,
         layers::resolve_conflict,
+        layers::reset_customisation,
+        layers::undo_reset,
         flow_template::instantiate,
         export_files,
         import_files,
@@ -2867,6 +2877,9 @@ pub fn routes() -> Router<EngineState> {
         layers::LayerDifferenceView,
         layers::LayerConflictView,
         layers::ResolveConflictBody,
+        layers::ResetBody,
+        layers::ResetChangeView,
+        layers::ResetView,
         flow_template::InstantiateRequest,
         flow_template::InstantiateResponse,
         ModelFile,

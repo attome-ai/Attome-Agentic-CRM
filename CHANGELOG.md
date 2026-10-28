@@ -59,6 +59,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Resetting a customisation (Y11-T9): `POST /api/v1/admin/metadata/{kind}/{key}/reset` (with
+  `?preview=true` to see what changes) puts an entity's or field's customised properties back to the
+  app's or platform's values, and `POST /api/v1/admin/metadata/resets/{reset_id}/undo` undoes it once.
 - Calendars, the rest of Z12 (see `docs/calendars.md`): holiday rules and seasons per calendar
   (`/api/v1/admin/calendars/{id}/holiday-rules`, `.../holiday-rules/expanded`, `.../seasons`),
   moon-sighting confirmation (`/api/v1/calendar-sightings`), the Saudi, UAE and Omani holiday

@@ -184,7 +184,14 @@ pub async fn resolve_in_tx(
         }
     };
     if let Some(value) = applied {
-        apply_in_tx(tx, &conflict, &value).await?;
+        apply_property_in_tx(
+            tx,
+            &conflict.object_kind,
+            &conflict.object_key,
+            &conflict.property,
+            &value,
+        )
+        .await?;
     }
 
     sqlx::query(
@@ -207,21 +214,22 @@ pub async fn resolve_in_tx(
     })
 }
 
-/// Writes `value` to the conflict's entity or field column and appends the
-/// change-log row. The property must be one the reconcile writes.
-async fn apply_in_tx(
+/// Writes `value` to property `property` of the entity (`kind` `entity`,
+/// `key` its logical name) or field (`attribute`, `<entity>.<field>`) and
+/// appends the change-log row, metadata only as a seed's write is. The
+/// property must be one the reconcile writes, each a column of the same
+/// name; `NotFound` when the item is gone. Shared with `layer_reset`.
+pub(crate) async fn apply_property_in_tx(
     tx: &mut Tx<'_>,
-    conflict: &LayerConflict,
+    kind: &str,
+    key: &str,
+    property: &str,
     value: &Value,
 ) -> Result<(), AppError> {
-    let property = conflict.property.as_str();
-    let unknown = || {
-        AppError::Validation(format!(
-            "{property} is not a property a conflict can resolve"
-        ))
-    };
+    let unknown =
+        || AppError::Validation(format!("{property} is not a layered property of an {kind}"));
     let column = quote_ident(property);
-    let (entity_id, entity): (Uuid, String) = match conflict.object_kind.as_str() {
+    let (entity_id, entity): (Uuid, String) = match kind {
         "entity" => {
             if !ENTITY_PROPERTIES.contains(&property) {
                 return Err(unknown());
@@ -236,7 +244,7 @@ async fn apply_in_tx(
             ))
             .bind(property)
             .bind(value)
-            .bind(&conflict.object_key)
+            .bind(key)
             .fetch_optional(&mut **tx)
             .await
             .map_err(AppError::internal)?
@@ -246,10 +254,7 @@ async fn apply_in_tx(
             if !ATTRIBUTE_PROPERTIES.contains(&property) {
                 return Err(unknown());
             }
-            let (entity, field) = conflict
-                .object_key
-                .split_once('.')
-                .ok_or(AppError::NotFound)?;
+            let (entity, field) = key.split_once('.').ok_or(AppError::NotFound)?;
             sqlx::query_as(&format!(
                 "UPDATE attribute_info a \
                     SET {column} = (jsonb_populate_record(NULL::attribute_info, \

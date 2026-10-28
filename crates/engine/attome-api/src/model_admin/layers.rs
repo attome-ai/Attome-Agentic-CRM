@@ -8,11 +8,15 @@
 //! customer's value, take the platform's, or combine them), through
 //! `attome_metadata::provision::layer_conflicts`, with its audit event in
 //! the same transaction.
+//!
+//! Y11-T9: resetting a customisation back to the layers below the customer,
+//! with a preview and an undo (`attome_metadata::provision::layer_reset`).
 
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
 use attome_metadata::provision::layer_conflicts::{self, LayerConflict, Resolution};
+use attome_metadata::provision::layer_reset;
 use attome_model::Layer;
 use attome_model::layer_stack::{self, PropertyStack};
 use attome_server::authz::{Authorized, Privilege, area};
@@ -374,4 +378,170 @@ pub(crate) async fn resolve_conflict(
         crate::admin::notify_metadata_change(&state.base.redis).await;
     }
     Ok(Json(resolved.into()))
+}
+
+/// Y11-T9: what to reset; `{}` resets every customised property.
+#[derive(Debug, Default, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ResetBody {
+    /// The properties to reset; every customised property when absent.
+    #[serde(default)]
+    properties: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub(crate) struct ResetQuery {
+    /// Answer what the reset would change, and change nothing.
+    #[serde(default)]
+    preview: bool,
+}
+
+/// One property a reset changes.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct ResetChangeView {
+    property: String,
+    /// The customer's value now.
+    #[schema(value_type = Object)]
+    current: Value,
+    /// The value after the reset: an app's, else the platform's; `null` when
+    /// no lower layer recorded one, so the property is left as it is.
+    #[schema(value_type = Option<Object>)]
+    after: Option<Value>,
+}
+
+/// A reset, or its preview.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct ResetView {
+    /// The reset to undo; absent for a preview.
+    reset_id: Option<Uuid>,
+    changes: Vec<ResetChangeView>,
+}
+
+fn change_views(changes: Vec<layer_reset::ResetChange>) -> Vec<ResetChangeView> {
+    changes
+        .into_iter()
+        .map(|c| ResetChangeView {
+            property: c.property,
+            current: c.current,
+            after: c.after,
+        })
+        .collect()
+}
+
+/// Reset a customisation
+///
+/// Puts an entity's or a field's customised properties (all, or the ones named) back to what an app or the platform gives them, removing the customer's values; with `preview=true`, only answers what would change. Undo with the reset id.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/metadata/{kind}/{key}/reset",
+    tag = "admin",
+    params(
+        ("kind" = String, Path, description = "`entity` or `attribute`"),
+        ("key" = String, Path, description = "The entity's logical name, or `<entity>.<field>`"),
+        ResetQuery,
+    ),
+    request_body = ResetBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "What the reset changed, or would change", body = ResetView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such entity or field, or nothing to reset", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn reset_customisation(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::DataModel>>,
+    Path((kind, key)): Path<(String, String)>,
+    Query(query): Query<ResetQuery>,
+    Json(body): Json<ResetBody>,
+) -> Result<Json<ResetView>, AppError> {
+    // The item must exist, as for its layer stack.
+    stack_of(&state, &kind, &key).await?;
+    let properties = body.properties;
+    if query.preview {
+        let changes =
+            layer_reset::preview(&state.base.db, &kind, &key, properties.as_deref()).await?;
+        return Ok(Json(ResetView {
+            reset_id: None,
+            changes: change_views(changes),
+        }));
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let (reset_id, changes) =
+        layer_reset::reset_in_tx(&mut tx, &kind, &key, properties.as_deref(), ctx.user_id).await?;
+    write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "metadata_layer_reset",
+            Some(reset_id),
+        )
+        .named("metadata.customisation.reset")
+        .comment(format!(
+            "{kind} {key}: {}",
+            changes
+                .iter()
+                .map(|c| c.property.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    crate::admin::notify_metadata_change(&state.base.redis).await;
+    Ok(Json(ResetView {
+        reset_id: Some(reset_id),
+        changes: change_views(changes),
+    }))
+}
+
+/// Undo a reset
+///
+/// Puts back the customer's values a reset removed, once. Refused when the item was customised again since.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/metadata/resets/{reset_id}/undo",
+    tag = "admin",
+    params(("reset_id" = Uuid, Path, description = "The reset's id")),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+    responses(
+        (status = 204, description = "The customer's values are back"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such reset, or its item is gone", body = ErrorResponse),
+        (status = 409, description = "Already undone, or the item was customised again", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn undo_reset(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::DataModel>>,
+    Path(reset_id): Path<Uuid>,
+) -> Result<axum::http::StatusCode, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let (kind, key) = layer_reset::undo_in_tx(&mut tx, reset_id, ctx.user_id).await?;
+    write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "metadata_layer_reset",
+            Some(reset_id),
+        )
+        .named("metadata.customisation.reset_undone")
+        .comment(format!("{kind} {key}")),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    crate::admin::notify_metadata_change(&state.base.redis).await;
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }
