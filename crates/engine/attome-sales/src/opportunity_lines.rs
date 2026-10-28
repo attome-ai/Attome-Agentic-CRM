@@ -323,6 +323,10 @@ type ListRow = (
     Option<String>,
 );
 
+/// List a deal's lines
+///
+/// The opportunity's product lines with their prices, discounts and totals. Anyone who may read the
+/// opportunity.
 #[utoipa::path(
     get,
     path = "/api/v1/sales/opportunities/{id}/lines",
@@ -479,6 +483,11 @@ fn optional_dec(field: &str, text: Option<&str>) -> Result<Option<String>, AppEr
         .transpose()
 }
 
+/// Add a line to a deal
+///
+/// Adds a product from the deal's price list; every line is repriced, and the deal's totals, amount
+/// and split amounts are written again in the same transaction. Needs the deal's `If-Match` row
+/// version and update rights on it. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/opportunities/{id}/lines",
@@ -587,6 +596,10 @@ pub struct SalesLinePatch {
     pub description: Option<String>,
 }
 
+/// Change a deal line
+///
+/// Changes the line's quantity, price or discount, then reprices the deal as adding a line does.
+/// Needs the deal's `If-Match` row version and update rights on it. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/sales/opportunities/{id}/lines/{line_id}",
@@ -679,6 +692,10 @@ pub async fn change_line(
     Ok(changed(opportunity, Some(line), totals))
 }
 
+/// Remove a deal line
+///
+/// Removes the line and reprices the deal as adding a line does. Needs the deal's `If-Match` row
+/// version and update rights on it. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/sales/opportunities/{id}/lines/{line_id}",
@@ -761,6 +778,10 @@ pub struct SalesDealDiscountBody {
     pub percent: Option<String>,
 }
 
+/// Set a deal's discount
+///
+/// Sets the discount over the whole deal and reprices its lines, totals and splits. Needs the deal's
+/// `If-Match` row version and update rights on it. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/opportunities/{id}/deal-discount",

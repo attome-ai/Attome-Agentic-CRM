@@ -194,6 +194,11 @@ pub struct SalesTeamChange {
     pub skipped: u64,
 }
 
+/// Copy the account team onto a deal
+///
+/// Copies the account team's members with the account roles given onto this deal, each with the share
+/// their access gives; being on an account's team never grants deal access by itself. Needs update
+/// rights on the opportunity. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/opportunities/{id}/team/copy-account-team",

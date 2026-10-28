@@ -321,6 +321,10 @@ pub async fn battlecards(
         .collect())
 }
 
+/// List a deal's battle cards
+///
+/// The competitors on the deal, each with the knowledge article holding its battle card when one is
+/// set. Anyone who may read the opportunity.
 #[utoipa::path(
     get,
     path = "/api/v1/sales/opportunities/{id}/battlecards",

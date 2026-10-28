@@ -478,6 +478,11 @@ pub async fn do_apply_proposal(
     })
 }
 
+/// Set a deal's splits
+///
+/// Replaces every credit split of the deal, checked against the split rules, and stores each amount.
+/// On a won deal the change waits for approval with a reason and applies only if the deal has not
+/// changed since. Needs update rights on the opportunity. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/sales/opportunities/{id}/splits",

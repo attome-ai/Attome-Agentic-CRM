@@ -697,6 +697,10 @@ pub(crate) async fn post_sales_quote_order(
     ))
 }
 
+/// Order a won deal
+///
+/// A draft sales order from a `closed_won` opportunity: from its accepted primary quote when it has
+/// one, otherwise from its own lines. A deal orders once. Needs the order create privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/opportunities/{id}/order",

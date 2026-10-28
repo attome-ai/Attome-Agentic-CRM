@@ -299,6 +299,10 @@ async fn read_member(
     })
 }
 
+/// Add a deal team member
+///
+/// Adds a user, with a share of the deal for read or edit access, or a partner contact (no share; a
+/// partner reaches deals through the portal). Needs update rights on the opportunity. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/opportunities/{id}/team",
@@ -375,6 +379,10 @@ pub struct SalesTeamMemberPatch {
     pub access_level: Option<TeamAccess>,
 }
 
+/// Change a deal team member
+///
+/// Changes the member's role or access, and their share with it. Needs update rights on the
+/// opportunity. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/sales/opportunities/{id}/team/{member_id}",
@@ -455,6 +463,9 @@ pub(crate) async fn patch_sales_team_member(
     Ok(Json(changed))
 }
 
+/// Remove a deal team member
+///
+/// Removes the member and their share of the deal. Needs update rights on the opportunity. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/sales/opportunities/{id}/team/{member_id}",

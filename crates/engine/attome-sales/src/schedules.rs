@@ -342,6 +342,11 @@ pub async fn run_shift(
     Ok(moved)
 }
 
+/// Shift a deal's schedules
+///
+/// Moves every revenue and quantity schedule row of the deal by whole months, after the user agreed to
+/// move them with a new close date; never called automatically. Needs update rights on the
+/// opportunity. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/opportunities/{id}/schedules/shift",

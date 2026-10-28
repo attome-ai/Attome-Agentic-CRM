@@ -45,6 +45,11 @@ pub struct SalesOwnerChanged {
     pub splits_moved: u64,
 }
 
+/// Change a deal's owner
+///
+/// In one transaction: moves the owner and gives the new owner edit access and a place on the team,
+/// keeps the old owner as a member with the role given or removes them, and moves or keeps their
+/// splits. Needs update rights on the opportunity. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/opportunities/{id}/change-owner",

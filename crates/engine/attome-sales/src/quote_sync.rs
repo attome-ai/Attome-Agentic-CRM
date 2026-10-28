@@ -158,6 +158,11 @@ pub struct SalesSyncResult {
     pub snapshot_id: Option<Uuid>,
 }
 
+/// Sync a deal with its primary quote
+///
+/// Copies lines one way, from the quote to the deal or the other way. When both changed since the
+/// last sync, it answers 409 `sync_both_changed` with both line sets unless `force` is set. Needs
+/// update rights on the opportunity. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/opportunities/{id}/sync",
