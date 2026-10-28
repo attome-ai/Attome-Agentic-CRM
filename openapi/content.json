@@ -1,0 +1,6352 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Attome XRM API",
+    "description": "The Attome XRM platform's HTTP API. Entity record shapes under `/api/v1/{entity}` are resolved from each deployment's runtime metadata (D-003) and therefore cannot be enumerated statically — those operations document the generic envelope only. Fetch `GET /api/v1/schema/{logicalname}` for a live entity's fields.",
+    "contact": {
+      "name": "Automatica Tech Solutions"
+    },
+    "license": {
+      "name": "AGPL-3.0-only",
+      "identifier": "AGPL-3.0-only"
+    },
+    "version": "0.1.0"
+  },
+  "x-api-version": "2026-10",
+  "paths": {
+    "/api/v1/admin/content/pages": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "List content pages",
+        "description": "The pages of one space that are not deleted: the root pages, or the children of one page, or the\npages whose name contains the search text anywhere in the tree; one-based pages. Content\nadministrators only.",
+        "operationId": "list_content_pages",
+        "parameters": [
+          {
+            "name": "content_space_id",
+            "in": "query",
+            "description": "Every list is scoped to one space — pages in other spaces never\nappear, matching the admin UI's per-space \"Pages\" screen.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "parent_page_id",
+            "in": "query",
+            "description": "Children of this page. Omit for root-level pages. Ignored when\n`search` is set (search runs across the whole tree).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Text the name contains.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PageSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Create a content page",
+        "description": "A draft page in a space, under a parent page or at the root, with its title and URL path,\noptionally from a template. Content administrators only. Audited.",
+        "operationId": "create_page",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "url_path is already in use by another live page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Get a content page",
+        "description": "One page: its draft and published blocks, SEO fields, status, publishing schedule and\n`row_version`. Content administrators only.",
+        "operationId": "get_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "delete": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Delete a content page",
+        "description": "Marks the page deleted. Content administrators only. Audited.",
+        "operationId": "delete_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "patch": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Change a content page",
+        "description": "Changes the title, URL path, blocks or SEO fields given. Requires `If-Match: \"<row_version>\"`;\na missing or stale one is refused. Content administrators only. Audited.",
+        "operationId": "update_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "If-Match's row_version is stale, or url_path is already in use by another live page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation, or If-Match is missing/malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/ancestors": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "List a page's ancestors",
+        "description": "The pages above this one, furthest first, for a breadcrumb. Content administrators only.",
+        "operationId": "get_ancestors",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AncestorRow"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/article": {
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Makes a page a knowledge article, or an ordinary page again (G11-T1).",
+        "description": "An article names the knowledge data source it is filed under, a category\nand products; while published it is searchable as a knowledge item\nwritten as the caller, who needs to be able to create knowledge items.\n`knowledge_source_id: null` makes it an ordinary page and withdraws it\nfrom search.",
+        "operationId": "set_article",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The page's article settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, may not create knowledge items, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad category or product, or a knowledge source the caller cannot see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/as-page": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A CMS page as a page document.",
+        "description": "The page's draft blocks mapped onto the page palette (T2-T4), with its\ntitle and SEO title and description, for the page designer to open.",
+        "operationId": "get_content_page_as_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The CMS page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "audience",
+            "in": "query",
+            "description": "`public` (default), `portal` or `internal`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page document the page designer opens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An audience other than public, portal or internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/audience": {
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Sets who may read a page (K5-T2).",
+        "description": "`public`: anyone, through the public view and delivery routes.\n`internal`: signed-in people only; the public routes answer it with the\nsame 404 as a missing page.",
+        "operationId": "set_audience",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AudienceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The audience was set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudienceBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The audience is not public or internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/move": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Move a content page",
+        "description": "Puts the page under another parent, or at the root; a move under the page itself or one of its\ndescendants is refused. Content administrators only. Audited.",
+        "operationId": "move_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovePageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A hierarchy change is already in progress, or this move would create a cycle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/preview-link": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A signed link to a page's current draft (K5-T2).",
+        "description": "Anyone with the link reads the draft until it expires (60 minutes unless\n`minutes` says otherwise, at most seven days); it opens nothing else.",
+        "operationId": "create_preview_link",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewLinkBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The preview link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "minutes is out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/publish": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Publishes a page's draft (K5-T1: as a new numbered version).",
+        "description": "The draft's blocks are checked again and become the published content; the\npublish is kept as the page's next version. In a space that requires\napproval the publish waits for it instead (202 with the request's id).",
+        "operationId": "publish_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published as a new version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResult"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The publish waits for approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The current draft fails block validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "activated"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/related": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "List a page's related pages",
+        "description": "The pages linked to this one as related that are not deleted. Content administrators only.",
+        "operationId": "get_related_pages",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PageSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Set a page's related pages",
+        "description": "Replaces the page's related pages with the ones given; each link works both ways. A page cannot be\nrelated to itself. Content administrators only. Audited.",
+        "operationId": "set_related_pages",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RelatedPagesBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PageSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "related_page_ids includes this page itself, or a page that does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/review-by": {
+      "patch": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Set a page's review date",
+        "description": "Sets the date the page should be reviewed by, or clears it with `null`; a reminder goes out when it\ncomes. Requires `If-Match`. Content administrators only. Audited.",
+        "operationId": "set_review_by",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewByBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "If-Match's row_version is stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match is missing/malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/schedule": {
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Schedule a page's publishing",
+        "description": "Sets or clears (`null`) when the page is published and unpublished; a background sweep changes\nits status when the time passes. Requires `If-Match`. Content administrators only. Audited.",
+        "operationId": "schedule_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulePageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "If-Match's row_version is stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "unpublish_at is not after publish_at, or If-Match is missing/malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/seo": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A page's search settings",
+        "description": "E13-T8: the title, description, canonical URL, robots flags and Open\nGraph card stored on the page, with its row version.",
+        "operationId": "get_page_seo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page's search settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageSeoView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Change a page's search settings",
+        "description": "E13-T8: replaces the settings at the `If-Match` row version. A change to\nthe canonical URL or the noindex flag is recorded as a configuration\nevent in the same transaction.",
+        "operationId": "put_page_seo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The row_version last read",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageSeo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The saved settings and the new row version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageSeoView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The page changed since that row version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing or malformed, or a setting out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/seo/audit": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Audit a page now",
+        "description": "E13-T8: runs the page audit at once (whether or not audits run on save)\nand replaces the stored findings and score.",
+        "operationId": "audit_page_now",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The new score",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoAuditRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "recomputes the page's derived search findings and score; changes no content or setting",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/seo/findings": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A page's search findings",
+        "description": "E13-T8: the findings of the page's last audit, errors first.",
+        "operationId": "page_findings",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SeoFinding"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Paging out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/stats": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Read a page's statistics",
+        "description": "Views, retrievals by search and AI, helpful and unhelpful votes and when it was last useful, as\nthe statistics rollup job counted them. Content administrators only.",
+        "operationId": "page_stats",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success — zeroed row if the rollup has never run for this page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageStats"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/translation/current": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Marks a translation up to date with its source (K5-T4).",
+        "description": "Records the source's latest published version against the translation,\nso it is no longer stale until the source is published again. Asked of a\npage that is not a translation, it answers 404.",
+        "operationId": "mark_current",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The translation's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The translation is up to date",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such translation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/translations": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A page's translations and whether each is stale (K5-T4).",
+        "description": "Asked of a source page or of any of its translations, it answers the\nsource and every translation of it.",
+        "operationId": "list_translations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "A source page's id, or a translation's",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The source and its translations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSet"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Creates a linked translation of a page (K5-T4).",
+        "description": "The new page sits beside its source (same space and parent) with the\nsource's published blocks as its draft, ready to translate; it starts up to\ndate with the source's latest version. A translation cannot itself be\ntranslated: translate its source.",
+        "operationId": "create_translation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The source page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTranslationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The translation was created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The url_path is taken, or the page already has a translation into this language",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Bad language, title or url_path, or the page is itself a translation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/versions": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A page's versions, newest first (K5-T1).",
+        "description": "Every published version of the page with who published it and when, and\nwhich version a restore came from.",
+        "operationId": "list_versions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page's versions, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PageVersionSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/versions/compare": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Compares two versions of a page (K5-T1).",
+        "description": "Whether the title or SEO text changed, and each block added, removed,\nchanged or moved between `from` and `to`, by block id.",
+        "operationId": "compare_versions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The older version.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The newer version.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The differences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDiff"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/versions/{number}": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "One version of a page with its content (K5-T1).",
+        "description": "The title, SEO text and blocks exactly as that version was published.",
+        "operationId": "get_content_page_version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "description": "The version number",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageVersion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/versions/{number}/restore": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Restores an old version of a page (K5-T1).",
+        "description": "The version's title, SEO text and blocks become the page's draft and are\npublished as a new version that names the restored one. In a space that\nrequires approval the restored draft waits for approval (202 with the\nrequest's id) like any other publish.",
+        "operationId": "restore_content_page_version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "description": "The version to restore",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Restored and published as a new version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResult"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Restored to the draft; the publish waits for approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page or version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The restored blocks fail today's block validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/seo/topics": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Topic clusters",
+        "description": "E13-T8: every topic, by name.",
+        "operationId": "list_topics",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of topics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SeoTopic"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Paging out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Create a topic cluster",
+        "description": "E13-T8: a topic with its language and, optionally, its pillar page.",
+        "operationId": "create_topic",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoTopicBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoTopic"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A name or language out of bounds, or no such pillar page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/seo/topics/{id}": {
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Change a topic cluster",
+        "description": "E13-T8: name, language and pillar page, at the `If-Match` row version.",
+        "operationId": "update_topic",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The topic",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The row_version last read",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoTopicBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoTopic"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The topic changed since that row version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing, or a value out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      },
+      "delete": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Delete a topic cluster",
+        "description": "E13-T8: the topic and its page links; the pages stay.",
+        "operationId": "delete_topic",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The topic",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/content/seo/topics/{id}/pages": {
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Set a topic's cluster pages",
+        "description": "E13-T8: replaces the pages of the cluster (at most 500).",
+        "operationId": "set_topic_pages",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The topic",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoTopicPagesBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Saved"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A page that does not exist, or too many",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/sites/{site_key}/robots": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A site's robots.txt",
+        "description": "E13-T8: the stored body and what crawlers are served.",
+        "operationId": "get_robots",
+        "parameters": [
+          {
+            "name": "site_key",
+            "in": "path",
+            "description": "The site's host name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The site's robots.txt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoRobotsView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a host name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Set a site's robots.txt",
+        "description": "E13-T8: stores the body; portal-only and preview paths stay closed to\ncrawlers whatever it says. The change is a configuration event with the\nbody before and after.",
+        "operationId": "put_robots",
+        "parameters": [
+          {
+            "name": "site_key",
+            "in": "path",
+            "description": "The site's host name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoRobotsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The stored robots.txt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoRobotsView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another change to this site's robots.txt is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a host name, or the body is too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/spaces": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "List content spaces",
+        "description": "Every space that is not deleted, by name. Content administrators only.",
+        "operationId": "list_spaces",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContentSpace"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Create a content space",
+        "description": "A space with its name, description, whether a publish in it waits for approval, and its kind\n(`standard`, or `marketing`, which starts with the landing page templates; fixed once created).\nContent administrators only. Audited.",
+        "operationId": "create_space",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSpaceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentSpace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A space with this name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/spaces/{id}": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Get a content space",
+        "description": "One space's settings and `row_version`. Content administrators only.",
+        "operationId": "get_space",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The space",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentSpace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Space not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "delete": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Delete a content space",
+        "description": "Marks the space deleted. Content administrators only. Audited.",
+        "operationId": "delete_space",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The space",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Space not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "patch": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Change a content space",
+        "description": "Changes the fields given; an empty description clears it. Requires `If-Match:\n\"<row_version>\"`. Content administrators only. Audited.",
+        "operationId": "update_space",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The space",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSpaceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentSpace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Space not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "If-Match's row_version is stale, or a space with this name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation, or If-Match is missing/malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/spaces/{id}/templates": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "List a space's allowed templates",
+        "description": "The templates a new page in this space may start from. Content administrators only.",
+        "operationId": "get_space_templates",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The space",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Set a space's allowed templates",
+        "description": "Replaces the templates a new page in this space may start from. Content administrators only.\nAudited.",
+        "operationId": "set_space_templates",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The space",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpaceTemplatesBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Space not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "template_ids includes a template that does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/templates": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "List content templates",
+        "description": "Every page template that is not deleted, by name. Content administrators only.",
+        "operationId": "list_templates",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContentTemplate"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Create a content template",
+        "description": "A page template: its name, description and the blocks a page made from it starts with. Content\nadministrators only. Audited.",
+        "operationId": "create_template",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTemplateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A template with this name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/templates/{id}": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Get a content template",
+        "description": "One template with its blocks and `row_version`. Content administrators only.",
+        "operationId": "get_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The template",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "delete": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Delete a content template",
+        "description": "Marks the template deleted. Content administrators only. Audited.",
+        "operationId": "delete_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The template",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "patch": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Change a content template",
+        "description": "Changes the name, description or blocks given;\nRequires `If-Match: \"<row_version>\"`. Content administrators only. Audited.",
+        "operationId": "update_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The template",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTemplateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "If-Match's row_version is stale, or a template with this name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation, or If-Match is missing/malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AncestorRow": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "depth"
+        ],
+        "properties": {
+          "depth": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Distance from the queried page — 1 is its immediate parent."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "ArticleBody": {
+        "type": "object",
+        "description": "`PUT .../article`.",
+        "properties": {
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "knowledge_source_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The knowledge data source to file the article under; `null` makes the\npage an ordinary page again."
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ArticleSettings": {
+        "type": "object",
+        "description": "A page's article settings.",
+        "required": [
+          "id",
+          "page_type",
+          "article_products"
+        ],
+        "properties": {
+          "article_category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "article_products": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "knowledge_item_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The knowledge item the article is projected into, once it has been."
+          },
+          "knowledge_source_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "page_type": {
+            "type": "string",
+            "description": "`page` or `article`."
+          }
+        }
+      },
+      "AudienceBody": {
+        "type": "object",
+        "description": "`PUT .../audience`.",
+        "required": [
+          "audience"
+        ],
+        "properties": {
+          "audience": {
+            "type": "string",
+            "description": "`public` or `internal`."
+          }
+        }
+      },
+      "Block": {
+        "type": "object",
+        "description": "One block on the canvas. `props` is validated against `kind`'s shape by\n`blocks::validate_blocks` before a draft save or publish is accepted —\nnever stored as trusted-opaque JSON (coding-guidelines §8).",
+        "required": [
+          "id",
+          "kind",
+          "props"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BlockKind"
+          },
+          "props": {
+            "type": "object"
+          }
+        }
+      },
+      "BlockChange": {
+        "type": "string",
+        "description": "What happened to one block between two versions, by block `id`.",
+        "enum": [
+          "added",
+          "removed",
+          "changed",
+          "moved"
+        ]
+      },
+      "BlockDiff": {
+        "type": "object",
+        "description": "One block's change.",
+        "required": [
+          "block_id",
+          "change"
+        ],
+        "properties": {
+          "block_id": {
+            "type": "string"
+          },
+          "change": {
+            "$ref": "#/components/schemas/BlockChange"
+          },
+          "from_index": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Its position in the older version, if it was there.",
+            "minimum": 0
+          },
+          "to_index": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Its position in the newer version, if it is there.",
+            "minimum": 0
+          }
+        }
+      },
+      "BlockKind": {
+        "type": "string",
+        "description": "The full block library (mockup's block-library modal). Kept as a real\nenum (not a bare string) so an unrecognized `kind` is rejected by\ndeserialization itself, before `blocks::validate_blocks` ever runs.",
+        "enum": [
+          "heading",
+          "rich_text",
+          "alert",
+          "image",
+          "columns",
+          "data_table",
+          "chart",
+          "form",
+          "component"
+        ]
+      },
+      "ContentSpace": {
+        "type": "object",
+        "description": "A reusable container of pages — a pure organizational grouping, not a URL\nnamespace (`url_path` uniqueness stays global across all spaces; see\nD-369). Infra-mutable class (D-005).",
+        "required": [
+          "id",
+          "name",
+          "require_approval",
+          "kind",
+          "theme",
+          "menu",
+          "row_version",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "blog_path": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pages under this path are the site's blog posts."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "E12-T2: the domain this space is served on."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "E11-T1: `standard` or `marketing` (landing pages), set at create."
+          },
+          "menu": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MenuItem"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "require_approval": {
+            "type": "boolean",
+            "description": "K5-T1: a publish in this space waits for approval."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "site_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "theme": {
+            "type": "object",
+            "description": "CSS custom property to value (`--ac-bg`: `#fff`)."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ContentTemplate": {
+        "type": "object",
+        "description": "A reusable block-content starting point for new pages — selecting one at\npage-create time copies `blocks` into the new page's `blocks_draft` once;\nthere is no ongoing link back to the template afterward (D-369).",
+        "required": [
+          "id",
+          "name",
+          "blocks",
+          "row_version",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreatePageBody": {
+        "type": "object",
+        "required": [
+          "content_space_id",
+          "title",
+          "url_path"
+        ],
+        "properties": {
+          "content_space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parent_page_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "template_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "When set, must be one of `content_space_id`'s allowed templates\n(`content_space_template`) — its `blocks` are copied into the new\npage's `blocks_draft` once, at create time."
+          },
+          "title": {
+            "type": "string"
+          },
+          "url_path": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateSpaceBody": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "E11-T1: `standard` (the default) or `marketing`; a marketing space\nstarts with the landing page templates. Fixed once created."
+          },
+          "name": {
+            "type": "string"
+          },
+          "require_approval": {
+            "type": "boolean",
+            "description": "K5-T1: a publish in this space waits for approval."
+          }
+        }
+      },
+      "CreateTemplateBody": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            }
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateTranslationBody": {
+        "type": "object",
+        "description": "`POST .../translations`.",
+        "required": [
+          "language",
+          "title",
+          "url_path"
+        ],
+        "properties": {
+          "language": {
+            "type": "string",
+            "description": "The translation's language code, e.g. `ar` or `en-GB`."
+          },
+          "title": {
+            "type": "string"
+          },
+          "url_path": {
+            "type": "string",
+            "description": "The translation's own URL path."
+          }
+        }
+      },
+      "ErrorDetails": {
+        "oneOf": [
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          },
+          {
+            "$ref": "#/components/schemas/RuleViolationDetails"
+          },
+          {
+            "$ref": "#/components/schemas/FieldLockedDetails"
+          }
+        ],
+        "description": "`ErrorResponse.details`: its shape depends on the `error` code —\na list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on\n`rule_violation`, [`FieldLockedDetails`] on `field_locked` and\n`field_locked_required` (D-789)."
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Standard error envelope. `error` is a stable machine-readable code; `message` is human-readable and never contains internal detail.",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same value as `error`."
+          },
+          "current_state": {
+            "description": "Present on a version conflict: the server's current row for the\nfields the caller touched, as a JSON object. The owning engine filters\nsensitive columns out before building it (BTY-16c's precondition), so\nthis is a deliberate filtered projection — never a raw row dump."
+          },
+          "current_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a version conflict: the `row_version` the server currently\nholds, so a caller can re-read and retry instead of guessing what the\nwinner wrote. Omitted when the conflict is not version-based."
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same text as `message`."
+          },
+          "details": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorDetails",
+                "description": "Structured detail, shaped by `error` (see [`ErrorDetails`]): every\nfield-level failure on a `validation_error` response when the raiser\nhas a field list, so a form can render them all at once; every firing\nrule on a `rule_violation` response from a business rule; every\nrefused field on `field_locked` / `field_locked_required`. Omitted\notherwise."
+              }
+            ]
+          },
+          "effect": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: `hidden` or\n`disabled`."
+          },
+          "error": {
+            "type": "string",
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+          },
+          "errors": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {},
+            "description": "Every field-level failure on a `validation_error`, as\n`{attribute, rule, message, fix}`."
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required` (D-789): the first\nrefused field (every one is in `details.fields`); on\n`attribute_not_writable` (Q15-T4): the attribute the caller may not\nwrite."
+          },
+          "hidden": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on `duplicate_detected`: how many more matches the caller may\nnot read."
+          },
+          "instance": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The request path the problem happened at."
+          },
+          "matches": {
+            "description": "Present on `duplicate_detected` (A15-T4): the existing records the\nsave matches that the caller may read (record, rule, score)."
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on responses that passed through the request-id middleware\n(D-043); absent on the few pre-middleware rejection paths."
+          },
+          "retry_after_sec": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a `rate_limit_exceeded` response when the limiter knows its\nwindow: seconds to wait before retrying, equal by construction to the\n`Retry-After` header on the same response (BTY-11a). Omitted when the\nlimit that was hit has no known window.",
+            "minimum": 0
+          },
+          "retryable": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the same request may succeed later (the error catalogue's\nverdict for `code`)."
+          },
+          "rule_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Present on a `rule_violation` response (D-472): the id of the\n`xrm_core_rule` whose failing expression produced this 422, so a\nclient can highlight or re-check the exact rule without parsing\n`message`. Omitted on every other code, and on any response that\ndoes not name a rule.\nAlso present on `field_locked` / `field_locked_required` (D-789): the\nbusiness rule that locks `field`."
+          },
+          "rule_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: the display name\nof the rule that locks `field`."
+          },
+          "status": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The HTTP status code.",
+            "minimum": 0
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A short title for `code` in the request's language (Z14-T3), e.g.\n`The resource was not found.`"
+          },
+          "type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Z14-T1 (RFC 9457): `about:blank`; the problem is named by `code`."
+          }
+        },
+        "example": {
+          "error": "validation_error",
+          "message": "validation error: name is required",
+          "request_id": "018f0a1b-2c3d-7e4f-8a9b-0c1d2e3f4a5b"
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "description": "One field-level failure inside `ErrorResponse.details` (BTY-16b): the\nfield the caller sent, a stable machine-readable `code` the client maps\nto localized text (e.g. `required`, `too_long`, `invalid_format`,\n`not_allowed`), and the English server-side `message`.\n\nA list, not a single error, so one 422 can answer with every bad field at\nonce (BTY-F11) instead of making a form discover them one round-trip at a\ntime.",
+        "required": [
+          "field",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable failure code for this field, independent of\nthe message text."
+          },
+          "field": {
+            "type": "string",
+            "description": "The offending field, as the caller addressed it (e.g. `email` or\n`amount`)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable, English, server-side detail for this field."
+          }
+        }
+      },
+      "FieldLockedDetails": {
+        "type": "object",
+        "description": "`details` of a `field_locked` / `field_locked_required` response: every\nrefused field, the first being the one the top-level `field` names.",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedField"
+            }
+          }
+        }
+      },
+      "LockedField": {
+        "type": "object",
+        "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
+        "required": [
+          "field",
+          "rule_id",
+          "rule_name",
+          "effect"
+        ],
+        "properties": {
+          "effect": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string"
+          }
+        }
+      },
+      "MenuItem": {
+        "type": "object",
+        "description": "One menu link.",
+        "required": [
+          "label",
+          "path"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "label_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "A path on the site (`/pricing`) or an absolute http(s) URL."
+          }
+        }
+      },
+      "MovePageBody": {
+        "type": "object",
+        "properties": {
+          "parent_page_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "PageDetail": {
+        "type": "object",
+        "required": [
+          "id",
+          "content_space_id",
+          "title",
+          "url_path",
+          "status",
+          "blocks_draft",
+          "row_version",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "audience": {
+            "type": "string",
+            "description": "K5-T2: `public` (anyone) or `internal` (signed-in people only)."
+          },
+          "blocks_draft": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "blocks_published": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object"
+            }
+          },
+          "content_space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parent_page_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "publish_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "M56 Phase 1 (D-436, migration `0230`) — when set on a `draft` page,\nthe scheduled-publish sweep publishes it once `NOW()` passes this."
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "review_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "M37 Phase 2 (D-452) — when set, the owner (`updated_by`) is reminded\nthrough M51 once `NOW()` passes it, and retrieval callers are told the\nunderlying content is stale. `None` means no review cadence is set,\nnot \"never review\"."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "seo_description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seo_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "`draft | published`."
+          },
+          "template_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "`None` if this page was built from scratch, not from a template."
+          },
+          "title": {
+            "type": "string"
+          },
+          "unpublish_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When set on a `published` page, the same sweep reverts it to `draft`\nonce `NOW()` passes this."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url_path": {
+            "type": "string"
+          }
+        }
+      },
+      "PageSeo": {
+        "type": "object",
+        "description": "A page's search settings.",
+        "properties": {
+          "canonical_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nofollow": {
+            "type": "boolean"
+          },
+          "noindex": {
+            "type": "boolean"
+          },
+          "og_description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "og_image_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "og_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PageSeoView": {
+        "type": "object",
+        "description": "A page's search settings, as the SEO panel reads them.",
+        "required": [
+          "settings",
+          "row_version"
+        ],
+        "properties": {
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Send back as `If-Match` on the next `PUT`."
+          },
+          "settings": {
+            "$ref": "#/components/schemas/PageSeo"
+          }
+        }
+      },
+      "PageStats": {
+        "type": "object",
+        "description": "The read model `attome_content::analytics::rollup_page_stats` maintains\n(D-452). Served by the admin page-stats panel; not written directly by\nany request handler.",
+        "required": [
+          "page_ref",
+          "views",
+          "retrievals",
+          "helpfulness_up",
+          "helpfulness_down",
+          "updated_at"
+        ],
+        "properties": {
+          "helpfulness_down": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "helpfulness_up": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "last_useful_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "page_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "retrievals": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "views": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PageSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "content_space_id",
+          "title",
+          "url_path",
+          "status",
+          "updated_at"
+        ],
+        "properties": {
+          "content_space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parent_page_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`draft | published`."
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url_path": {
+            "type": "string"
+          }
+        }
+      },
+      "PageVersion": {
+        "type": "object",
+        "description": "One version with its content.",
+        "required": [
+          "version_number",
+          "title",
+          "blocks",
+          "published_by",
+          "published_at"
+        ],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "published_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restored_from": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "seo_description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seo_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "version_number": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PaginatedResponse_PageSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "content_space_id",
+                "title",
+                "url_path",
+                "status",
+                "updated_at"
+              ],
+              "properties": {
+                "content_space_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "parent_page_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`draft | published`."
+                },
+                "title": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "url_path": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_PageVersionSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One version in a page's list.",
+              "required": [
+                "version_number",
+                "title",
+                "published_by",
+                "published_at"
+              ],
+              "properties": {
+                "published_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "published_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "restored_from": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "The version this one restored, if it was a restore."
+                },
+                "title": {
+                  "type": "string"
+                },
+                "version_number": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_SeoFinding": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One stored finding.",
+              "required": [
+                "id",
+                "rule",
+                "severity",
+                "created_at"
+              ],
+              "properties": {
+                "block_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "message_key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The catalog key of the message."
+                },
+                "rule": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string",
+                  "description": "`info`, `warning` or `error`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_SeoTopic": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A topic cluster.",
+              "required": [
+                "id",
+                "name",
+                "language",
+                "row_version",
+                "created_at",
+                "updated_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "language": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "pillar_page_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PreviewLink": {
+        "type": "object",
+        "description": "A signed preview link.",
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "token": {
+            "type": "string",
+            "description": "The token for `GET /api/v1/content/preview?token=`."
+          }
+        }
+      },
+      "PreviewLinkBody": {
+        "type": "object",
+        "description": "`POST .../preview-link`.",
+        "properties": {
+          "minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "How long the link works, 1 to 10,080 minutes; 60 when unset."
+          }
+        }
+      },
+      "PublishResult": {
+        "type": "object",
+        "description": "A publish's outcome: published (with its version), or waiting for\napproval in a space that requires it (K5-T1).",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The approval request a publish waits for."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "`published`, or `pending_approval`."
+          },
+          "version_number": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The version this publish recorded."
+          }
+        }
+      },
+      "RelatedPagesBody": {
+        "type": "object",
+        "description": "Full-set replace for a page's symmetric \"related pages\" — the admin API\nwrites both directions (A→B and B→A) in one transaction, so a read for\neither page's related list is a single-direction query.",
+        "required": [
+          "related_page_ids"
+        ],
+        "properties": {
+          "related_page_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "ReviewByBody": {
+        "type": "object",
+        "description": "Full replace, `null` clears — same convention as `SchedulePageBody`\n(D-452's `review_by`, a plain `Option<NaiveDate>` full-replace, has no\nempty-string-vs-null ambiguity to resolve).",
+        "properties": {
+          "review_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "RuleFailure": {
+        "type": "object",
+        "description": "One business-rule `error` policy that fired (D-789 §3.3), inside a\n`rule_violation` body's `details.rules`. Carries names and the rule's own\nmessage, never a record value.",
+        "required": [
+          "rule_id",
+          "rule_name",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The field the policy is attached to, when it names one."
+          },
+          "message": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string",
+            "description": "The rule's display name (its name when it has none)."
+          }
+        }
+      },
+      "RuleViolationDetails": {
+        "type": "object",
+        "description": "`details` of a `rule_violation` response (D-789): the field of the first\nfailing policy, when it names one, and every blocking `error` policy that\nfired, the first (by rule display order) being the one `rule_id` names.",
+        "required": [
+          "rules"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleFailure"
+            }
+          }
+        }
+      },
+      "SchedulePageBody": {
+        "type": "object",
+        "description": "Full replace, not a partial patch — both fields are always written\nexactly as given (`null` clears), so there is no absent-vs-null\nambiguity to resolve (the trap `UpdatePageBody`'s `seo_title`/\n`seo_description` sentinel-empty-string convention exists to avoid for a\nstring field; a plain `Option<DateTime<Utc>>` full-replace is the\nsimpler fix for a field with no such sentinel).",
+        "properties": {
+          "publish_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "unpublish_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "SeoAuditRun": {
+        "type": "object",
+        "description": "What an audit run found.",
+        "required": [
+          "score",
+          "audited_at"
+        ],
+        "properties": {
+          "audited_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32",
+            "description": "0 to 100."
+          }
+        }
+      },
+      "SeoRobotsBody": {
+        "type": "object",
+        "description": "A robots body to store.",
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeoRobotsView": {
+        "type": "object",
+        "description": "A site's robots.txt as stored.",
+        "required": [
+          "site_key",
+          "served"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The stored body; `null` when the site has none (the default applies)."
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "served": {
+            "type": "string",
+            "description": "What crawlers are served: the body (or the default) with the paths\nthat are always closed appended."
+          },
+          "site_key": {
+            "type": "string"
+          }
+        }
+      },
+      "SeoTopic": {
+        "type": "object",
+        "description": "A topic cluster.",
+        "required": [
+          "id",
+          "name",
+          "language",
+          "row_version",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pillar_page_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SeoTopicBody": {
+        "type": "object",
+        "description": "A topic to create or change.",
+        "required": [
+          "name",
+          "language"
+        ],
+        "properties": {
+          "language": {
+            "type": "string",
+            "description": "`en`, `ar`, or a regional form such as `ar-SA`."
+          },
+          "name": {
+            "type": "string"
+          },
+          "pillar_page_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeoTopicPagesBody": {
+        "type": "object",
+        "description": "A topic's cluster pages.",
+        "required": [
+          "page_ids"
+        ],
+        "properties": {
+          "page_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SpaceTemplatesBody": {
+        "type": "object",
+        "description": "Full-set replace for which templates a space's editors may pick from.",
+        "required": [
+          "template_ids"
+        ],
+        "properties": {
+          "template_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "TranslationSet": {
+        "type": "object",
+        "description": "A page and its translations.",
+        "required": [
+          "source_id",
+          "translations"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The source's latest published version; none when never published."
+          },
+          "translations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranslationSummary"
+            }
+          }
+        }
+      },
+      "TranslationSummary": {
+        "type": "object",
+        "description": "One translation of a page.",
+        "required": [
+          "id",
+          "title",
+          "url_path",
+          "status",
+          "stale"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "The source has a newer published version than that."
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "translated_from_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The source version this translation was last brought up to date with."
+          },
+          "url_path": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdatePageBody": {
+        "type": "object",
+        "description": "The optimistic-concurrency guard is the `If-Match` header (D-079's\ncontract, reused as-is), not a body field — `attome-api`'s\n`content_admin::update_page` parses it before this deserializes.",
+        "properties": {
+          "blocks": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            }
+          },
+          "seo_description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seo_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "UpdateSpaceBody": {
+        "type": "object",
+        "properties": {
+          "blog_path": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`None` leaves it, `\"\"` clears it."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`None` leaves the stored value unchanged, `Some(\"\")` clears it,\n`Some(nonempty)` sets it — same convention as `UpdatePageBody`'s\n`seo_title`/`seo_description`."
+          },
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "E12-T2: `None` leaves it, `\"\"` clears it."
+          },
+          "menu": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MenuItem"
+            },
+            "description": "Replaces the menu when present."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "require_approval": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "K5-T1: `None` leaves it unchanged."
+          },
+          "site_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "theme": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Replaces the theme when present.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "UpdateTemplateBody": {
+        "type": "object",
+        "properties": {
+          "blocks": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            }
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "VersionDiff": {
+        "type": "object",
+        "description": "Two versions compared.",
+        "required": [
+          "from_version",
+          "to_version",
+          "title_changed",
+          "seo_changed",
+          "blocks"
+        ],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlockDiff"
+            }
+          },
+          "from_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "seo_changed": {
+            "type": "boolean"
+          },
+          "title_changed": {
+            "type": "boolean"
+          },
+          "to_version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "Warning": {
+        "type": "object",
+        "description": "Something the server did that the caller should know about though the\nrequest succeeded (a value truncated, a default applied, a page clamped):\na stable `code` and English `message`. Sent only when there is one.",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "api_key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "`Authorization: ApiKey <public_key>:<secret>`, issued by POST /api/v1/auth/api-keys."
+      },
+      "portal_session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-wp_{portal}_session",
+        "description": "A web portal user's session cookie, issued by the portal's sign-in; `{portal}` is the portal's keyword (`wp_{portal}_session` on plain-http local dev). Valid only on that portal's own routes."
+      },
+      "s2s_hmac": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-s2s-signature",
+        "description": "A system-to-system call, signed. Send `x-s2s-client-id`, `x-s2s-key-id`, `x-s2s-timestamp` (Unix milliseconds, within 300 seconds of the server's clock), `x-s2s-nonce` (single use: a repeat is refused) and `x-s2s-signature`: the hex HMAC-SHA256, keyed by the hex-decoded client secret, of `METHOD`, `PATH_AND_QUERY`, the hex SHA-256 of the body, `TIMESTAMP` and `NONCE`, joined by newlines in that order."
+      },
+      "session_cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-session_token",
+        "description": "Browser session cookie issued by POST /api/v1/auth/login. Mutating requests additionally require the CSRF conditions enforced by `middleware::csrf`."
+      }
+    }
+  },
+  "tags": []
+}

@@ -1,0 +1,1098 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Attome XRM API",
+    "description": "The Attome XRM platform's HTTP API. Entity record shapes under `/api/v1/{entity}` are resolved from each deployment's runtime metadata (D-003) and therefore cannot be enumerated statically — those operations document the generic envelope only. Fetch `GET /api/v1/schema/{logicalname}` for a live entity's fields.",
+    "contact": {
+      "name": "Automatica Tech Solutions"
+    },
+    "license": {
+      "name": "AGPL-3.0-only",
+      "identifier": "AGPL-3.0-only"
+    },
+    "version": "0.1.0"
+  },
+  "x-api-version": "2026-10",
+  "paths": {
+    "/api/v1/admin/predict/models": {
+      "get": {
+        "tags": [
+          "predict"
+        ],
+        "summary": "List prediction models",
+        "description": "The prediction models, one-based pages. AI administrators only.",
+        "operationId": "list_models",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ModelSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "predict",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "predict"
+        ],
+        "summary": "Create a prediction model",
+        "description": "Creates the model for its target and entity and queues its first training run in the same\ntransaction; a duplicate name is 409. AI administrators only. Audited.",
+        "operationId": "create_model",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateModelBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A model with this name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation, or an unsupported target/entity pair",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "predict",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/predict/models/{id}": {
+      "get": {
+        "tags": [
+          "predict"
+        ],
+        "summary": "Get a prediction model",
+        "description": "One prediction model. AI administrators only.",
+        "operationId": "get_model",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Prediction model id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "predict",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "delete": {
+        "tags": [
+          "predict"
+        ],
+        "summary": "Retire a prediction model",
+        "description": "Retires the model; its past predictions stay readable. AI administrators only. Audited.",
+        "operationId": "retire_model",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Prediction model id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "predict",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/predict/models/{id}/train": {
+      "post": {
+        "tags": [
+          "predict"
+        ],
+        "summary": "Retrain a prediction model",
+        "description": "Queues a new training run; a model already training is refused. AI administrators only. Audited.",
+        "operationId": "retrain_model",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Prediction model id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Training run enqueued"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A training run is already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "predict",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/predictions": {
+      "get": {
+        "tags": [
+          "predict"
+        ],
+        "summary": "Read a record's predictions",
+        "description": "The latest predictions about one record, newest first, for its banner and dashboard widget.",
+        "operationId": "list_predictions",
+        "parameters": [
+          {
+            "name": "regarding_entity",
+            "in": "query",
+            "description": "Only records of this entity.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "regarding_id",
+            "in": "query",
+            "description": "Only this record.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`; defaults to 20.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PredictionSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks {regarding_entity}.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "predict",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateModelBody": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/predict/models` body. No `features`/`algorithm` field:\nPhase 1 has no per-model configurable feature set yet — `features` is\nderived and overwritten from `features::FEATURE_KEYS` once training\nactually runs (`model::FeatureDescriptor`'s own doc comment), and\n`algorithm` is always `logistic_regression` — so accepting either here\nwould just be a client-supplied value this crate silently ignores.",
+        "required": [
+          "name",
+          "target",
+          "entity"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorDetails": {
+        "oneOf": [
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          },
+          {
+            "$ref": "#/components/schemas/RuleViolationDetails"
+          },
+          {
+            "$ref": "#/components/schemas/FieldLockedDetails"
+          }
+        ],
+        "description": "`ErrorResponse.details`: its shape depends on the `error` code —\na list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on\n`rule_violation`, [`FieldLockedDetails`] on `field_locked` and\n`field_locked_required` (D-789)."
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Standard error envelope. `error` is a stable machine-readable code; `message` is human-readable and never contains internal detail.",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same value as `error`."
+          },
+          "current_state": {
+            "description": "Present on a version conflict: the server's current row for the\nfields the caller touched, as a JSON object. The owning engine filters\nsensitive columns out before building it (BTY-16c's precondition), so\nthis is a deliberate filtered projection — never a raw row dump."
+          },
+          "current_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a version conflict: the `row_version` the server currently\nholds, so a caller can re-read and retry instead of guessing what the\nwinner wrote. Omitted when the conflict is not version-based."
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same text as `message`."
+          },
+          "details": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorDetails",
+                "description": "Structured detail, shaped by `error` (see [`ErrorDetails`]): every\nfield-level failure on a `validation_error` response when the raiser\nhas a field list, so a form can render them all at once; every firing\nrule on a `rule_violation` response from a business rule; every\nrefused field on `field_locked` / `field_locked_required`. Omitted\notherwise."
+              }
+            ]
+          },
+          "effect": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: `hidden` or\n`disabled`."
+          },
+          "error": {
+            "type": "string",
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+          },
+          "errors": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {},
+            "description": "Every field-level failure on a `validation_error`, as\n`{attribute, rule, message, fix}`."
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required` (D-789): the first\nrefused field (every one is in `details.fields`); on\n`attribute_not_writable` (Q15-T4): the attribute the caller may not\nwrite."
+          },
+          "hidden": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on `duplicate_detected`: how many more matches the caller may\nnot read."
+          },
+          "instance": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The request path the problem happened at."
+          },
+          "matches": {
+            "description": "Present on `duplicate_detected` (A15-T4): the existing records the\nsave matches that the caller may read (record, rule, score)."
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on responses that passed through the request-id middleware\n(D-043); absent on the few pre-middleware rejection paths."
+          },
+          "retry_after_sec": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a `rate_limit_exceeded` response when the limiter knows its\nwindow: seconds to wait before retrying, equal by construction to the\n`Retry-After` header on the same response (BTY-11a). Omitted when the\nlimit that was hit has no known window.",
+            "minimum": 0
+          },
+          "retryable": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the same request may succeed later (the error catalogue's\nverdict for `code`)."
+          },
+          "rule_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Present on a `rule_violation` response (D-472): the id of the\n`xrm_core_rule` whose failing expression produced this 422, so a\nclient can highlight or re-check the exact rule without parsing\n`message`. Omitted on every other code, and on any response that\ndoes not name a rule.\nAlso present on `field_locked` / `field_locked_required` (D-789): the\nbusiness rule that locks `field`."
+          },
+          "rule_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: the display name\nof the rule that locks `field`."
+          },
+          "status": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The HTTP status code.",
+            "minimum": 0
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A short title for `code` in the request's language (Z14-T3), e.g.\n`The resource was not found.`"
+          },
+          "type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Z14-T1 (RFC 9457): `about:blank`; the problem is named by `code`."
+          }
+        },
+        "example": {
+          "error": "validation_error",
+          "message": "validation error: name is required",
+          "request_id": "018f0a1b-2c3d-7e4f-8a9b-0c1d2e3f4a5b"
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "description": "One field-level failure inside `ErrorResponse.details` (BTY-16b): the\nfield the caller sent, a stable machine-readable `code` the client maps\nto localized text (e.g. `required`, `too_long`, `invalid_format`,\n`not_allowed`), and the English server-side `message`.\n\nA list, not a single error, so one 422 can answer with every bad field at\nonce (BTY-F11) instead of making a form discover them one round-trip at a\ntime.",
+        "required": [
+          "field",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable failure code for this field, independent of\nthe message text."
+          },
+          "field": {
+            "type": "string",
+            "description": "The offending field, as the caller addressed it (e.g. `email` or\n`amount`)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable, English, server-side detail for this field."
+          }
+        }
+      },
+      "FieldLockedDetails": {
+        "type": "object",
+        "description": "`details` of a `field_locked` / `field_locked_required` response: every\nrefused field, the first being the one the top-level `field` names.",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedField"
+            }
+          }
+        }
+      },
+      "LockedField": {
+        "type": "object",
+        "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
+        "required": [
+          "field",
+          "rule_id",
+          "rule_name",
+          "effect"
+        ],
+        "properties": {
+          "effect": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string"
+          }
+        }
+      },
+      "ModelSummary": {
+        "type": "object",
+        "description": "The `/api/v1/admin/predict/models*` wire shape — deliberately omits\n`model_artifact` (internal fitted parameters, not a public contract) and\n`organization_ref`/`row_version`/`is_deleted` (no client needs them yet).",
+        "required": [
+          "id",
+          "name",
+          "target",
+          "entity",
+          "features",
+          "algorithm",
+          "trained_version",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "algorithm": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "features": {},
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metrics": {},
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "trained_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginatedResponse_ModelSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "The `/api/v1/admin/predict/models*` wire shape — deliberately omits\n`model_artifact` (internal fitted parameters, not a public contract) and\n`organization_ref`/`row_version`/`is_deleted` (no client needs them yet).",
+              "required": [
+                "id",
+                "name",
+                "target",
+                "entity",
+                "features",
+                "algorithm",
+                "trained_version",
+                "status",
+                "created_at",
+                "updated_at"
+              ],
+              "properties": {
+                "algorithm": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "features": {},
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "metrics": {},
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "trained_version": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_PredictionSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "model_ref",
+                "regarding_entity",
+                "regarding_id",
+                "score",
+                "label",
+                "predicted_at",
+                "horizon_at",
+                "resolved"
+              ],
+              "properties": {
+                "explanation": {},
+                "horizon_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "model_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "predicted_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "regarding_entity": {
+                  "type": "string"
+                },
+                "regarding_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "resolved": {
+                  "type": "boolean",
+                  "description": "`true` once the outcome-fill sweep has recorded whether this\nprediction actually came true (see `crate::score::fill_outcomes`)."
+                },
+                "score": {
+                  "type": "number",
+                  "format": "double"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "RuleFailure": {
+        "type": "object",
+        "description": "One business-rule `error` policy that fired (D-789 §3.3), inside a\n`rule_violation` body's `details.rules`. Carries names and the rule's own\nmessage, never a record value.",
+        "required": [
+          "rule_id",
+          "rule_name",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The field the policy is attached to, when it names one."
+          },
+          "message": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string",
+            "description": "The rule's display name (its name when it has none)."
+          }
+        }
+      },
+      "RuleViolationDetails": {
+        "type": "object",
+        "description": "`details` of a `rule_violation` response (D-789): the field of the first\nfailing policy, when it names one, and every blocking `error` policy that\nfired, the first (by rule display order) being the one `rule_id` names.",
+        "required": [
+          "rules"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleFailure"
+            }
+          }
+        }
+      },
+      "Warning": {
+        "type": "object",
+        "description": "Something the server did that the caller should know about though the\nrequest succeeded (a value truncated, a default applied, a page clamped):\na stable `code` and English `message`. Sent only when there is one.",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "api_key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "`Authorization: ApiKey <public_key>:<secret>`, issued by POST /api/v1/auth/api-keys."
+      },
+      "portal_session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-wp_{portal}_session",
+        "description": "A web portal user's session cookie, issued by the portal's sign-in; `{portal}` is the portal's keyword (`wp_{portal}_session` on plain-http local dev). Valid only on that portal's own routes."
+      },
+      "s2s_hmac": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-s2s-signature",
+        "description": "A system-to-system call, signed. Send `x-s2s-client-id`, `x-s2s-key-id`, `x-s2s-timestamp` (Unix milliseconds, within 300 seconds of the server's clock), `x-s2s-nonce` (single use: a repeat is refused) and `x-s2s-signature`: the hex HMAC-SHA256, keyed by the hex-decoded client secret, of `METHOD`, `PATH_AND_QUERY`, the hex SHA-256 of the body, `TIMESTAMP` and `NONCE`, joined by newlines in that order."
+      },
+      "session_cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-session_token",
+        "description": "Browser session cookie issued by POST /api/v1/auth/login. Mutating requests additionally require the CSRF conditions enforced by `middleware::csrf`."
+      }
+    }
+  },
+  "tags": []
+}

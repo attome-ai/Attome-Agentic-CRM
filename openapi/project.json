@@ -1,0 +1,2957 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Attome XRM API",
+    "description": "The Attome XRM platform's HTTP API. Entity record shapes under `/api/v1/{entity}` are resolved from each deployment's runtime metadata (D-003) and therefore cannot be enumerated statically — those operations document the generic envelope only. Fetch `GET /api/v1/schema/{logicalname}` for a live entity's fields.",
+    "contact": {
+      "name": "Automatica Tech Solutions"
+    },
+    "license": {
+      "name": "AGPL-3.0-only",
+      "identifier": "AGPL-3.0-only"
+    },
+    "version": "0.1.0"
+  },
+  "x-api-version": "2026-10",
+  "paths": {
+    "/api/v1/portfolio/{id}/summary": {
+      "get": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Read a portfolio's summary",
+        "description": "The portfolio's figures rolled up from its programmes and their projects, computed when read.",
+        "operationId": "portfolio_summary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The portfolio",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portfolio, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/program/{id}/summary": {
+      "get": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Read a programme's summary",
+        "description": "The programme's figures rolled up from its projects, computed when read.",
+        "operationId": "program_summary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The programme",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such program, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/project/change-request/{id}/approve": {
+      "post": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Approve a project change request",
+        "description": "Approves the change request through the four-eyes gate: when the approval policy requires it, this\nsubmits an approval request a second person decides; otherwise it applies now. Audited.",
+        "operationId": "approve_change_request",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The change request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestDecisionResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Four-eyes approval required — request submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestDecisionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_change_request.approve or .update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such change request, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided, or changed concurrently",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The transition's guard refused it (the caller requested this change request)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/project/change-request/{id}/reject": {
+      "post": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Reject a project change request",
+        "description": "Rejects the change request, through the same four-eyes gate as approving. Audited.",
+        "operationId": "reject_change_request",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The change request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestDecisionResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Four-eyes approval required — request submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestDecisionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_change_request.approve or .update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such change request, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided, or changed concurrently",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The transition's guard refused it (the caller requested this change request)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/project/change-request/{id}/send-for-signoff": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Sends a change request for the customer's signature.",
+        "description": "The change document goes to the signer in a K4 envelope; when it is\nsigned the change request is approved and the project rebaselined, and a\ndeclined envelope rejects it.",
+        "operationId": "post_change_request_signoff",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The change request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignoffBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Sent for signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignoffSent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_change_request.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such change request or document, or sign-off is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not pending, not customer facing, or already out for sign-off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No signer name or email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/project/timesheet/{id}/approve": {
+      "post": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Approve a timesheet",
+        "description": "Approves a submitted timesheet through the four-eyes gate, so its period is locked; when the\napproval policy requires it, a second person decides. Audited.",
+        "operationId": "approve_timesheet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The timesheet",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimesheetDecisionResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Four-eyes approval required — request submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimesheetDecisionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_timesheet.approve or .update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such timesheet, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not submitted, already decided, or changed concurrently",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The transition's guard refused it (the caller owns this timesheet)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/project/timesheet/{id}/reject": {
+      "post": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Reject a timesheet",
+        "description": "Sends a submitted timesheet back, through the same four-eyes gate as approving. Audited.",
+        "operationId": "reject_timesheet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The timesheet",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimesheetDecisionResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Four-eyes approval required — request submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimesheetDecisionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_timesheet.approve or .update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such timesheet, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not submitted, already decided, or changed concurrently",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The transition's guard refused it (the caller owns this timesheet)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/project/timesheet/{id}/submit": {
+      "post": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Submit a timesheet",
+        "description": "Moves the owner's timesheet from draft to submitted for review; no approval gate applies to one's\nown submission. Audited.",
+        "operationId": "submit_timesheet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The timesheet",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimesheetDecisionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such timesheet, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not in draft status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/project/{id}/baseline": {
+      "post": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Capture a project baseline",
+        "description": "Saves a snapshot of the project's work-item schedule that later progress is compared with;\nbaselines are never changed. Audited.",
+        "operationId": "capture_project_baseline",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureBaselineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A baseline with this label already existed for this project; returned as-is",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureBaselineResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureBaselineResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another capture for this project is already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "label is empty, or trigger is not one of initial/change_request/manual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/project/{id}/gantt": {
+      "get": {
+        "tags": [
+          "project"
+        ],
+        "summary": "What a project's Gantt chart draws.",
+        "description": "The work items with dates and critical-path float, their dependencies,\nand the latest baseline's planned dates for the overlay.",
+        "operationId": "get_project_gantt",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work items, dependencies and the latest baseline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GanttView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/project/{id}/summary": {
+      "get": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Read a project's summary",
+        "description": "The control centre tiles, computed live: health, weighted progress, budget consumed, open risks\nand pending approvals.",
+        "operationId": "project_summary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/project/{id}/work-items/rollup": {
+      "get": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Read a project's work breakdown",
+        "description": "The work-item tree with each phase's progress weighted by points, computed when read; nothing is\nstored on the parent.",
+        "operationId": "work_item_rollup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_WorkItemRollupRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project, or not visible to this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/projects/{id}/invoice-proposals": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Proposes an invoice for a project.",
+        "description": "A milestone invoices one accepted deliverable; time and materials\ninvoices the billable approved hours not yet proposed. Billing makes the\ndraft invoice; a repeat never proposes the same work twice.",
+        "operationId": "post_project_invoice_proposal",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The invoice request billing holds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Proposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks attome_project.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project, or project invoicing is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No account, an unaccepted deliverable or an unknown kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/projects/{id}/spend-check": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Checks a spend against the project's budget line.",
+        "description": "The line is the finance budget line linked to the project; the answer\nsays whether the spend fits, warns or is blocked by the line's setting.",
+        "operationId": "post_project_spend_check",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The project",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpendBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Whether the spend fits the project's budget line",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpendCheck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks attome_project.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such project, or budgets are not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No budget line, or not an amount",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "answers whether a spend fits the budget line; writes nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/resources/capacity": {
+      "get": {
+        "tags": [
+          "project"
+        ],
+        "summary": "Read resource capacity",
+        "description": "Per resource and period: the capacity there is, how much is allocated, how much was logged, and\nwhether the resource is over-committed. Computed when read.",
+        "operationId": "resource_capacity",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "From this time (inclusive).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Up to this time (exclusive).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "team",
+            "in": "query",
+            "description": "Restrict to resources on this `team.id` — also the\nauthorization gate for a `Team`-tier caller; see this module's doc\ncomment.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "skill",
+            "in": "query",
+            "description": "Restrict to resources holding this `resource_skill.skill` value.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CapacityRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or the requested team is outside their scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "from is after to, or paging is out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "project",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CaptureBaselineRequest": {
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "A human name for this snapshot (e.g. \"Sprint 3 baseline\"). Capturing\ntwice with the same label for the same project is safe — see this\nmodule's doc comment — and returns the existing baseline rather than\ncreating a duplicate."
+          },
+          "trigger": {
+            "type": "string",
+            "description": "`initial` | `change_request` | `manual` — `project_baseline\n.trigger`'s own choice values. Defaults to `manual`."
+          }
+        }
+      },
+      "CaptureBaselineResponse": {
+        "type": "object",
+        "required": [
+          "baseline_id",
+          "project_id",
+          "label",
+          "trigger",
+          "captured_at",
+          "item_count"
+        ],
+        "properties": {
+          "baseline_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "captured_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "item_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of `project_baseline_item` rows captured under this\nbaseline — every active work item on the project at capture time."
+          },
+          "label": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trigger": {
+            "type": "string"
+          }
+        }
+      },
+      "ChangeRequestDecisionResponse": {
+        "type": "object",
+        "required": [
+          "change_request_id",
+          "project_id",
+          "status",
+          "row_version",
+          "approval_pending"
+        ],
+        "properties": {
+          "approval_pending": {
+            "type": "boolean",
+            "description": "`true` when this call only submitted a pending four-eyes approval\nrequest rather than deciding the change request immediately —\nmirrors `attome-dashboard::lifecycle::PublishResponse`'s own field."
+          },
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "change_request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorDetails": {
+        "oneOf": [
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          },
+          {
+            "$ref": "#/components/schemas/RuleViolationDetails"
+          },
+          {
+            "$ref": "#/components/schemas/FieldLockedDetails"
+          }
+        ],
+        "description": "`ErrorResponse.details`: its shape depends on the `error` code —\na list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on\n`rule_violation`, [`FieldLockedDetails`] on `field_locked` and\n`field_locked_required` (D-789)."
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Standard error envelope. `error` is a stable machine-readable code; `message` is human-readable and never contains internal detail.",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same value as `error`."
+          },
+          "current_state": {
+            "description": "Present on a version conflict: the server's current row for the\nfields the caller touched, as a JSON object. The owning engine filters\nsensitive columns out before building it (BTY-16c's precondition), so\nthis is a deliberate filtered projection — never a raw row dump."
+          },
+          "current_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a version conflict: the `row_version` the server currently\nholds, so a caller can re-read and retry instead of guessing what the\nwinner wrote. Omitted when the conflict is not version-based."
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same text as `message`."
+          },
+          "details": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorDetails",
+                "description": "Structured detail, shaped by `error` (see [`ErrorDetails`]): every\nfield-level failure on a `validation_error` response when the raiser\nhas a field list, so a form can render them all at once; every firing\nrule on a `rule_violation` response from a business rule; every\nrefused field on `field_locked` / `field_locked_required`. Omitted\notherwise."
+              }
+            ]
+          },
+          "effect": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: `hidden` or\n`disabled`."
+          },
+          "error": {
+            "type": "string",
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+          },
+          "errors": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {},
+            "description": "Every field-level failure on a `validation_error`, as\n`{attribute, rule, message, fix}`."
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required` (D-789): the first\nrefused field (every one is in `details.fields`); on\n`attribute_not_writable` (Q15-T4): the attribute the caller may not\nwrite."
+          },
+          "hidden": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on `duplicate_detected`: how many more matches the caller may\nnot read."
+          },
+          "instance": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The request path the problem happened at."
+          },
+          "matches": {
+            "description": "Present on `duplicate_detected` (A15-T4): the existing records the\nsave matches that the caller may read (record, rule, score)."
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on responses that passed through the request-id middleware\n(D-043); absent on the few pre-middleware rejection paths."
+          },
+          "retry_after_sec": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a `rate_limit_exceeded` response when the limiter knows its\nwindow: seconds to wait before retrying, equal by construction to the\n`Retry-After` header on the same response (BTY-11a). Omitted when the\nlimit that was hit has no known window.",
+            "minimum": 0
+          },
+          "retryable": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the same request may succeed later (the error catalogue's\nverdict for `code`)."
+          },
+          "rule_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Present on a `rule_violation` response (D-472): the id of the\n`xrm_core_rule` whose failing expression produced this 422, so a\nclient can highlight or re-check the exact rule without parsing\n`message`. Omitted on every other code, and on any response that\ndoes not name a rule.\nAlso present on `field_locked` / `field_locked_required` (D-789): the\nbusiness rule that locks `field`."
+          },
+          "rule_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: the display name\nof the rule that locks `field`."
+          },
+          "status": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The HTTP status code.",
+            "minimum": 0
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A short title for `code` in the request's language (Z14-T3), e.g.\n`The resource was not found.`"
+          },
+          "type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Z14-T1 (RFC 9457): `about:blank`; the problem is named by `code`."
+          }
+        },
+        "example": {
+          "error": "validation_error",
+          "message": "validation error: name is required",
+          "request_id": "018f0a1b-2c3d-7e4f-8a9b-0c1d2e3f4a5b"
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "description": "One field-level failure inside `ErrorResponse.details` (BTY-16b): the\nfield the caller sent, a stable machine-readable `code` the client maps\nto localized text (e.g. `required`, `too_long`, `invalid_format`,\n`not_allowed`), and the English server-side `message`.\n\nA list, not a single error, so one 422 can answer with every bad field at\nonce (BTY-F11) instead of making a form discover them one round-trip at a\ntime.",
+        "required": [
+          "field",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable failure code for this field, independent of\nthe message text."
+          },
+          "field": {
+            "type": "string",
+            "description": "The offending field, as the caller addressed it (e.g. `email` or\n`amount`)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable, English, server-side detail for this field."
+          }
+        }
+      },
+      "FieldLockedDetails": {
+        "type": "object",
+        "description": "`details` of a `field_locked` / `field_locked_required` response: every\nrefused field, the first being the one the top-level `field` names.",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedField"
+            }
+          }
+        }
+      },
+      "GanttBaseline": {
+        "type": "object",
+        "description": "The latest baseline.",
+        "required": [
+          "baseline_id",
+          "items"
+        ],
+        "properties": {
+          "baseline_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "captured_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GanttBaselineItem"
+            }
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GanttBaselineItem": {
+        "type": "object",
+        "description": "One item's planned dates in the baseline.",
+        "required": [
+          "work_item_id"
+        ],
+        "properties": {
+          "planned_due": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "planned_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "work_item_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "GanttDependency": {
+        "type": "object",
+        "description": "One dependency.",
+        "required": [
+          "predecessor_id",
+          "successor_id",
+          "dependency_type"
+        ],
+        "properties": {
+          "dependency_type": {
+            "type": "string",
+            "description": "`finish_to_start`, `start_to_start`, `finish_to_finish` or\n`start_to_finish`."
+          },
+          "lag_days": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "predecessor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "successor_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "GanttView": {
+        "type": "object",
+        "description": "Everything the chart needs.",
+        "required": [
+          "items",
+          "dependencies"
+        ],
+        "properties": {
+          "baseline": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GanttBaseline"
+              }
+            ]
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GanttDependency"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkItemRollupRow"
+            }
+          }
+        }
+      },
+      "LockedField": {
+        "type": "object",
+        "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
+        "required": [
+          "field",
+          "rule_id",
+          "rule_name",
+          "effect"
+        ],
+        "properties": {
+          "effect": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string"
+          }
+        }
+      },
+      "PaginatedResponse_CapacityRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One row of `GET /api/v1/resources/capacity` — a single resource's\ncapacity/demand picture over the requested `[from, to]` period (M72).\nSee `capacity.rs`'s module doc for the exact arithmetic behind each\nfield — in short: `capacity_hours` is the platform's default business\ncalendar over the period, net of approved leave; `allocated_hours` is\n`resource_allocation.allocation_percent` prorated by date overlap;\n`actual_hours` is `project_time_entry.hours`, unrelated to either.",
+              "required": [
+                "resource_id",
+                "capacity_hours",
+                "allocated_hours",
+                "actual_hours",
+                "utilization_pct",
+                "over_allocated"
+              ],
+              "properties": {
+                "actual_hours": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "`SUM(hours)` from `project_time_entry` for this resource, entries\ndated within `[from, to]` — what was actually logged, independent of\nwhat was planned."
+                },
+                "allocated_hours": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "`SUM(allocation_percent / 100 * capacity_hours * overlap_days /\nperiod_days)` across every `resource_allocation` row overlapping\nthe period — prorated against the period's nominal (pre-leave)\ncapacity, not the leave-adjusted figure above; see `capacity.rs`."
+                },
+                "capacity_hours": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "Business-calendar working hours over `[from, to]`, net of any\n`resource_availability` leave overlapping the period."
+                },
+                "over_allocated": {
+                  "type": "boolean",
+                  "description": "`allocated_hours > capacity_hours` — the resource is committed past\nwhat the period's business calendar (net of leave) can deliver."
+                },
+                "resource_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "resource_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "`user_account.user_name` — `None` for a legacy row with no\nusername set, same optionality the column itself carries."
+                },
+                "utilization_pct": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "`allocated_hours / capacity_hours * 100`; `0.0` when `capacity_hours`\nis `0` (e.g. a period with no working days at all, or a resource on\nleave for the whole period) rather than a division-by-zero `NaN`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_WorkItemRollupRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One row of `GET /api/v1/project/{id}/work-items/rollup` — a work item's\nown stored fields plus its point rollup. The client builds the WBS tree\nfrom `parent_work_item_id`, the same flat-list-plus-parent-pointer shape\n`entity/document-folder/document-folder-browser.component.ts` already\nrenders recursively.",
+              "required": [
+                "id",
+                "name",
+                "item_type",
+                "status",
+                "points_own",
+                "points_completed",
+                "points_total",
+                "points_blocked",
+                "progress_pct",
+                "is_critical_path"
+              ],
+              "properties": {
+                "due_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_critical_path": {
+                  "type": "boolean",
+                  "description": "Critical Path Method result — see `critical_path.rs` for the\nalgorithm and its documented scope (`finish_to_start` dependencies\nonly). `false`/`None` (not an error) when the project's dependency\ngraph has a cycle, or when this item isn't part of the dependency\nnetwork at all (an isolated item's float is trivially `0`, so it IS\nstill marked critical — only a genuine cycle degrades to `None`)."
+                },
+                "item_type": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "owner_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "parent_work_item_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "points_blocked": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "points_completed": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Sum of `points` over every leaf *descendant* of this node (itself,\nif this node is a leaf)."
+                },
+                "points_own": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "This node's own `points` value — meaningful only when it is itself a\nleaf (`points_total == points_own` in that case); 0 for a\nphase/parent row regardless of what its `points` column happens to\nhold, per the \"parent tasks and phases do not carry their own\nprogress\" rule."
+                },
+                "points_total": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "progress_pct": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "`points_completed / points_total * 100`; `0.0` when `points_total`\nis `0` (no leaf descendants yet, e.g. an empty phase)."
+                },
+                "sequence": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double"
+                },
+                "start_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "total_float_days": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PortfolioSummaryResponse": {
+        "type": "object",
+        "description": "`GET /api/v1/portfolio/{id}/summary` — same rule, rolled up one level\nfurther: every program under the portfolio, and every project under each\nof those programs.",
+        "required": [
+          "portfolio_id",
+          "program_count",
+          "project_count",
+          "weighted_progress_pct",
+          "points_completed",
+          "points_total",
+          "health_green",
+          "health_amber",
+          "health_red"
+        ],
+        "properties": {
+          "actual_cost_total": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "budget_amount_total": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "budget_consumed_total": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "health_amber": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "health_green": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "health_red": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "points_completed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "points_total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "portfolio_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "program_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "project_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "weighted_progress_pct": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "ProgramSummaryResponse": {
+        "type": "object",
+        "description": "`GET /api/v1/program/{id}/summary` — same D-368 read-time-rollup rule as\n`ProjectSummaryResponse`, one level up: every number here is computed\nfresh from the program's own child projects, never a stored aggregate.",
+        "required": [
+          "program_id",
+          "project_count",
+          "weighted_progress_pct",
+          "points_completed",
+          "points_total",
+          "health_green",
+          "health_amber",
+          "health_red"
+        ],
+        "properties": {
+          "actual_cost_total": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Same `is_sensitive`-derived security gate as\n`ProjectSummaryResponse::actual_cost` — `None` unless the caller\nholds read access to `project_resource_rate`."
+          },
+          "budget_amount_total": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "budget_consumed_total": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "health_amber": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "health_green": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "health_red": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "points_completed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "points_total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "program_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "project_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "weighted_progress_pct": {
+            "type": "number",
+            "format": "double",
+            "description": "`points_completed / points_total * 100` across every leaf work item\nof every project under this program; `0.0` when there are none yet."
+          }
+        }
+      },
+      "ProjectSummaryResponse": {
+        "type": "object",
+        "description": "`GET /api/v1/project/{id}/summary` — the \"Project Control Center\" tiles.\nEvery count/percentage here is computed at read time from the current\nstate of the project's own fields plus its child work items/issues/change\nrequests — nothing is a stored/cached rollup (see `work_plan.rs`'s doc\ncomment for why).",
+        "required": [
+          "project_id",
+          "weighted_progress_pct",
+          "points_completed",
+          "points_total",
+          "points_blocked",
+          "work_items_done",
+          "work_items_actionable",
+          "open_risks_total",
+          "open_risks_critical",
+          "pending_change_requests_total",
+          "pending_change_requests_customer_facing"
+        ],
+        "properties": {
+          "actual_cost": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "`SUM(time_entry.hours * resource_rate.internal_cost_rate)` across\nthis project's leaf work items, using each user's most recent rate as\nof the entry (falls back to `None`-contributes-nothing when no rate\nrow exists for that user). Distinct from `budget_consumed` above,\nwhich stays a PM-maintained input — this is computed at read time\nfrom `project_time_entry`/`project_resource_rate`, the same\nD-368 rule every other number on this response follows.\n\n`None` (not `0.0`) when the caller lacks read access to\n`project_resource_rate` — `internal_cost_rate` is `is_sensitive`,\nand this field is derived from it, so it is gated the same way: a\nplain `ProjectRead` caller does not automatically see it."
+          },
+          "baseline_captured_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "baseline_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The most recently captured baseline this project's variance fields\nare computed against — `None` when no baseline has ever been\ncaptured (`POST /project/{id}/baseline`). See `variance.rs`'s module\ndoc for exactly what each field below does and does not measure."
+          },
+          "baseline_label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "budget_amount": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "budget_at_completion": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Budget at Completion — `budget_amount`, unchanged; repeated here so\nevery EVM figure below reads from one self-contained group."
+          },
+          "budget_consumed": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "PM-maintained for this phase — see the implementation plan's\n\"Deferred\" section (time-entry-driven automation is a follow-up)."
+          },
+          "budget_consumed_pct": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "cost_performance_index": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Cost Performance Index — `EV / AC` (`AC` is `actual_cost` above,\nalready gated on `project_resource_rate` read access — this\ninherits that gate: `None` whenever `actual_cost` is `None`, same as\nevery other cost-derived field on this response). `> 1` means\nunder budget for work performed so far, `< 1` means over."
+          },
+          "earned_value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Earned Value — `BAC × weighted_progress_pct / 100`, the standard\n\"budgeted cost of work performed\" formula using this project's own\nlive progress fraction. `None` without a `None` BAC."
+          },
+          "estimate_at_completion": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Estimate at Completion — `BAC / CPI`, the standard \"current cost\nperformance continues for the rest of the project\" projection."
+          },
+          "estimate_to_complete": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Estimate to Complete — `EAC - AC`."
+          },
+          "forecast_buffer_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "`target_end_date - forecast_date`, in days. Positive means the\nforecast lands before the target (buffer); negative means it lands\nafter (overrun). `None` unless both dates are present."
+          },
+          "forecast_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "`MAX(due_date)` among leaf work items not yet `done` — `None` when\nevery leaf item is done or the project has no leaf items yet."
+          },
+          "health": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "PM-maintained (`attome_project.health`), not auto-scored — see the\nimplementation plan's \"Deferred\" section."
+          },
+          "open_risks_critical": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "open_risks_total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pending_change_requests_customer_facing": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pending_change_requests_total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "planned_value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Planned Value — `BAC × (baseline points whose planned_due has\nalready passed) / (baseline points total)`. A simplified,\npoints-as-progress-measure PV: this crate has no per-task budget to\ntime-phase (`project_work_item` carries no cost field — see\n`baseline.rs`'s own doc comment on why `planned_budget` is always\n`NULL`), so points stand in for value the same way `weighted_progress_pct`\nalready does for EV below. `None` without a baseline or a `None` BAC."
+          },
+          "points_blocked": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Points belonging to leaf items whose status is `blocked` — a delivery\nexposure metric, deliberately not netted out of `points_total` or\ncounted toward `points_completed`."
+          },
+          "points_completed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "points_total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "schedule_performance_index": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Schedule Performance Index — `EV / PV`. `> 1` means ahead of the\nbaseline's planned pace, `< 1` means behind."
+          },
+          "schedule_variance_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The baseline's own planned finish (`MAX(planned_due)` across its\ncaptured items) minus the live `forecast_date` above, in days.\nPositive means the live forecast is ahead of the baseline's plan;\nnegative means it has slipped behind it. `None` when either date is\nmissing (no baseline, no baseline item carries a `planned_due`, or\nevery leaf item is currently `done` so there is no live forecast)."
+          },
+          "scope_item_count_variance": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Active work items now minus active work items captured in the\nbaseline — positive means scope has grown since the baseline,\nnegative means it has shrunk (items deactivated/deleted)."
+          },
+          "variance_at_completion": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Variance at Completion — `BAC - EAC`. Positive means the project is\ntrending to finish under budget."
+          },
+          "weighted_progress_pct": {
+            "type": "number",
+            "format": "double",
+            "description": "`points_completed / points_total * 100`, over the project's leaf work\nitems only (a phase/parent item never carries its own points — see\n`work_plan.rs`). `0.0` when there are no leaf items yet."
+          },
+          "work_items_actionable": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "work_items_done": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Leaf work items only (\"actionable\" — a phase/parent container is\nnever itself actionable)."
+          }
+        }
+      },
+      "Proposal": {
+        "type": "object",
+        "description": "The proposal sent to billing.",
+        "required": [
+          "project_id",
+          "entries",
+          "unrated_users"
+        ],
+        "properties": {
+          "entries": {
+            "type": "integer",
+            "description": "The time entries the proposal took.",
+            "minimum": 0
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "unrated_users": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "People with billable time but no billable rate, left out."
+          }
+        }
+      },
+      "ProposalBody": {
+        "type": "object",
+        "description": "What to propose.",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "deliverable_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The accepted deliverable, for a milestone."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`milestone` or `time_and_materials`."
+          },
+          "until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The last day of time taken, for time and materials (today when\nabsent)."
+          }
+        }
+      },
+      "RuleFailure": {
+        "type": "object",
+        "description": "One business-rule `error` policy that fired (D-789 §3.3), inside a\n`rule_violation` body's `details.rules`. Carries names and the rule's own\nmessage, never a record value.",
+        "required": [
+          "rule_id",
+          "rule_name",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The field the policy is attached to, when it names one."
+          },
+          "message": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string",
+            "description": "The rule's display name (its name when it has none)."
+          }
+        }
+      },
+      "RuleViolationDetails": {
+        "type": "object",
+        "description": "`details` of a `rule_violation` response (D-789): the field of the first\nfailing policy, when it names one, and every blocking `error` policy that\nfired, the first (by rule display order) being the one `rule_id` names.",
+        "required": [
+          "rules"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleFailure"
+            }
+          }
+        }
+      },
+      "SignoffBody": {
+        "type": "object",
+        "description": "The request.",
+        "required": [
+          "document_id",
+          "signer_name",
+          "signer_email"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The change document, an `attome_document` record."
+          },
+          "signer_email": {
+            "type": "string"
+          },
+          "signer_name": {
+            "type": "string"
+          }
+        }
+      },
+      "SignoffSent": {
+        "type": "object",
+        "description": "The envelope sent.",
+        "required": [
+          "change_request_id",
+          "envelope_id"
+        ],
+        "properties": {
+          "change_request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "envelope_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SpendBody": {
+        "type": "object",
+        "description": "The spend to check.",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "A decimal string."
+          }
+        }
+      },
+      "SpendCheck": {
+        "type": "object",
+        "description": "The spend check.",
+        "required": [
+          "budget_line_id",
+          "outcome",
+          "available_after"
+        ],
+        "properties": {
+          "available_after": {
+            "type": "string",
+            "description": "What is left after the spend (negative: over)."
+          },
+          "budget_line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "`within`, `warn` or `blocked`."
+          }
+        }
+      },
+      "TimesheetDecisionResponse": {
+        "type": "object",
+        "required": [
+          "timesheet_id",
+          "status",
+          "row_version",
+          "approval_pending"
+        ],
+        "properties": {
+          "approval_pending": {
+            "type": "boolean"
+          },
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "timesheet_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Warning": {
+        "type": "object",
+        "description": "Something the server did that the caller should know about though the\nrequest succeeded (a value truncated, a default applied, a page clamped):\na stable `code` and English `message`. Sent only when there is one.",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkItemRollupRow": {
+        "type": "object",
+        "description": "One row of `GET /api/v1/project/{id}/work-items/rollup` — a work item's\nown stored fields plus its point rollup. The client builds the WBS tree\nfrom `parent_work_item_id`, the same flat-list-plus-parent-pointer shape\n`entity/document-folder/document-folder-browser.component.ts` already\nrenders recursively.",
+        "required": [
+          "id",
+          "name",
+          "item_type",
+          "status",
+          "points_own",
+          "points_completed",
+          "points_total",
+          "points_blocked",
+          "progress_pct",
+          "is_critical_path"
+        ],
+        "properties": {
+          "due_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_critical_path": {
+            "type": "boolean",
+            "description": "Critical Path Method result — see `critical_path.rs` for the\nalgorithm and its documented scope (`finish_to_start` dependencies\nonly). `false`/`None` (not an error) when the project's dependency\ngraph has a cycle, or when this item isn't part of the dependency\nnetwork at all (an isolated item's float is trivially `0`, so it IS\nstill marked critical — only a genuine cycle degrades to `None`)."
+          },
+          "item_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "parent_work_item_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "points_blocked": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "points_completed": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Sum of `points` over every leaf *descendant* of this node (itself,\nif this node is a leaf)."
+          },
+          "points_own": {
+            "type": "number",
+            "format": "double",
+            "description": "This node's own `points` value — meaningful only when it is itself a\nleaf (`points_total == points_own` in that case); 0 for a\nphase/parent row regardless of what its `points` column happens to\nhold, per the \"parent tasks and phases do not carry their own\nprogress\" rule."
+          },
+          "points_total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "progress_pct": {
+            "type": "number",
+            "format": "double",
+            "description": "`points_completed / points_total * 100`; `0.0` when `points_total`\nis `0` (no leaf descendants yet, e.g. an empty phase)."
+          },
+          "sequence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "total_float_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "api_key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "`Authorization: ApiKey <public_key>:<secret>`, issued by POST /api/v1/auth/api-keys."
+      },
+      "portal_session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-wp_{portal}_session",
+        "description": "A web portal user's session cookie, issued by the portal's sign-in; `{portal}` is the portal's keyword (`wp_{portal}_session` on plain-http local dev). Valid only on that portal's own routes."
+      },
+      "s2s_hmac": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-s2s-signature",
+        "description": "A system-to-system call, signed. Send `x-s2s-client-id`, `x-s2s-key-id`, `x-s2s-timestamp` (Unix milliseconds, within 300 seconds of the server's clock), `x-s2s-nonce` (single use: a repeat is refused) and `x-s2s-signature`: the hex HMAC-SHA256, keyed by the hex-decoded client secret, of `METHOD`, `PATH_AND_QUERY`, the hex SHA-256 of the body, `TIMESTAMP` and `NONCE`, joined by newlines in that order."
+      },
+      "session_cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-session_token",
+        "description": "Browser session cookie issued by POST /api/v1/auth/login. Mutating requests additionally require the CSRF conditions enforced by `middleware::csrf`."
+      }
+    }
+  },
+  "tags": []
+}

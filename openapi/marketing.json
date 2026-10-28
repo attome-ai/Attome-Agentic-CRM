@@ -1,0 +1,5423 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Attome XRM API",
+    "description": "The Attome XRM platform's HTTP API. Entity record shapes under `/api/v1/{entity}` are resolved from each deployment's runtime metadata (D-003) and therefore cannot be enumerated statically — those operations document the generic envelope only. Fetch `GET /api/v1/schema/{logicalname}` for a live entity's fields.",
+    "contact": {
+      "name": "Automatica Tech Solutions"
+    },
+    "license": {
+      "name": "AGPL-3.0-only",
+      "identifier": "AGPL-3.0-only"
+    },
+    "version": "0.1.0"
+  },
+  "x-api-version": "2026-10",
+  "paths": {
+    "/api/v1/marketing/address-check": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Check an email address.",
+        "description": "Syntax, role address, disposable domain and typo suggestion; a syntax\nerror is invalid, the rest are risky.",
+        "operationId": "check_email_address",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressCheckBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The address's findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressCheckView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many checks this minute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "read-only check",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/campaigns/{id}/members/from-list": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Add a list's people to a campaign.",
+        "description": "In the background: people already members are skipped, and for an\nemail, social, advertising or content campaign, so are people without a\ncurrent consent for the purpose. Each member is created as `targeted`.",
+        "operationId": "add_campaign_members_from_list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The campaign",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FromListBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The members are being added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FromListQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks campaign_member.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such campaign or list, or the marketing package is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The list holds neither contacts nor leads, or the campaign type needs a consent purpose",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/campaigns/{id}/members/summary": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Count a campaign's members by status",
+        "description": "How many of the campaign's members are in each status.",
+        "operationId": "campaign_member_summary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The campaign",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Members by status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks campaign_member.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such campaign, or the marketing package is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/contacts/{id}/traits": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "A contact's traits",
+        "description": "Last seen, visits, purchases and their total, rolled up from the\ncontact's profile events when read.",
+        "operationId": "contact_traits",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contact",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The contact's traits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactTraits"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks contact.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contact, or not readable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/deliverability/daily": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "List the daily deliverability rollup.",
+        "description": "Sent, delivered, bounced, opened, clicked and complaints per day, sending\ndomain, mailbox provider and campaign, newest day first.",
+        "operationId": "list_deliverability_daily",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "description": "Only this sending domain.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "description": "Only this mailbox provider (`gmail`, `outlook`, `regional:stc`, ...).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "First day, inclusive.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Last day, inclusive.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rollup rows, newest day first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DeliverabilityDay"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_deliverability_policy.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/deliverability/dmarc": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Summarise DMARC reports for a domain.",
+        "description": "Per sending source over the window, the messages reported and how many\npassed SPF and DKIM, and the sources that failed both.",
+        "operationId": "get_dmarc_summary",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "description": "The sending domain.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Days back (default 30, at most 365).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SPF and DKIM per sending source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmarcSummaryView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrators only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/deliverability/dmarc/upload": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Upload a DMARC aggregate report.",
+        "description": "Reads one report (XML, gzip or ZIP) and stores it, once per reporter and\nreport id.",
+        "operationId": "upload_dmarc_report",
+        "requestBody": {
+          "description": "The report file: XML, gzip or ZIP",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The report was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmarcUploaded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrators only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a readable aggregate report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-body-limit": 20971520,
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/deliverability/overview": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "The deliverability dashboard.",
+        "description": "Over the last `days` days: sent, delivered, bounced and complaints per\nmailbox provider and day, the largest sends, the alerts raised with their\nguidance keys, the latest result per target and blocklist, and each\ndomain's DMARC pass share, with the bounce and complaint limits in force.",
+        "operationId": "get_deliverability_overview",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Days back from today, 1 to 90 (default 30).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "maximum": 90,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The dashboard's figures",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliverabilityOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_deliverability_policy.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/deliverability/sends/{send_id}": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read one campaign's deliverability.",
+        "description": "Its sent, delivered, bounced, opened and clicked totals per mailbox\nprovider, over every day of the rollup.",
+        "operationId": "get_send_deliverability",
+        "parameters": [
+          {
+            "name": "send_id",
+            "in": "path",
+            "description": "The campaign the mail was sent for",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The campaign's totals per mailbox provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendDeliverability"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_deliverability_policy.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/emails/preview": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Preview an email as one contact or lead.",
+        "description": "Resolves each dynamic block for the person (their record and lists) and\nrenders the design, naming the variant each block chose.",
+        "operationId": "preview_marketing_email",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The design as the person would receive it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DynamicPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such person, or the caller cannot read them",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The design does not render",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "renders a preview; sends and writes nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/events/{id}/check-in": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Check in to a marketing event",
+        "description": "Checks a registered person in by the code on their ticket. Audited.",
+        "operationId": "post_marketing_check_in",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketingCheckInBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Checked in (a repeat scan answers the same, not twice)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingCheckedIn"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_event_registration.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No registration for this event has that code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The registration is cancelled or still waiting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/events/{id}/registrations": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Register for a marketing event",
+        "description": "Registers a person up to the event's capacity, and puts them on the waitlist after that. Audited.",
+        "operationId": "post_marketing_registration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketingRegistrationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Registered, or waitlisted when the event is full",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingRegistration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_event_registration.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The event is closed, cancelled or done, or busy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No attendee name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/events/{id}/registrations/{registration_id}/cancel": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Cancel an event registration",
+        "description": "Cancels the registration and promotes the first person waiting. Audited.",
+        "operationId": "post_marketing_registration_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "registration_id",
+            "in": "path",
+            "description": "The registration",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled; the first waiting person takes the seat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingCancelled"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_event_registration.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such registration for this event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already cancelled or attended, or the event is busy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/forms/{id}/submit": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Submit a marketing form.",
+        "description": "Public: a published form's submission, filed as the service account in\n`marketing.form_intake.user`. Every miss (unknown, unpublished, no intake\naccount, marketing not licensed) is the same 404. At most five a minute\nfrom one address and 120 a minute to one form; when the deployment has a\nchallenge, `captcha_token` must carry it solved (429 with\n`Attome-Challenge` otherwise).",
+        "operationId": "submit_marketing_form",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The published form",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormSubmission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted; what to show next",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormAccepted"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This form takes no submissions (the same answer for every reason)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No valid email, or a field is not accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many submissions, or the challenge was not solved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "anonymous form submission: the lead or contact, its consent events and the submission row are written by the generic create and the consent ledger, as the intake service account",
+          "reason": "delegated",
+          "via": "attome_records::entity_crud::create_record_with_id_for"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/identity/conflicts": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Identity conflicts to review",
+        "description": "Identifiers (email, visitor, portal user, phone) a deterministic event\ntied to a second contact. Nothing moved; each waits for a decision.",
+        "operationId": "list_identity_conflicts",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Open conflicts, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_IdentityConflict"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks contact.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/identity/conflicts/{id}/resolve": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Settle an identity conflict",
+        "description": "Keep the identifier with the contact it is linked to, or move it to the\nconflicting contact.",
+        "operationId": "resolve_identity_conflict",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The conflict",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Settled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resolved"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks contact.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such open conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The identifier is being linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/landing/stats": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Landing page results.",
+        "description": "Unique visitors (website tracking page views) and conversions (form\nsubmissions from the page) for one page path over a period of at most a\nyear, 30 days by default.",
+        "operationId": "get_marketing_landing_stats",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "description": "The landing page's path (or full URL).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The start, inclusive; 30 days before `to` by default.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The end, exclusive; now by default.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page's unique visitors and conversions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LandingStats"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read marketing forms",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No path, or the period ends before it starts or spans over a year",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/count": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Count a marketing list",
+        "description": "How many people the list holds, estimated or exact, and how many can be reached for a purpose,\ncomputed as the caller.",
+        "operationId": "get_marketing_list_count",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "exact",
+            "in": "query",
+            "description": "Evaluate the list instead of estimating.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "purpose_key",
+            "in": "query",
+            "description": "Also count the people reachable for this consent purpose by email.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list's size and, for a purpose, how many are reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingListCount"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/email/send": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Start an email campaign to a list.",
+        "description": "Renders the design once, fixes the consenting recipients and starts\nsending on the bulk stream in the background, at most three marketing\nmessages per person per week.",
+        "operationId": "start_email_campaign",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCampaignBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The send has started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailCampaignStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No subject or purpose, a design that does not render, or nobody to email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/explain/{person_id}": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Explain a list membership",
+        "description": "Why one person is or is not in the list, condition by condition.",
+        "operationId": "get_marketing_list_explain",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "person_id",
+            "in": "path",
+            "description": "The person",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Which step put the person in or left them out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingListExplanation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list, or a person the caller cannot read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/imports": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Import people into a static list from a CSV document.",
+        "description": "Queues the import; its first column is an email or a record id per row.\nFollow it with the import's status route.",
+        "operationId": "import_marketing_list_members",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The static list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaticListImportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The import is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListImport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list, or the document is not readable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A segment list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/imports/{import_id}": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a list import's progress.",
+        "description": "Rows read, people added and skipped, and whether it finished or failed.",
+        "operationId": "get_marketing_list_import",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The static list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "import_id",
+            "in": "path",
+            "description": "The import",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The import's progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListImport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/imports/{import_id}/undo": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Undo a list import.",
+        "description": "Removes exactly the people that import added, within seven days of its\nfinish.",
+        "operationId": "undo_marketing_list_import",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The static list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "import_id",
+            "in": "path",
+            "description": "The import",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The import's members removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberChange"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not finished, or finished more than seven days ago",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/members": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Add people to a static list.",
+        "description": "By hand or from a view selection; only people the caller may read are\nadded, and people already in the list are skipped.",
+        "operationId": "add_marketing_list_members",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The static list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MembersBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "People added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberChange"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The list is being changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A segment list, or more than 1,000 people",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/members-as-of": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a list's past members",
+        "description": "Who was in the list on a past date, as the caller may read them.",
+        "operationId": "get_marketing_list_members_as_of",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "at",
+            "in": "query",
+            "description": "The moment to read the list as of.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The people in the list at that time that the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_String"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/members/remove": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Remove people from a static list.",
+        "description": "Each removal is a membership event; people not in the list are skipped.",
+        "operationId": "remove_marketing_list_members",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The static list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MembersBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "People removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberChange"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The list is being changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A segment list, or more than 1,000 people",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/sample": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Sample a marketing list",
+        "description": "A few of the list's people the caller may read.",
+        "operationId": "get_marketing_list_sample",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Up to 20 people of the list the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingListSample"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/sms/estimate": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Estimate an SMS campaign to a list.",
+        "description": "How many of the list's people can be texted for the purpose, the\nmessage's encoding and segments, and the cost at the configured price.",
+        "operationId": "estimate_sms_campaign",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmsCampaignBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Who can be reached and what it costs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmsEstimate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No body or purpose, or the body is too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "estimates an SMS campaign; sends and writes nothing",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/sms/send": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Start an SMS campaign to a list.",
+        "description": "Fixes the consenting recipients and starts sending in the background,\nholding each message until the recipient's quiet hours end.",
+        "operationId": "start_sms_campaign",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmsCampaignBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The send has started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmsCampaignStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The estimate grew past expected_cost",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No body or purpose, or nobody to text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/opportunities/{id}/attribution": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "An opportunity's attribution",
+        "description": "How much of a won opportunity each marketing touch earned under one\nmodel, by touch and by campaign; computed nightly.",
+        "operationId": "opportunity_attribution",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "description": "`first_touch`, `last_touch`, `linear` (default), `u_shaped` or\n`time_decay`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The credit under the model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attribution"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks opportunity.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity, or not readable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/precheck": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Check a message before sending.",
+        "description": "A score from 0 to 100 (70 passes) and the findings behind it: spam\nwording, image-heavy content, links to domains on a blocklist this\ndeployment checked in the last week, a missing unsubscribe link or text\npart, size, and the audience's never-mailed and invalid shares. Each\nfinding names a guidance key; nothing is sent or stored.",
+        "operationId": "post_marketing_precheck",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrecheckBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The score and findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrecheckReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_deliverability_policy.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The message is empty",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "scores a message; sends and writes nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/profile-events": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Send profile events",
+        "description": "Up to 500 events per batch, 60 batches a minute per caller. Each names\na contact or an anonymous id; events that fail a check come back with\ntheir index and reason, and the rest are kept.",
+        "operationId": "ingest_profile_events",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Kept and left-out events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingProfileBatchResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks contact.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An empty batch, or more than 500 events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many batches this minute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/tracking/live": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "List a site's live visitors.",
+        "description": "The sessions seen in the last five minutes (bots left out), newest\nfirst, each with the page it is on and the known contact or lead.",
+        "operationId": "list_live_visitors",
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "description": "The site's key.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions seen in the last five minutes, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LiveVisitor"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_tracked_site.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/unsubscribe/{token}": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Unsubscribe page",
+        "description": "The page an email's unsubscribe link opens: one button that confirms.\nPublic; opening it changes nothing (link scanners open links).",
+        "operationId": "show_email_unsubscribe",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The token from the email's unsubscribe link",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page with one unsubscribe button",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Unsubscribe from marketing email",
+        "description": "The page's button, or a mail client's one-click request (RFC 8058):\nthe address stops getting bulk mail. Public; the token is the\ncredential, and an unknown one answers the same page.",
+        "operationId": "email_unsubscribe",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The token from the email's unsubscribe link",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unsubscribed (the same page for any token)",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/track/collect": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Collect tracking events.",
+        "description": "Public: the tracking script's batches. Queues them and writes nothing\nelse; a batch for an unknown or disabled site, from another origin, or\nmalformed is dropped with the same 204.",
+        "operationId": "collect_tracking_events",
+        "requestBody": {
+          "description": "The script's batch, as JSON: {site, visitor, session, events}",
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Queued"
+          },
+          "204": {
+            "description": "Not taken (the same answer for every reason)"
+          },
+          "429": {
+            "description": "Too many batches from this visitor or address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "public visitor telemetry",
+          "reason": "telemetry",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/track/script.js": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "The website tracking script.",
+        "description": "The site's configuration and the script, cached for a day. Public: a\nwebsite loads it with a script tag.",
+        "operationId": "get_tracking_script",
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "description": "The tracked site's key.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The tracking script for the site",
+            "content": {
+              "application/javascript": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such tracked site (the same answer for every reason)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddressCheckBody": {
+        "type": "object",
+        "required": [
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          }
+        }
+      },
+      "AddressCheckView": {
+        "type": "object",
+        "required": [
+          "status",
+          "issues"
+        ],
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Stable issue codes (`role_address`, `disposable_domain`, ...)."
+          },
+          "status": {
+            "type": "string",
+            "description": "`valid`, `risky` or `invalid`."
+          },
+          "suggestion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "AlertView": {
+        "type": "object",
+        "description": "One alert raised by the daily evaluation (E6-T10).",
+        "required": [
+          "day",
+          "subject",
+          "kind",
+          "value",
+          "threshold",
+          "guidance_key"
+        ],
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "guidance_key": {
+            "type": "string",
+            "description": "The screens' translation key for what to do (`deliverabilityAlert.<kind>`)."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`bounce_rate`, `complaint_rate`, `blocklisted`, `dmarc_failures` or\n`reputation_drop`."
+          },
+          "subject": {
+            "type": "string"
+          },
+          "threshold": {
+            "type": "number",
+            "format": "double"
+          },
+          "value": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "Attribution": {
+        "type": "object",
+        "description": "An opportunity's credit under one model.",
+        "required": [
+          "opportunity_id",
+          "model",
+          "touchpoints",
+          "by_campaign"
+        ],
+        "properties": {
+          "by_campaign": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignCredit"
+            }
+          },
+          "computed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When it was last computed; `None` when not yet."
+          },
+          "model": {
+            "type": "string"
+          },
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "touchpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TouchCredit"
+            }
+          }
+        }
+      },
+      "BlocklistStatus": {
+        "type": "object",
+        "description": "The latest check of one target on one blocklist.",
+        "required": [
+          "target",
+          "target_kind",
+          "list_name",
+          "listed",
+          "checked_at"
+        ],
+        "properties": {
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "list_name": {
+            "type": "string"
+          },
+          "listed": {
+            "type": "boolean"
+          },
+          "target": {
+            "type": "string"
+          },
+          "target_kind": {
+            "type": "string"
+          }
+        }
+      },
+      "CampaignCredit": {
+        "type": "object",
+        "description": "One campaign's credit.",
+        "required": [
+          "campaign_id",
+          "share"
+        ],
+        "properties": {
+          "amount": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "campaign_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "share": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "ContactTraits": {
+        "type": "object",
+        "description": "A contact's traits.",
+        "required": [
+          "contact_id",
+          "visits",
+          "purchases",
+          "total_purchases",
+          "events"
+        ],
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "events": {
+            "type": "integer",
+            "format": "int64",
+            "description": "All events kept for the contact."
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "The latest event of any kind."
+          },
+          "purchases": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total_purchases": {
+            "type": "number",
+            "format": "double",
+            "description": "The sum of purchase events' numeric `amount`."
+          },
+          "visits": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Events of a visit kind."
+          }
+        }
+      },
+      "DeliverabilityOverview": {
+        "type": "object",
+        "description": "The deliverability dashboard's figures.",
+        "required": [
+          "days",
+          "bounce_limit",
+          "complaint_limit",
+          "providers",
+          "sends",
+          "alerts",
+          "blocklist",
+          "dmarc"
+        ],
+        "properties": {
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlertView"
+            },
+            "description": "The 100 newest alerts in the window."
+          },
+          "blocklist": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlocklistStatus"
+            }
+          },
+          "bounce_limit": {
+            "type": "number",
+            "format": "double",
+            "description": "The bounce and complaint limits in force, in percent."
+          },
+          "complaint_limit": {
+            "type": "number",
+            "format": "double"
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dmarc": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DmarcShare"
+            }
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderDay"
+            }
+          },
+          "sends": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SendTotals"
+            },
+            "description": "The 50 largest sends in the window."
+          }
+        }
+      },
+      "DmarcShare": {
+        "type": "object",
+        "description": "DMARC messages for one domain and how many passed (SPF or DKIM aligned).",
+        "required": [
+          "domain",
+          "messages",
+          "passed"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "passed": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "DmarcSourceView": {
+        "type": "object",
+        "required": [
+          "source_ip",
+          "messages",
+          "spf_pass",
+          "dkim_pass",
+          "both_fail"
+        ],
+        "properties": {
+          "both_fail": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "dkim_pass": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "messages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "source_ip": {
+            "type": "string"
+          },
+          "spf_pass": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "DmarcSummaryView": {
+        "type": "object",
+        "required": [
+          "domain",
+          "days",
+          "sources",
+          "unauthorised"
+        ],
+        "properties": {
+          "days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DmarcSourceView"
+            }
+          },
+          "unauthorised": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sources whose every message failed both SPF and DKIM."
+          }
+        }
+      },
+      "DmarcUploaded": {
+        "type": "object",
+        "required": [
+          "stored"
+        ],
+        "properties": {
+          "stored": {
+            "type": "boolean",
+            "description": "False when this reporter's report was already stored."
+          }
+        }
+      },
+      "DynamicPreview": {
+        "type": "object",
+        "description": "A preview of a design as one contact or lead sees it.",
+        "required": [
+          "html",
+          "text",
+          "choices"
+        ],
+        "properties": {
+          "choices": {
+            "type": "object",
+            "description": "Block id to the chosen variant id (absent: the default).",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "html": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "EmailCampaignBody": {
+        "type": "object",
+        "description": "A campaign to start.",
+        "required": [
+          "subject",
+          "design",
+          "purpose_key"
+        ],
+        "properties": {
+          "design": {
+            "type": "object",
+            "description": "The email designer's JSON (E2-T1): blocks, direction, width, colour."
+          },
+          "locale": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`en` (default) or `ar`: how values are formatted."
+          },
+          "purpose_key": {
+            "type": "string",
+            "description": "The consent purpose the email is sent under."
+          },
+          "subject": {
+            "type": "string",
+            "description": "The subject line (at most 200 characters)."
+          }
+        }
+      },
+      "EmailCampaignStarted": {
+        "type": "object",
+        "description": "A campaign started.",
+        "required": [
+          "send_id",
+          "recipients"
+        ],
+        "properties": {
+          "recipients": {
+            "type": "integer",
+            "format": "int64",
+            "description": "People who will be emailed, before caps and later withdrawals."
+          },
+          "send_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ErrorDetails": {
+        "oneOf": [
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          },
+          {
+            "$ref": "#/components/schemas/RuleViolationDetails"
+          },
+          {
+            "$ref": "#/components/schemas/FieldLockedDetails"
+          }
+        ],
+        "description": "`ErrorResponse.details`: its shape depends on the `error` code —\na list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on\n`rule_violation`, [`FieldLockedDetails`] on `field_locked` and\n`field_locked_required` (D-789)."
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Standard error envelope. `error` is a stable machine-readable code; `message` is human-readable and never contains internal detail.",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same value as `error`."
+          },
+          "current_state": {
+            "description": "Present on a version conflict: the server's current row for the\nfields the caller touched, as a JSON object. The owning engine filters\nsensitive columns out before building it (BTY-16c's precondition), so\nthis is a deliberate filtered projection — never a raw row dump."
+          },
+          "current_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a version conflict: the `row_version` the server currently\nholds, so a caller can re-read and retry instead of guessing what the\nwinner wrote. Omitted when the conflict is not version-based."
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same text as `message`."
+          },
+          "details": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorDetails",
+                "description": "Structured detail, shaped by `error` (see [`ErrorDetails`]): every\nfield-level failure on a `validation_error` response when the raiser\nhas a field list, so a form can render them all at once; every firing\nrule on a `rule_violation` response from a business rule; every\nrefused field on `field_locked` / `field_locked_required`. Omitted\notherwise."
+              }
+            ]
+          },
+          "effect": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: `hidden` or\n`disabled`."
+          },
+          "error": {
+            "type": "string",
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+          },
+          "errors": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {},
+            "description": "Every field-level failure on a `validation_error`, as\n`{attribute, rule, message, fix}`."
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required` (D-789): the first\nrefused field (every one is in `details.fields`); on\n`attribute_not_writable` (Q15-T4): the attribute the caller may not\nwrite."
+          },
+          "hidden": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on `duplicate_detected`: how many more matches the caller may\nnot read."
+          },
+          "instance": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The request path the problem happened at."
+          },
+          "matches": {
+            "description": "Present on `duplicate_detected` (A15-T4): the existing records the\nsave matches that the caller may read (record, rule, score)."
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on responses that passed through the request-id middleware\n(D-043); absent on the few pre-middleware rejection paths."
+          },
+          "retry_after_sec": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a `rate_limit_exceeded` response when the limiter knows its\nwindow: seconds to wait before retrying, equal by construction to the\n`Retry-After` header on the same response (BTY-11a). Omitted when the\nlimit that was hit has no known window.",
+            "minimum": 0
+          },
+          "retryable": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the same request may succeed later (the error catalogue's\nverdict for `code`)."
+          },
+          "rule_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Present on a `rule_violation` response (D-472): the id of the\n`xrm_core_rule` whose failing expression produced this 422, so a\nclient can highlight or re-check the exact rule without parsing\n`message`. Omitted on every other code, and on any response that\ndoes not name a rule.\nAlso present on `field_locked` / `field_locked_required` (D-789): the\nbusiness rule that locks `field`."
+          },
+          "rule_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: the display name\nof the rule that locks `field`."
+          },
+          "status": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The HTTP status code.",
+            "minimum": 0
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A short title for `code` in the request's language (Z14-T3), e.g.\n`The resource was not found.`"
+          },
+          "type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Z14-T1 (RFC 9457): `about:blank`; the problem is named by `code`."
+          }
+        },
+        "example": {
+          "error": "validation_error",
+          "message": "validation error: name is required",
+          "request_id": "018f0a1b-2c3d-7e4f-8a9b-0c1d2e3f4a5b"
+        }
+      },
+      "EventBatch": {
+        "type": "object",
+        "description": "A batch of events.",
+        "required": [
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncomingEvent"
+            }
+          }
+        }
+      },
+      "ExplainStep": {
+        "type": "object",
+        "description": "One step of why a person is in a list or not.",
+        "required": [
+          "step",
+          "list_id",
+          "holds",
+          "member_after"
+        ],
+        "properties": {
+          "holds": {
+            "type": "boolean",
+            "description": "Whether the step's list holds the person."
+          },
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "member_after": {
+            "type": "boolean",
+            "description": "Whether the person is in after this step."
+          },
+          "step": {
+            "type": "string",
+            "description": "`base` (the list's own query or members), then each combination."
+          }
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "description": "One field-level failure inside `ErrorResponse.details` (BTY-16b): the\nfield the caller sent, a stable machine-readable `code` the client maps\nto localized text (e.g. `required`, `too_long`, `invalid_format`,\n`not_allowed`), and the English server-side `message`.\n\nA list, not a single error, so one 422 can answer with every bad field at\nonce (BTY-F11) instead of making a form discover them one round-trip at a\ntime.",
+        "required": [
+          "field",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable failure code for this field, independent of\nthe message text."
+          },
+          "field": {
+            "type": "string",
+            "description": "The offending field, as the caller addressed it (e.g. `email` or\n`amount`)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable, English, server-side detail for this field."
+          }
+        }
+      },
+      "FieldLockedDetails": {
+        "type": "object",
+        "description": "`details` of a `field_locked` / `field_locked_required` response: every\nrefused field, the first being the one the top-level `field` names.",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedField"
+            }
+          }
+        }
+      },
+      "FormAccepted": {
+        "type": "object",
+        "description": "What the browser hears back.",
+        "properties": {
+          "redirect_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "thank_you": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "FormSubmission": {
+        "type": "object",
+        "description": "The browser's submission.",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "captcha_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The solved challenge, when the deployment asks for one."
+          },
+          "fields": {
+            "type": "object",
+            "description": "The form's fields, consent checkboxes (`consent_<purpose>`), UTM tags\nand `page_url`, as the form sent them."
+          }
+        }
+      },
+      "FromListBody": {
+        "type": "object",
+        "description": "Adding a list to a campaign.",
+        "required": [
+          "list_id"
+        ],
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The marketing list whose people become members."
+          },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The consent purpose; required for an email, social, advertising or\ncontent campaign."
+          }
+        }
+      },
+      "FromListQueued": {
+        "type": "object",
+        "description": "The queued job.",
+        "required": [
+          "campaign_id",
+          "list_id",
+          "consent_checked"
+        ],
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "consent_checked": {
+            "type": "boolean",
+            "description": "Whether people without consent for the purpose are skipped."
+          },
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "IncomingEvent": {
+        "type": "object",
+        "description": "One event sent.",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "anonymous_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A visitor not yet known as a contact."
+          },
+          "at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When; now when absent."
+          },
+          "contact_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "What happened (1 to 100 characters), such as `page_view` or `purchase`."
+          },
+          "properties": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "Keep": {
+        "type": "string",
+        "description": "How a conflict is settled.",
+        "enum": [
+          "existing",
+          "new"
+        ]
+      },
+      "LandingStats": {
+        "type": "object",
+        "description": "One landing page's results over a period.",
+        "required": [
+          "path",
+          "from",
+          "to",
+          "unique_visitors",
+          "conversions"
+        ],
+        "properties": {
+          "conversion_rate": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Conversions over unique visitors; absent with no visitors."
+          },
+          "conversions": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "path": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unique_visitors": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ListImport": {
+        "type": "object",
+        "description": "An import's state.",
+        "required": [
+          "id",
+          "list_id",
+          "document_id",
+          "status",
+          "rows_read",
+          "added",
+          "skipped",
+          "created_at"
+        ],
+        "properties": {
+          "added": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rows_read": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "description": "`queued`, `running`, `done`, `failed` or `undone`."
+          }
+        }
+      },
+      "LockedField": {
+        "type": "object",
+        "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
+        "required": [
+          "field",
+          "rule_id",
+          "rule_name",
+          "effect"
+        ],
+        "properties": {
+          "effect": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string"
+          }
+        }
+      },
+      "MarketingCancelled": {
+        "type": "object",
+        "required": [
+          "registration_id"
+        ],
+        "properties": {
+          "promoted": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The waiting registration that took the freed seat."
+          },
+          "registration_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "MarketingCheckInBody": {
+        "type": "object",
+        "required": [
+          "ticket_code"
+        ],
+        "properties": {
+          "ticket_code": {
+            "type": "string",
+            "description": "The code on the ticket."
+          }
+        }
+      },
+      "MarketingCheckedIn": {
+        "type": "object",
+        "required": [
+          "registration_id",
+          "first_check_in"
+        ],
+        "properties": {
+          "attendee_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "first_check_in": {
+            "type": "boolean",
+            "description": "False when the person had already been checked in."
+          },
+          "registration_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "MarketingListCount": {
+        "type": "object",
+        "required": [
+          "list_id",
+          "count",
+          "basis"
+        ],
+        "properties": {
+          "basis": {
+            "type": "string",
+            "description": "`estimate` or `exact`."
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reachable": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "People with active consent for the purpose, an email that is not\nsuppressed, and no marketing sunset."
+          }
+        }
+      },
+      "MarketingListExplanation": {
+        "type": "object",
+        "required": [
+          "list_id",
+          "person_id",
+          "member",
+          "steps"
+        ],
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "member": {
+            "type": "boolean"
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExplainStep"
+            }
+          }
+        }
+      },
+      "MarketingListSample": {
+        "type": "object",
+        "required": [
+          "list_id",
+          "target_entity",
+          "person_ids"
+        ],
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "person_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "target_entity": {
+            "type": "string"
+          }
+        }
+      },
+      "MarketingProfileBatchResult": {
+        "type": "object",
+        "description": "What a batch did.",
+        "required": [
+          "accepted",
+          "rejected"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rejected": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RejectedEvent"
+            }
+          }
+        }
+      },
+      "MarketingRegistration": {
+        "type": "object",
+        "required": [
+          "registration_id",
+          "status",
+          "ticket_code"
+        ],
+        "properties": {
+          "registration_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`registered` or `waitlisted`."
+          },
+          "ticket_code": {
+            "type": "string",
+            "description": "The ticket code the QR shows."
+          }
+        }
+      },
+      "MarketingRegistrationBody": {
+        "type": "object",
+        "required": [
+          "attendee_name"
+        ],
+        "properties": {
+          "attendee_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "attendee_name": {
+            "type": "string"
+          },
+          "contact_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "lead_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`form`, `portal`, `import` or `staff` (default)."
+          }
+        }
+      },
+      "MemberChange": {
+        "type": "object",
+        "description": "What a change did.",
+        "required": [
+          "changed",
+          "skipped"
+        ],
+        "properties": {
+          "changed": {
+            "type": "integer",
+            "description": "People added or removed.",
+            "minimum": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "description": "Ids skipped: already in (or not in) the list, or not readable.",
+            "minimum": 0
+          }
+        }
+      },
+      "MemberSummary": {
+        "type": "object",
+        "description": "A campaign's members by status.",
+        "required": [
+          "total",
+          "by_status"
+        ],
+        "properties": {
+          "by_status": {
+            "type": "object",
+            "description": "Count per status; a member without one counts under `none`.",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "MembersBody": {
+        "type": "object",
+        "required": [
+          "person_ids"
+        ],
+        "properties": {
+          "person_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The people (records of the list's target entity), at most 1,000."
+          }
+        }
+      },
+      "PaginatedResponse_DeliverabilityDay": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One rollup row.",
+              "required": [
+                "day",
+                "sending_domain",
+                "mailbox_provider",
+                "send_ref",
+                "sent",
+                "delivered",
+                "bounced",
+                "opened",
+                "clicked",
+                "complaints"
+              ],
+              "properties": {
+                "bounced": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "clicked": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "complaints": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "day": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "delivered": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "mailbox_provider": {
+                  "type": "string"
+                },
+                "opened": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "send_ref": {
+                  "type": "string"
+                },
+                "sending_domain": {
+                  "type": "string"
+                },
+                "sent": {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_IdentityConflict": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "An identifier claimed by two contacts.",
+              "required": [
+                "id",
+                "identifier_type",
+                "identifier_value",
+                "contact_id",
+                "source",
+                "linked_at"
+              ],
+              "properties": {
+                "conflict_with": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The contact it is linked to."
+                },
+                "contact_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The contact the identifier was last seen with."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "identifier_type": {
+                  "type": "string"
+                },
+                "identifier_value": {
+                  "type": "string"
+                },
+                "linked_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "source": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_LiveVisitor": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One live session.",
+              "required": [
+                "session_id",
+                "visitor_id",
+                "started_at",
+                "last_seen_at",
+                "page_count"
+              ],
+              "properties": {
+                "contact_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The known contact or lead, when the visitor is identified."
+                },
+                "current_url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The page the visitor last viewed."
+                },
+                "last_seen_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lead_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "page_count": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "session_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "started_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "utm_source": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "visitor_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_String": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PrecheckBody": {
+        "type": "object",
+        "description": "A message to check before sending.",
+        "required": [
+          "html"
+        ],
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "The rendered HTML body."
+          },
+          "invalid": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "never_mailed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "recipients": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The audience: how many, how many never mailed before, how many with\nan invalid address."
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The plain-text part, if the message has one."
+          }
+        }
+      },
+      "PrecheckFinding": {
+        "type": "object",
+        "description": "One finding.",
+        "required": [
+          "code",
+          "severity",
+          "guidance_key"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What matched (a phrase, a domain), when there is one."
+          },
+          "guidance_key": {
+            "type": "string",
+            "description": "The screens' translation key for what to do about it."
+          },
+          "severity": {
+            "$ref": "#/components/schemas/PrecheckSeverity"
+          }
+        }
+      },
+      "PrecheckReport": {
+        "type": "object",
+        "description": "The check's answer.",
+        "required": [
+          "score",
+          "passed",
+          "findings"
+        ],
+        "properties": {
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrecheckFinding"
+            }
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "PrecheckSeverity": {
+        "type": "string",
+        "description": "How much a finding costs the score.",
+        "enum": [
+          "error",
+          "warning",
+          "info"
+        ]
+      },
+      "PreviewBody": {
+        "type": "object",
+        "required": [
+          "entity",
+          "person_id",
+          "design"
+        ],
+        "properties": {
+          "design": {
+            "type": "object",
+            "description": "The email design (blocks, direction, width, colour)."
+          },
+          "entity": {
+            "type": "string",
+            "description": "`contact` or `lead`."
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ProviderDay": {
+        "type": "object",
+        "description": "One provider's totals on one day.",
+        "required": [
+          "day",
+          "mailbox_provider",
+          "sent",
+          "delivered",
+          "bounced",
+          "complaints"
+        ],
+        "properties": {
+          "bounced": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "complaints": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "delivered": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mailbox_provider": {
+            "type": "string"
+          },
+          "sent": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "RejectedEvent": {
+        "type": "object",
+        "description": "An event left out, by its place in the batch.",
+        "required": [
+          "index",
+          "reason"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "ResolveBody": {
+        "type": "object",
+        "required": [
+          "keep"
+        ],
+        "properties": {
+          "keep": {
+            "$ref": "#/components/schemas/Keep"
+          }
+        }
+      },
+      "Resolved": {
+        "type": "object",
+        "description": "The settled conflict.",
+        "required": [
+          "identifier_type",
+          "identifier_value",
+          "contact_id"
+        ],
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The contact the identifier is linked to now."
+          },
+          "identifier_type": {
+            "type": "string"
+          },
+          "identifier_value": {
+            "type": "string"
+          }
+        }
+      },
+      "RuleFailure": {
+        "type": "object",
+        "description": "One business-rule `error` policy that fired (D-789 §3.3), inside a\n`rule_violation` body's `details.rules`. Carries names and the rule's own\nmessage, never a record value.",
+        "required": [
+          "rule_id",
+          "rule_name",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The field the policy is attached to, when it names one."
+          },
+          "message": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string",
+            "description": "The rule's display name (its name when it has none)."
+          }
+        }
+      },
+      "RuleViolationDetails": {
+        "type": "object",
+        "description": "`details` of a `rule_violation` response (D-789): the field of the first\nfailing policy, when it names one, and every blocking `error` policy that\nfired, the first (by rule display order) being the one `rule_id` names.",
+        "required": [
+          "rules"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleFailure"
+            }
+          }
+        }
+      },
+      "SendDeliverability": {
+        "type": "object",
+        "required": [
+          "send_ref",
+          "providers"
+        ],
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SendProvider"
+            }
+          },
+          "send_ref": {
+            "type": "string"
+          }
+        }
+      },
+      "SendProvider": {
+        "type": "object",
+        "description": "One campaign's totals per provider.",
+        "required": [
+          "mailbox_provider",
+          "sent",
+          "delivered",
+          "bounced",
+          "opened",
+          "clicked"
+        ],
+        "properties": {
+          "bounced": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "clicked": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "delivered": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mailbox_provider": {
+            "type": "string"
+          },
+          "opened": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sent": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "SendTotals": {
+        "type": "object",
+        "description": "One send's totals over the window.",
+        "required": [
+          "send_ref",
+          "sent",
+          "delivered",
+          "bounced",
+          "complaints",
+          "opened",
+          "clicked"
+        ],
+        "properties": {
+          "bounced": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "clicked": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "complaints": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "delivered": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "opened": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "send_ref": {
+            "type": "string"
+          },
+          "sent": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "SmsCampaignBody": {
+        "type": "object",
+        "required": [
+          "body",
+          "purpose_key"
+        ],
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "The message (at most 670 characters)."
+          },
+          "expected_cost": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "`send` only: the cost the sender agreed to; a larger estimate is\nrefused."
+          },
+          "purpose_key": {
+            "type": "string",
+            "description": "The consent purpose the message is sent under."
+          }
+        }
+      },
+      "SmsCampaignStarted": {
+        "type": "object",
+        "required": [
+          "send_id",
+          "estimate"
+        ],
+        "properties": {
+          "estimate": {
+            "$ref": "#/components/schemas/SmsEstimate"
+          },
+          "send_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SmsEstimate": {
+        "type": "object",
+        "description": "The estimate shown before sending.",
+        "required": [
+          "recipients",
+          "encoding",
+          "segments_each",
+          "total_segments"
+        ],
+        "properties": {
+          "cost": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "`total_segments` at `marketing.sms_price_per_segment`; absent when no\nprice is set."
+          },
+          "encoding": {
+            "type": "string",
+            "description": "`gsm7` or `ucs2` (Arabic text is UCS-2)."
+          },
+          "recipients": {
+            "type": "integer",
+            "format": "int64",
+            "description": "People with a phone and SMS consent for the purpose."
+          },
+          "segments_each": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Segments one message takes.",
+            "minimum": 0
+          },
+          "total_segments": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "StaticListImportBody": {
+        "type": "object",
+        "required": [
+          "document_id"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The CSV document (`attome_document`) to import."
+          }
+        }
+      },
+      "TouchCredit": {
+        "type": "object",
+        "description": "One touchpoint's credit.",
+        "required": [
+          "touchpoint_id",
+          "touchpoint_kind",
+          "channel",
+          "touched_at",
+          "share"
+        ],
+        "properties": {
+          "amount": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "campaign_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "share": {
+            "type": "number",
+            "format": "double"
+          },
+          "touched_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "touchpoint_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "touchpoint_kind": {
+            "type": "string"
+          }
+        }
+      },
+      "Warning": {
+        "type": "object",
+        "description": "Something the server did that the caller should know about though the\nrequest succeeded (a value truncated, a default applied, a page clamped):\na stable `code` and English `message`. Sent only when there is one.",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "api_key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "`Authorization: ApiKey <public_key>:<secret>`, issued by POST /api/v1/auth/api-keys."
+      },
+      "portal_session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-wp_{portal}_session",
+        "description": "A web portal user's session cookie, issued by the portal's sign-in; `{portal}` is the portal's keyword (`wp_{portal}_session` on plain-http local dev). Valid only on that portal's own routes."
+      },
+      "s2s_hmac": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-s2s-signature",
+        "description": "A system-to-system call, signed. Send `x-s2s-client-id`, `x-s2s-key-id`, `x-s2s-timestamp` (Unix milliseconds, within 300 seconds of the server's clock), `x-s2s-nonce` (single use: a repeat is refused) and `x-s2s-signature`: the hex HMAC-SHA256, keyed by the hex-decoded client secret, of `METHOD`, `PATH_AND_QUERY`, the hex SHA-256 of the body, `TIMESTAMP` and `NONCE`, joined by newlines in that order."
+      },
+      "session_cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-session_token",
+        "description": "Browser session cookie issued by POST /api/v1/auth/login. Mutating requests additionally require the CSRF conditions enforced by `middleware::csrf`."
+      }
+    }
+  },
+  "tags": []
+}

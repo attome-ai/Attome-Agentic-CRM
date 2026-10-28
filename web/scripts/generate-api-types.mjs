@@ -15,6 +15,8 @@
 // Two artifacts, both committed, both generated — never hand-edit either:
 //   openapi.json                                     (repo root)
 //   projects/base/src/lib/generated/api-types.ts
+// and beside them openapi.ar.json (S2-T11), openapi/<module>.json and
+// docs/api/openapi-quality.json (S2-T15, openapi-split.mjs).
 //
 // Committing them is what makes drift reviewable: a backend response-shape
 // change shows up as a diff in the commit that caused it. Nothing re-runs this
@@ -24,9 +26,11 @@
 // database, no config file, no listener, no live authenticated server.
 //
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { qualityLines, qualityReport, splitByModule } from './openapi-split.mjs';
 
 const ANGULAR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = resolve(ANGULAR, '..');
@@ -182,6 +186,7 @@ if (specArg >= 0) {
 // summaries, descriptions and tag descriptions it has, nothing else.
 const AR_CATALOG = join(ROOT, 'docs', 'api', 'openapi-ar.catalog.json');
 const SPEC_AR = join(ROOT, 'openapi.ar.json');
+let arabicTranslated = 0;
 if (existsSync(AR_CATALOG)) {
   const catalog = JSON.parse(readFileSync(AR_CATALOG, 'utf8'));
   const doc = JSON.parse(readFileSync(SPEC, 'utf8'));
@@ -200,6 +205,30 @@ if (existsSync(AR_CATALOG)) {
   }
   writeFileSync(SPEC_AR, `${JSON.stringify(doc, null, 2)}\n`, { encoding: 'utf8' });
   console.log(`openapi.ar.json <- ${translated} operations in Arabic`);
+  arabicTranslated = translated;
+}
+
+// S2-T15: one document per module under openapi/, and the quality report.
+// A module no longer in the document loses its file.
+{
+  const doc = JSON.parse(readFileSync(SPEC, 'utf8'));
+  const dir = join(ROOT, 'openapi');
+  mkdirSync(dir, { recursive: true });
+  const parts = splitByModule(doc);
+  for (const name of readdirSync(dir)) {
+    if (name.endsWith('.json') && !parts.has(name.slice(0, -'.json'.length))) rmSync(join(dir, name));
+  }
+  for (const [module, part] of parts) {
+    writeFileSync(join(dir, `${module}.json`), `${JSON.stringify(part, null, 2)}\n`, { encoding: 'utf8' });
+  }
+  console.log(`openapi/ <- ${parts.size} module documents`);
+  const baseline = join(ROOT, 'crates', 'apps', 'attome', 'tests', 'openapi_lint_baseline.json');
+  const lintBaselineEntries = existsSync(baseline) ? JSON.parse(readFileSync(baseline, 'utf8')).length : 0;
+  const report = qualityReport(doc, { arabicTranslated, lintBaselineEntries });
+  writeFileSync(join(ROOT, 'docs', 'api', 'openapi-quality.json'), `${JSON.stringify(report, null, 2)}\n`, {
+    encoding: 'utf8',
+  });
+  for (const line of qualityLines(report)) console.log(line);
 }
 
 mkdirSync(dirname(OUT), { recursive: true });

@@ -1,0 +1,1347 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Attome XRM API",
+    "description": "The Attome XRM platform's HTTP API. Entity record shapes under `/api/v1/{entity}` are resolved from each deployment's runtime metadata (D-003) and therefore cannot be enumerated statically — those operations document the generic envelope only. Fetch `GET /api/v1/schema/{logicalname}` for a live entity's fields.",
+    "contact": {
+      "name": "Automatica Tech Solutions"
+    },
+    "license": {
+      "name": "AGPL-3.0-only",
+      "identifier": "AGPL-3.0-only"
+    },
+    "version": "0.1.0"
+  },
+  "x-api-version": "2026-10",
+  "paths": {
+    "/api/v1/offline/profile": {
+      "get": {
+        "tags": [
+          "offline"
+        ],
+        "summary": "Read my offline profile",
+        "description": "The caller's offline profile: the entity metadata a device needs (no sensitive attribute) and the\nrules a device checks before it syncs.",
+        "operationId": "get_offline_profile",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflineProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No offline profile for the caller's roles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "offline",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/offline/pull": {
+      "post": {
+        "tags": [
+          "offline"
+        ],
+        "summary": "Pull offline changes",
+        "description": "The device's next page of its offline profile's records, with the records it must drop.",
+        "operationId": "post_pull",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PullBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PullResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The device has been told to wipe itself",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not the caller's device, or no offline profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "reads records through the query executor and keeps the device's own sync position",
+          "reason": "user_preference",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "offline",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/offline/push": {
+      "post": {
+        "tags": [
+          "offline"
+        ],
+        "summary": "Push offline changes",
+        "description": "Applies a device's queued changes in order, each once, through the same path as an online edit.",
+        "operationId": "post_push",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each operation's result, in order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not the caller's device, or it was told to wipe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A push from this device is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "More than 100 operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "create"
+            },
+            {
+              "category": "entity",
+              "operation": "update"
+            },
+            {
+              "category": "entity",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "offline",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AppliesTo": {
+        "type": "string",
+        "description": "Who a rule applies to (`rule.applies_to`).",
+        "enum": [
+          "all",
+          "roles"
+        ]
+      },
+      "BusinessRuleOp": {
+        "type": "string",
+        "description": "Leaf operators (string serde). `eq … in` keep `ConditionOperator`'s\nmeaning; the per-type table is [`ConditionFieldKind::allows`].",
+        "enum": [
+          "eq",
+          "ne",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "in",
+          "not_in",
+          "contains",
+          "starts_with",
+          "is_empty",
+          "is_not_empty"
+        ]
+      },
+      "ConditionAll": {
+        "type": "object",
+        "required": [
+          "all"
+        ],
+        "properties": {
+          "all": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConditionTree"
+            },
+            "description": "The tree nests, so utoipa must not expand it inline (the recursion\nwould overflow the stack while building the OpenAPI document)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConditionAny": {
+        "type": "object",
+        "required": [
+          "any"
+        ],
+        "properties": {
+          "any": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConditionTree"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConditionExpression": {
+        "type": "object",
+        "required": [
+          "expression"
+        ],
+        "properties": {
+          "expression": {
+            "type": "string",
+            "description": "A `attome-rules` expression over the entity's own fields that types as\n`bool`. A rule with an advanced leaf may not carry `hidden` or\n`disabled` policies (the client cannot mirror it)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConditionLeaf": {
+        "type": "object",
+        "required": [
+          "field",
+          "op"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "op": {
+            "$ref": "#/components/schemas/BusinessRuleOp"
+          },
+          "value": {
+            "description": "Absent for `is_empty`/`is_not_empty`; an array for `in`/`not_in`."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConditionTree": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ConditionAll"
+          },
+          {
+            "$ref": "#/components/schemas/ConditionAny"
+          },
+          {
+            "$ref": "#/components/schemas/ConditionExpression"
+          },
+          {
+            "$ref": "#/components/schemas/ConditionLeaf"
+          }
+        ],
+        "description": "A condition: `{\"all\": [...]}` (AND), `{\"any\": [...]}` (OR), a structured\nleaf `{\"field\", \"op\", \"value\"?}`, or an advanced leaf `{\"expression\"}`\nholding a `attome-rules` boolean. The root `{\"all\": []}` means \"always\"."
+      },
+      "ErrorDetails": {
+        "oneOf": [
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          },
+          {
+            "$ref": "#/components/schemas/RuleViolationDetails"
+          },
+          {
+            "$ref": "#/components/schemas/FieldLockedDetails"
+          }
+        ],
+        "description": "`ErrorResponse.details`: its shape depends on the `error` code —\na list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on\n`rule_violation`, [`FieldLockedDetails`] on `field_locked` and\n`field_locked_required` (D-789)."
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Standard error envelope. `error` is a stable machine-readable code; `message` is human-readable and never contains internal detail.",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same value as `error`."
+          },
+          "current_state": {
+            "description": "Present on a version conflict: the server's current row for the\nfields the caller touched, as a JSON object. The owning engine filters\nsensitive columns out before building it (BTY-16c's precondition), so\nthis is a deliberate filtered projection — never a raw row dump."
+          },
+          "current_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a version conflict: the `row_version` the server currently\nholds, so a caller can re-read and retry instead of guessing what the\nwinner wrote. Omitted when the conflict is not version-based."
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same text as `message`."
+          },
+          "details": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorDetails",
+                "description": "Structured detail, shaped by `error` (see [`ErrorDetails`]): every\nfield-level failure on a `validation_error` response when the raiser\nhas a field list, so a form can render them all at once; every firing\nrule on a `rule_violation` response from a business rule; every\nrefused field on `field_locked` / `field_locked_required`. Omitted\notherwise."
+              }
+            ]
+          },
+          "effect": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: `hidden` or\n`disabled`."
+          },
+          "error": {
+            "type": "string",
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+          },
+          "errors": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {},
+            "description": "Every field-level failure on a `validation_error`, as\n`{attribute, rule, message, fix}`."
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required` (D-789): the first\nrefused field (every one is in `details.fields`); on\n`attribute_not_writable` (Q15-T4): the attribute the caller may not\nwrite."
+          },
+          "hidden": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on `duplicate_detected`: how many more matches the caller may\nnot read."
+          },
+          "instance": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The request path the problem happened at."
+          },
+          "matches": {
+            "description": "Present on `duplicate_detected` (A15-T4): the existing records the\nsave matches that the caller may read (record, rule, score)."
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on responses that passed through the request-id middleware\n(D-043); absent on the few pre-middleware rejection paths."
+          },
+          "retry_after_sec": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on a `rate_limit_exceeded` response when the limiter knows its\nwindow: seconds to wait before retrying, equal by construction to the\n`Retry-After` header on the same response (BTY-11a). Omitted when the\nlimit that was hit has no known window.",
+            "minimum": 0
+          },
+          "retryable": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the same request may succeed later (the error catalogue's\nverdict for `code`)."
+          },
+          "rule_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Present on a `rule_violation` response (D-472): the id of the\n`xrm_core_rule` whose failing expression produced this 422, so a\nclient can highlight or re-check the exact rule without parsing\n`message`. Omitted on every other code, and on any response that\ndoes not name a rule.\nAlso present on `field_locked` / `field_locked_required` (D-789): the\nbusiness rule that locks `field`."
+          },
+          "rule_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present on `field_locked` / `field_locked_required`: the display name\nof the rule that locks `field`."
+          },
+          "status": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The HTTP status code.",
+            "minimum": 0
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A short title for `code` in the request's language (Z14-T3), e.g.\n`The resource was not found.`"
+          },
+          "type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Z14-T1 (RFC 9457): `about:blank`; the problem is named by `code`."
+          }
+        },
+        "example": {
+          "error": "validation_error",
+          "message": "validation error: name is required",
+          "request_id": "018f0a1b-2c3d-7e4f-8a9b-0c1d2e3f4a5b"
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "description": "One field-level failure inside `ErrorResponse.details` (BTY-16b): the\nfield the caller sent, a stable machine-readable `code` the client maps\nto localized text (e.g. `required`, `too_long`, `invalid_format`,\n`not_allowed`), and the English server-side `message`.\n\nA list, not a single error, so one 422 can answer with every bad field at\nonce (BTY-F11) instead of making a form discover them one round-trip at a\ntime.",
+        "required": [
+          "field",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable failure code for this field, independent of\nthe message text."
+          },
+          "field": {
+            "type": "string",
+            "description": "The offending field, as the caller addressed it (e.g. `email` or\n`amount`)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable, English, server-side detail for this field."
+          }
+        }
+      },
+      "FieldLockedDetails": {
+        "type": "object",
+        "description": "`details` of a `field_locked` / `field_locked_required` response: every\nrefused field, the first being the one the top-level `field` names.",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedField"
+            }
+          }
+        }
+      },
+      "LockedField": {
+        "type": "object",
+        "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
+        "required": [
+          "field",
+          "rule_id",
+          "rule_name",
+          "effect"
+        ],
+        "properties": {
+          "effect": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string"
+          }
+        }
+      },
+      "OfflineAttribute": {
+        "type": "object",
+        "description": "An attribute the device may hold; never a sensitive one.",
+        "required": [
+          "logicalname",
+          "field_type",
+          "is_required",
+          "is_write_restricted"
+        ],
+        "properties": {
+          "field_type": {
+            "type": "string",
+            "description": "The field type's name (`text`, `lookup`, …)."
+          },
+          "is_required": {
+            "type": "boolean"
+          },
+          "is_write_restricted": {
+            "type": "boolean",
+            "description": "Writable only with a field-security grant: shown, not edited offline."
+          },
+          "logicalname": {
+            "type": "string"
+          },
+          "max_length": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "OfflineBusinessRule": {
+        "type": "object",
+        "description": "A business rule that applies to the caller.",
+        "required": [
+          "id",
+          "name",
+          "label",
+          "applies_to",
+          "condition",
+          "policies",
+          "version"
+        ],
+        "properties": {
+          "applies_to": {
+            "$ref": "#/components/schemas/AppliesTo"
+          },
+          "condition": {
+            "$ref": "#/components/schemas/ConditionTree"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "policies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PolicyDef"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "OfflineEntity": {
+        "type": "object",
+        "description": "One entity the device keeps.",
+        "required": [
+          "entity",
+          "include_related",
+          "include_files",
+          "attributes",
+          "rules",
+          "business_rules"
+        ],
+        "properties": {
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineAttribute"
+            }
+          },
+          "business_rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineBusinessRule"
+            }
+          },
+          "entity": {
+            "type": "string"
+          },
+          "include_files": {
+            "type": "boolean"
+          },
+          "include_related": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Lookup attributes whose targets come along."
+          },
+          "max_rows": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "primary_name_attribute": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineRule"
+            }
+          },
+          "state_model": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OfflineStateModel",
+                "description": "B18-T13: the entity's active state model, if it has one."
+              }
+            ]
+          },
+          "stored_query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The stored query that picks the records; none keeps what the caller\nmay read, up to `max_rows`."
+          }
+        }
+      },
+      "OfflineProfile": {
+        "type": "object",
+        "description": "The profile a device follows.",
+        "required": [
+          "id",
+          "name",
+          "include_maps",
+          "entities",
+          "bundle_version"
+        ],
+        "properties": {
+          "bundle_version": {
+            "type": "string",
+            "description": "Hex SHA-256 of `entities`: changes whenever the metadata or rules do."
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineEntity"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "include_maps": {
+            "type": "boolean"
+          },
+          "max_days_offline": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "max_storage_mb": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "OfflineRule": {
+        "type": "object",
+        "description": "An expression rule, as source in its language version.",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "expression",
+          "language",
+          "severity",
+          "version"
+        ],
+        "properties": {
+          "expression": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`visibility`, `requirement`, `policy`, `routing`, …"
+          },
+          "language": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "target_field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "OfflineStateModel": {
+        "type": "object",
+        "description": "An entity's state model, as a device needs it.",
+        "required": [
+          "name",
+          "state_field",
+          "initial_state",
+          "transitions"
+        ],
+        "properties": {
+          "initial_state": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state_field": {
+            "type": "string"
+          },
+          "transitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineTransition"
+            },
+            "description": "Live transitions, in display order."
+          }
+        }
+      },
+      "OfflineTransition": {
+        "type": "object",
+        "description": "One allowed move.",
+        "required": [
+          "from_state",
+          "to_state",
+          "name",
+          "language",
+          "requires_approval"
+        ],
+        "properties": {
+          "from_state": {
+            "type": "string"
+          },
+          "guard_expression": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The guard's source in `language`; none when the move is unguarded."
+          },
+          "language": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "required_privilege": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The privilege the move needs; the server checks it on push."
+          },
+          "requires_approval": {
+            "type": "boolean",
+            "description": "Needs an approval: only the server can start it, so a device sends\nit only when online."
+          },
+          "to_state": {
+            "type": "string"
+          }
+        }
+      },
+      "OpResult": {
+        "type": "object",
+        "description": "What happened to one operation.",
+        "required": [
+          "client_op_id",
+          "status",
+          "id"
+        ],
+        "properties": {
+          "client_op_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why it was rejected: `forbidden`, `not_found`, `invalid`,\n`depends_on_failed`, …"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "link": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where to open the record and see the problem."
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The record's row version after the change."
+          },
+          "server_values": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "A conflict's server values for the fields that clashed."
+          },
+          "status": {
+            "type": "string",
+            "description": "`applied`, `merged`, `conflict` or `rejected`."
+          }
+        }
+      },
+      "PolicyDef": {
+        "type": "object",
+        "description": "One policy, in the wire shape `{ type, field?, message?, severity?,\nvalue?, expression?, mode? }` (one `rule_policy` row). Its shape\nis checked by [`validate_rule`] (and by the table's CHECK); use\n[`PolicyDef::effect`] for the typed view.",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "enforce_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A3-T4: with `stage: enforce`, the first day the check refuses writes;\nbefore it the check warns."
+          },
+          "expression": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A `set_value` `attome-rules` expression over the entity's own fields."
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SetMode"
+              }
+            ]
+          },
+          "severity": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Severity"
+              }
+            ]
+          },
+          "stage": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Stage",
+                "description": "A3-T4: how this check is rolled out; absent means its severity decides."
+              }
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/PolicyType"
+          },
+          "value": {
+            "description": "A `set_value` literal."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PolicyType": {
+        "type": "string",
+        "enum": [
+          "hidden",
+          "disabled",
+          "error",
+          "set_value",
+          "required",
+          "allowed_values",
+          "add_tag",
+          "remove_tag"
+        ]
+      },
+      "PullBody": {
+        "type": "object",
+        "description": "`POST /api/v1/offline/pull`.",
+        "required": [
+          "device_id"
+        ],
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The registered device (B17-T4) pulling."
+          }
+        }
+      },
+      "PullResult": {
+        "type": "object",
+        "required": [
+          "upserts",
+          "removals",
+          "done",
+          "bundle_version"
+        ],
+        "properties": {
+          "bundle_version": {
+            "type": "string",
+            "description": "The profile's bundle version (B18-T4): a different one means fetch the\nprofile again."
+          },
+          "done": {
+            "type": "boolean",
+            "description": "`true` once every profile entity is up to date; pull again later."
+          },
+          "removals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Removal"
+            }
+          },
+          "upserts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PulledRecord"
+            }
+          }
+        }
+      },
+      "PulledRecord": {
+        "type": "object",
+        "description": "A record to keep or update on the device.",
+        "required": [
+          "entity",
+          "record"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "record": {
+            "type": "object",
+            "description": "The record's values, without sensitive attributes."
+          }
+        }
+      },
+      "PushBody": {
+        "type": "object",
+        "description": "`POST /api/v1/offline/push`.",
+        "required": [
+          "device_id",
+          "ops"
+        ],
+        "properties": {
+          "bytes_used": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Bytes the device's offline store uses."
+          },
+          "device_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PushOp"
+            }
+          },
+          "queue_size": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Changes still waiting on the device after this push."
+          }
+        }
+      },
+      "PushOp": {
+        "type": "object",
+        "description": "One queued change.",
+        "required": [
+          "client_op_id",
+          "kind",
+          "entity",
+          "id"
+        ],
+        "properties": {
+          "base_row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The row version the change was made against (update, delete)."
+          },
+          "base_values": {
+            "type": "object",
+            "description": "The changed fields' values before the change (update)."
+          },
+          "changed": {
+            "type": "object",
+            "description": "The fields changed and their new values (create, update)."
+          },
+          "client_op_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The device's own id for this operation; a retry repeats it."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The record. For a create, the UUIDv7 the device gave it."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`create`, `update` or `delete`."
+          }
+        }
+      },
+      "PushResult": {
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpResult"
+            }
+          }
+        }
+      },
+      "Removal": {
+        "type": "object",
+        "description": "A record the device must drop.",
+        "required": [
+          "entity",
+          "id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RuleFailure": {
+        "type": "object",
+        "description": "One business-rule `error` policy that fired (D-789 §3.3), inside a\n`rule_violation` body's `details.rules`. Carries names and the rule's own\nmessage, never a record value.",
+        "required": [
+          "rule_id",
+          "rule_name",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The field the policy is attached to, when it names one."
+          },
+          "message": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string",
+            "description": "The rule's display name (its name when it has none)."
+          }
+        }
+      },
+      "RuleViolationDetails": {
+        "type": "object",
+        "description": "`details` of a `rule_violation` response (D-789): the field of the first\nfailing policy, when it names one, and every blocking `error` policy that\nfired, the first (by rule display order) being the one `rule_id` names.",
+        "required": [
+          "rules"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleFailure"
+            }
+          }
+        }
+      },
+      "SetMode": {
+        "type": "string",
+        "description": "When a `set_value` policy writes: on every write, or on create only when\nthe field is still empty (after the body, state initial value and\nautovalue).",
+        "enum": [
+          "always",
+          "default"
+        ]
+      },
+      "Severity": {
+        "type": "string",
+        "description": "Severity of an `error` policy. `Error` fails the write (422\n`rule_violation`); `Warning` never blocks: the write succeeds and the\nwarning is returned to the caller (D-791 rule 6) and logged.",
+        "enum": [
+          "error",
+          "warning"
+        ]
+      },
+      "Stage": {
+        "type": "string",
+        "description": "A3-T4: how a refusing check (`error`, `required`, `allowed_values`) is\nrolled out. `Report` only logs a failure, `Warn` lets the write through\nwith a warning, `Enforce` refuses it — from `enforce_from` when set, and\nas a warning before that date.",
+        "enum": [
+          "report",
+          "warn",
+          "enforce"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "api_key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "`Authorization: ApiKey <public_key>:<secret>`, issued by POST /api/v1/auth/api-keys."
+      },
+      "portal_session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-wp_{portal}_session",
+        "description": "A web portal user's session cookie, issued by the portal's sign-in; `{portal}` is the portal's keyword (`wp_{portal}_session` on plain-http local dev). Valid only on that portal's own routes."
+      },
+      "s2s_hmac": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-s2s-signature",
+        "description": "A system-to-system call, signed. Send `x-s2s-client-id`, `x-s2s-key-id`, `x-s2s-timestamp` (Unix milliseconds, within 300 seconds of the server's clock), `x-s2s-nonce` (single use: a repeat is refused) and `x-s2s-signature`: the hex HMAC-SHA256, keyed by the hex-decoded client secret, of `METHOD`, `PATH_AND_QUERY`, the hex SHA-256 of the body, `TIMESTAMP` and `NONCE`, joined by newlines in that order."
+      },
+      "session_cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-session_token",
+        "description": "Browser session cookie issued by POST /api/v1/auth/login. Mutating requests additionally require the CSRF conditions enforced by `middleware::csrf`."
+      }
+    }
+  },
+  "tags": []
+}
