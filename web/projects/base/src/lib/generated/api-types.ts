@@ -13776,8 +13776,9 @@ export interface paths {
         /**
          * Start an OIDC sign-in
          * @description P2.8 (D-065) — starts the generic OIDC authorization-code + PKCE flow for
-         *     a config-driven provider (`config.oidc.providers.{provider}`). Redirects
-         *     the browser straight to the IdP; `AppError::NotFound` for an unconfigured
+         *     a provider from configuration or added on screen (Q1-T3,
+         *     `state.oidc_providers`). Redirects the browser straight to the IdP;
+         *     `AppError::NotFound` for an unconfigured
          *     provider key (never 401/403 — an unconfigured provider isn't a protected
          *     resource, it just doesn't exist, same `FeatureHidden`-style reasoning as
          *     an unlicensed module route). Bypass-listed: the caller has no session yet.

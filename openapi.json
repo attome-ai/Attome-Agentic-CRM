@@ -71293,7 +71293,7 @@
           "auth"
         ],
         "summary": "Start an OIDC sign-in",
-        "description": "P2.8 (D-065) — starts the generic OIDC authorization-code + PKCE flow for\na config-driven provider (`config.oidc.providers.{provider}`). Redirects\nthe browser straight to the IdP; `AppError::NotFound` for an unconfigured\nprovider key (never 401/403 — an unconfigured provider isn't a protected\nresource, it just doesn't exist, same `FeatureHidden`-style reasoning as\nan unlicensed module route). Bypass-listed: the caller has no session yet.",
+        "description": "P2.8 (D-065) — starts the generic OIDC authorization-code + PKCE flow for\na provider from configuration or added on screen (Q1-T3,\n`state.oidc_providers`). Redirects the browser straight to the IdP;\n`AppError::NotFound` for an unconfigured\nprovider key (never 401/403 — an unconfigured provider isn't a protected\nresource, it just doesn't exist, same `FeatureHidden`-style reasoning as\nan unlicensed module route). Bypass-listed: the caller has no session yet.",
         "operationId": "oidc_login",
         "parameters": [
           {
@@ -227063,6 +227063,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -227115,6 +227116,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }
