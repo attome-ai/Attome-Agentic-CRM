@@ -4157,6 +4157,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- A sign-in provider added on screen signs in only people whose email domain is verified for it
+  (Q1-T6): add the domain under `/api/v1/admin/security/oidc-domains`, publish its TXT record and
+  check it. Until then its sign-ins end on the login page with `domain_not_verified`. Configured
+  providers are unchanged. A provider's `tenant_allowlist` is now enforced: a token whose `tid` is
+  missing or not listed ends with `tenant_not_allowed`.
+- `POST /api/v1/auth/logout` answers a JSON body, `{"redirect": ...}` for a session from an OIDC
+  provider with an end-session endpoint, `{}` otherwise (Q1-T10).
 - `POST /api/v1/sales/orders/{id}/confirm`: `invoice_request_id` is null when the order's
   `billing_rule` is `on_shipment` or `on_delivery` (F6-T13); fulfilment asks billing per shipment line.
 - `contact.reports_to` and `contact.dotted_line_ref` are engine-managed (D23-T4): a create or

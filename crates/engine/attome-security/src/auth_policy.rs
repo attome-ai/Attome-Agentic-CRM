@@ -33,6 +33,48 @@ pub fn email_domain(email: &str) -> Option<String> {
         .filter(|domain| !domain.is_empty())
 }
 
+/// Q1-T6: the key of the provider `email`'s domain routes sign-in to, when
+/// that domain is verified for a provider that is on. Says nothing about
+/// whether anyone with that email exists.
+pub async fn provider_for_email(db: &DbPool, email: &str) -> Result<Option<String>, AppError> {
+    let Some(domain) = email_domain(email) else {
+        return Ok(None);
+    };
+    sqlx::query_scalar(
+        "SELECT p.key FROM oidc_domain d JOIN oidc_provider p ON p.id = d.provider_ref \
+          WHERE d.domain = $1 AND d.verified_at IS NOT NULL \
+            AND p.enabled AND NOT p.is_deleted",
+    )
+    .bind(&domain)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Q1-T6: whether `email`'s domain is verified for the provider `provider_key`.
+/// A provider added on screen signs in, links or creates only such people:
+/// an administrator who adds a provider does not thereby vouch for every
+/// email address it may assert.
+pub async fn domain_verified_for(
+    db: &DbPool,
+    provider_key: &str,
+    email: &str,
+) -> Result<bool, AppError> {
+    let Some(domain) = email_domain(email) else {
+        return Ok(false);
+    };
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM oidc_domain d JOIN oidc_provider p ON p.id = d.provider_ref \
+                         WHERE d.domain = $1 AND p.key = $2 AND d.verified_at IS NOT NULL \
+                           AND NOT p.is_deleted)",
+    )
+    .bind(&domain)
+    .bind(provider_key)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
 /// Whether `user_id` (signing in as `email`) may use a password.
 pub async fn password_login(
     db: &DbPool,

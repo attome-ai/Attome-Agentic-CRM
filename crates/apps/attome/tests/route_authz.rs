@@ -448,6 +448,11 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     ),
     (
         "POST",
+        "/api/v1/auth/oidc/discover",
+        "Q1-T6: email-first sign-in, before any session exists; answers only a provider key or null, never whether an account exists. Bypass-listed subtree.",
+    ),
+    (
+        "POST",
         "/api/v1/auth/oidc/{provider}/backchannel-logout",
         "Q1-T10: the provider posts a signed logout token server to server; no session exists. The token's signature, issuer and audience are the credential. Bypass-listed subtree.",
     ),

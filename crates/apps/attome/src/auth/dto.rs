@@ -387,3 +387,23 @@ impl std::fmt::Debug for BackchannelLogoutForm {
             .finish_non_exhaustive()
     }
 }
+
+/// Q1-T6: the email typed on the sign-in page.
+#[derive(Deserialize, ToSchema)]
+pub struct OidcDiscoverRequest {
+    pub email: String,
+}
+
+impl std::fmt::Debug for OidcDiscoverRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OidcDiscoverRequest")
+            .finish_non_exhaustive()
+    }
+}
+
+/// Q1-T6: the provider that email's verified domain signs in through, or
+/// `null`. The same answer shape whether or not anyone has that email.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OidcDiscoverResponse {
+    pub provider: Option<String>,
+}

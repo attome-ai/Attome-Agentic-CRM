@@ -66,6 +66,24 @@ accepts only a token whose `auth_time` is fresh. The broker must pass that on to
 provider as a forced authentication (`ForceAuthn`); a broker that only re-checks its own
 session proves a fresh sign-in at the broker, not at the SAML provider.
 
+**Email-first sign-in and domains.** A provider added on screen (Security > Sign-in
+providers) signs in only people whose email domain is verified for it. A configured provider
+in `config.json` needs no domain.
+1. Add the domain: `POST /api/v1/admin/security/oidc-domains` with `provider_id` and
+   `domain`. The answer gives a TXT record name, `_attome-verify.<domain>`, and its value,
+   `attome-verify=<token>`.
+2. Publish that record at your DNS host.
+3. Check it: `POST /api/v1/admin/security/oidc-domains/{id}/verify` looks the record up
+   (at most 5 seconds) and marks the domain verified, or says why not.
+
+Once a domain is verified, `POST /api/v1/auth/oidc/discover` with an email on that domain
+answers the provider's key, so the sign-in page can send the person straight to it. Any
+other email answers `null`. The route never says whether an account exists.
+
+**Entra tenants.** A provider's `tenant_allowlist` limits it to those tenants. A token
+whose `tid` is missing or not listed is refused, and the person lands on the login page
+with `tenant_not_allowed`.
+
 **Sign-out.** Two settings on the broker's client make signing out work both ways.
 
 - **Post-logout redirect URI:** register `https://<your-attome-host>`. When someone

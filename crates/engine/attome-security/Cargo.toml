@@ -29,6 +29,7 @@ axum.workspace            = true
 chrono.workspace          = true
 fred.workspace            = true
 futures-util.workspace    = true
+hickory-resolver.workspace = true
 metrics.workspace         = true
 rand.workspace            = true
 serde.workspace           = true

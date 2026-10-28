@@ -149,6 +149,15 @@ pub struct OidcIdentity {
     /// Q1-T10: the provider's session id (`sid`), when it sent one. Kept on
     /// the refresh family so a back-channel logout naming it ends the family.
     pub sid: Option<String>,
+    /// Q1-T6: the Entra tenant the token was issued in (`tid`), when sent.
+    pub tid: Option<String>,
+}
+
+/// Q1-T6: whether a token from tenant `tid` may sign in through a provider
+/// that allows `allowlist`. An empty list allows any tenant; otherwise the
+/// token must name one of them (a missing `tid` is refused). Pure.
+pub fn tenant_allowed(allowlist: &[String], tid: Option<&str>) -> bool {
+    allowlist.is_empty() || tid.is_some_and(|tid| allowlist.iter().any(|t| t == tid))
 }
 
 impl std::fmt::Debug for OidcIdentity {
@@ -1104,6 +1113,11 @@ fn verify_claims(
         .and_then(|v| v.as_str())
         .filter(|sid| !sid.is_empty())
         .map(str::to_owned);
+    let tid = claims
+        .get("tid")
+        .and_then(|v| v.as_str())
+        .filter(|tid| !tid.is_empty())
+        .map(str::to_owned);
 
     // Overwritten by complete_login right after this returns — this pure
     // half has no `OidcState` (and thus no linking_user_id) to draw from.
@@ -1119,6 +1133,7 @@ fn verify_claims(
         tester: None,
         claims,
         sid,
+        tid,
     })
 }
 
@@ -1647,6 +1662,39 @@ mod tests {
         let (token, header, jwks) = sign_test_token(claims);
         let jwk = jwks.find(header.kid.as_deref().unwrap()).unwrap();
         verify_logout_claims(jwk, &header, provider, &token, now)
+    }
+
+    #[test]
+    fn tenant_outside_allowlist_is_refused() {
+        let allow = vec!["tenant-a".to_owned(), "tenant-b".to_owned()];
+        assert!(tenant_allowed(&allow, Some("tenant-b")));
+        assert!(!tenant_allowed(&allow, Some("tenant-c")));
+        assert!(
+            !tenant_allowed(&allow, None),
+            "a token without tid is refused"
+        );
+        assert!(tenant_allowed(&[], None), "an empty list allows any tenant");
+        assert!(tenant_allowed(&[], Some("anyone")));
+    }
+
+    #[test]
+    fn verify_claims_keeps_the_tenant() {
+        let provider = test_provider();
+        let claims = serde_json::json!({
+            "iss": provider.issuer,
+            "aud": provider.client_id,
+            "sub": "user-sub-42",
+            "email": "person@example.com",
+            "nonce": "expected-nonce",
+            "tid": "tenant-a",
+            "exp": (chrono::Utc::now().timestamp() + 300),
+            "iat": chrono::Utc::now().timestamp(),
+        });
+        let (token, header, jwks) = sign_test_token(&claims);
+        let jwk = jwks.find(header.kid.as_deref().unwrap()).unwrap();
+        let identity =
+            verify_claims(jwk, &header, &provider, &token, Some("expected-nonce")).unwrap();
+        assert_eq!(identity.tid.as_deref(), Some("tenant-a"));
     }
 
     #[test]

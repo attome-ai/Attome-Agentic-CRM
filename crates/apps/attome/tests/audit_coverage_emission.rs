@@ -329,6 +329,35 @@ const UNDRIVABLE: &[(&str, &str)] = &[
 const DRILL_KEY_SEED: [u8; 32] = [7; 32];
 
 /// Q1-T4: a sign-in provider with a fresh key.
+fn oidc_domain_body(provider: Uuid) -> serde_json::Value {
+    json!({
+        "provider_id": provider,
+        "domain": format!("cov{}.example.test", &uuid::Uuid::now_v7().simple().to_string()[20..]),
+    })
+}
+
+/// Q1-T6: a sign-in domain on a new provider, for the routes that change one.
+async fn oidc_domain(fx: &Fx) -> Uuid {
+    let provider = id_of(
+        &admin(
+            fx,
+            "POST",
+            "/api/v1/admin/security/oidc-providers",
+            Some(oidc_provider_body()),
+        )
+        .await,
+    );
+    id_of(
+        &admin(
+            fx,
+            "POST",
+            "/api/v1/admin/security/oidc-domains",
+            Some(oidc_domain_body(provider)),
+        )
+        .await,
+    )
+}
+
 fn oidc_provider_body() -> serde_json::Value {
     json!({
         "key": format!("cov-{}", &uuid::Uuid::now_v7().simple().to_string()[20..]),
@@ -2608,6 +2637,34 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 .await,
             );
             request("DELETE", &format!("{S}/oidc-providers/{id}"), t, None)
+        }
+        // ── sign-in domains (Q1-T6) ─────────────────────────────────────────
+        "POST /api/v1/admin/security/oidc-domains" => {
+            let provider = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("{S}/oidc-providers"),
+                    Some(oidc_provider_body()),
+                )
+                .await,
+            );
+            request(
+                "POST",
+                &format!("{S}/oidc-domains"),
+                t,
+                Some(oidc_domain_body(provider)),
+            )
+        }
+        "DELETE /api/v1/admin/security/oidc-domains/{id}" => {
+            let id = oidc_domain(fx).await;
+            request("DELETE", &format!("{S}/oidc-domains/{id}"), t, None)
+        }
+        "POST /api/v1/admin/security/oidc-domains/{id}/verify" => {
+            // The TXT lookup of a made-up domain finds nothing; the check is
+            // still recorded and audited.
+            let id = oidc_domain(fx).await;
+            request("POST", &format!("{S}/oidc-domains/{id}/verify"), t, None)
         }
         // ── impersonation (Q13-T1) ──────────────────────────────────────────
         "POST /api/v1/admin/security/impersonation" => {

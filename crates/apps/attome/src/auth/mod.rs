@@ -114,6 +114,8 @@ pub fn public_routes(
             post(local::verify_email_confirm),
         )
         .route("/api/v1/auth/oidc/providers", get(oidc::oidc_providers))
+        // Q1-T6: email-first sign-in; `discover` is not a provider key.
+        .route("/api/v1/auth/oidc/discover", post(oidc::oidc_discover))
         .route("/api/v1/auth/oidc/{provider}/login", get(oidc::oidc_login))
         // Q1-T5: an administrator's test sign-in through a provider.
         .route(

@@ -32,6 +32,8 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("POST", "/api/v1/auth/register", "credential"),
     ("POST", "/api/v1/auth/google", "credential"),
     ("GET", "/api/v1/auth/oidc/{provider}/callback", "credential"),
+    // Q1-T6: email-first sign-in, an enumeration surface of domains.
+    ("POST", "/api/v1/auth/oidc/discover", "credential"),
     ("POST", "/api/v1/auth/refresh", "credential"),
     ("POST", "/api/v1/auth/mfa/verify", "mfa"),
     ("POST", "/api/v1/auth/mfa/verify-recovery", "mfa"),

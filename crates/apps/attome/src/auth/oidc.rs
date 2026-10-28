@@ -12,7 +12,8 @@ use axum::{
 };
 
 use super::dto::{
-    BackchannelLogoutForm, IdentityLinkOidcCallbackQuery, OidcCallbackQuery, OidcProviderInfo,
+    BackchannelLogoutForm, IdentityLinkOidcCallbackQuery, OidcCallbackQuery, OidcDiscoverRequest,
+    OidcDiscoverResponse, OidcProviderInfo,
 };
 use super::session::issue_session_cookies_for;
 use attome_auth::auth_context::AuthContext;
@@ -361,6 +362,10 @@ fn oidc_error_redirect(state: &AppState, error: AppError) -> Response {
         // Q1-T8: a link-only provider found no account for this person.
         AppError::Conflict("no_linked_account") => "no_linked_account",
         AppError::Conflict(_) => "oidc_link_conflict",
+        // Q1-T6: the token's tenant is not on the provider's allow-list, or
+        // the email's domain is not verified for the provider.
+        AppError::RequestRejected("tenant_not_allowed") => "tenant_not_allowed",
+        AppError::RequestRejected("domain_not_verified") => "domain_not_verified",
         _ => "oidc_error",
     };
     let location = format!("{}/login?{reason}=1", state.config.frontend_url());
@@ -419,6 +424,27 @@ async fn oidc_callback_inner(
             provider,
             &identity.claims,
         ));
+    }
+    // Q1-T6: a provider limited to some Entra tenants signs in only theirs.
+    if !attome_auth::oidc::tenant_allowed(&entry.tenant_allowlist, identity.tid.as_deref()) {
+        tracing::warn!(
+            provider,
+            "oidc_callback: the token's tenant is not on the provider's allow-list"
+        );
+        return Err(AppError::RequestRejected("tenant_not_allowed"));
+    }
+    // Q1-T6: a provider added on screen signs in only people whose email
+    // domain is verified for it; a configured provider is trusted as
+    // configured, as before.
+    if entry.source == attome_auth::oidc_registry::ProviderSource::Database
+        && !attome_security::auth_policy::domain_verified_for(&state.db, provider, &identity.email)
+            .await?
+    {
+        tracing::warn!(
+            provider,
+            "oidc_callback: the email's domain is not verified for the provider"
+        );
+        return Err(AppError::RequestRejected("domain_not_verified"));
     }
     // M04 Phase 2 (LIC-F2): the seat gate lives inside `link_oidc_identity`'s
     // transaction, on the branch that actually creates a row (see
@@ -907,6 +933,36 @@ pub(super) struct OidcTestStart {
 /// because `#[utoipa::path]` generates a `__path_*` type with the handler's
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
+/// Find the sign-in provider for an email
+///
+/// Email-first sign-in: answers the key of the provider whose verified domain
+/// the email is on, or `null`, so the sign-in page can send the person
+/// straight to it. Always 200 and the same shape, and it never looks at user
+/// accounts, so it tells nobody whether an account exists. Only domains of
+/// providers added on screen route; rate limited as a credential route. No
+/// session.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/oidc/discover",
+    tag = "auth",
+    request_body = OidcDiscoverRequest,
+    responses(
+        (status = 200, description = "The provider's key, or `null`", body = OidcDiscoverResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::ReadOnly, None, "looks up which provider an email domain routes to; changes nothing")))),
+)]
+pub(super) async fn oidc_discover(
+    State(state): State<AppState>,
+    Json(body): Json<OidcDiscoverRequest>,
+) -> Result<Json<OidcDiscoverResponse>, AppError> {
+    let provider = attome_security::auth_policy::provider_for_email(&state.db, &body.email)
+        .await?
+        // A provider the registry no longer lists cannot be signed in with.
+        .filter(|key| state.oidc_providers.get(key).is_some());
+    Ok(Json(OidcDiscoverResponse { provider }))
+}
+
 /// How long a logout token's id is remembered: past its `iat` window, so a
 /// replay inside the window always finds it.
 const LOGOUT_TOKEN_REPLAY_TTL_SECS: i64 = 600;
@@ -1036,6 +1092,7 @@ async fn backchannel_logout_inner(
     oidc_login,
     oidc_callback,
     oidc_backchannel_logout,
+    oidc_discover,
     identity_link_oidc_start,
     identity_link_oidc_callback,
     oidc_providers,
