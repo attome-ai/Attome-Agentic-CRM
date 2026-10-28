@@ -577,3 +577,83 @@ fn a_dead_letter_can_be_discarded() {
         assert_eq!(again.status(), StatusCode::CONFLICT);
     })
 }
+
+/// AA10-T7: the operations list's ids for a caller, following every page.
+async fn operation_ids(app: &axum::Router, cookie: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let mut cursor: Option<String> = None;
+    loop {
+        let uri = match &cursor {
+            Some(c) => format!("/api/v1/admin/operations?page_size=200&cursor={c}"),
+            None => "/api/v1/admin/operations?page_size=200".to_owned(),
+        };
+        let req = Request::builder()
+            .method("GET")
+            .uri(uri)
+            .header("cookie", cookie)
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let page: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        for item in page["items"].as_array().unwrap() {
+            out.push((
+                item["id"].as_str().unwrap().to_owned(),
+                item["kind"].as_str().unwrap().to_owned(),
+            ));
+        }
+        match page["next_cursor"].as_str() {
+            Some(next) => cursor = Some(next.to_owned()),
+            None => return out,
+        }
+    }
+}
+
+#[test]
+fn operations_list_shows_mass_and_bulk() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (owner, owner_cookie) = seed_user(&system, false).await;
+        let (_, other_cookie) = seed_user(&system, false).await;
+        let (_, admin_cookie) = seed_user(&system, true).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+
+        let mass: Uuid = sqlx::query_scalar(
+            "INSERT INTO heavy_operation (kind, entity_logicalname, filter, payload, status, estimated_rows, started_by, reason) \
+             VALUES ('update', 'account', '{}', '{}', 'running', 1200, $1, 'tidy regions') RETURNING id",
+        )
+        .bind(owner)
+        .fetch_one(&db)
+        .await
+        .expect("seed a mass operation");
+        let bulk: Uuid = sqlx::query_scalar(
+            "INSERT INTO automation_bulk_operation (entity_logicalname, operation, status, total, succeeded, created_by) \
+             VALUES ('account', 'update', 'completed', 10, 10, $1) RETURNING id",
+        )
+        .bind(owner)
+        .fetch_one(&db)
+        .await
+        .expect("seed a bulk operation");
+        let mass = (mass.to_string(), "mass".to_owned());
+        let bulk = (bulk.to_string(), "bulk".to_owned());
+
+        let own = operation_ids(&app, &owner_cookie).await;
+        assert!(own.contains(&mass) && own.contains(&bulk), "{own:?}");
+        let other = operation_ids(&app, &other_cookie).await;
+        assert!(
+            !other.contains(&mass) && !other.contains(&bulk),
+            "{other:?}"
+        );
+        let all = operation_ids(&app, &admin_cookie).await;
+        assert!(all.contains(&mass) && all.contains(&bulk));
+        let mut seen = std::collections::HashSet::new();
+        assert!(
+            all.iter().all(|row| seen.insert(row.clone())),
+            "no row on two pages"
+        );
+    })
+}

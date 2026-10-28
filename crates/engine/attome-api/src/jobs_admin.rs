@@ -13,7 +13,7 @@ use attome_core::EngineState;
 use attome_core::dead_letter::{DeadLetter, DeadLetterFuture, DeadLetterSource, ReplayOutcome};
 use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::ErrorResponse;
-use attome_types::{AppError, OnePageQuery, PaginatedResponse};
+use attome_types::{AppError, CursorPage, MAX_PAGE_SIZE, OnePageQuery, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
     Json, Router,
@@ -634,8 +634,217 @@ async fn cancel_batch(
     Ok((StatusCode::ACCEPTED, Json(batch_body(batch))))
 }
 
+// ── AA10-T7: one list of heavy operations ────────────────────────────────────
+
+/// One long-running operation, whatever started it: a mass operation
+/// (`mass`), a bulk create/update/delete (`bulk`), a bulk field transform
+/// (`bulk_transform`), a staged import (`staged_import`), a file import
+/// (`import`) or an index being built right now (`index_build`).
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+struct OperationSummary {
+    id: Uuid,
+    kind: String,
+    /// What it does within its kind: `update`, `delete`, `upsert`, `trim`...
+    action: Option<String>,
+    /// The entity it works on (an index build: its table).
+    entity: String,
+    /// The operation's own status word (`running`, `done`, `completed`,
+    /// `approved`, `applied`...), as its own status route reports it.
+    status: String,
+    rows_done: Option<i64>,
+    estimated_rows: Option<i64>,
+    /// Who started it; an index build has no starter on record.
+    started_by: Option<Uuid>,
+    reason: Option<String>,
+    created_at: DateTime<Utc>,
+    finished_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct OperationsQuery {
+    /// The previous response's `next_cursor`, verbatim; omit for the first
+    /// page.
+    cursor: Option<String>,
+    /// 1 to `MAX_PAGE_SIZE`; default `DEFAULT_PAGE_SIZE`.
+    page_size: Option<i64>,
+}
+
+/// The keyset position: the last row's `(created_at, id)`.
+fn operations_cursor(at: DateTime<Utc>, id: Uuid) -> String {
+    format!(
+        "{}|{id}",
+        at.to_rfc3339_opts(chrono::SecondsFormat::Micros, true)
+    )
+}
+
+fn parse_operations_cursor(raw: &str) -> Result<(DateTime<Utc>, Uuid), AppError> {
+    let invalid = || {
+        AppError::Validation(
+            "invalid cursor: pass back a next_cursor value unchanged, or omit it".into(),
+        )
+    };
+    let (at, id) = raw.split_once('|').ok_or_else(invalid)?;
+    let at = DateTime::parse_from_rfc3339(at)
+        .map_err(|_| invalid())?
+        .with_timezone(&Utc);
+    let id = id.parse().map_err(|_| invalid())?;
+    Ok((at, id))
+}
+
+/// Every persisted heavy-operation kind, newest first, after `$3`/`$4`, as
+/// one keyset. `$1` is the caller, `$2` whether they see everyone's. Each
+/// branch is bounded by `$5` before the merge.
+const OPERATIONS_SQL: &str = "\
+SELECT id, kind, action, entity, status, rows_done, estimated_rows, started_by, reason,
+       created_at, finished_at
+  FROM (
+  (SELECT id, 'mass'::text AS kind, kind AS action, entity_logicalname AS entity, status,
+          rows_done, estimated_rows, started_by, reason, created_at, finished_at
+     FROM heavy_operation
+    WHERE ($2 OR started_by = $1) AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
+    ORDER BY created_at DESC, id DESC LIMIT $5)
+  UNION ALL
+  (SELECT id, 'bulk', operation, entity_logicalname, status,
+          (succeeded + failed + rejected)::bigint, total::bigint, created_by, NULL, created_at,
+          CASE WHEN status IN ('completed', 'failed') THEN updated_at END
+     FROM automation_bulk_operation
+    WHERE NOT is_deleted AND ($2 OR created_by = $1)
+      AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
+    ORDER BY created_at DESC, id DESC LIMIT $5)
+  UNION ALL
+  (SELECT id, 'bulk_transform', transform, entity_logicalname, status,
+          (succeeded + failed)::bigint, total::bigint, created_by, NULL, created_at,
+          CASE WHEN status IN ('completed', 'failed') THEN updated_at END
+     FROM bulk_transform_operation
+    WHERE NOT is_deleted AND ($2 OR created_by = $1)
+      AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
+    ORDER BY created_at DESC, id DESC LIMIT $5)
+  UNION ALL
+  (SELECT id, 'staged_import', operation, entity_logicalname, status,
+          NULL::bigint, NULL::bigint, created_by, NULL, created_at,
+          CASE WHEN status IN ('approved', 'rejected') THEN COALESCE(approved_at, updated_at) END
+     FROM automation_staged_import
+    WHERE NOT is_deleted AND ($2 OR created_by = $1)
+      AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
+    ORDER BY created_at DESC, id DESC LIMIT $5)
+  UNION ALL
+  (SELECT id, 'import', match_mode, entity_logicalname, status,
+          cursor_row::bigint, NULL::bigint, created_by, NULL, created_at, finished_at
+     FROM import_job
+    WHERE ($2 OR created_by = $1) AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
+    ORDER BY created_at DESC, id DESC LIMIT $5)
+) ops
+ORDER BY created_at DESC, id DESC
+LIMIT $5";
+
+/// The indexes PostgreSQL is building now. They have no history table: an
+/// index build is a `CREATE INDEX CONCURRENTLY` whose only record is
+/// `pg_stat_progress_create_index` while it runs, so a finished build is not
+/// listed. The id is derived from the backend pid and start time so a page
+/// can tell two builds apart.
+const INDEX_BUILDS_SQL: &str = "\
+SELECT c.relname::text AS entity, p.tuples_done, p.tuples_total, a.query_start, p.pid
+  FROM pg_stat_progress_create_index p
+  JOIN pg_class c ON c.oid = p.relid
+  LEFT JOIN pg_stat_activity a ON a.pid = p.pid
+ ORDER BY a.query_start DESC NULLS LAST";
+
+/// Heavy operations
+///
+/// AA10-T7: mass operations, bulk operations, bulk transforms, staged and
+/// file imports in one list, newest first, keyset paged; on the first page
+/// an administrator also sees the indexes being built now. Administrators
+/// see everyone's operations; anyone else sees only the ones they started.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/operations",
+    tag = "jobs",
+    operation_id = "list_heavy_operations",
+    params(OperationsQuery),
+    responses(
+        (status = 200, description = "One keyset page of operations; `total` is not counted", body = CursorPage<OperationSummary>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 422, description = "A malformed cursor or page size", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_operations(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Query(q): Query<OperationsQuery>,
+) -> Result<Json<CursorPage<OperationSummary>>, AppError> {
+    let page_size = q.page_size.unwrap_or(DEFAULT_PAGE_SIZE);
+    if !(1..=MAX_PAGE_SIZE).contains(&page_size) {
+        return Err(AppError::Validation(format!(
+            "page_size is 1 to {MAX_PAGE_SIZE}"
+        )));
+    }
+    let after = attome_types::cursor::open_opt(q.cursor.as_deref())?
+        .as_deref()
+        .map(parse_operations_cursor)
+        .transpose()?;
+    let mut rows: Vec<OperationSummary> = sqlx::query_as(OPERATIONS_SQL)
+        .bind(ctx.user_id)
+        .bind(ctx.is_admin)
+        .bind(after.map(|(at, _)| at))
+        .bind(after.map(|(_, id)| id))
+        .bind(page_size + 1)
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    let has_more = rows.len() > usize::try_from(page_size).unwrap_or(usize::MAX);
+    rows.truncate(usize::try_from(page_size).unwrap_or(usize::MAX));
+    let next_cursor = if has_more {
+        rows.last().map(|r| operations_cursor(r.created_at, r.id))
+    } else {
+        None
+    };
+
+    if after.is_none() && ctx.is_admin {
+        let builds: Vec<(String, Option<i64>, Option<i64>, Option<DateTime<Utc>>, i32)> =
+            match sqlx::query_as(INDEX_BUILDS_SQL)
+                .fetch_all(&state.base.db_migrator)
+                .await
+            {
+                Ok(builds) => builds,
+                Err(error) => {
+                    // The list still answers; only the live builds are missing.
+                    tracing::warn!(%error, "operations: index builds could not be read");
+                    Vec::new()
+                }
+            };
+        let mut live: Vec<OperationSummary> = builds
+            .into_iter()
+            .map(|(entity, done, total, started, pid)| {
+                let started = started.unwrap_or_else(Utc::now);
+                OperationSummary {
+                    id: Uuid::new_v5(
+                        &Uuid::NAMESPACE_OID,
+                        format!("index-build:{pid}:{}", started.timestamp_micros()).as_bytes(),
+                    ),
+                    kind: "index_build".into(),
+                    action: Some("create_index".into()),
+                    entity,
+                    status: "running".into(),
+                    rows_done: done,
+                    estimated_rows: total,
+                    started_by: None,
+                    reason: None,
+                    created_at: started,
+                    finished_at: None,
+                }
+            })
+            .collect();
+        live.append(&mut rows);
+        rows = live;
+    }
+    Ok(Json(CursorPage::new(rows, next_cursor)))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route("/api/v1/admin/operations", get(list_operations))
         .route("/api/v1/admin/jobs/dead-letter", get(list_dead_letter))
         .route("/api/v1/admin/jobs/lanes", get(lanes))
         .route("/api/v1/admin/jobs/{id}/replay", post(replay))
@@ -659,7 +868,8 @@ pub fn routes() -> Router<EngineState> {
     my_batches,
     pending_timers,
     batch_progress,
-    cancel_batch
+    cancel_batch,
+    list_operations
 ))]
 struct ApiDocFragment;
 
