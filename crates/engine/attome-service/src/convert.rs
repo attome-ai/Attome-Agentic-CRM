@@ -382,11 +382,15 @@ pub async fn convert_work_request_to_project(
     })
 }
 
+/// Convert a work request to a ticket
+///
+/// Creates a service ticket from the work request and marks the request converted, in one transaction.
+/// Needs the right to create tickets and to update the request. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/work-request/{id}/convert-to-ticket",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The work request")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
         (attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create),
         (attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Create),
@@ -413,11 +417,15 @@ async fn convert_to_ticket(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
+/// Convert a work request to a task
+///
+/// Creates a task from the work request and marks the request converted, in one transaction. Needs the
+/// right to create tasks and to update the request. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/work-request/{id}/convert-to-task",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The work request")),
     request_body = ConvertToTaskRequest,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
         (attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create),
@@ -445,11 +453,15 @@ async fn convert_to_task(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
+/// Convert a work request to a project
+///
+/// Creates a project from the work request and marks the request converted, in one transaction. Needs
+/// the right to create projects and to update the request. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/work-request/{id}/convert-to-project",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The work request")),
     request_body = ConvertToProjectRequest,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
         (attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create),
@@ -797,7 +809,7 @@ pub async fn convert_with_maps(
     post,
     path = "/api/v1/work-request/{id}/convert",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The work request")),
     request_body = ConvertWithMapsRequest,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
         (attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create),

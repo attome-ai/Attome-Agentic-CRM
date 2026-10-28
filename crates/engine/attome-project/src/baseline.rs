@@ -305,11 +305,15 @@ pub async fn capture_baseline(
     ))
 }
 
+/// Capture a project baseline
+///
+/// Saves a snapshot of the project's work-item schedule that later progress is compared with;
+/// baselines are never changed. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/project/{id}/baseline",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The project")),
     request_body = CaptureBaselineRequest,
     responses(
         (status = 200, description = "A baseline with this label already existed for this project; returned as-is", body = CaptureBaselineResponse),

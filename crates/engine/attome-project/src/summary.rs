@@ -204,11 +204,15 @@ async fn actual_cost(
     Ok(Some(cost))
 }
 
+/// Read a project's summary
+///
+/// The control centre tiles, computed live: health, weighted progress, budget consumed, open risks
+/// and pending approvals.
 #[utoipa::path(
     get,
     path = "/api/v1/project/{id}/summary",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The project")),
     responses(
         (status = 200, description = "Success", body = ProjectSummaryResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

@@ -206,11 +206,15 @@ async fn fetch_rollup(db: &DbPool, project_id: Uuid) -> Result<Vec<RollupRow>, A
     .map_err(AppError::internal)
 }
 
+/// Read a project's work breakdown
+///
+/// The work-item tree with each phase's progress weighted by points, computed when read; nothing is
+/// stored on the parent.
 #[utoipa::path(
     get,
     path = "/api/v1/project/{id}/work-items/rollup",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The project")),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<WorkItemRollupRow>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

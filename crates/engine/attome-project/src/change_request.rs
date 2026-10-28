@@ -376,11 +376,15 @@ async fn decide(
     Ok((StatusCode::OK, response))
 }
 
+/// Approve a project change request
+///
+/// Approves the change request through the four-eyes gate: when the approval policy requires it, this
+/// submits an approval request a second person decides; otherwise it applies now. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/project/change-request/{id}/approve",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The change request")),
     responses(
         (status = 200, description = "Success", body = ChangeRequestDecisionResponse),
         (status = 202, description = "Four-eyes approval required — request submitted", body = ChangeRequestDecisionResponse),
@@ -404,11 +408,14 @@ async fn approve_change_request(
     Ok((status, Json(response)))
 }
 
+/// Reject a project change request
+///
+/// Rejects the change request, through the same four-eyes gate as approving. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/project/change-request/{id}/reject",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The change request")),
     responses(
         (status = 200, description = "Success", body = ChangeRequestDecisionResponse),
         (status = 202, description = "Four-eyes approval required — request submitted", body = ChangeRequestDecisionResponse),

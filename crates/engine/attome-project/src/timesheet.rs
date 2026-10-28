@@ -150,11 +150,15 @@ async fn decide_as(
     })
 }
 
+/// Submit a timesheet
+///
+/// Moves the owner's timesheet from draft to submitted for review; no approval gate applies to one's
+/// own submission. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/project/timesheet/{id}/submit",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The timesheet")),
     responses(
         (status = 200, description = "Success", body = TimesheetDecisionResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -219,11 +223,15 @@ async fn decide(
     Ok((StatusCode::OK, response))
 }
 
+/// Approve a timesheet
+///
+/// Approves a submitted timesheet through the four-eyes gate, so its period is locked; when the
+/// approval policy requires it, a second person decides. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/project/timesheet/{id}/approve",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The timesheet")),
     responses(
         (status = 200, description = "Success", body = TimesheetDecisionResponse),
         (status = 202, description = "Four-eyes approval required — request submitted", body = TimesheetDecisionResponse),
@@ -247,11 +255,14 @@ async fn approve_timesheet(
     Ok((status, Json(response)))
 }
 
+/// Reject a timesheet
+///
+/// Sends a submitted timesheet back, through the same four-eyes gate as approving. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/project/timesheet/{id}/reject",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The timesheet")),
     responses(
         (status = 200, description = "Success", body = TimesheetDecisionResponse),
         (status = 202, description = "Four-eyes approval required — request submitted", body = TimesheetDecisionResponse),
