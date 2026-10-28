@@ -1670,7 +1670,7 @@
         ],
         "summary": "Who is on call over a range",
         "description": "H7-T2: the stretches of one on-call schedule over at most 62 days, in time order, each with the person on call and whether the rotation or an override put them there; gaps with nobody on call are left out. The whole answer is on page 1.",
-        "operationId": "get_calendar",
+        "operationId": "get_oncall_calendar",
         "parameters": [
           {
             "name": "id",

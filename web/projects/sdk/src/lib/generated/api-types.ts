@@ -25614,7 +25614,7 @@ export interface paths {
          * Who is on call over a range
          * @description H7-T2: the stretches of one on-call schedule over at most 62 days, in time order, each with the person on call and whether the rotation or an override put them there; gaps with nobody on call are left out. The whole answer is on page 1.
          */
-        get: operations["get_calendar"];
+        get: operations["get_oncall_calendar"];
         put?: never;
         post?: never;
         delete?: never;
@@ -138864,7 +138864,7 @@ export interface operations {
             };
         };
     };
-    get_calendar: {
+    get_oncall_calendar: {
         parameters: {
             query: {
                 /** @description The range's start (inclusive). */
