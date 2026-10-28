@@ -104,6 +104,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   Above `limits.heavy_op.agent_confirm_rows` (100) the start refuses and the agent calls
   `record.mass.start_confirmed` with the estimate as `confirm_rows`; a person confirms that, no
   autonomy level lifts it, and it refuses to run if the filter now selects more than was confirmed.
+- Sign-in setup, for administrators only:
+  - `identity.propose_oidc_provider` reads a provider's discovery document from its issuer
+    URL (public addresses only, 5 seconds). It drafts the provider settings: the preset,
+    scopes, claim names and the groups claim to map, with warnings.
+  - The draft never holds a secret and is never saved. A person adds the provider from it.
 - Questions: `query.plan` turns a question into a checked query (entity, filters, order, limit) and
   returns the issues to fix, or a description for the person and the `query.execute` arguments that
   run it. The model never writes SQL.
