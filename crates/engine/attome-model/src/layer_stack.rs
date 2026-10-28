@@ -63,6 +63,62 @@ pub fn effective(
     (values, winners)
 }
 
+/// Y11-T6: a property the platform changed that another layer set to
+/// something else.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Conflict {
+    pub property: String,
+    /// The platform's value before the change; `None` when it had none.
+    pub old_platform: Option<Value>,
+    pub new_platform: Value,
+    /// The value the app or customer layer holds.
+    pub customer: Value,
+}
+
+/// What [`three_way`] makes of an upgrade.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct MergeResult {
+    /// The new platform values with every property the other layer holds
+    /// kept as it is: conflicting or not, nothing is overwritten.
+    pub merged: Map<String, Value>,
+    /// The properties changed on both sides to different values.
+    pub conflicts: Vec<Conflict>,
+}
+
+/// Y11-T6: the three-way merge at upgrade. `old_platform` is what the
+/// platform last set, `new_platform` what it sets now and `customer` what an
+/// app or the customer set. A property only the platform changed takes the
+/// new value; one the other layer holds keeps it; one both changed (the
+/// platform from a value it had recorded, the other layer to a different
+/// value) is a conflict. Pure.
+pub fn three_way(
+    old_platform: &Map<String, Value>,
+    new_platform: &Map<String, Value>,
+    customer: &Map<String, Value>,
+) -> MergeResult {
+    let mut result = MergeResult::default();
+    for (property, new) in new_platform {
+        match customer.get(property) {
+            None => {
+                result.merged.insert(property.clone(), new.clone());
+            }
+            Some(held) => {
+                result.merged.insert(property.clone(), held.clone());
+                let old = old_platform.get(property);
+                if old.is_some_and(|old| old != new) && held != new {
+                    result.conflicts.push(Conflict {
+                        property: property.clone(),
+                        old_platform: old.cloned(),
+                        new_platform: new.clone(),
+                        customer: held.clone(),
+                    });
+                }
+            }
+        }
+    }
+    result
+}
+
 /// Y11-T5: one property across the layers: each layer's value, in merge
 /// order (platform, apps in install order, customer), and the winner.
 #[derive(Debug, Clone, PartialEq)]
@@ -227,6 +283,46 @@ mod tests {
             effective(&base, &rows, &reversed).0["label"],
             json!("Company")
         );
+    }
+
+    #[test]
+    fn non_conflicting_properties_merge() {
+        let old = map(json!({ "label": "Phone", "max_length": 20, "required": false }));
+        let new = map(json!({ "label": "Phone", "max_length": 32, "required": true }));
+        let customer = map(json!({ "label": "Mobile" }));
+        let result = three_way(&old, &new, &customer);
+        assert!(result.conflicts.is_empty(), "{result:?}");
+        assert_eq!(
+            result.merged,
+            map(json!({ "label": "Mobile", "max_length": 32, "required": true }))
+        );
+        // The customer chose what the platform now chooses: no conflict.
+        let same = map(json!({ "max_length": 32 }));
+        assert!(three_way(&old, &new, &same).conflicts.is_empty());
+    }
+
+    #[test]
+    fn same_property_changed_both_sides_is_conflict() {
+        let old = map(json!({ "max_length": 20 }));
+        let new = map(json!({ "max_length": 32 }));
+        let customer = map(json!({ "max_length": 50 }));
+        let result = three_way(&old, &new, &customer);
+        assert_eq!(
+            result.conflicts,
+            vec![Conflict {
+                property: "max_length".into(),
+                old_platform: Some(json!(20)),
+                new_platform: json!(32),
+                customer: json!(50),
+            }]
+        );
+        assert_eq!(
+            result.merged["max_length"],
+            json!(50),
+            "nothing is overwritten"
+        );
+        // A platform value it never recorded cannot be known to have changed.
+        assert!(three_way(&Map::new(), &new, &customer).conflicts.is_empty());
     }
 
     #[test]

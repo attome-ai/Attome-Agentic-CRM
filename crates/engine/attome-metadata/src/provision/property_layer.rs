@@ -14,6 +14,11 @@
 //!   for every property no app or customer row holds, and keeps the current
 //!   value for the ones that do. A steady-state boot, which changes nothing,
 //!   reads no layer rows.
+//! - **Conflicts (Y11-T6).** When the platform changes a property (its
+//!   layer row's value against the seed's) that an app or the customer holds
+//!   with a different value, the seed keeps the held value and records an
+//!   open `metadata_layer_conflict` for a builder to resolve; nothing is
+//!   merged automatically (`attome_model::layer_stack::three_way`).
 //! - **Backfill.** A row customised before this existed has no layer rows.
 //!   The first seed pass over it records a customer row for every property
 //!   the seed manages whose stored value differs from the seed's: the
@@ -151,16 +156,37 @@ pub(super) async fn seed_keeps(
     .await
     .map_err(AppError::internal)?;
     if any {
-        let kept: Vec<String> = sqlx::query_scalar(
-            "SELECT DISTINCT property FROM metadata_property_layer \
-              WHERE object_kind = $1 AND object_key = $2 AND layer <> 'platform'",
+        let rows: Vec<(String, String, Option<Value>)> = sqlx::query_as(
+            "SELECT property, layer, value FROM metadata_property_layer \
+              WHERE object_kind = $1 AND object_key = $2 \
+              ORDER BY property, layer",
         )
         .bind(kind)
         .bind(key)
         .fetch_all(db)
         .await
         .map_err(AppError::internal)?;
-        return Ok(kept.into_iter().collect());
+        let mut old_platform = Map::new();
+        let mut held = Map::new();
+        for (property, layer, value) in rows {
+            let value = value.unwrap_or(Value::Null);
+            if layer == "platform" {
+                old_platform.insert(property, value);
+            } else {
+                // `app` sorts before `customer`, so the customer's value,
+                // which wins the merge, is the one left standing.
+                held.insert(property, value);
+            }
+        }
+        let kept: BTreeSet<String> = held.keys().cloned().collect();
+        // Y11-T6: a platform change to a property another layer holds is a
+        // conflict to resolve, never merged here; the seed keeps the value.
+        let new_platform = only(seed, managed);
+        let merge = attome_model::layer_stack::three_way(&old_platform, &new_platform, &held);
+        if !merge.conflicts.is_empty() {
+            record_conflicts(db, kind, key, &merge.conflicts, &new_platform).await?;
+        }
+        return Ok(kept);
     }
     if !customised {
         return Ok(BTreeSet::new());
@@ -172,6 +198,47 @@ pub(super) async fn seed_keeps(
         tx.commit().await.map_err(AppError::internal)?;
     }
     Ok(differing.into_keys().collect())
+}
+
+/// Y11-T6: records `conflicts` open (one per property; a later platform
+/// change updates the open one) and the platform's new values as its layer
+/// rows, in one transaction, so the next boot does not find the same change
+/// again. The metadata row itself is left as it is.
+async fn record_conflicts(
+    db: &DbPool,
+    kind: &str,
+    key: &str,
+    conflicts: &[attome_model::layer_stack::Conflict],
+    new_platform: &Map<String, Value>,
+) -> Result<(), AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    for conflict in conflicts {
+        sqlx::query(
+            "INSERT INTO metadata_layer_conflict \
+                 (object_kind, object_key, property, old_platform, new_platform, customer) \
+             VALUES ($1, $2, $3, $4, $5, $6) \
+             ON CONFLICT (object_kind, object_key, property) WHERE status = 'open' \
+             DO UPDATE SET new_platform = EXCLUDED.new_platform, customer = EXCLUDED.customer",
+        )
+        .bind(kind)
+        .bind(key)
+        .bind(&conflict.property)
+        .bind(&conflict.old_platform)
+        .bind(&conflict.new_platform)
+        .bind(&conflict.customer)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        tracing::warn!(
+            object_kind = %kind,
+            object_key = %key,
+            property = %conflict.property,
+            "metadata upgrade: the platform changed a property the customer set; kept, conflict recorded"
+        );
+    }
+    record_in_tx(&mut tx, kind, key, Stamp::Platform, new_platform).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok(())
 }
 
 #[cfg(test)]

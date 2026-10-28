@@ -21,6 +21,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Changed
+- A platform upgrade that changes a property the customer also changed no longer keeps the customer's
+  value silently (Y11-T6): it keeps it and records an open conflict in `metadata_layer_conflict` with
+  the old and new platform values and the customer's, for a builder to resolve.
 - A platform upgrade now fixes the parts of an entity or field a customer did not change (Y11-T4).
   Each metadata write records which properties it set and for which layer (platform, app or
   customer); a seed applies the platform's definition property by property and keeps what an app

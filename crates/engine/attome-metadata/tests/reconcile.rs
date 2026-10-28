@@ -1045,3 +1045,73 @@ async fn seed_keeps_customer_label() {
     .expect("second seed");
     assert_eq!(outcome, ReconcileOutcome::Unchanged);
 }
+
+/// Y11-T6: a platform change to a property the customer also changed is a
+/// conflict: the seed writes one open conflict and leaves the value alone,
+/// and running again does not add a second one.
+#[tokio::test]
+async fn seed_records_a_conflict_instead_of_overwriting_the_customer() {
+    let db = skip_if_no_db!(test_db().await);
+    let entity_ln = unique_logicalname("test_layer");
+    let (entity_id, _) = reconcile_entity(
+        &db,
+        &entity_desc(&entity_ln, "Layers"),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("create entity");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 20),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("seed attribute");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 50),
+        ReconcilePolicy::Admin,
+    )
+    .await
+    .expect("the customer widens it");
+    let key = format!("{entity_ln}.title");
+
+    for _ in 0..2 {
+        reconcile_attribute(
+            &db,
+            entity_id,
+            &sized_attr("Phone", 32),
+            ReconcilePolicy::Seed,
+        )
+        .await
+        .expect("the platform changes it too");
+    }
+    assert_eq!(
+        attr_probe(&db, entity_id, "title").await.max_length,
+        Some(50)
+    );
+    let conflicts: Vec<(
+        String,
+        Option<serde_json::Value>,
+        serde_json::Value,
+        serde_json::Value,
+    )> = sqlx::query_as(
+        "SELECT property, old_platform, new_platform, customer FROM metadata_layer_conflict \
+              WHERE object_kind = 'attribute' AND object_key = $1 AND status = 'open'",
+    )
+    .bind(&key)
+    .fetch_all(&db)
+    .await
+    .expect("read conflicts");
+    assert_eq!(
+        conflicts,
+        vec![(
+            "max_length".to_owned(),
+            Some(serde_json::json!(20)),
+            serde_json::json!(32),
+            serde_json::json!(50),
+        )]
+    );
+}
