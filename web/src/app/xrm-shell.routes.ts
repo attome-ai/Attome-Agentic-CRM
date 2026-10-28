@@ -143,6 +143,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin').then(m => m.SecretsInventoryComponent),
           },
           {
+            // A31-T5: entity settings, data protection and the comparison.
+            path: 'entity-settings',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin').then(m => m.EntitySettingsComponent),
+          },
+          {
             // M10-T4: every pending timer.
             path: 'timers',
             canActivate: [authGuard],

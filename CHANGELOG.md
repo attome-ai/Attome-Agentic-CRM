@@ -45,6 +45,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- An entity settings page at `/xrm/admin/entity-settings` (A31-T5): an entity's preset and per-feature
+  switches, each with what it costs to keep on, saved and published as its `entity_settings` object;
+  a data-protection card (field labels, encryption, retention rules, active legal holds); and a table
+  comparing every entity's effective settings.
 - Status page data and reads (AB11-T1, AB11-T2): migration 0314 adds components (seeded sign-in,
   records, search, email, AI, portal, integrations), incidents with append-only updates,
   maintenance windows and status subscribers. `GET /api/v1/ops/status` (any signed-in user) gives
