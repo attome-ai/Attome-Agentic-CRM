@@ -7,8 +7,10 @@
 //! * create → unchanged (the steady-state reseed reports `Unchanged`; no
 //!   duplicate rows, same id);
 //! * an `Admin` update applies and sets `is_customized`;
-//! * a `Seed` against a customized row returns `SkippedCustomized` and
-//!   writes nothing (§6 "Ownership (c)" — the guard step 19 names);
+//! * a `Seed` against a customized row keeps every property an admin set
+//!   (Y11-T4: they are customer-layer rows) and still applies the platform's
+//!   other properties; a retired customized row returns `SkippedCustomized`
+//!   and writes nothing (§6 "Ownership (c)");
 //! * a field-type change is refused with `Validation` (D-055);
 //! * retire is `is_active = false` only, idempotent, and a later reconcile
 //!   reactivates the *same* row rather than inserting a second one;
@@ -305,7 +307,9 @@ async fn admin_update_sets_is_customized_and_seed_then_skips_it() {
         "an admin write marks the row customized"
     );
 
-    // §6 "Ownership (c)": the next boot's seed must NOT "fix" the row.
+    // §6 "Ownership (c)": the next boot's seed must NOT "fix" what the admin
+    // set (Y11-T4: the admin's properties are customer-layer rows), and here
+    // it sets nothing else.
     let (id, outcome) = reconcile_attribute(
         &db,
         entity_id,
@@ -315,7 +319,7 @@ async fn admin_update_sets_is_customized_and_seed_then_skips_it() {
     .await
     .expect("seed against customized row");
     assert_eq!(id, attr_id);
-    assert_eq!(outcome, ReconcileOutcome::SkippedCustomized);
+    assert_eq!(outcome, ReconcileOutcome::Unchanged);
     let probe = attr_probe(&db, entity_id, "title").await;
     assert_eq!(probe.name.as_deref(), Some("Customer Title"));
     assert_eq!(
@@ -889,4 +893,155 @@ async fn seed_without_an_opinion_leaves_is_write_restricted_alone() {
         !write_restricted(&db, attr_id).await,
         "an Admin description owns the column: None means false"
     );
+}
+
+/// A text attribute whose label is `label` and `max_length` is `max_length`.
+fn sized_attr(label: &str, max_length: i32) -> AttributeDesc {
+    let mut desc = text_attr("title", label);
+    desc.max_length = Some(max_length);
+    desc
+}
+
+async fn layer_of(db: &DbPool, key: &str, property: &str) -> Vec<(String, serde_json::Value)> {
+    sqlx::query_as(
+        "SELECT layer, value FROM metadata_property_layer           WHERE object_kind = 'attribute' AND object_key = $1 AND property = $2           ORDER BY layer",
+    )
+    .bind(key)
+    .bind(property)
+    .fetch_all(db)
+    .await
+    .expect("read property layers")
+}
+
+/// Y11-T4: a platform fix to `max_length` reaches a field whose label the
+/// customer changed, and the label stays the customer's.
+#[tokio::test]
+async fn seed_updates_unchanged_property_of_customised_row() {
+    let db = skip_if_no_db!(test_db().await);
+    let entity_ln = unique_logicalname("test_layer");
+    let (entity_id, _) = reconcile_entity(
+        &db,
+        &entity_desc(&entity_ln, "Layers"),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("create entity");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 20),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("seed attribute");
+    let key = format!("{entity_ln}.title");
+    assert_eq!(
+        layer_of(&db, &key, "max_length").await,
+        vec![("platform".to_owned(), serde_json::json!(20))],
+        "a seed records the properties it sets as the platform's"
+    );
+
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Mobile", 20),
+        ReconcilePolicy::Admin,
+    )
+    .await
+    .expect("admin relabels");
+    assert_eq!(
+        layer_of(&db, &key, "name").await,
+        vec![
+            ("customer".to_owned(), serde_json::json!("Mobile")),
+            ("platform".to_owned(), serde_json::json!("Phone")),
+        ]
+    );
+    assert!(
+        layer_of(&db, &key, "max_length")
+            .await
+            .iter()
+            .all(|(layer, _)| layer == "platform"),
+        "the admin did not change max_length, so it records no customer row for it"
+    );
+
+    let (_, outcome) = reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 32),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("the platform fixes max_length");
+    assert_eq!(outcome, ReconcileOutcome::Updated);
+    let probe = attr_probe(&db, entity_id, "title").await;
+    assert_eq!(probe.name.as_deref(), Some("Mobile"));
+    assert_eq!(probe.max_length, Some(32));
+    assert!(probe.is_customized, "a seed never clears the marker");
+}
+
+/// Y11-T4: a row customised before property layers existed has none; the
+/// first seed pass records what differs from the platform as the customer's
+/// (the backfill), so the label survives. It cannot tell a customer edit from
+/// an older platform value, so a differing `max_length` is kept too.
+#[tokio::test]
+async fn seed_keeps_customer_label() {
+    let db = skip_if_no_db!(test_db().await);
+    let entity_ln = unique_logicalname("test_layer");
+    let (entity_id, _) = reconcile_entity(
+        &db,
+        &entity_desc(&entity_ln, "Layers"),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("create entity");
+    let (attr_id, _) = reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 20),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("seed attribute");
+    let key = format!("{entity_ln}.title");
+    // As a deployment from before Y11-T4 has it: customised, no layer rows.
+    sqlx::query("UPDATE attribute_info SET name = 'Mobile', is_customized = true WHERE id = $1")
+        .bind(attr_id)
+        .execute(&db)
+        .await
+        .expect("customise the old way");
+    sqlx::query(
+        "DELETE FROM metadata_property_layer WHERE object_kind = 'attribute' AND object_key = $1",
+    )
+    .bind(&key)
+    .execute(&db)
+    .await
+    .expect("no layer rows yet");
+
+    let (_, outcome) = reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 32),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("seed after upgrade");
+    assert_eq!(outcome, ReconcileOutcome::Unchanged);
+    let probe = attr_probe(&db, entity_id, "title").await;
+    assert_eq!(probe.name.as_deref(), Some("Mobile"));
+    assert_eq!(probe.max_length, Some(20));
+    assert_eq!(
+        layer_of(&db, &key, "name").await,
+        vec![("customer".to_owned(), serde_json::json!("Mobile"))]
+    );
+
+    // Recorded once: the next seed reads the rows and keeps the label again.
+    let (_, outcome) = reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 32),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("second seed");
+    assert_eq!(outcome, ReconcileOutcome::Unchanged);
 }

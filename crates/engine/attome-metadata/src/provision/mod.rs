@@ -43,6 +43,7 @@ pub mod lookup_fk;
 pub mod master;
 /// Y12-T6 — backfill batch sizes that follow the load.
 pub mod pacing;
+mod property_layer;
 mod reconcile;
 /// A27-T1 — the `record_type` attribute an entity gets with its first type.
 pub mod record_type;

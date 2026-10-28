@@ -23,9 +23,12 @@
 //!   racy by design (two nodes can both decide to write); the write path
 //!   then serializes on the global metadata-write lock and the loser gets
 //!   `Conflict`, exactly as before.
-//! * **Ownership is one boolean.** Under `Seed`, a row whose `is_customized`
-//!   is `true` is never written — the call logs the skip at `info` with the
-//!   row's key and returns [`ReconcileOutcome::SkippedCustomized`]. A seed
+//! * **Ownership is per property (Y11-T4, `property_layer`).** Every write
+//!   records the properties it sets under its layer. Under `Seed`, a live row
+//!   takes the seed's value for every property no app or customer row holds
+//!   and keeps the others (a customised one with no layer rows yet is
+//!   backfilled first); a retired customised row is never written — the call logs the skip at `info` with
+//!   the row's key and returns [`ReconcileOutcome::SkippedCustomized`]. A seed
 //!   never sets `is_customized`. `Admin` sets it `true`; `Bundle` sets it to
 //!   the value the bundle carries. For `Admin`/`Bundle` the marker is part of
 //!   the diff, so an admin write that changes nothing else still marks the
@@ -86,14 +89,19 @@
 //!   not; bundle apply fires one doorbell at the end; admin handlers already
 //!   notify).
 
+use std::collections::BTreeSet;
+
 use attome_db::DbPool;
 use attome_types::AppError;
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use uuid::Uuid;
 
 use super::changeset::{self, ObjectKind, RecordAs};
 use super::identifiers::{
     is_multi_valued, physical_field_type, type_to_int, valid_field_type, valid_identifier,
 };
+use super::property_layer;
 use super::schema_change::{ChangeClassification, classify_schema_change, evolve_attribute_schema};
 use super::table::{provision_column, provision_table};
 use attome_core::changeset::Op;
@@ -215,8 +223,9 @@ fn valid_data_classification(s: &str) -> bool {
 // ── Entity ───────────────────────────────────────────────────────────────────
 
 /// The managed columns of an `entity_info` row — what the diff
-/// compares and what the UPDATE writes.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// compares and what the UPDATE writes. Its fields are the property names
+/// `metadata_property_layer` records (Y11-T4).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct EntityState {
     name: String,
     primary_name_attribute: Option<String>,
@@ -266,6 +275,55 @@ fn entity_changes(current: Option<&EntityRow>, desired: &EntityState) -> Vec<&'s
     );
     changeset::diff(&mut changed, "category", &row.category, &desired.category);
     changed
+}
+
+/// The state a stored entity row has.
+fn entity_state_of(row: &EntityRow) -> EntityState {
+    EntityState {
+        name: row.name.clone(),
+        primary_name_attribute: row.primary_name_attribute.clone(),
+        is_append_only: row.is_append_only,
+        is_audited: row.is_audited,
+        category: row.category.clone(),
+    }
+}
+
+/// Y11-T4: the entity properties a seed's description sets (an `Option`
+/// left `None` is one the seed does not manage).
+fn entity_seed_managed(desc: &EntityDesc) -> BTreeSet<&'static str> {
+    let mut managed: BTreeSet<&'static str> = ["name", "is_append_only", "is_audited"].into();
+    if desc.primary_name_attribute.is_some() {
+        managed.insert("primary_name_attribute");
+    }
+    if desc.category.is_some() {
+        managed.insert("category");
+    }
+    managed
+}
+
+/// Y11-T4: the properties a write records, under its layer: a seed's
+/// managed ones, or what an admin or bundle write sets (everything on a
+/// create or a reactivation).
+fn layer_values<T: Serialize>(
+    policy: ReconcilePolicy,
+    seed_managed: &BTreeSet<&str>,
+    live_before: Option<&T>,
+    desired: &T,
+) -> Result<Map<String, Value>, AppError> {
+    let after = property_layer::to_map(desired)?;
+    Ok(match policy {
+        ReconcilePolicy::Seed => property_layer::only(&after, seed_managed),
+        _ => {
+            let before = live_before.map(property_layer::to_map).transpose()?;
+            property_layer::changed(before.as_ref(), &after)
+        }
+    })
+}
+
+/// Y11-T4: whether a seed works on a row property by property (a live
+/// row) rather than skipping it when it is customised (a retired one).
+fn seed_per_property(policy: ReconcilePolicy, is_live: bool) -> bool {
+    policy == ReconcilePolicy::Seed && is_live
 }
 
 /// Prefers the live row; otherwise the most recently created retired one
@@ -349,7 +407,7 @@ pub async fn reconcile_entity_recorded(
         changeset::check_owner(rec, &row.owner_layer)?;
     }
     let layer = changeset::layer_for(policy, rec)?;
-    let desired = EntityState {
+    let mut desired = EntityState {
         name: desc.display_name.clone(),
         primary_name_attribute: managed_value(
             policy,
@@ -366,19 +424,51 @@ pub async fn reconcile_entity_recorded(
             current.as_ref().and_then(|r| r.category.clone()),
         ),
     };
-    let state_differs = current.as_ref().is_some_and(|r| {
-        EntityState {
-            name: r.name.clone(),
-            primary_name_attribute: r.primary_name_attribute.clone(),
-            is_append_only: r.is_append_only,
-            is_audited: r.is_audited,
-            category: r.category.clone(),
-        } != desired
-    });
+    let seed_managed = entity_seed_managed(desc);
+    // Y11-T4: what the seed alone would set, before what other layers hold
+    // is kept; its managed properties are the platform's layer rows.
+    let seed_desired = desired.clone();
+    // Only when the seed would change the row, so a steady-state boot reads
+    // nothing more.
+    if let Some(row) = current.as_ref()
+        && seed_per_property(policy, row.is_live)
+        && entity_state_of(row) != desired
+    {
+        let before = property_layer::to_map(&entity_state_of(row))?;
+        let seed = property_layer::to_map(&desired)?;
+        let kept = property_layer::seed_keeps(
+            db,
+            property_layer::ENTITY,
+            logicalname,
+            &before,
+            &seed,
+            &seed_managed,
+            row.is_customized,
+        )
+        .await?;
+        desired = property_layer::from_map(property_layer::keep(&seed, &before, &kept))?;
+    }
+    let state_differs = current
+        .as_ref()
+        .is_some_and(|r| entity_state_of(r) != desired);
     let status = current.as_ref().map(|r| RowStatus {
-        is_customized: r.is_customized,
+        is_customized: r.is_customized && !seed_per_property(policy, r.is_live),
         is_live: r.is_live,
     });
+    let entity_layer_values = layer_values(
+        policy,
+        &seed_managed,
+        current
+            .as_ref()
+            .filter(|r| r.is_live)
+            .map(entity_state_of)
+            .as_ref(),
+        if policy == ReconcilePolicy::Seed {
+            &seed_desired
+        } else {
+            &desired
+        },
+    )?;
 
     match decide_step(policy, status, state_differs) {
         WriteStep::Unchanged => {
@@ -493,6 +583,14 @@ pub async fn reconcile_entity_recorded(
                 }
             };
 
+            property_layer::record_in_tx(
+                &mut tx,
+                property_layer::ENTITY,
+                logicalname,
+                layer,
+                &entity_layer_values,
+            )
+            .await?;
             // `provision_table` already ran above, before `begin()`.
             // The log row and the metadata write it describes are atomic
             // (append_change_log's own contract); the changeset operation,
@@ -529,8 +627,9 @@ pub async fn reconcile_entity_recorded(
 
 /// The managed columns of an `attribute_info` row (everything the
 /// admin UPDATE writes, plus `is_sensitive`). `"type"` is deliberately absent:
-/// it is compared separately and never rewritten.
-#[derive(Clone, Debug, PartialEq)]
+/// it is compared separately and never rewritten. Its fields are the
+/// property names `metadata_property_layer` records (Y11-T4).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct AttributeState {
     name: String,
     required: bool,
@@ -615,6 +714,36 @@ impl AttributeState {
             purpose: row.purpose.clone(),
         }
     }
+}
+
+/// Y11-T4: the attribute properties a seed's description sets (an
+/// `Option` left `None` is one the seed does not manage).
+fn attribute_seed_managed(
+    desc: &AttributeDesc,
+    lookup_entity_ref: Option<Uuid>,
+) -> BTreeSet<&'static str> {
+    let mut managed: BTreeSet<&'static str> = [
+        "name",
+        "required",
+        "is_sensitive",
+        "is_sortable",
+        "is_filterable",
+    ]
+    .into();
+    for (property, set) in [
+        ("is_write_restricted", desc.is_write_restricted.is_some()),
+        ("max_length", desc.max_length.is_some()),
+        ("lookup_entity_ref", lookup_entity_ref.is_some()),
+        ("options", desc.options.is_some()),
+        ("on_target_delete", desc.on_target_delete.is_some()),
+        ("data_classification", desc.data_classification.is_some()),
+        ("purpose", desc.purpose.is_some()),
+    ] {
+        if set {
+            managed.insert(property);
+        }
+    }
+    managed
 }
 
 #[derive(sqlx::FromRow)]
@@ -782,7 +911,44 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
     if let Some(row) = current.as_ref() {
         changeset::check_owner(rec, &row.owner_layer)?;
     }
-    let desired = AttributeState::desired(desc, lookup_entity_ref, current.as_ref(), policy);
+    let mut desired = AttributeState::desired(desc, lookup_entity_ref, current.as_ref(), policy);
+    let seed_managed = attribute_seed_managed(desc, lookup_entity_ref);
+    let object_key = format!("{entity_logicalname}.{logicalname}");
+    // Y11-T4: what the seed alone would set, before what other layers hold
+    // is kept; its managed properties are the platform's layer rows.
+    let seed_desired = desired.clone();
+    if let Some(row) = current.as_ref()
+        && seed_per_property(policy, row.is_live)
+        && AttributeState::from_row(row) != desired
+    {
+        let before = property_layer::to_map(&AttributeState::from_row(row))?;
+        let seed = property_layer::to_map(&desired)?;
+        let kept = property_layer::seed_keeps(
+            db,
+            property_layer::ATTRIBUTE,
+            &object_key,
+            &before,
+            &seed,
+            &seed_managed,
+            row.is_customized,
+        )
+        .await?;
+        desired = property_layer::from_map(property_layer::keep(&seed, &before, &kept))?;
+    }
+    let attribute_layer_values = layer_values(
+        policy,
+        &seed_managed,
+        current
+            .as_ref()
+            .filter(|r| r.is_live)
+            .map(AttributeState::from_row)
+            .as_ref(),
+        if policy == ReconcilePolicy::Seed {
+            &seed_desired
+        } else {
+            &desired
+        },
+    )?;
     let physical_type = physical_field_type(field_type, desired.options.as_ref());
     let key = AttributeKey {
         entity_id,
@@ -804,7 +970,7 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
         .as_ref()
         .is_some_and(|r| AttributeState::from_row(r) != desired);
     let status = current.as_ref().map(|r| RowStatus {
-        is_customized: r.is_customized,
+        is_customized: r.is_customized && !seed_per_property(policy, r.is_live),
         is_live: r.is_live,
     });
     let step = decide_step(policy, status, state_differs);
@@ -872,6 +1038,7 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
                 generated.as_deref(),
                 desired_id,
                 rec,
+                &attribute_layer_values,
             )
             .await?;
             if hierarchy {
@@ -1291,6 +1458,7 @@ async fn write_attribute_row(
     generated: Option<&str>,
     desired_id: Option<Uuid>,
     rec: Option<RecordAs<'_>>,
+    layer_values: &Map<String, Value>,
 ) -> Result<Uuid, AppError> {
     let layer = changeset::layer_for(policy, rec)?;
     let AttributeKey {
@@ -1402,6 +1570,14 @@ async fn write_attribute_row(
         .map_err(map_unique_violation)?,
     };
 
+    property_layer::record_in_tx(
+        &mut tx,
+        property_layer::ATTRIBUTE,
+        &format!("{entity_logicalname}.{logicalname}"),
+        layer,
+        layer_values,
+    )
+    .await?;
     // `provision_column` already ran above, before `begin()`.
     // Keyed on the owning *entity* (matching `admin/attribute.rs`):
     // `ChangeKind::Upsert` means "re-fetch this entity's row + active

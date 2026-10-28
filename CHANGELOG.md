@@ -21,6 +21,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Changed
+- A platform upgrade now fixes the parts of an entity or field a customer did not change (Y11-T4).
+  Each metadata write records which properties it set and for which layer (platform, app or
+  customer); a seed applies the platform's definition property by property and keeps what an app
+  or the customer set, where before it skipped a customised row whole. A row customised before
+  this release keeps every property that differs from the platform's definition at the first
+  upgrade, since a customer edit and an older platform value cannot be told apart.
 - `GET /api/v1/{entity}` now runs through the same query engine as `POST /api/v1/query/run`
   (S4-T12): the same select, filter and sort answer the same rows, and paging under a sort other
   than `id` resumes at the right place. Its `next_cursor` now carries the sort keys, so a cursor
