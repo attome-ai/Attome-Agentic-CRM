@@ -279,7 +279,9 @@ async fn fetch_discovery(issuer: &str) -> Result<Value, AppError> {
         "{}/.well-known/openid-configuration",
         issuer.trim_end_matches('/')
     );
-    attome_server::ssrf_guard::validate_url(&url)
+    let parsed = reqwest::Url::parse(&url)
+        .map_err(|e| AppError::Validation(format!("issuer rejected: {e}")))?;
+    attome_server::ssrf_guard::validate_url(&parsed)
         .await
         .map_err(|e| AppError::Validation(format!("issuer rejected: {e}")))?;
     let client = attome_outbound::http::client(
