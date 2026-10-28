@@ -987,6 +987,11 @@ fn verify_claims(
     })
 }
 
+/// Q1-T11: the `amr` methods (RFC 8176) that mean a second factor at the
+/// provider. A provider added on screen counts these unless its claim map
+/// names its own; a configured provider counts only what it lists (V2-D681).
+pub const STANDARD_MFA_AMR: &[&str] = &["mfa", "otp", "hwk", "swk", "fido"];
+
 /// Q2-T2: whether the validated token says the person passed MFA at the
 /// provider: one of the provider's `mfa_acr_values` is among `amr` or equals
 /// `acr`. Always `false` for a provider with `trust_idp_mfa = false` or no
@@ -1426,6 +1431,31 @@ mod tests {
         assert!(idp_mfa_of(&keycloak, serde_json::json!({"acr": "2"})));
         assert!(!idp_mfa_of(&keycloak, serde_json::json!({"acr": "1"})));
         assert!(!idp_mfa_of(&keycloak, serde_json::json!({"acr": 2})));
+    }
+
+    /// Q1-T11: a provider added on screen starts from the standard methods.
+    #[test]
+    fn amr_mfa_counts_when_trusted() {
+        let on_screen = provider_with_mfa_values(STANDARD_MFA_AMR);
+        for method in ["mfa", "otp", "hwk", "swk", "fido"] {
+            assert!(
+                idp_mfa_of(&on_screen, serde_json::json!({"amr": ["pwd", method]})),
+                "{method}"
+            );
+        }
+        assert!(!idp_mfa_of(&on_screen, serde_json::json!({"amr": ["pwd"]})));
+    }
+
+    #[test]
+    fn amr_mfa_ignored_when_untrusted() {
+        let untrusted = OidcProviderConfig {
+            trust_idp_mfa: false,
+            ..provider_with_mfa_values(STANDARD_MFA_AMR)
+        };
+        assert!(!idp_mfa_of(
+            &untrusted,
+            serde_json::json!({"amr": ["mfa", "otp"]})
+        ));
     }
 
     #[test]

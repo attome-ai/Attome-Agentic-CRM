@@ -155,7 +155,15 @@ fn from_row(row: ProviderRow, secret: Secret) -> ProviderEntry {
             .get("require_email_verified")
             .and_then(Value::as_bool)
             .unwrap_or(true),
-        mfa_acr_values: claim_list(&row.claim_map, "mfa_acr"),
+        // Q1-T11: a new provider's MFA counts by the standard methods unless
+        // its claim map names its own values.
+        mfa_acr_values: match claim_list(&row.claim_map, "mfa_acr") {
+            values if values.is_empty() => crate::oidc::STANDARD_MFA_AMR
+                .iter()
+                .map(|v| (*v).to_owned())
+                .collect(),
+            values => values,
+        },
         trust_idp_mfa: row.trusted_for_mfa,
     };
     ProviderEntry {
@@ -370,6 +378,14 @@ mod tests {
         assert_eq!(okta.config.email_claim, "upn");
         assert_eq!(okta.config.mfa_acr_values, vec!["mfa".to_owned()]);
         assert!(!okta.trusted_for_mfa && !okta.config.trust_idp_mfa);
+        let mut plain = row("plain");
+        plain.claim_map = serde_json::json!({});
+        let merged = merge(&HashMap::new(), &HashMap::new(), vec![plain], open);
+        assert_eq!(
+            merged[0].config.mfa_acr_values,
+            crate::oidc::STANDARD_MFA_AMR,
+            "Q1-T11: an on-screen provider counts the standard methods"
+        );
         assert_eq!(okta.config.client_secret.expose(), "opened-secret");
     }
 
