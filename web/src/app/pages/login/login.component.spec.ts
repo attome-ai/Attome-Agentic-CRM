@@ -43,6 +43,9 @@ function authStub(overrides: Record<string, unknown> = {}) {
       of({ secret_base32: 'JBSWY3DPEHPK3PXP', otpauth_uri: 'otpauth://totp/attome' })),
     confirmMfaEnrollment:  vi.fn((): Observable<unknown> =>
       of({ user_id: 'user-1', recovery_codes: ['AAAA-1111', 'BBBB-2222'] })),
+    discoverOidc:          vi.fn((): Observable<unknown> => of({ provider: null })),
+    loginWithOidc:         vi.fn(),
+    postponeMfa:           vi.fn((): Observable<unknown> => of({ user_id: 'user-1' })),
     ...overrides,
   };
 }
@@ -381,8 +384,8 @@ describe('LoginComponent email first (Q1-T14)', () => {
     expect(component.askPassword()).toBe(false);
     component.form.controls.email.setValue('person@corp.example');
     component.submit();
-    expect(auth['discoverOidc']).toHaveBeenCalledWith('person@corp.example');
-    expect(auth['loginWithOidc']).toHaveBeenCalledWith('corp');
+    expect(auth.discoverOidc).toHaveBeenCalledWith('person@corp.example');
+    expect(auth.loginWithOidc).toHaveBeenCalledWith('corp');
     expect(auth.login).not.toHaveBeenCalled();
   });
 
@@ -420,7 +423,7 @@ describe('LoginComponent second-factor prompts (Q5-T10)', () => {
     expect(text(fixture)).toContain('xrmLogin.later');
     expect(auth.startMfaEnrollment).not.toHaveBeenCalled();
     component.later();
-    expect(auth['postponeMfa']).toHaveBeenCalledWith('pending-3');
+    expect(auth.postponeMfa).toHaveBeenCalledWith('pending-3');
   });
 
   it('enrols at once when the grace period is over', () => {
