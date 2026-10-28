@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
-import { ApiError, LangService, TranslatePipe } from '@attome/base';
-import { EntityRecord } from '@attome/xrm';
-import { EntityService } from '@attome/xrm/core/entity';
-import { forkJoin, map, of } from 'rxjs';
+import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { Observable, forkJoin, map, of } from 'rxjs';
 
 /** The statuses a whitespace cell takes (sales pack 0005). */
 export const WHITESPACE_STATUSES = ['owned', 'in_progress', 'opportunity', 'not_a_fit', 'competitor'] as const;
@@ -53,8 +51,10 @@ export function pivot(rows: readonly WhitespaceCell[], names: ReadonlyMap<string
   };
 }
 
-function field(record: EntityRecord, name: string): unknown {
-  return (record.data as Record<string, unknown>)[name];
+type Row = Record<string, unknown>;
+
+function field(record: Row, name: string): unknown {
+  return record[name];
 }
 
 /**
@@ -72,7 +72,7 @@ function field(record: EntityRecord, name: string): unknown {
   styleUrl: './whitespace-grid.component.css',
 })
 export class WhitespaceGridComponent {
-  private readonly entities = inject(EntityService);
+  private readonly api = inject(ApiService);
   private readonly lang = inject(LangService);
 
   readonly entityName = input('account_plan');
@@ -97,20 +97,25 @@ export class WhitespaceGridComponent {
     });
   }
 
+  /** Records of `entity` matching `filters`, through `query/execute` (the
+   *  sales entry point must not import the entity screens, which load it). */
+  private records(entity: string, filters: unknown[], size: number): Observable<Row[]> {
+    return this.api.post<{ data: { records: Row[] } }>('/api/v1/query/execute', {
+      entity, page: 1, page_size: size, order_by: '', order_dir: 'asc', filters, include_total: false,
+    }).pipe(map(res => res.data?.records ?? []));
+  }
+
   load(planId: string): void {
     this.error.set(null);
-    this.entities.list('account_whitespace', {
-      filters: [{ field: 'account_plan_ref', op: 'eq', value: planId }],
-      limit: 500,
-    }).subscribe({
+    this.records('account_whitespace', [{ field: 'account_plan_ref', op: 'eq', value: planId }], 500).subscribe({
       next: page => {
-        const rows: WhitespaceCell[] = page.data.map(r => ({
-          id: r.id,
+        const rows: WhitespaceCell[] = page.map(r => ({
+          id: String(r['id'] ?? ''),
           product_ref: String(field(r, 'product_ref') ?? ''),
           department: String(field(r, 'department') ?? ''),
           status: String(field(r, 'status') ?? ''),
           estimated_value: typeof field(r, 'estimated_value') === 'number' ? field(r, 'estimated_value') as number : null,
-          row_version: Number((r as unknown as { row_version?: number }).row_version ?? field(r, 'row_version') ?? 0),
+          row_version: Number(field(r, 'row_version') ?? 0),
         }));
         this.rows.set(rows);
         this.loadNames([...new Set(rows.map(r => r.product_ref).filter(Boolean))]);
@@ -121,8 +126,8 @@ export class WhitespaceGridComponent {
 
   private loadNames(ids: string[]): void {
     if (!ids.length) { this.names.set(new Map()); return; }
-    this.entities.list('product', { filters: [{ field: 'id', op: 'in', value: ids }], limit: ids.length }).pipe(
-      map(page => new Map(page.data.map(r => [r.id, String(field(r, 'name') ?? r.id)] as [string, string]))),
+    this.records('product', [{ field: 'id', op: 'in', value: ids }], ids.length).pipe(
+      map(page => new Map(page.map(r => [String(r['id']), String(field(r, 'name') ?? r['id'])] as [string, string]))),
     ).subscribe({ next: names => this.names.set(names), error: () => this.names.set(new Map()) });
   }
 
@@ -144,8 +149,8 @@ export class WhitespaceGridComponent {
     if (!plan || !status) return;
     const existing = this.cell(product, department);
     const saved = existing
-      ? this.entities.update('account_whitespace', existing.id, { status }, existing.row_version)
-      : this.entities.create('account_whitespace', {
+      ? this.api.patch(`/api/v1/account_whitespace/${encodeURIComponent(existing.id)}`, { status }, existing.row_version)
+      : this.api.post('/api/v1/account_whitespace', {
         account_plan_ref: plan, product_ref: product, department, status,
       });
     forkJoin([saved, of(plan)]).subscribe({

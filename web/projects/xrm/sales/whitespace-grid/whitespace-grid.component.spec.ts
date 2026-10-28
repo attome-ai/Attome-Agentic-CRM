@@ -1,7 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { LangService } from '@attome/base';
-import { EntityService } from '@attome/xrm/core/entity';
+import { ApiService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -29,15 +28,16 @@ describe('account plan whitespace (D27-T2)', () => {
   });
 
   it('shows the grid and fills an empty cell by creating it', () => {
-    const list = vi.fn((entity: string) => of(entity === 'account_whitespace'
-      ? { data: [{ id: 'w1', data: { product_ref: 'p1', department: 'HR', status: 'owned', row_version: 2 } }], meta: { total: 1 } }
-      : { data: [{ id: 'p1', data: { name: 'Payroll' } }], meta: { total: 1 } }));
-    const create = vi.fn(() => of({}));
-    const update = vi.fn(() => of({}));
+    const post = vi.fn((path: string, body: { entity?: string }) => of(path === '/api/v1/query/execute'
+      ? { data: { records: body.entity === 'account_whitespace'
+        ? [{ id: 'w1', product_ref: 'p1', department: 'HR', status: 'owned', row_version: 2 }]
+        : [{ id: 'p1', name: 'Payroll' }] } }
+      : {}));
+    const patch = vi.fn(() => of({}));
     TestBed.configureTestingModule({
       imports: [WhitespaceGridComponent],
       providers: [
-        { provide: EntityService, useValue: { list, create, update } },
+        { provide: ApiService, useValue: { post, patch } },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal('ar'), errorText: () => 'error', intlLocale: () => 'ar-SA' },
@@ -51,10 +51,10 @@ describe('account plan whitespace (D27-T2)', () => {
     expect(el.querySelector('[data-product="p1"] [data-status="owned"]')).not.toBeNull();
     const cmp = fixture.componentInstance;
     cmp.setStatus('p1', 'Finance', { target: { value: 'opportunity' } } as unknown as Event);
-    expect(create).toHaveBeenCalledWith('account_whitespace', {
+    expect(post).toHaveBeenCalledWith('/api/v1/account_whitespace', {
       account_plan_ref: 'plan-1', product_ref: 'p1', department: 'Finance', status: 'opportunity',
     });
     cmp.setStatus('p1', 'HR', { target: { value: 'competitor' } } as unknown as Event);
-    expect(update).toHaveBeenCalledWith('account_whitespace', 'w1', { status: 'competitor' }, 2);
+    expect(patch).toHaveBeenCalledWith('/api/v1/account_whitespace/w1', { status: 'competitor' }, 2);
   });
 });
