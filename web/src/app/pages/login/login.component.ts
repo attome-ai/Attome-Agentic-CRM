@@ -19,7 +19,18 @@ import { solvePow } from './pow';
 
 declare const google: GoogleIdentityGlobal;
 
-type Stage = 'credentials' | 'mfa-code' | 'mfa-enroll';
+type Stage = 'credentials' | 'mfa-code' | 'mfa-grace' | 'mfa-enroll';
+
+/** Q5-T10: Arabic-Indic and Persian digits as ASCII, so a code typed on an
+ *  Arabic keyboard is sent as the digits it shows (the server accepts both). */
+export function asciiDigits(text: string): string {
+  return text.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, d => {
+    const code = d.charCodeAt(0);
+    return String(code >= 0x06F0 ? code - 0x06F0 : code - 0x0660);
+  });
+}
+
+const DAY_MS = 86_400_000;
 
 @Component({
   selector:   'app-login',
@@ -137,6 +148,12 @@ type Stage = 'credentials' | 'mfa-code' | 'mfa-enroll';
                 </p>
               }
             </div>
+            @if (rememberAllowed() && !useRecoveryCode()) {
+              <label class="checkbox-row">
+                <input type="checkbox" [checked]="rememberDevice()" (change)="onRemember($event)" data-testid="remember-device" />
+                {{ t('xrmLogin.rememberDevice') }}
+              </label>
+            }
 
             @if (error()) {
               <p class="error-msg">{{ error() }}</p>
@@ -154,6 +171,22 @@ type Stage = 'credentials' | 'mfa-code' | 'mfa-enroll';
           </p>
           <p class="auth-link">
             <button type="button" class="link-button" (click)="startOver()">Back to sign in</button>
+          </p>
+        }
+
+        @if (stage() === 'mfa-grace') {
+          <h2>{{ t('xrmLogin.graceTitle') }}</h2>
+          <p class="subtitle">{{ t('xrmLogin.graceIntro') }}</p>
+          @if (error()) {
+            <p class="error-msg">{{ error() }}</p>
+          }
+          <button type="button" class="btn-submit" (click)="setUpNow()" [disabled]="loading()" data-testid="grace-now">
+            {{ t('xrmLogin.setUpNow') }}
+          </button>
+          <p class="auth-link">
+            <button type="button" class="link-button" (click)="later()" [disabled]="loading()" data-testid="grace-later">
+              {{ laterLabel() }}
+            </button>
           </p>
         }
 
@@ -339,6 +372,15 @@ export class LoginComponent implements OnInit, AfterViewInit {
    * locked out by it.
    */
   readonly emailChecked = signal(false);
+  /** Q5-T10: the grace period's end, when enrolling may still be put off. */
+  readonly graceUntil = signal<string | null>(null);
+  readonly graceDaysLeft = computed(() => {
+    const until = this.graceUntil();
+    return until ? Math.max(1, Math.ceil((Date.parse(until) - Date.now()) / DAY_MS)) : 0;
+  });
+  /** Q5-T10: the server allows remembering this browser after the code. */
+  readonly rememberAllowed = signal(false);
+  readonly rememberDevice = signal(false);
   readonly askPassword = computed(() => this.emailChecked() || this.oidcProviders().length === 0);
 
   private pendingToken = '';
@@ -529,7 +571,15 @@ export class LoginComponent implements OnInit, AfterViewInit {
         this.pendingToken = res.pending_token;
         if (res.mfa === 'required') {
           this.loading.set(false);
+          this.rememberAllowed.set(res.remember_device === true);
           this.stage.set('mfa-code');
+          return;
+        }
+        // Q5-T10: within the grace period the person may set it up now or later.
+        if (res.grace_until && Date.parse(res.grace_until) > Date.now()) {
+          this.loading.set(false);
+          this.graceUntil.set(res.grace_until);
+          this.stage.set('mfa-grace');
           return;
         }
         // 'enrollment_required' — mfa_policy=required and this account isn't
@@ -561,10 +611,11 @@ export class LoginComponent implements OnInit, AfterViewInit {
     this.loading.set(true);
     this.error.set(null);
 
-    const code = this.codeForm.value.code!;
+    const code = asciiDigits(this.codeForm.value.code!.trim());
+    const remember = this.rememberAllowed() && this.rememberDevice();
     const req$ = this.useRecoveryCode()
       ? this.auth.verifyMfaRecovery({ pending_token: this.pendingToken, code })
-      : this.auth.verifyMfa({ pending_token: this.pendingToken, code });
+      : this.auth.verifyMfa({ pending_token: this.pendingToken, code, remember });
 
     req$.subscribe({
       next: () => this.goHome(),
@@ -582,13 +633,45 @@ export class LoginComponent implements OnInit, AfterViewInit {
     this.loading.set(true);
     this.error.set(null);
 
-    const code = this.codeForm.value.code!;
+    const code = asciiDigits(this.codeForm.value.code!.trim());
     this.auth.confirmMfaEnrollment({ pending_token: this.pendingToken, code }).subscribe({
       next:  res => { this.loading.set(false); this.recoveryCodes.set(res.recovery_codes); },
       error: (err: ApiError) => {
         this.loading.set(false);
         this.error.set(err.status === 401 ? this.lang.translate('xrmLogin.invalidCode') : this.lang.errorText(err));
       },
+    });
+  }
+
+  onRemember(event: Event): void {
+    this.rememberDevice.set((event.target as HTMLInputElement).checked);
+  }
+
+  laterLabel(): string {
+    return this.lang.translate('xrmLogin.later', { days: this.graceDaysLeft() });
+  }
+
+  /** Q5-T10: enrol now, from the grace prompt. */
+  setUpNow(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.auth.startMfaEnrollment({ pending_token: this.pendingToken }).subscribe({
+      next: info => {
+        this.loading.set(false);
+        this.enrollInfo.set(info);
+        this.stage.set('mfa-enroll');
+      },
+      error: (err: ApiError) => { this.loading.set(false); this.error.set(this.lang.errorText(err)); },
+    });
+  }
+
+  /** Q5-T10: put enrolling off and sign in. */
+  later(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.auth.postponeMfa(this.pendingToken).subscribe({
+      next: () => this.goHome(),
+      error: (err: ApiError) => { this.loading.set(false); this.error.set(this.lang.errorText(err)); },
     });
   }
 

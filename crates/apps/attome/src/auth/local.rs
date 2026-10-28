@@ -607,6 +607,12 @@ pub(super) async fn login(
         }
     }
 
+    // Q5-T10: what the sign-in page offers with a challenge: "later" while
+    // the grace period runs, and remembering the browser where allowed.
+    let (grace_until, remember_device) = match &outcome {
+        accounts::LoginOutcome::Session(_) => (None, false),
+        _ => challenge_hints(&state, &body.email).await,
+    };
     match outcome {
         accounts::LoginOutcome::Session(user_id) => {
             let cookies = issue_session_cookies_for(
@@ -628,6 +634,8 @@ pub(super) async fn login(
             Json(MfaChallengeResponse {
                 mfa: "required".to_string(),
                 pending_token,
+                grace_until: None,
+                remember_device,
             }),
         )
             .into_response()),
@@ -636,6 +644,8 @@ pub(super) async fn login(
             Json(MfaChallengeResponse {
                 mfa: "enrollment_required".to_string(),
                 pending_token,
+                grace_until,
+                remember_device: false,
             }),
         )
             .into_response()),
@@ -698,6 +708,38 @@ async fn record_failed_second_factor(
 /// account exists, so it adds no timing difference between the two. An
 /// unknown identifier yields [`failed_login::Subject::Unknown`] and nothing
 /// about the typed string is kept (D-541 G3-1 a).
+/// Q5-T10: the grace period's end while it runs, and whether the browser may
+/// be remembered, for `email`'s challenge. A failure shows neither: the
+/// challenge itself is what matters.
+async fn challenge_hints(
+    state: &AppState,
+    email: &str,
+) -> (Option<chrono::DateTime<chrono::Utc>>, bool) {
+    let Ok(failed_login::Subject::Known { user_id, .. }) = failed_login_subject(state, email).await
+    else {
+        return (None, false);
+    };
+    match attome_security::mfa_policy::requirement_for(
+        &state.db,
+        user_id,
+        &state.config.auth.mfa_policy,
+    )
+    .await
+    {
+        Ok(requirement) => {
+            let now = chrono::Utc::now();
+            (
+                requirement.grace_until.filter(|until| *until > now),
+                requirement.remember_device_days > 0,
+            )
+        }
+        Err(error) => {
+            tracing::warn!(%user_id, %error, "auth: the challenge hints could not be read");
+            (None, false)
+        }
+    }
+}
+
 /// Q5-T6: whether a password sign-in for `email` is risky (see
 /// `attome_security::sign_in_rules::risk`); an unknown address is not.
 async fn risky_sign_in(state: &AppState, email: &str, streak: i64) -> Result<bool, AppError> {

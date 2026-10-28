@@ -781,6 +781,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from
   `WSADuplicateSocketW`, or `-` to read it from stdin) is set, so a supervisor can hand the same
   socket to the next version; otherwise it binds as before.
+- Second-factor policy screens (Q5-T10): the role form's Sign-in tab edits single sign-on, the
+  second-factor mode, allowed factors (codes sent by email or message cannot be chosen for a role
+  that grants administration), grace days, remember-browser days and phishing-resistant only, through
+  `PUT /api/v1/admin/security/roles/{id}/auth-policy`, which now takes every field (each optional;
+  breaking: its body and response are `RoleAuthPolicyBody`/`RoleAuthPolicy`, and `sso_only` is no
+  longer required) and gains a `GET`. Security > MFA Coverage shows who has which factor. At sign-in
+  the challenge says when the grace period ends (`grace_until`, offered as "Later (N days left)") and
+  whether the browser may be remembered (`remember_device`); codes typed in Arabic-Indic digits are
+  accepted.
 - Risky sign-ins ask again (Q5-T6): a password sign-in from a browser family or country not seen
   for that person in 90 days, or after three wrong passwords in a row, asks for the second factor
   even on a remembered browser. The country comes from the offline database `auth.geoip_database`

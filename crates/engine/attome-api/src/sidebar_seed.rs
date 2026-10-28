@@ -877,6 +877,19 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     )
     .await?;
 
+    // Q5-T10: who has which second factor, per role.
+    upsert_sidebar(
+        db,
+        "MFA Coverage",
+        Some("/xrm/admin/security/mfa-coverage"),
+        "las la-user-check",
+        "#a855f7",
+        Some(security_group),
+        16,
+        Some("core"),
+    )
+    .await?;
+
     // Q1-T14: sign-in providers (OIDC) added on screen, with their domains
     // and group mappings.
     upsert_sidebar(

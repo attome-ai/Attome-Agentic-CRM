@@ -22,6 +22,11 @@ export const hostAr = {
     continue:           'متابعة',
     checkingEmail:      'جارٍ التحقق من طرق تسجيل الدخول…',
     otherEmail:         'استخدام بريد آخر',
+    rememberDevice:     'تذكّر هذا المتصفح',
+    graceTitle:         'إعداد التحقق بخطوتين',
+    graceIntro:         'تطلب مؤسستك الآن عاملاً ثانياً عند تسجيل الدخول. يمكنك إعداده الآن، أو لاحقاً حتى تنتهي فترة السماح.',
+    setUpNow:           'إعداده الآن',
+    later:              '{days, plural, zero {لاحقاً} one {لاحقاً (بقي يوم واحد)} two {لاحقاً (بقي يومان)} few {لاحقاً (بقيت # أيام)} many {لاحقاً (بقي # يوماً)} other {لاحقاً (بقي # يوم)}}',
   },
   securitySettings: {
     googleLinkConflict: 'حساب Google هذا مرتبط بالفعل بمستخدم آخر.',

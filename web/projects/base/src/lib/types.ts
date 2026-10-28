@@ -224,6 +224,10 @@ export type GoogleConfigInfo =
 export interface MfaChallenge {
   mfa:           'required' | 'enrollment_required';
   pending_token: string;
+  /** Q5-T10: with `enrollment_required`, the end of the grace period while it runs. */
+  grace_until?:  string | null;
+  /** Q5-T10: with `required`, this browser may be remembered. */
+  remember_device?: boolean;
 }
 
 export function isMfaChallenge(res: AuthResponse | MfaChallenge): res is MfaChallenge {

@@ -1015,6 +1015,13 @@ export const xrmEn = {
     healthNode: 'Sign-in failures seen by node {node}:', lastFailure: 'Last failure: {kind} at {time}.',
     noFailures: 'No sign-in failure recorded.',
   },
+  mfaCoverage: {
+    title: 'MFA coverage', subtitle: 'Who has which second factor, by role.', refresh: 'Refresh', loading: 'Loading…',
+    colRole: 'Role', colUsers: 'Members', colWithTotp: 'With an authenticator app', colWithout: 'Without a second factor',
+    noRole: 'No role', role: 'Role', allRoles: 'All roles', missingOnly: 'Only accounts without a second factor',
+    empty: 'No account matches.', colEmail: 'Account', colRoles: 'Roles', colFactors: 'Second factors',
+    admin: 'Administrator', none: 'None', needsPasskey: 'An administrator without a passkey',
+  },
   myQueues: {
     title: 'My queues', actions: 'Queue item actions', selected: '{count} selected',
     pick: 'Pick', release: 'Release', transfer: 'Transfer', transferTo: 'Transfer to queue',
@@ -1446,6 +1453,18 @@ export const xrmEn = {
     },
   },
   roleForm: {
+    mfa: {
+      ssoOnly: 'Sign in only through single sign-on', mode: 'Second factor',
+      modes: { inherit: 'As the deployment sets it', off: 'Off', optional: 'Optional', required: 'Required' },
+      factors: 'Allowed factors',
+      factor: { passkey: 'Passkey', push: 'Push approval', totp: 'Authenticator app', recovery: 'Recovery codes',
+        email: 'Code by email', sms: 'Code by SMS', whatsapp: 'Code by WhatsApp' },
+      weak: '(weaker: a sent code)', adminHint: 'This role grants administration: codes sent by email or message are never used for it.',
+      graceDays: 'Days to set it up once required', rememberDays: 'Days a browser stays remembered',
+      rememberHint: '0 never remembers a browser. An administrator\'s browser is never remembered.',
+      phishingOnly: 'Only phishing-resistant factors (passkeys)', save: 'Save sign-in policy', saved: 'Saved.',
+      noFactor: 'Allow at least one factor.',
+    },
     editRole: 'Edit role', newRole: 'New role', createRole: 'Create Role',
     namePlaceholder: 'e.g. Sales Manager',
     positionHierarchy: "Extend this role's access levels down the holder's position subtree (F138)",

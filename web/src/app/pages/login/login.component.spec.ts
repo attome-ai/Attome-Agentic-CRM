@@ -9,7 +9,7 @@ import {
 } from '@attome/base';
 import { Observable, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LoginComponent } from './login.component';
+import { LoginComponent, asciiDigits } from './login.component';
 
 /**
  * The XRM sign-in screen's MFA branch (D-069): a correct password does not
@@ -398,5 +398,52 @@ describe('LoginComponent email first (Q1-T14)', () => {
     component.form.controls.password.setValue('correct horse');
     component.submit();
     expect(auth.login).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('LoginComponent second-factor prompts (Q5-T10)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('grace_prompt_shows_days_left', () => {
+    const until = new Date(Date.now() + 3.5 * 86_400_000).toISOString();
+    const { component, fixture, auth } = mount({
+      login:       vi.fn((): Observable<unknown> =>
+        of({ mfa: 'enrollment_required', pending_token: 'pending-3', grace_until: until })),
+      postponeMfa: vi.fn(() => of({ user_id: 'user-1' })),
+    });
+    signIn(component);
+    fixture.detectChanges();
+    expect(component.stage()).toBe('mfa-grace');
+    expect(component.graceDaysLeft()).toBe(4);
+    expect(text(fixture)).toContain('xrmLogin.later');
+    expect(auth.startMfaEnrollment).not.toHaveBeenCalled();
+    component.later();
+    expect(auth['postponeMfa']).toHaveBeenCalledWith('pending-3');
+  });
+
+  it('enrols at once when the grace period is over', () => {
+    const { component, auth } = mount({
+      login: vi.fn((): Observable<unknown> => of(CHALLENGE_ENROLL)),
+    });
+    signIn(component);
+    expect(component.stage()).toBe('mfa-enroll');
+    expect(auth.startMfaEnrollment).toHaveBeenCalled();
+  });
+
+  it('sends a code typed in Arabic-Indic digits as ASCII, remembering the browser when asked', () => {
+    expect(asciiDigits('١٢٣٤٥٦')).toBe('123456');
+    expect(asciiDigits('۷۸۹')).toBe('789');
+    const { component, fixture, auth } = mount({
+      login: vi.fn((): Observable<unknown> => of({ ...CHALLENGE_REQUIRED, remember_device: true })),
+    });
+    signIn(component);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="remember-device"]')).not.toBeNull();
+    component.rememberDevice.set(true);
+    component.codeForm.setValue({ code: '٤٥٦٧٨٩' });
+    component.submitMfaCode();
+    expect(auth.verifyMfa).toHaveBeenCalledWith({ pending_token: 'pending-1', code: '456789', remember: true });
   });
 });

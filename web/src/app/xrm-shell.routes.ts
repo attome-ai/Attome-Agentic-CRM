@@ -389,6 +389,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/security/access-admin').then(m => m.RoleTemplatesComponent),
           },
           {
+            // Q5-T10: who has which second factor.
+            path: 'security/mfa-coverage',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/security').then(m => m.MfaCoverageComponent),
+          },
+          {
             // Q1-T14: sign-in providers added on screen.
             path: 'security/oidc-providers',
             canActivate: [authGuard],

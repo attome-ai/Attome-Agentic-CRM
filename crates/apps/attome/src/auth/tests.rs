@@ -103,6 +103,8 @@ fn mfa_challenge_response_serializes_mfa_and_pending_token() {
     let value = serde_json::to_value(MfaChallengeResponse {
         mfa: "required".to_string(),
         pending_token: "pt".to_string(),
+        grace_until: None,
+        remember_device: false,
     })
     .unwrap();
     assert_eq!(

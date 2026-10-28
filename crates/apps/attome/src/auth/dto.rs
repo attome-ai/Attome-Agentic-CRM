@@ -201,6 +201,15 @@ pub struct MfaChallengeResponse {
     /// not yet enrolled — call `/mfa/pending-enroll` then `/mfa/pending-confirm`).
     pub mfa: String,
     pub pending_token: String,
+    /// Q5-T10: with `enrollment_required`, the end of the grace period while
+    /// it runs; until then `POST /api/v1/auth/mfa/postpone` signs in and puts
+    /// enrolling off.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub grace_until: Option<chrono::DateTime<chrono::Utc>>,
+    /// Q5-T10: with `required`, this browser may be remembered
+    /// (`"remember": true` on `/mfa/verify`); absent when it may not.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub remember_device: bool,
 }
 
 impl std::fmt::Debug for MfaChallengeResponse {

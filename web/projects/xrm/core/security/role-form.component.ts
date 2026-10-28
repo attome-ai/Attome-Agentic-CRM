@@ -20,7 +20,11 @@ import {
   RoleGrantItem,
   RoleItem,
   RoleUserItem,
+  MFA_FACTORS,
+  MFA_MODES,
+  RoleAuthPolicy,
   SecurityAdminService,
+  WEAK_MFA_FACTORS,
   UpsertEntityAccessGrantBody,
   operationLevelsOf,
 } from './security-admin.service';
@@ -172,6 +176,7 @@ export class RoleFormComponent implements OnInit {
     { id: 'grants',      label: 'Privilege Grants',  icon: 'las la-key' },
     { id: 'access',      label: 'Record Access',     icon: 'las la-shield-alt' },
     { id: 'assignments', label: 'Assignments',       icon: 'las la-user-friends' },
+    { id: 'signin',      label: 'Sign-in',           icon: 'las la-user-shield' },
     { id: 'notes',       label: 'Notes',             icon: 'las la-edit' },
   ] as const;
   readonly activeTab = signal<(typeof this.tabs)[number]['id']>('general');
@@ -189,8 +194,79 @@ export class RoleFormComponent implements OnInit {
       this.loadRole(id);
       this.loadAccessGrants(id);
       this.loadAssignments(id);
+      this.loadAuthPolicy(id);
     }
   });
+
+  // Sign-in (Q5-T10)
+  readonly mfaModes = MFA_MODES;
+  readonly mfaFactors = MFA_FACTORS;
+  readonly authPolicy = signal<RoleAuthPolicy | null>(null);
+  readonly savingPolicy = signal(false);
+  readonly policyError = signal<string | null>(null);
+  readonly policySaved = signal(false);
+  editMfaMode = 'inherit';
+  editFactors = new Set<string>();
+  editGraceDays = 7;
+  editRememberDays = 30;
+  editPhishingOnly = false;
+  editSsoOnly = false;
+
+  /** A weak factor cannot be chosen for a role that grants administration. */
+  factorDisabled(factor: string): boolean {
+    return this.authPolicy()?.is_admin_role === true && WEAK_MFA_FACTORS.includes(factor);
+  }
+
+  isWeak(factor: string): boolean {
+    return WEAK_MFA_FACTORS.includes(factor);
+  }
+
+  toggleFactor(factor: string): void {
+    const next = new Set(this.editFactors);
+    if (next.has(factor)) next.delete(factor); else next.add(factor);
+    this.editFactors = next;
+  }
+
+  private applyPolicy(policy: RoleAuthPolicy): void {
+    this.authPolicy.set(policy);
+    this.editMfaMode = policy.mfa_mode;
+    this.editFactors = new Set(policy.mfa_factors.filter(f => !this.factorDisabled(f)));
+    this.editGraceDays = policy.mfa_grace_days;
+    this.editRememberDays = policy.remember_device_days;
+    this.editPhishingOnly = policy.phishing_resistant_only;
+    this.editSsoOnly = policy.sso_only;
+  }
+
+  private loadAuthPolicy(roleId: string): void {
+    this.svc.getRoleAuthPolicy(roleId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: policy => this.applyPolicy(policy),
+      error: (e: ApiError) => this.policyError.set(this.lang.errorText(e)),
+    });
+  }
+
+  saveAuthPolicy(): void {
+    const id = this.id();
+    if (!id) return;
+    const factors = MFA_FACTORS.filter(f => this.editFactors.has(f) && !this.factorDisabled(f));
+    if (factors.length === 0) {
+      this.policyError.set(this.lang.translate('roleForm.mfa.noFactor'));
+      return;
+    }
+    this.savingPolicy.set(true);
+    this.policyError.set(null);
+    this.policySaved.set(false);
+    this.svc.updateRoleAuthPolicy(id, {
+      sso_only: this.editSsoOnly,
+      mfa_mode: this.editMfaMode,
+      mfa_factors: [...factors],
+      mfa_grace_days: Math.trunc(Number(this.editGraceDays)),
+      remember_device_days: Math.trunc(Number(this.editRememberDays)),
+      phishing_resistant_only: this.editPhishingOnly,
+    }).subscribe({
+      next: policy => { this.applyPolicy(policy); this.savingPolicy.set(false); this.policySaved.set(true); },
+      error: (e: ApiError) => { this.savingPolicy.set(false); this.policyError.set(this.lang.errorText(e)); },
+    });
+  }
 
   // General
   editName = '';

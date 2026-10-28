@@ -930,6 +930,13 @@ export const xrmAr = {
     healthNode: 'إخفاقات تسجيل الدخول التي رصدتها العقدة {node}:', lastFailure: 'آخر إخفاق: {kind} في {time}.',
     noFailures: 'لم يُسجَّل أي إخفاق في تسجيل الدخول.',
   },
+  mfaCoverage: {
+    title: 'تغطية العامل الثاني', subtitle: 'من لديه أي عامل ثانٍ، حسب الدور.', refresh: 'تحديث', loading: 'جارٍ التحميل…',
+    colRole: 'الدور', colUsers: 'الأعضاء', colWithTotp: 'لديهم تطبيق مصادقة', colWithout: 'بلا عامل ثانٍ',
+    noRole: 'بلا دور', role: 'الدور', allRoles: 'كل الأدوار', missingOnly: 'الحسابات التي بلا عامل ثانٍ فقط',
+    empty: 'لا يوجد حساب مطابق.', colEmail: 'الحساب', colRoles: 'الأدوار', colFactors: 'العوامل الثانية',
+    admin: 'مسؤول', none: 'لا شيء', needsPasskey: 'مسؤول بلا مفتاح مرور',
+  },
   myQueues: {
     title: 'قوائم الانتظار', actions: 'إجراءات عناصر قوائم الانتظار', selected: 'تم تحديد {count}',
     pick: 'استلام', release: 'إعادة', transfer: 'نقل', transferTo: 'النقل إلى قائمة',
@@ -1411,6 +1418,18 @@ export const xrmAr = {
     },
   },
   roleForm: {
+    mfa: {
+      ssoOnly: 'تسجيل الدخول عبر الدخول الموحّد فقط', mode: 'العامل الثاني',
+      modes: { inherit: 'كما يحدده النظام', off: 'معطّل', optional: 'اختياري', required: 'إلزامي' },
+      factors: 'العوامل المسموح بها',
+      factor: { passkey: 'مفتاح المرور', push: 'الموافقة بالإشعار', totp: 'تطبيق المصادقة', recovery: 'رموز الاسترداد',
+        email: 'رمز بالبريد الإلكتروني', sms: 'رمز برسالة نصية', whatsapp: 'رمز عبر واتساب' },
+      weak: '(أضعف: رمز مُرسل)', adminHint: 'هذا الدور يمنح الإدارة: لا تُستخدم له الرموز المرسلة بالبريد أو الرسائل أبداً.',
+      graceDays: 'أيام الإعداد بعد أن يصبح إلزامياً', rememberDays: 'أيام تذكّر المتصفح',
+      rememberHint: 'صفر يعني عدم تذكّر أي متصفح. لا يُتذكّر متصفح المسؤول أبداً.',
+      phishingOnly: 'العوامل المقاومة للتصيّد فقط (مفاتيح المرور)', save: 'حفظ سياسة تسجيل الدخول', saved: 'تم الحفظ.',
+      noFactor: 'اسمح بعامل واحد على الأقل.',
+    },
     editRole: 'تعديل الدور', newRole: 'دور جديد', createRole: 'إنشاء دور',
     namePlaceholder: 'مثال: مدير المبيعات',
     positionHierarchy: 'توسيع مستويات وصول هذا الدور إلى المناصب التابعة لصاحبه (F138)',

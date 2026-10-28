@@ -192,9 +192,14 @@ nothing. A role may set its own mode instead, stricter or not.
   the failures count. What was seen is kept per person without the address; a person with no
   history yet is not judged.
 
-A role's mode is stored with its sign-in policy (`role_auth_policy`). The route that sets it today,
-`PUT /api/v1/admin/security/roles/{id}/auth-policy`, sets single sign-on only; setting the second
-factor mode comes with the security policy screens.
+A role's mode is stored with its sign-in policy (`role_auth_policy`) and edited on the role form's
+Sign-in tab, through `GET` and `PUT /api/v1/admin/security/roles/{id}/auth-policy`: single sign-on
+only, the second-factor mode, the allowed factors (codes sent by email or message are never used,
+nor offered, for a role that grants administration), grace days (0 to 90), remember-browser days
+(0 to 365) and phishing-resistant only. Each field of the `PUT` is optional; the ones given change.
+Security > MFA Coverage lists who has which factor, by role. While a person's grace period runs, the
+sign-in page offers "Set up now" or "Later (N days left)"; a code may be typed in Arabic-Indic
+digits.
 
 ## Explaining access
 

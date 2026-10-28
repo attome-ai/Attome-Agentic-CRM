@@ -29,6 +29,11 @@ export const hostEn = {
     continue:           'Continue',
     checkingEmail:      'Checking your sign-in options…',
     otherEmail:         'Use another email',
+    rememberDevice:     'Remember this browser',
+    graceTitle:         'Set up two-factor authentication',
+    graceIntro:         'Your organisation now asks for a second factor when you sign in. You can set it up now, or later until the grace period ends.',
+    setUpNow:           'Set up now',
+    later:              '{days, plural, one {Later (# day left)} other {Later (# days left)}}',
   },
   // Host app's /settings/security page (src/app/pages/security-settings).
   securitySettings: {

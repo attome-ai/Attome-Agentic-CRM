@@ -442,6 +442,52 @@
       }
     </div>
 
+    <!-- ── Sign-in (Q5-T10) ─────────────────────────────────────────── -->
+    <div id="role-panel-signin" class="xf-tab-panel" role="tabpanel"
+         aria-labelledby="role-tab-signin" [hidden]="activeTab() !== 'signin'">
+      <div class="card">
+        @if (policyError(); as message) { <p class="error-msg" role="alert">{{ message }}</p> }
+        @if (policySaved()) { <p class="state-msg" role="status">{{ 'roleForm.mfa.saved' | translate }}</p> }
+        <label class="checkbox-row">
+          <input type="checkbox" [(ngModel)]="editSsoOnly" name="sso_only"> {{ 'roleForm.mfa.ssoOnly' | translate }}
+        </label>
+        <div class="field">
+          <label for="role-mfa-mode">{{ 'roleForm.mfa.mode' | translate }}</label>
+          <select id="role-mfa-mode" [(ngModel)]="editMfaMode" name="mfa_mode" data-testid="mfa-mode">
+            @for (m of mfaModes; track m) { <option [value]="m">{{ ('roleForm.mfa.modes.' + m) | translate }}</option> }
+          </select>
+        </div>
+        <fieldset class="field">
+          <legend>{{ 'roleForm.mfa.factors' | translate }}</legend>
+          @for (f of mfaFactors; track f) {
+            <label class="checkbox-row" [attr.data-factor]="f">
+              <input type="checkbox" [checked]="editFactors.has(f) && !factorDisabled(f)" [disabled]="factorDisabled(f)" (change)="toggleFactor(f)">
+              {{ ('roleForm.mfa.factor.' + f) | translate }}
+              @if (isWeak(f)) { <span class="hint">{{ 'roleForm.mfa.weak' | translate }}</span> }
+            </label>
+          }
+          @if (authPolicy()?.is_admin_role) { <p class="hint" data-admin-hint>{{ 'roleForm.mfa.adminHint' | translate }}</p> }
+        </fieldset>
+        <div class="field">
+          <label for="role-mfa-grace">{{ 'roleForm.mfa.graceDays' | translate }}</label>
+          <input id="role-mfa-grace" type="number" min="0" max="90" [(ngModel)]="editGraceDays" name="grace_days">
+        </div>
+        <div class="field">
+          <label for="role-mfa-remember">{{ 'roleForm.mfa.rememberDays' | translate }}</label>
+          <input id="role-mfa-remember" type="number" min="0" max="365" [(ngModel)]="editRememberDays" name="remember_days">
+          <p class="hint">{{ 'roleForm.mfa.rememberHint' | translate }}</p>
+        </div>
+        <label class="checkbox-row">
+          <input type="checkbox" [(ngModel)]="editPhishingOnly" name="phishing_only"> {{ 'roleForm.mfa.phishingOnly' | translate }}
+        </label>
+        <div class="btn-row">
+          <button type="button" class="btn-primary" (click)="saveAuthPolicy()" [disabled]="savingPolicy()" data-testid="mfa-save">
+            {{ 'roleForm.mfa.save' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Notes ────────────────────────────────────────────────────── -->
     <div id="role-panel-notes" class="xf-tab-panel" role="tabpanel"
          aria-labelledby="role-tab-notes" [hidden]="activeTab() !== 'notes'">

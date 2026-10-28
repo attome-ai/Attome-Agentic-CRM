@@ -152,6 +152,13 @@ export class AuthService {
     return this.api.get<OidcProviderInfo[]>('/api/v1/auth/oidc/providers');
   }
 
+  /** Q5-T10: puts enrolling off within the grace period and signs in. */
+  postponeMfa(pendingToken: string): Observable<AuthResponse> {
+    return this.api.post<AuthResponse>('/api/v1/auth/mfa/postpone', { pending_token: pendingToken }).pipe(
+      tap(res => this.setSession(res.user_id)),
+    );
+  }
+
   /** Q1-T14: the sign-in provider a verified email domain sends this address
    *  to, or `null` to sign in with a password. */
   discoverOidc(email: string): Observable<{ provider?: string | null }> {

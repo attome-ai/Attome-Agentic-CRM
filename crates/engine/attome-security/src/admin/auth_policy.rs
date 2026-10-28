@@ -27,21 +27,135 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// A role's sign-in policy.
+/// A role's sign-in policy. Every field is optional; the ones given change.
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
-pub struct RoleSsoPolicyBody {
+pub struct RoleAuthPolicyBody {
     /// Only single sign-on, never a password, for every holder of the role
     /// who is not a break-glass account.
-    pub sso_only: bool,
+    #[serde(default)]
+    pub sso_only: Option<bool>,
+    /// Q5-T10: `inherit` (the deployment's `auth.mfa_policy`), `off`,
+    /// `optional` or `required`.
+    #[serde(default)]
+    pub mfa_mode: Option<String>,
+    /// Q5-T10: the second factors the role allows: `passkey`, `push`,
+    /// `totp`, `recovery`, `email`, `sms`, `whatsapp`. The weak ones (codes
+    /// sent by email or message) are never used for an administrator.
+    #[serde(default)]
+    pub mfa_factors: Option<Vec<String>>,
+    /// Q5-T10: days a holder may put off enrolling once a factor is required
+    /// (0 to 90).
+    #[serde(default)]
+    pub mfa_grace_days: Option<i32>,
+    /// Q5-T10: days a browser stays remembered after a second factor (0 to
+    /// 365; 0 never remembers).
+    #[serde(default)]
+    pub remember_device_days: Option<i32>,
+    /// Q5-T10: only phishing-resistant factors (passkeys) count.
+    #[serde(default)]
+    pub phishing_resistant_only: Option<bool>,
 }
 
 /// A role's stored sign-in policy.
-#[derive(Debug, Serialize, ToSchema)]
-pub struct RoleSsoPolicy {
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+pub struct RoleAuthPolicy {
     pub role_id: Uuid,
     pub sso_only: bool,
+    pub mfa_mode: String,
+    pub mfa_factors: Vec<String>,
+    pub mfa_grace_days: i32,
+    pub remember_device_days: i32,
+    pub phishing_resistant_only: bool,
+    /// The role grants `system.admin`: weak factors never apply to it.
+    pub is_admin_role: bool,
     pub row_version: i64,
+}
+
+const MFA_MODES: &[&str] = &["inherit", "off", "optional", "required"];
+
+/// Refuses an unknown mode or factor and an out-of-range number of days.
+/// Pure.
+pub fn check_policy(body: &RoleAuthPolicyBody) -> Result<(), AppError> {
+    if let Some(mode) = &body.mfa_mode
+        && !MFA_MODES.contains(&mode.as_str())
+    {
+        return Err(AppError::Validation(
+            "mfa_mode is inherit, off, optional or required".into(),
+        ));
+    }
+    if let Some(factors) = &body.mfa_factors {
+        if let Some(bad) = factors
+            .iter()
+            .find(|f| crate::mfa_policy::FactorKind::parse(f).is_none())
+        {
+            return Err(AppError::Validation(format!(
+                "unknown second factor {bad:?}"
+            )));
+        }
+        if factors.is_empty() {
+            return Err(AppError::Validation(
+                "mfa_factors needs at least one factor".into(),
+            ));
+        }
+    }
+    if body.mfa_grace_days.is_some_and(|d| !(0..=90).contains(&d)) {
+        return Err(AppError::Validation("mfa_grace_days is 0 to 90".into()));
+    }
+    if body
+        .remember_device_days
+        .is_some_and(|d| !(0..=365).contains(&d))
+    {
+        return Err(AppError::Validation(
+            "remember_device_days is 0 to 365".into(),
+        ));
+    }
+    Ok(())
+}
+
+const POLICY_SELECT: &str = "SELECT r.id AS role_id, \
+        COALESCE(p.sso_only, false) AS sso_only, \
+        COALESCE(p.mfa_mode, 'inherit') AS mfa_mode, \
+        COALESCE(p.mfa_factors, '{passkey,push,totp,recovery}'::text[]) AS mfa_factors, \
+        COALESCE(p.mfa_grace_days, 7) AS mfa_grace_days, \
+        COALESCE(p.remember_device_days, 30) AS remember_device_days, \
+        COALESCE(p.phishing_resistant_only, false) AS phishing_resistant_only, \
+        EXISTS (SELECT 1 FROM role_mm_privilege rp \
+                  JOIN privilege pr ON pr.id = rp.privilege_ref AND pr.is_active \
+                 WHERE rp.role_ref = r.id AND NOT rp.is_deleted AND pr.key = $2) AS is_admin_role, \
+        COALESCE(p.row_version, 0) AS row_version \
+   FROM role r LEFT JOIN role_auth_policy p ON p.role_ref = r.id \
+  WHERE r.id = $1";
+
+/// Read a role's sign-in policy
+///
+/// Q5-T10: a role's single sign-on and second-factor policy, with the defaults for a role that has none stored. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/security/roles/{id}/auth-policy",
+    tag = "admin-security",
+    params(("id" = Uuid, Path, description = "The role")),
+    responses(
+        (status = 200, description = "The role's policy", body = RoleAuthPolicy),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such role", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_role_auth_policy(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::Security>>,
+    Path(role_id): Path<Uuid>,
+) -> Result<Json<RoleAuthPolicy>, AppError> {
+    sqlx::query_as(POLICY_SELECT)
+        .bind(role_id)
+        .bind(attome_server::security::ADMIN_PRIVILEGE_KEY)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .map(Json)
+        .ok_or(AppError::NotFound)
 }
 
 /// A break-glass account to add.
@@ -55,20 +169,20 @@ pub struct BreakGlassBody {
 
 /// Set a role's sign-in policy
 ///
-/// Sets whether a role signs in only through single sign-on (Q1-T7).
-/// Administrators only.
+/// Sets whether a role signs in only through single sign-on (Q1-T7) and its second-factor policy: mode, allowed factors, grace days, remember-browser days and phishing-resistant only (Q5-T10). Only the fields given change. Administrators only.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/security/roles/{id}/auth-policy",
     tag = "admin-security",
     params(("id" = Uuid, Path, description = "The role")),
-    request_body = RoleSsoPolicyBody,
+    request_body = RoleAuthPolicyBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
-        (status = 200, description = "The role's policy", body = RoleSsoPolicy),
+        (status = 200, description = "The role's policy", body = RoleAuthPolicy),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 404, description = "No such role", body = ErrorResponse),
+        (status = 422, description = "An unknown mode or factor, no factor, or days out of range", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -76,8 +190,18 @@ async fn put_role_auth_policy(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<area::Security>>,
     Path(role_id): Path<Uuid>,
-    Json(body): Json<RoleSsoPolicyBody>,
-) -> Result<Json<RoleSsoPolicy>, AppError> {
+    Json(body): Json<RoleAuthPolicyBody>,
+) -> Result<Json<RoleAuthPolicy>, AppError> {
+    check_policy(&body)?;
+    let changes = serde_json::to_string(&serde_json::json!({
+        "sso_only": body.sso_only,
+        "mfa_mode": body.mfa_mode,
+        "mfa_factors": body.mfa_factors,
+        "mfa_grace_days": body.mfa_grace_days,
+        "remember_device_days": body.remember_device_days,
+        "phishing_resistant_only": body.phishing_resistant_only,
+    }))
+    .map_err(AppError::internal)?;
     let mut tx = SecurityTx::begin(
         &state,
         SecurityEvent::new(
@@ -87,8 +211,8 @@ async fn put_role_auth_policy(
             "role_auth_policy",
             Some(role_id),
         )
-        .named("role_sso_only_set")
-        .comment(format!("sso_only = {}", body.sso_only)),
+        .named("role_auth_policy_set")
+        .comment(changes),
     )
     .await?;
     let exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM role WHERE id = $1)")
@@ -99,24 +223,39 @@ async fn put_role_auth_policy(
     if !exists {
         return Err(AppError::NotFound);
     }
-    let row_version: i64 = sqlx::query_scalar(
-        "INSERT INTO role_auth_policy (role_ref, sso_only) VALUES ($1, $2) \
-         ON CONFLICT (role_ref) DO UPDATE \
-             SET sso_only = EXCLUDED.sso_only, row_version = role_auth_policy.row_version + 1, \
-                 updated_at = now() \
-         RETURNING row_version",
+    sqlx::query(
+        "INSERT INTO role_auth_policy (role_ref, sso_only, mfa_mode, mfa_factors, mfa_grace_days, \
+                                       remember_device_days, phishing_resistant_only) \
+         VALUES ($1, COALESCE($2, false), COALESCE($3, 'inherit'), \
+                 COALESCE($4, '{passkey,push,totp,recovery}'::text[]), COALESCE($5, 7), \
+                 COALESCE($6, 30), COALESCE($7, false)) \
+         ON CONFLICT (role_ref) DO UPDATE SET \
+             sso_only = COALESCE($2, role_auth_policy.sso_only), \
+             mfa_mode = COALESCE($3, role_auth_policy.mfa_mode), \
+             mfa_factors = COALESCE($4, role_auth_policy.mfa_factors), \
+             mfa_grace_days = COALESCE($5, role_auth_policy.mfa_grace_days), \
+             remember_device_days = COALESCE($6, role_auth_policy.remember_device_days), \
+             phishing_resistant_only = COALESCE($7, role_auth_policy.phishing_resistant_only), \
+             row_version = role_auth_policy.row_version + 1, updated_at = now()",
     )
     .bind(role_id)
     .bind(body.sso_only)
-    .fetch_one(&mut *tx)
+    .bind(&body.mfa_mode)
+    .bind(&body.mfa_factors)
+    .bind(body.mfa_grace_days)
+    .bind(body.remember_device_days)
+    .bind(body.phishing_resistant_only)
+    .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    let policy: RoleAuthPolicy = sqlx::query_as(POLICY_SELECT)
+        .bind(role_id)
+        .bind(attome_server::security::ADMIN_PRIVILEGE_KEY)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
     tx.commit().await?;
-    Ok(Json(RoleSsoPolicy {
-        role_id,
-        sso_only: body.sso_only,
-        row_version,
-    }))
+    Ok(Json(policy))
 }
 
 /// Add a break-glass account
@@ -264,7 +403,7 @@ pub(super) fn routes() -> Router<EngineState> {
     Router::new()
         .route(
             "/api/v1/admin/security/roles/{id}/auth-policy",
-            put(put_role_auth_policy),
+            put(put_role_auth_policy).get(get_role_auth_policy),
         )
         .route(
             "/api/v1/admin/security/break-glass-accounts",
@@ -278,8 +417,13 @@ pub(super) fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(put_role_auth_policy, add_break_glass, remove_break_glass),
-    components(schemas(RoleSsoPolicyBody, RoleSsoPolicy, BreakGlassBody))
+    paths(
+        get_role_auth_policy,
+        put_role_auth_policy,
+        add_break_glass,
+        remove_break_glass
+    ),
+    components(schemas(RoleAuthPolicyBody, RoleAuthPolicy, BreakGlassBody))
 )]
 struct ApiDocFragment;
 

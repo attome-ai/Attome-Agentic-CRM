@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { ApiComponents, ApiService, Page } from '@attome/base';
 import { RecordSharingService } from '@attome/xrm/core/entity';
 
@@ -163,6 +163,18 @@ export type OidcGroupMappingItem = ApiComponents['schemas']['OidcGroupMappingIte
 export type CreateOidcGroupMappingBody = ApiComponents['schemas']['CreateOidcGroupMappingBody'];
 export type OidcProviderHealthItem = ApiComponents['schemas']['OidcProviderHealthItem'];
 export type OidcTestStart = ApiComponents['schemas']['OidcTestStart'];
+
+// Q5-T10: a role's sign-in and second-factor policy, and MFA coverage (Q5-T9).
+export type RoleAuthPolicy = ApiComponents['schemas']['RoleAuthPolicy'];
+export type RoleAuthPolicyBody = ApiComponents['schemas']['RoleAuthPolicyBody'];
+export type MfaCoverageRow = ApiComponents['schemas']['MfaCoverageRow'];
+export type MfaCoverageSummary = ApiComponents['schemas']['MfaCoverageSummary'];
+
+/** Q5-T10: every second factor a role may allow, strongest first. */
+export const MFA_FACTORS = ['passkey', 'push', 'totp', 'recovery', 'email', 'sms', 'whatsapp'] as const;
+/** Codes sent by email or message: never used for an administrator. */
+export const WEAK_MFA_FACTORS: readonly string[] = ['email', 'sms', 'whatsapp'];
+export const MFA_MODES = ['inherit', 'off', 'optional', 'required'] as const;
 
 /// Q10-T12: the feature switches the advanced access screens sit behind
 /// (`attome_core::feature_flag_catalog::q10_flags`), all off on a new
@@ -543,6 +555,28 @@ export class SecurityAdminService {
       '/api/v1/admin/security/users/lookup', { email },
     );
   }
+  // ── Q5-T10: role sign-in policy and MFA coverage ────────────────────────
+
+  getRoleAuthPolicy(roleId: string): Observable<RoleAuthPolicy> {
+    return this.api.get<RoleAuthPolicy>(`/api/v1/admin/security/roles/${encodeURIComponent(roleId)}/auth-policy`);
+  }
+
+  updateRoleAuthPolicy(roleId: string, body: RoleAuthPolicyBody): Observable<RoleAuthPolicy> {
+    return this.api.put<RoleAuthPolicy>(`/api/v1/admin/security/roles/${encodeURIComponent(roleId)}/auth-policy`, body);
+  }
+
+  /** At most 500 active accounts, administrators first. */
+  mfaCoverage(filter: { roleId?: string; missingOnly?: boolean } = {}): Observable<MfaCoverageRow[]> {
+    const params: Record<string, string> = {};
+    if (filter.roleId) params['role_id'] = filter.roleId;
+    if (filter.missingOnly) params['missing_only'] = 'true';
+    return this.api.get<Page<MfaCoverageRow>>('/api/v1/admin/security/mfa/coverage', params).pipe(map(p => p.items));
+  }
+
+  mfaCoverageSummary(): Observable<MfaCoverageSummary[]> {
+    return this.api.get<MfaCoverageSummary[]>('/api/v1/admin/security/mfa/coverage/summary');
+  }
+
   // ── Q1-T14: sign-in providers ────────────────────────────────────────────
 
   listOidcProviders(): Observable<OidcProviderItem[]> {

@@ -45,6 +45,10 @@ export { UserAccessComponent }            from './user-access.component';
 export { UsersListComponent }             from './users-list.component';
 export { OrganizationsListComponent }     from './organizations-list.component';
 export { RecordSharesComponent }          from './record-shares.component';
+// Q5-T10: second-factor coverage.
+export { MfaCoverageComponent }           from './mfa-coverage.component';
+export { MFA_FACTORS, MFA_MODES, WEAK_MFA_FACTORS } from './security-admin.service';
+export type { RoleAuthPolicy, RoleAuthPolicyBody, MfaCoverageRow, MfaCoverageSummary } from './security-admin.service';
 // Q1-T14: the sign-in provider screens.
 export { OidcProvidersComponent }         from './oidc-providers.component';
 export { OidcProviderFormComponent, applyPreset, bodyOf, draftOf, emptyDraft } from './oidc-provider-form.component';
