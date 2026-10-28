@@ -30,6 +30,10 @@ fn not_computable(reason: &str) -> (StatusCode, Json<NotComputableResponse>) {
     )
 }
 
+/// Read a process's bottlenecks (not built yet)
+///
+/// Reserved for bottleneck detection; this release answers that it is not computed. Automation
+/// administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/process/case-defs/{id}/bottlenecks",
@@ -54,6 +58,10 @@ async fn bottlenecks(
     )
 }
 
+/// Read a process's findings (not built yet)
+///
+/// Reserved for process findings; this release answers that they are not computed. Automation
+/// administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/process/case-defs/{id}/findings",

@@ -148,6 +148,9 @@ fn validate_body(
     Ok((name, parsed))
 }
 
+/// List process case definitions
+///
+/// The case definitions process mining extracts events for. Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/process/case-defs",
@@ -187,6 +190,9 @@ async fn fetch_detail(state: &EngineState, id: Uuid) -> Result<CaseDefDetail, Ap
     Ok(row.into())
 }
 
+/// Get a process case definition
+///
+/// One case definition with its mappings. Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/process/case-defs/{id}",
@@ -208,6 +214,11 @@ async fn get_case_def(
     Ok(Json(fetch_detail(&state, id).await?))
 }
 
+/// Create a process case definition
+///
+/// What one process case is: its name, the source its events come from, how source rows map to
+/// activities and resources, and who may see it. Recorded in the open changeset. Automation
+/// administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/process/case-defs",
@@ -284,6 +295,10 @@ async fn create_case_def(
     Ok((StatusCode::CREATED, Json(row.into())))
 }
 
+/// Change a process case definition
+///
+/// Changes the fields given. Recorded in the open changeset; another layer's definition is 409.
+/// Automation administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/process/case-defs/{id}",
@@ -382,6 +397,9 @@ async fn update_case_def(
     Ok(Json(row.into()))
 }
 
+/// Delete a process case definition
+///
+/// Retires the definition. Recorded in the open changeset. Automation administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/process/case-defs/{id}",

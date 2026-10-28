@@ -541,6 +541,10 @@ async fn validate_transition_states(
 
 // ── Handlers: state models ──────────────────────────────────────────────────
 
+/// List state models
+///
+/// Every state model: its entity, state field, initial state and record type. Automation
+/// administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/state-models",
@@ -609,6 +613,10 @@ async fn fetch_detail(state: &EngineState, id: Uuid) -> Result<StateModelDetail,
     })
 }
 
+/// Get a state model
+///
+/// One state model: its entity, state field, initial state, whether it is active, its transitions and
+/// `row_version`. Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/state-models/{id}",
@@ -630,6 +638,11 @@ async fn get_state_model(
     Ok(Json(fetch_detail(&state, id).await?))
 }
 
+/// Create a state model
+///
+/// A state model on an entity's choice field with its initial state, optionally for one record type
+/// (fixed once created; a typed model is not recorded in changesets). Recorded in the open changeset
+/// otherwise. Automation administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/state-models",
@@ -752,6 +765,9 @@ async fn create_state_model(
     Ok((StatusCode::CREATED, Json(fetch_detail(&state, id).await?)))
 }
 
+/// Change a state model
+///
+/// Changes the fields given. Recorded in the open changeset. Automation administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/state-models/{id}",
@@ -865,6 +881,9 @@ async fn update_state_model(
     Ok(Json(fetch_detail(&state, id).await?))
 }
 
+/// Delete a state model
+///
+/// Retires the model. Recorded in the open changeset. Automation administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/state-models/{id}",
@@ -930,6 +949,10 @@ async fn delete_state_model(
 
 // ── Handlers: transitions ────────────────────────────────────────────────────
 
+/// Add a transition to a state model
+///
+/// A named move from one state to another, with an optional privilege, guard expression, and entry
+/// and exit actions. Recorded in the open changeset. Automation administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/state-models/{id}/transitions",
@@ -1045,6 +1068,9 @@ async fn create_transition(
     Ok((StatusCode::CREATED, Json(row.into())))
 }
 
+/// Change a transition
+///
+/// Changes the fields given. Recorded in the open changeset. Automation administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/state-models/{id}/transitions/{transition_id}",
@@ -1191,6 +1217,10 @@ async fn update_transition(
     Ok(Json(row.into()))
 }
 
+/// Remove a transition
+///
+/// Records can no longer take it. Recorded in the open changeset. Automation administrators only.
+/// Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/state-models/{id}/transitions/{transition_id}",

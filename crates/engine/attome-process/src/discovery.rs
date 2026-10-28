@@ -286,6 +286,10 @@ async fn latest_snapshot(state: &EngineState, case_def_id: Uuid) -> Result<Snaps
     .ok_or(AppError::NotFound)
 }
 
+/// Read a process's directly-follows graph
+///
+/// Which activity follows which and how often, with cycle times, from the latest snapshot the
+/// extraction sweep computed; nothing is computed on the request. Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/process/case-defs/{id}/dfg",
@@ -317,6 +321,10 @@ async fn get_dfg(
     }))
 }
 
+/// Read a process's variants
+///
+/// The distinct paths cases took through the process and how many cases took each, from the latest
+/// snapshot. Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/process/case-defs/{id}/variants",
