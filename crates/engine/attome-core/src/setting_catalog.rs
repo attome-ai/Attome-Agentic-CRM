@@ -238,6 +238,16 @@ fn limit_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(500),
         ),
+        // AA10-T10: above this many rows an agent's mass operation waits for a person.
+        SettingDescriptor::new(
+            "limits.heavy_op.agent_confirm_rows",
+            "Rows an AI agent's mass update, delete or restore may change without a person \
+             confirming it first; a larger one is proposed for confirmation. 1 to 100,000.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 100_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(100),
+        ),
         // AA10-T9: the measured speed of a mass update, written by each one.
         SettingDescriptor::new(
             "limits.heavy_op.measured_rps.update",

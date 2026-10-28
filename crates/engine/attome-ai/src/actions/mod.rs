@@ -65,6 +65,8 @@ pub mod knowledge_answer;
 pub mod lead_qualifier;
 /// L5-T8: lineage.downstream, lineage.upstream, lineage.impact.
 pub mod lineage;
+/// AA10-T10: mass operations over a filter, estimate then start.
+pub mod mass_operation;
 /// L1-T10: master.xref, master.preview_ranking, master.propose_release.
 pub mod master;
 pub mod meeting;
@@ -152,6 +154,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(crate::builder::explain::descriptor());
     all.extend(record_write::descriptors());
     all.extend(bulk::descriptors());
+    all.extend(mass_operation::descriptors());
     all.extend(transition::descriptors());
     all.push(translate::descriptor());
     all.push(draft_page::descriptor());
@@ -250,6 +253,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(crate::builder::explain::BuilderExplain));
     all.extend(record_write::executors());
     all.extend(bulk::executors());
+    all.extend(mass_operation::executors());
     all.push(Box::new(transition::RecordTransitions));
     all.push(Box::new(transition::RecordTransition));
     all.push(Box::new(translate::TextTranslate));

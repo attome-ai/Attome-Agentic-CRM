@@ -117,5 +117,14 @@ with its counts. The operation becomes `undone` once chunk 0, the last to replay
 The values an operation replaced are kept for `limits.heavy_op.undo_retention_days` (30 by
 default) after it finishes. A daily job clears older ones, and undo is then refused with `409`.
 
+## From an AI agent
+
+`record.mass.estimate`, `record.mass.start` and `record.mass.start_confirmed` run the same engine as
+the agent. Each start runs the size check itself; an agent's operation larger than
+`limits.heavy_op.agent_confirm_rows` (100 by default) runs only through
+`record.mass.start_confirmed`, which a person confirms with the record count shown (see
+[agents](agents.md)). The agent is the operation's `started_by`. Reassignment is not offered to
+agents.
+
 The entity name `mass` is reserved, because `/api/v1/mass/...` would otherwise collide with an
 entity's own routes.

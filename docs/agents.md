@@ -99,6 +99,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Many records: `record.bulk.preview` (count, a sample of what changes, problems), then
   `record.bulk.update|delete` (up to 500, run by the bulk engine, approved by a second person) and
   `record.bulk.status` (each record's result). A replayed call never applies twice.
+- Every record a filter selects: `record.mass.estimate` (how many the agent may change, how long,
+  whether a person must confirm), then `record.mass.start` (update, delete or restore; undoable).
+  Above `limits.heavy_op.agent_confirm_rows` (100) the start refuses and the agent calls
+  `record.mass.start_confirmed` with the estimate as `confirm_rows`; a person confirms that, no
+  autonomy level lifts it, and it refuses to run if the filter now selects more than was confirmed.
 - Questions: `query.plan` turns a question into a checked query (entity, filters, order, limit) and
   returns the issues to fix, or a description for the person and the `query.execute` arguments that
   run it. The model never writes SQL.
