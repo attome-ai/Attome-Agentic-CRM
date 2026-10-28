@@ -5,7 +5,7 @@ import { EntityMetadataChangeService } from './entity-metadata-change.service';
 
 export const XRM_FIELD_TYPES = [
   'text', 'number', 'currency', 'date', 'bool', 'choice', 'lookup', 'file', 'icon', 'color',
-  'formula', 'rich_text', 'image', 'date_time', 'time',
+  'formula', 'rich_text', 'image', 'date_time', 'time', 'geolocation', 'json',
 ] as const;
 export type XrmFieldType = typeof XRM_FIELD_TYPES[number];
 

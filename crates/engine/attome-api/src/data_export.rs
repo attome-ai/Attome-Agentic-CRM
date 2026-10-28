@@ -195,6 +195,8 @@ struct DatePresentation {
     calendar: String,
     arab_digits: bool,
     date_columns: Vec<String>,
+    /// A2-T3: geolocation columns, written `lat,lng` (the import shape).
+    geo_columns: Vec<String>,
     hijri: std::sync::Arc<attome_core::calendar::hijri::HijriCalendar>,
 }
 
@@ -221,11 +223,29 @@ impl DatePresentation {
                 .filter(|a| a.field_type().is_temporal())
                 .map(|a| a.logicalname.clone())
                 .collect(),
+            geo_columns: attrs
+                .iter()
+                .filter(|a| attome_core::filter::is_geolocation_attr(a))
+                .map(|a| a.logicalname.clone())
+                .collect(),
             hijri: state.hijri.load_full(),
         }
     }
 
     fn apply(&self, mut row: Value) -> Value {
+        if let Value::Object(map) = &mut row {
+            for column in &self.geo_columns {
+                if let Some(cell) = map.get_mut(column) {
+                    let point = cell
+                        .get("lat")
+                        .and_then(Value::as_f64)
+                        .zip(cell.get("lng").and_then(Value::as_f64));
+                    if let Some((lat, lng)) = point {
+                        *cell = Value::String(format!("{lat},{lng}"));
+                    }
+                }
+            }
+        }
         if self.calendar == "gregorian" && !self.arab_digits {
             return row;
         }
@@ -1461,6 +1481,7 @@ mod tests {
             calendar: calendar.to_owned(),
             arab_digits,
             date_columns: vec!["closed_on".to_owned()],
+            geo_columns: vec!["site".to_owned()],
             hijri: std::sync::Arc::new(
                 attome_core::calendar::hijri::HijriCalendar::umm_al_qura().clone(),
             ),
@@ -1484,5 +1505,14 @@ mod tests {
             "١٤٤٧-٠٩-٠١"
         );
         assert_eq!(presentation("gregorian", false).apply(row.clone()), row);
+    }
+
+    /// A2-T3: a point exports as the `lat,lng` text import reads back.
+    #[test]
+    fn export_writes_a_point_as_lat_lng() {
+        let row = serde_json::json!({"site": {"lat": 24.5, "lng": 46.25}, "name": "x"});
+        let out = presentation("gregorian", false).apply(row);
+        assert_eq!(out["site"], "24.5,46.25");
+        assert_eq!(out["name"], "x");
     }
 }

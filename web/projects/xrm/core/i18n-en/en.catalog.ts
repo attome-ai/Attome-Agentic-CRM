@@ -1353,6 +1353,8 @@ export const xrmEn = {
     removeAttachment: 'Remove attachment', removeImage: 'Remove image', removeNamed: 'Remove {label}',
     // U9 (D-604/D-605) — formula, rich text, image, address and rollup.
     formulaHint: 'Calculated automatically: {expression}',
+    geoPlaceholder: 'Latitude, longitude (e.g. 24.7136, 46.6753)',
+    jsonInvalid: 'This is not valid JSON; the last valid value is kept.',
     formulaEmpty: 'Not calculated yet',
     formulaTrue: 'Yes', formulaFalse: 'No',
     richTextToolbar: 'Text formatting',
@@ -1972,7 +1974,7 @@ export const xrmEn = {
   fieldTypes: {
     text: 'Text', number: 'Number', date: 'Date', bool: 'Boolean',
     choice: 'Choice', lookup: 'Lookup', file: 'File', icon: 'Icon', color: 'Color', currency: 'Currency',
-    formula: 'Formula', rich_text: 'Rich text', image: 'Image', date_time: 'Date and time', time: 'Time',
+    formula: 'Formula', rich_text: 'Rich text', image: 'Image', date_time: 'Date and time', time: 'Time', geolocation: 'Location', json: 'JSON',
   },
   // C-29 (M01 §7) — `security-admin.service.ts`'s `ACCESS_LEVELS`/
   // `CONDITION_OPERATORS` used to hold literal English display text; both

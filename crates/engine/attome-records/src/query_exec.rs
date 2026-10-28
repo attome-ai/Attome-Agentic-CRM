@@ -50,6 +50,14 @@ pub struct ExecuteQueryRequest {
     #[serde(default = "asc")]
     #[schema(default = "asc", example = "asc")]
     order_dir: String,
+    /// A2-T3: `"lat,lng"`: sort by distance from this point, nearest first
+    /// (`order_dir: desc` for farthest first). `order_by` must name a
+    /// geolocation field; rows without a point come last (first for
+    /// `desc`). One page only:
+    /// not with `after_id` or `seek` (422), and no `next_cursor`.
+    #[serde(default)]
+    #[schema(example = "24.7136,46.6753")]
+    order_near: Option<String>,
     #[serde(default)]
     filters: Vec<Filter>,
     /// P-stored-query-containment phase 2 / D-126: `true` is the only way to
@@ -145,6 +153,7 @@ impl ExecuteQueryRequest {
             search: String::new(),
             order_by: String::new(),
             order_dir: "asc".to_string(),
+            order_near: None,
             filters,
             include_total: false,
             after_id: None,
@@ -1062,6 +1071,12 @@ impl FilterSchema for QueryExecFilterSchema<'_> {
 
     fn tag_scope(&self) -> Option<attome_core::filter::TagScope> {
         self.tag_scope.clone()
+    }
+
+    fn is_geolocation(&self, field: &str) -> bool {
+        self.columns
+            .iter()
+            .any(|column| column.name == field && column.data_type == "geolocation")
     }
 }
 
@@ -2659,7 +2674,34 @@ pub async fn execute_stored_query_with_definition(
     } else {
         None
     };
-    let order_sql = if body.order_by.is_empty() {
+    // A2-T3: nearest first, from a parsed and range-checked anchor.
+    let near = match body.order_near.as_deref() {
+        None => None,
+        Some(text) => {
+            if !whitelist.contains(&body.order_by) || !filter_schema.is_geolocation(&body.order_by)
+            {
+                return Err(AppError::Validation(
+                    "order_near needs order_by to name a geolocation field".into(),
+                ));
+            }
+            if body.after_id.is_some() || body.seek.is_some() {
+                return Err(AppError::Validation(
+                    "order_near returns one page: no after_id or seek".into(),
+                ));
+            }
+            Some(attome_core::filter::near_point(text).ok_or_else(|| {
+                AppError::Validation(
+                    "order_near takes \"lat,lng\" (lat -90..90, lng -180..180)".into(),
+                )
+            })?)
+        }
+    };
+    let order_sql = if let Some((lat, lng)) = near {
+        format!(
+            "ORDER BY {} {dir}",
+            attome_core::filter::geo_distance_km_to(&quote_ident(&body.order_by), lat, lng)
+        )
+    } else if body.order_by.is_empty() {
         String::new()
     } else if whitelist.contains(&body.order_by) {
         format!(
@@ -2798,7 +2840,13 @@ pub async fn execute_stored_query_with_definition(
         };
         let sort_col = quote_ident(sort_col);
         // B21-T3: the keyset bound compares in the same collation it sorts by.
-        let sort_by = sort_expr(&format!("t.{sort_col}"), collate);
+        // A2-T3: a nearest-first page sorts by distance (no keyset follows).
+        let sort_by = match near {
+            Some((lat, lng)) => {
+                attome_core::filter::geo_distance_km_to(&format!("t.{sort_col}"), lat, lng)
+            }
+            None => sort_expr(&format!("t.{sort_col}"), collate),
+        };
 
         // `after_id` present: continue an existing page, anchored via a
         // subquery that looks the cursor's sort value up from the DB by id rather
@@ -2846,7 +2894,7 @@ pub async fn execute_stored_query_with_definition(
         // A short page (fewer rows than requested) means there is
         // nothing further — only offer a cursor when the page is full,
         // matching the usual "keep paging until short" client contract.
-        let next_cursor = (records.len() as i64 == page_size)
+        let next_cursor = (records.len() as i64 == page_size && near.is_none())
             .then(|| records.last())
             .flatten()
             .and_then(|r| r.get("id"))

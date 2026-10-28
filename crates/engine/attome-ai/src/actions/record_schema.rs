@@ -136,6 +136,21 @@ pub(crate) fn field_schema(attr: &AttrInfo, target: Option<&str>) -> Option<Valu
         FieldType::Date => json!({ "type": "string", "format": "date" }),
         FieldType::DateTime => json!({ "type": "string", "format": "date-time" }),
         FieldType::Time => json!({ "type": "string", "format": "time" }),
+        // A2-T3: a point, or a JSON document matching its own schema.
+        FieldType::Geolocation => json!({
+            "type": "object",
+            "required": ["lat", "lng"],
+            "properties": {
+                "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+                "lng": { "type": "number", "minimum": -180, "maximum": 180 }
+            }
+        }),
+        FieldType::Json => attr
+            .options
+            .as_ref()
+            .and_then(|o| o.get("schema"))
+            .cloned()
+            .unwrap_or_else(|| json!({})),
         FieldType::Bool => json!({ "type": "boolean" }),
         FieldType::Choice => {
             let choices = attr

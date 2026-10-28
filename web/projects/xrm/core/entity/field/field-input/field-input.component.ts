@@ -178,6 +178,48 @@ export class FieldInputComponent implements OnInit, OnDestroy {
     this.ctrl.markAsDirty();
   }
 
+  /** A2-T3: the control's point as `lat,lng` text. */
+  geoText(): string {
+    const value: unknown = this.ctrl.value;
+    if (value && typeof value === 'object' && 'lat' in value && 'lng' in value) {
+      return `${(value as { lat: number }).lat},${(value as { lng: number }).lng}`;
+    }
+    return typeof value === 'string' ? value : '';
+  }
+
+  /** A2-T3: writes `lat,lng` text; the server stores it as `{lat, lng}`. */
+  setGeo(raw: string): void {
+    this.ctrl.setValue(raw.trim() === '' ? null : raw.trim());
+    this.ctrl.markAsDirty();
+  }
+
+  /** A2-T3: why the JSON text does not parse, if it does not. */
+  readonly jsonError = signal(false);
+
+  /** A2-T3: the control's JSON document as indented text. */
+  jsonText(): string {
+    const value: unknown = this.ctrl.value;
+    return value === null || value === undefined ? '' : JSON.stringify(value, null, 2);
+  }
+
+  /** A2-T3: writes the parsed document; text that does not parse is kept off the control. */
+  setJson(raw: string): void {
+    if (raw.trim() === '') {
+      this.jsonError.set(false);
+      this.ctrl.setValue(null);
+      this.ctrl.markAsDirty();
+      return;
+    }
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      this.jsonError.set(false);
+      this.ctrl.setValue(parsed);
+      this.ctrl.markAsDirty();
+    } catch {
+      this.jsonError.set(true);
+    }
+  }
+
   /** The Hijri date the control holds, if any. */
   hijriValue(): HijriParts | null {
     const value: unknown = this.ctrl.value;

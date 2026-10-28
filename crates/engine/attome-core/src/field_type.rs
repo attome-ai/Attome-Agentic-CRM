@@ -4,7 +4,11 @@ use serde_json::Value;
 /// A field's type. Y2-T1: `Date` is a calendar day (`DATE`) and `DateTime`
 /// a moment (`TIMESTAMPTZ`); attributes made before the split hold a
 /// `TIMESTAMPTZ` column and are relabelled `date_time` (Y2-T2). A2-T1:
-/// `Time` is a time of day (`TIME`, `HH:MM[:SS]`).
+/// `Time` is a time of day (`TIME`, `HH:MM[:SS]`). A2-T3: `Geolocation`
+/// is a point stored as `JSONB` `{"lat": .., "lng": ..}` (spatially indexed
+/// by an expression GiST index, filtered by `within_km` and sorted by
+/// `nearest`), and `Json` is a `JSONB` document, checked on write against
+/// `options.schema` when one is set.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FieldType {
@@ -23,12 +27,14 @@ pub enum FieldType {
     Image,
     DateTime,
     Time,
+    Geolocation,
+    Json,
 }
 
 /// Every variant, in declaration order. The one list callers iterate — the
 /// bundle vocabulary ([`FieldType::NAMES`]), the admin/reconcile validator,
 /// and the round-trip tests below all derive from it.
-pub const ALL_FIELD_TYPES: [FieldType; 15] = [
+pub const ALL_FIELD_TYPES: [FieldType; 17] = [
     FieldType::Text,
     FieldType::Number,
     FieldType::Currency,
@@ -44,6 +50,8 @@ pub const ALL_FIELD_TYPES: [FieldType; 15] = [
     FieldType::Image,
     FieldType::DateTime,
     FieldType::Time,
+    FieldType::Geolocation,
+    FieldType::Json,
 ];
 
 /// The storage types a `formula` field (B-R6, D-604) may declare as its
@@ -72,6 +80,8 @@ impl FieldType {
         "image",
         "date_time",
         "time",
+        "geolocation",
+        "json",
     ];
 
     /// Whether `name` is one of [`Self::NAMES`] — the one field-type
@@ -98,6 +108,8 @@ impl FieldType {
             Self::Image => "image",
             Self::DateTime => "date_time",
             Self::Time => "time",
+            Self::Geolocation => "geolocation",
+            Self::Json => "json",
         }
     }
 
@@ -141,6 +153,8 @@ impl FieldType {
             18 => Self::Image,
             19 => Self::DateTime,
             20 => Self::Time,
+            21 => Self::Geolocation,
+            22 => Self::Json,
             _ => Self::Text,
         })
     }
@@ -166,6 +180,8 @@ impl FieldType {
             Self::Image => 18,
             Self::DateTime => 19,
             Self::Time => 20,
+            Self::Geolocation => 21,
+            Self::Json => 22,
         }
     }
 
@@ -220,6 +236,7 @@ impl FieldType {
             Self::Date => "DATE",
             Self::DateTime => "TIMESTAMPTZ",
             Self::Time => "TIME",
+            Self::Geolocation | Self::Json => "JSONB",
             Self::Bool => "BOOLEAN",
             Self::Choice if multi => "TEXT[]",
             Self::Choice => "TEXT",
@@ -251,6 +268,7 @@ impl FieldType {
             Self::Date => "::date",
             Self::DateTime => "::timestamptz",
             Self::Time => "::time",
+            Self::Geolocation | Self::Json => "::jsonb",
             Self::Bool => "::boolean",
             Self::Lookup => "::uuid",
             Self::Choice if multi => "::text[]",
@@ -299,6 +317,8 @@ impl TryFrom<&str> for FieldType {
             "image" => Ok(Self::Image),
             "date_time" => Ok(Self::DateTime),
             "time" => Ok(Self::Time),
+            "geolocation" => Ok(Self::Geolocation),
+            "json" => Ok(Self::Json),
             other => Err(format!("unknown field type: {other}")),
         }
     }
@@ -308,7 +328,7 @@ impl TryFrom<&str> for FieldType {
 mod tests {
     use super::*;
 
-    const ALL: [FieldType; 15] = ALL_FIELD_TYPES;
+    const ALL: [FieldType; 17] = ALL_FIELD_TYPES;
 
     #[test]
     fn names_match_every_variant_in_order() {
@@ -329,6 +349,10 @@ mod tests {
         assert_eq!(FieldType::DateTime.to_int(), 19);
         assert_eq!(FieldType::Time.to_int(), 20);
         assert_eq!(FieldType::Time.pg_type(false), "TIME");
+        assert_eq!(FieldType::Geolocation.to_int(), 21);
+        assert_eq!(FieldType::Json.to_int(), 22);
+        assert_eq!(FieldType::Geolocation.pg_type(false), "JSONB");
+        assert_eq!(FieldType::Json.sql_cast(false), "::jsonb");
     }
 
     #[test]

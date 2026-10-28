@@ -226,6 +226,8 @@ fn shape_of(attr: &AttrInfo) -> Option<Shape> {
         FieldType::Choice => Shape::Choice,
         FieldType::Lookup => Shape::Id,
         FieldType::File | FieldType::Image => Shape::Presence,
+        // A2-T3: a point or a JSON document is asked about as present or not.
+        FieldType::Geolocation | FieldType::Json => Shape::Presence,
         // A formula is computed on read, not a stored column.
         FieldType::Formula => return None,
     })

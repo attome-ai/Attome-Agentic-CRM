@@ -337,3 +337,157 @@ fn return_pref_reads_minimal_case_insensitively() {
         assert_eq!(return_pref(&headers), ReturnPref::Minimal, "{value}");
     }
 }
+
+/// A2-T3: the geolocation and json field types end to end below the
+/// database: how values bind, how `within_km` compiles, and the schema check.
+mod geo_json_types {
+    use super::*;
+    use attome_core::FieldType;
+    use attome_core::filter::{FieldCastError, Filter, FilterSchema};
+    use serde_json::json;
+
+    #[test]
+    fn json_and_points_bind_as_json_text() {
+        let doc = attr(22, None);
+        assert_eq!(sql_cast(&doc), "::jsonb");
+        assert_eq!(
+            json_to_str(&json!("plain"), &doc).as_deref(),
+            Some("\"plain\"")
+        );
+        assert_eq!(json_to_str(&json!([1, 2]), &doc).as_deref(), Some("[1,2]"));
+        assert_eq!(json_to_str(&Value::Null, &doc), None);
+        let point = attr(21, None);
+        assert_eq!(sql_cast(&point), "::jsonb");
+        assert_eq!(
+            json_to_str(&json!({"lat": 24.5, "lng": 46.25}), &point).as_deref(),
+            Some(r#"{"lat":24.5,"lng":46.25}"#)
+        );
+    }
+
+    struct Geo;
+    impl FilterSchema for Geo {
+        fn cast(&self, field: &str) -> Result<&'static str, FieldCastError> {
+            match field {
+                "site" | "doc" => Ok("jsonb"),
+                _ => Err(FieldCastError::Unknown),
+            }
+        }
+        fn is_geolocation(&self, field: &str) -> bool {
+            field == "site"
+        }
+    }
+
+    fn filter(field: &str, op: &str, value: Value) -> Filter {
+        Filter {
+            field: field.to_owned(),
+            op: op.to_owned(),
+            value: Some(value),
+        }
+    }
+
+    #[test]
+    fn within_km_compiles_a_box_and_a_distance() {
+        let (sql, binds) = attome_core::filter::compile(
+            &filter("site", "within_km", json!("24.7,46.7,10")),
+            &Geo,
+            3,
+        )
+        .unwrap();
+        assert!(
+            sql.contains("<@ box(point($6::float8, $7::float8)"),
+            "{sql}"
+        );
+        assert!(sql.contains("<= $5::float8"), "{sql}");
+        assert_eq!(binds.len(), 7);
+        assert_eq!(&binds[..3], ["24.7", "46.7", "10"]);
+        // the object form compiles the same
+        let object = json!({"lat": 24.7, "lng": 46.7, "km": 10});
+        assert!(
+            attome_core::filter::compile(&filter("site", "within_km", object), &Geo, 1).is_ok()
+        );
+    }
+
+    #[test]
+    fn a_point_takes_only_within_km_and_null_checks() {
+        for (op, value) in [("eq", json!("1,2")), ("gt", json!("1"))] {
+            assert!(attome_core::filter::compile(&filter("site", op, value), &Geo, 1).is_err());
+        }
+        assert!(
+            attome_core::filter::compile(&filter("site", "is_null", Value::Null), &Geo, 1).is_ok()
+        );
+        // within_km needs a point field, a radius above 0 and coordinates in range
+        assert!(
+            attome_core::filter::compile(&filter("doc", "within_km", json!("1,2,3")), &Geo, 1)
+                .is_err()
+        );
+        for bad in ["1,2,0", "91,2,5", "1,181,5", "1,2", "a,b,c"] {
+            assert!(
+                attome_core::filter::compile(&filter("site", "within_km", json!(bad)), &Geo, 1)
+                    .is_err(),
+                "{bad}"
+            );
+        }
+    }
+
+    #[test]
+    fn nearest_sort_reads_a_point_and_the_box_holds_the_radius() {
+        assert_eq!(
+            attome_core::filter::near_point("24.7, 46.7"),
+            Some((24.7, 46.7))
+        );
+        assert_eq!(attome_core::filter::near_point("24.7"), None);
+        assert_eq!(attome_core::filter::near_point("95,46.7"), None);
+        let sql = attome_core::filter::geo_distance_km_to("t.\"site\"", 24.7, -46.7);
+        assert!(
+            sql.contains("(24.7::float8)") && sql.contains("(-46.7::float8)"),
+            "{sql}"
+        );
+        // 111 km is about one degree of latitude.
+        let (min_lat, _, max_lat, _) = attome_core::filter::bounding_box(0.0, 0.0, 111.195);
+        assert!((max_lat - 1.0).abs() < 1e-3 && (min_lat + 1.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn a_json_schema_refuses_a_document_that_does_not_match() {
+        let options = json!({"schema": {
+            "type": "object",
+            "required": ["sku"],
+            "additionalProperties": false,
+            "properties": {"sku": {"type": "string"}, "qty": {"type": "integer", "minimum": 1}}
+        }});
+        let ok = json!({"sku": "A-1", "qty": 2});
+        assert!(attome_field::validate(&FieldType::Json, &ok, Some(&options)).is_ok());
+        for bad in [
+            json!({"qty": 2}),
+            json!({"sku": "A-1", "qty": 0}),
+            json!({"sku": "A-1", "colour": "red"}),
+            json!([1]),
+        ] {
+            assert!(
+                attome_field::validate(&FieldType::Json, &bad, Some(&options)).is_err(),
+                "{bad}"
+            );
+        }
+        // without a schema any document is taken
+        assert!(attome_field::validate(&FieldType::Json, &json!([1, "a"]), None).is_ok());
+    }
+
+    #[test]
+    fn a_point_is_normalised_and_range_checked() {
+        let stored = attome_field::normalize(&FieldType::Geolocation, &json!("٢٤.٥, 46.25"), None);
+        assert_eq!(stored, Some(json!({"lat": 24.5, "lng": 46.25})));
+        assert!(
+            attome_field::validate(
+                &FieldType::Geolocation,
+                &json!({"lat": 24.5, "lng": 46.25}),
+                None
+            )
+            .is_ok()
+        );
+        assert!(
+            attome_field::validate(&FieldType::Geolocation, &json!({"lat": 99, "lng": 1}), None)
+                .is_err()
+        );
+        assert!(attome_field::validate(&FieldType::Geolocation, &json!("24.5"), None).is_err());
+    }
+}

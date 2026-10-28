@@ -210,8 +210,13 @@ pub fn rules_type(ft: &FieldType) -> Option<Type> {
         FieldType::Bool => Some(Type::Bool),
         FieldType::Choice => Some(Type::Choice),
         FieldType::Lookup => Some(Type::Lookup),
-        // A2-T1: a time of day has no rules type yet.
-        FieldType::File | FieldType::Image | FieldType::Time => None,
+        // A2-T1: a time of day has no rules type yet; A2-T3: nor a point
+        // or a JSON document.
+        FieldType::File
+        | FieldType::Image
+        | FieldType::Time
+        | FieldType::Geolocation
+        | FieldType::Json => None,
         FieldType::Text
         | FieldType::Icon
         | FieldType::Color

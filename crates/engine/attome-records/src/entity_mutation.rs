@@ -872,6 +872,14 @@ pub(crate) fn build_update_binds(
 /// interchangeable, so which one runs is driven by the same `options.multi`
 /// read `sql_cast` already made, not re-derived from the value's shape.
 pub fn json_to_str(v: &Value, attr: &AttrInfo) -> Option<String> {
+    // A2-T3: a `json` or `geolocation` column is `JSONB`: every value, a
+    // string or an array included, binds as JSON text.
+    if matches!(
+        attr.storage_type(),
+        attome_core::FieldType::Json | attome_core::FieldType::Geolocation
+    ) {
+        return (!v.is_null()).then(|| v.to_string());
+    }
     match v {
         Value::Null => None,
         Value::Bool(b) => Some(if *b { "true" } else { "false" }.to_owned()),

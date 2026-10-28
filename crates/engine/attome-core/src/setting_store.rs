@@ -212,7 +212,10 @@ pub async fn setting_log_watermark(db: &DbPool) -> Result<i64, AppError> {
 // be exactly the "speculative abstraction" guidelines §0/§13 warn against.
 // Supports: `type` (string/integer/number/boolean/array/object), `enum`,
 // `minimum`/`maximum` (numeric), `minLength`/`maxLength` (string), `pattern`
-// (string, via `regex`). An unrecognized keyword is ignored, not rejected —
+// (string, via `regex`), and (A2-T3, for `json` fields) `required`,
+// `properties` and `additionalProperties: false` on objects, `items`,
+// `minItems` and `maxItems` on arrays, nested up to
+// [`MAX_SCHEMA_DEPTH`] levels. An unrecognized keyword is ignored, not rejected —
 // this is a validator for the schemas this module ships, not a conformance
 // checker; extend it (or swap in a real crate) if a future descriptor needs
 // more.
@@ -224,10 +227,83 @@ pub fn validate_against_schema(
     value: &serde_json::Value,
     schema: &serde_json::Value,
 ) -> Result<(), String> {
+    validate_at(value, schema, "", 0)
+}
+
+/// How deep [`validate_against_schema`] follows `properties`/`items`; a
+/// deeper schema is refused rather than walked.
+pub const MAX_SCHEMA_DEPTH: usize = 16;
+
+fn validate_at(
+    value: &serde_json::Value,
+    schema: &serde_json::Value,
+    path: &str,
+    depth: usize,
+) -> Result<(), String> {
     let Some(obj) = schema.as_object() else {
         return Ok(());
     };
+    if depth > MAX_SCHEMA_DEPTH {
+        return Err(format!(
+            "schema nests deeper than {MAX_SCHEMA_DEPTH} levels"
+        ));
+    }
+    let at = |reason: String| {
+        if path.is_empty() {
+            reason
+        } else {
+            format!("at {path}: {reason}")
+        }
+    };
+    if let Some(map) = value.as_object() {
+        if let Some(required) = obj.get("required").and_then(|r| r.as_array()) {
+            for key in required.iter().filter_map(|k| k.as_str()) {
+                if !map.contains_key(key) {
+                    return Err(at(format!("\"{key}\" is required")));
+                }
+            }
+        }
+        let properties = obj.get("properties").and_then(|p| p.as_object());
+        if obj.get("additionalProperties") == Some(&serde_json::Value::Bool(false))
+            && let Some(extra) = map
+                .keys()
+                .find(|k| !properties.is_some_and(|p| p.contains_key(*k)))
+        {
+            return Err(at(format!("\"{extra}\" is not an allowed property")));
+        }
+        if let Some(properties) = properties {
+            for (key, sub) in properties {
+                if let Some(v) = map.get(key) {
+                    validate_at(v, sub, &format!("{path}/{key}"), depth + 1)?;
+                }
+            }
+        }
+    }
+    if let Some(items) = value.as_array() {
+        let len = items.len() as u64;
+        if let Some(min) = obj.get("minItems").and_then(|m| m.as_u64())
+            && len < min
+        {
+            return Err(at(format!("must have at least {min} items")));
+        }
+        if let Some(max) = obj.get("maxItems").and_then(|m| m.as_u64())
+            && len > max
+        {
+            return Err(at(format!("must have at most {max} items")));
+        }
+        if let Some(sub) = obj.get("items") {
+            for (i, v) in items.iter().enumerate() {
+                validate_at(v, sub, &format!("{path}/{i}"), depth + 1)?;
+            }
+        }
+    }
+    validate_scalar(value, obj).map_err(at)
+}
 
+fn validate_scalar(
+    value: &serde_json::Value,
+    obj: &serde_json::Map<String, serde_json::Value>,
+) -> Result<(), String> {
     if let Some(ty) = obj.get("type").and_then(|t| t.as_str()) {
         let ok = match ty {
             "string" => value.is_string(),
@@ -293,6 +369,31 @@ pub fn validate_against_schema(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    /// A2-T3: objects and arrays are checked member by member, with a path.
+    #[test]
+    fn schema_checks_nested_objects_and_arrays() {
+        let schema = json!({
+            "type": "object",
+            "required": ["lines"],
+            "properties": {
+                "lines": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"type": "object", "required": ["qty"], "properties": {"qty": {"type": "integer"}}}
+                }
+            }
+        });
+        assert!(validate_against_schema(&json!({"lines": [{"qty": 1}]}), &schema).is_ok());
+        assert!(validate_against_schema(&json!({}), &schema).is_err());
+        assert!(validate_against_schema(&json!({"lines": []}), &schema).is_err());
+        let err = validate_against_schema(&json!({"lines": [{"qty": "x"}]}), &schema).unwrap_err();
+        assert!(err.contains("/lines/0/qty"), "{err}");
+        let closed =
+            json!({"type": "object", "additionalProperties": false, "properties": {"a": {}}});
+        assert!(validate_against_schema(&json!({"a": 1}), &closed).is_ok());
+        assert!(validate_against_schema(&json!({"b": 1}), &closed).is_err());
+    }
 
     #[test]
     fn a_stored_limit_wins_and_none_stored_means_the_boot_value() {

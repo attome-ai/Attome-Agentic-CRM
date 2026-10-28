@@ -1315,6 +1315,8 @@ export const xrmAr = {
     removeAttachment: 'إزالة المرفق', removeImage: 'إزالة الصورة', removeNamed: 'إزالة {label}',
     // U9 — انظر en.catalog.ts
     formulaHint: 'يُحسب تلقائيًا: {expression}',
+    geoPlaceholder: 'خط العرض، خط الطول (مثل 24.7136, 46.6753)',
+    jsonInvalid: 'هذا ليس JSON صالحًا؛ تُحفظ آخر قيمة صالحة.',
     formulaEmpty: 'لم يُحسب بعد',
     formulaTrue: 'نعم', formulaFalse: 'لا',
     richTextToolbar: 'تنسيق النص',
@@ -1910,7 +1912,7 @@ export const xrmAr = {
   fieldTypes: {
     text: 'نص', number: 'رقم', date: 'تاريخ', bool: 'قيمة منطقية',
     choice: 'اختيار', lookup: 'بحث مرجعي', file: 'ملف', icon: 'أيقونة', color: 'لون', currency: 'عملة',
-    formula: 'صيغة', rich_text: 'نص منسق', image: 'صورة', date_time: 'تاريخ ووقت', time: 'وقت',
+    formula: 'صيغة', rich_text: 'نص منسق', image: 'صورة', date_time: 'تاريخ ووقت', time: 'وقت', geolocation: 'موقع', json: 'JSON',
   },
   security: {
     accessLevel: {

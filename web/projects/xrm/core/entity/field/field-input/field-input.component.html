@@ -97,6 +97,20 @@
              [formControlName]="field().name" />
     }
 
+    @case ('geolocation') {
+      <input [id]="field().name" type="text" dir="ltr" inputmode="decimal" class="xf-input"
+             [placeholder]="'fieldInput.geoPlaceholder' | translate"
+             [value]="geoText()" (change)="setGeo($any($event.target).value)" />
+    }
+
+    @case ('json') {
+      <textarea [id]="field().name" dir="ltr" rows="6" class="xf-input"
+                [value]="jsonText()" (change)="setJson($any($event.target).value)"></textarea>
+      @if (jsonError()) {
+        <p class="field-error" role="alert">{{ 'fieldInput.jsonInvalid' | translate }}</p>
+      }
+    }
+
     @case ('date_time') {
       <input [id]="field().name" type="datetime-local" class="xf-input"
              [value]="localDateTime()" (change)="setDateTime($any($event.target).value)" />

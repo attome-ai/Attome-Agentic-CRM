@@ -207,7 +207,12 @@ impl ConditionFieldKind {
     pub fn of_attr(attr: &AttrInfo) -> Option<Self> {
         if matches!(
             attr.field_type(),
-            FieldType::RichText | FieldType::File | FieldType::Image | FieldType::Time
+            FieldType::RichText
+                | FieldType::File
+                | FieldType::Image
+                | FieldType::Time
+                | FieldType::Geolocation
+                | FieldType::Json
         ) {
             return None;
         }
@@ -225,7 +230,12 @@ impl ConditionFieldKind {
                 }
             }
             FieldType::Lookup => Self::Lookup,
-            FieldType::File | FieldType::Image | FieldType::RichText | FieldType::Time => {
+            FieldType::File
+            | FieldType::Image
+            | FieldType::RichText
+            | FieldType::Time
+            | FieldType::Geolocation
+            | FieldType::Json => {
                 return None;
             }
         })

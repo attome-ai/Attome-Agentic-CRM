@@ -200,8 +200,28 @@ pub async fn sync_attribute_index_on_connection(
     }
 
     if wanted {
+        // A2-T3: a geolocation column (`{lat, lng}` JSONB) is indexed as a
+        // point, by GiST, so a `within_km` box prefilter can use it.
+        let field_type: Option<i32> = sqlx::query_scalar(
+            "SELECT a.type FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+             WHERE e.logicalname = $1 AND a.logicalname = $2",
+        )
+        .bind(entity_logicalname)
+        .bind(field_logicalname)
+        .fetch_optional(&mut *conn)
+        .await
+        .map_err(AppError::internal)?
+        .flatten();
+        let key = if field_type == Some(attome_core::FieldType::Geolocation.to_int()) {
+            format!(
+                "USING gist ({})",
+                attome_core::filter::geo_point_sql(&format!("\"{field_logicalname}\""))
+            )
+        } else {
+            format!("(\"{field_logicalname}\")")
+        };
         sqlx::query(&format!(
-            r#"CREATE INDEX CONCURRENTLY IF NOT EXISTS "{index_name}" ON "{entity_logicalname}" ("{field_logicalname}") WHERE is_active = TRUE"#
+            r#"CREATE INDEX CONCURRENTLY IF NOT EXISTS "{index_name}" ON "{entity_logicalname}" {key} WHERE is_active = TRUE"#
         ))
         .execute(&mut *conn)
         .await

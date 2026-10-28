@@ -802,6 +802,10 @@ pub fn restore_value(field_type: Option<FieldType>, raw: Option<&str>) -> Value 
         Some(FieldType::Date) => Value::String(raw.chars().take(10).collect()),
         Some(FieldType::DateTime) => Value::String(raw.to_owned()),
         Some(FieldType::Time) => Value::String(raw.chars().take(8).collect()),
+        // A2-T3: a JSONB column's old value is its JSON text.
+        Some(FieldType::Geolocation | FieldType::Json) => {
+            serde_json::from_str(raw).unwrap_or_else(|_| Value::String(raw.to_owned()))
+        }
         _ => Value::String(raw.to_owned()),
     }
 }

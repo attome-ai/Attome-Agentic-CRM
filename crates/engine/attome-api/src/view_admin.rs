@@ -313,6 +313,11 @@ impl FilterSchema for ViewFilterSchema<'_> {
         self.attr(field)
             .is_some_and(attome_core::filter::is_multi_choice_attr)
     }
+
+    fn is_geolocation(&self, field: &str) -> bool {
+        self.attr(field)
+            .is_some_and(attome_core::filter::is_geolocation_attr)
+    }
 }
 
 /// D-607 (B-R10 Phase A) — validates `view_metadata.filters`, the advanced

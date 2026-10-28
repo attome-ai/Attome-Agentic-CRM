@@ -204,6 +204,8 @@ pub fn normalize(field_type: &FieldType, value: &Value, options: Option<&Value>)
             )
         }
         FieldType::Choice => Value::String(text.trim().to_owned()),
+        // A2-T3: `"lat,lng"` is stored as `{"lat": .., "lng": ..}`.
+        FieldType::Geolocation => geolocation_of(value)?,
         _ => return None,
     };
     (changed != *value).then_some(changed)
@@ -215,6 +217,31 @@ pub fn normalize(field_type: &FieldType, value: &Value, options: Option<&Value>)
 pub fn time_ok(s: &str) -> bool {
     chrono::NaiveTime::parse_from_str(s, "%H:%M:%S").is_ok()
         || chrono::NaiveTime::parse_from_str(s, "%H:%M").is_ok()
+}
+
+/// A2-T3: a point as it is stored, `{"lat": .., "lng": ..}`, from that
+/// object or from `"lat,lng"` text (Arabic digits allowed); `None` when the
+/// value is neither or a coordinate is out of range. Pure.
+pub fn geolocation_of(value: &Value) -> Option<Value> {
+    let (lat, lng) = match value {
+        Value::Object(map) => (
+            map.get("lat").and_then(Value::as_f64)?,
+            map.get("lng").and_then(Value::as_f64)?,
+        ),
+        Value::String(s) => {
+            let western = western_digits(s);
+            let (lat, lng) = western.split_once(',')?;
+            (
+                lat.trim().parse::<f64>().ok()?,
+                lng.trim().parse::<f64>().ok()?,
+            )
+        }
+        _ => return None,
+    };
+    if !(-90.0..=90.0).contains(&lat) || !(-180.0..=180.0).contains(&lng) {
+        return None;
+    }
+    Some(serde_json::json!({ "lat": lat, "lng": lng }))
 }
 
 /// Validates that `value` is an acceptable JSON representation for `field_type`.
@@ -342,6 +369,22 @@ pub fn validate(
                 return Err(AppError::Validation(format!(
                     "color value must be a 6-digit hex color (e.g. #22c55e), got: {s}"
                 )));
+            }
+        }
+        // A2-T3: a point with lat in -90..90 and lng in -180..180.
+        FieldType::Geolocation => {
+            if geolocation_of(value).is_none() {
+                return Err(AppError::Validation(format!(
+                    "geolocation value must be {{\"lat\": .., \"lng\": ..}} or \"lat,lng\" \
+                     with lat in -90..90 and lng in -180..180, got: {value}"
+                )));
+            }
+        }
+        // A2-T3: any JSON document; with `options.schema`, one that matches it.
+        FieldType::Json => {
+            if let Some(schema) = options.and_then(|o| o.get("schema")) {
+                attome_core::setting_store::validate_against_schema(value, schema)
+                    .map_err(|reason| AppError::Validation(format!("json value {reason}")))?;
             }
         }
     }
@@ -680,6 +723,21 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
                     "display_calendar '{calendar}' is not one of {}",
                     DISPLAY_CALENDARS.join("|")
                 )));
+            }
+        }
+        // A2-T3: a json field's only option is its JSON Schema, an object.
+        FieldType::Json => {
+            if let Some(obj) = options.as_object() {
+                if let Some(key) = obj.keys().find(|k| *k != "schema") {
+                    return Err(AppError::Validation(format!(
+                        "json fields accept only a `schema` option, not `{key}`"
+                    )));
+                }
+                if obj.get("schema").is_some_and(|s| !s.is_object()) {
+                    return Err(AppError::Validation(
+                        "json option `schema` must be a JSON Schema object".into(),
+                    ));
+                }
             }
         }
         FieldType::Number | FieldType::Currency => {

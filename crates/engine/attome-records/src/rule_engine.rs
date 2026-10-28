@@ -133,6 +133,8 @@ fn rules_value_of_type(ft: &attome_core::FieldType, v: Option<&Value>) -> RulesV
         // rejected it as UnknownField), so this arm is unreachable in
         // practice; `Null` is the safe default if it's ever hit anyway.
         FieldType::File | FieldType::Image => RulesValue::Null,
+        // A2-T3: likewise a point or a JSON document (`rules_type` is None).
+        FieldType::Geolocation | FieldType::Json => RulesValue::Null,
         FieldType::Text
         | FieldType::Icon
         | FieldType::Color

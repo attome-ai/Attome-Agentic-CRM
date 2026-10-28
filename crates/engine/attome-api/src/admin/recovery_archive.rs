@@ -370,6 +370,8 @@ fn convert_for(value: &Value, target: FieldType, options: Option<&Value>) -> Opt
             }
             _ => None,
         },
+        // A2-T3: a point keeps its `{lat, lng}` shape.
+        FieldType::Geolocation => attome_field::geolocation_of(value),
         FieldType::DateTime => match value {
             Value::String(s) => chrono::DateTime::parse_from_rfc3339(s.trim())
                 .ok()

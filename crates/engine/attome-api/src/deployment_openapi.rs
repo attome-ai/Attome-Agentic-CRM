@@ -39,6 +39,18 @@ static CACHE: Mutex<Option<Cached>> = Mutex::new(None);
 
 /// The JSON schema of one attribute's value. `pub(crate)` for the AsyncAPI
 /// document (Y7-T7), which types the same values.
+/// A2-T3: the stored shape of a `geolocation` value.
+pub(crate) fn geolocation_schema() -> Value {
+    json!({
+        "type": "object",
+        "required": ["lat", "lng"],
+        "properties": {
+            "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+            "lng": { "type": "number", "minimum": -180, "maximum": 180 }
+        }
+    })
+}
+
 pub(crate) fn attribute_schema(attr: &AttrInfo) -> Value {
     let storage = attr.storage_type();
     let multi = attr
@@ -51,6 +63,14 @@ pub(crate) fn attribute_schema(attr: &AttrInfo) -> Value {
         FieldType::Date => json!({ "type": "string", "format": "date" }),
         FieldType::DateTime => json!({ "type": "string", "format": "date-time" }),
         FieldType::Time => json!({ "type": "string", "format": "time" }),
+        // A2-T3: a point is `{lat, lng}`; a json field is its own schema.
+        FieldType::Geolocation => geolocation_schema(),
+        FieldType::Json => attr
+            .options
+            .as_ref()
+            .and_then(|o| o.get("schema"))
+            .cloned()
+            .unwrap_or_else(|| json!({})),
         FieldType::Lookup => json!({ "type": "string", "format": "uuid" }),
         FieldType::Choice => {
             let choices: Vec<Value> = attr

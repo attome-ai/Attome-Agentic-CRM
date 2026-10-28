@@ -363,6 +363,10 @@ pub fn convert_cell(
         FieldType::File | FieldType::Image | FieldType::Formula => {
             return Err(RowError::new(name, "not_importable"));
         }
+        // A2-T3: a json cell is JSON text; a point is `lat,lng` (normalised below).
+        FieldType::Json => {
+            serde_json::from_str(&text).map_err(|_| RowError::new(name, "invalid_json"))?
+        }
         _ => {
             let value = Value::String(text);
             attome_field::normalize(&ft, &value, options).unwrap_or(value)

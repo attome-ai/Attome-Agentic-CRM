@@ -45,6 +45,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- `geolocation` and `json` field types (A2-T3), both `JSONB`. A point is stored as `{"lat", "lng"}`
+  (`"lat,lng"` is accepted and exported in CSV/XLSX), indexed by GiST as a point when the field is
+  indexed, filtered with the new `within_km` operator (`"lat,lng,km"`) and sorted nearest first by
+  `query/execute`'s new `order_near` (`"lat,lng"`, one page). A `json` field takes an optional
+  `options.schema` (a JSON Schema subset: types, enum, bounds, pattern, required, properties,
+  `additionalProperties: false`, items) checked on every write.
 - The rule language runs in the browser (Z11-T13): `attome-rules-wasm` builds the server's own
   evaluator to WebAssembly (`scripts/build-rules-wasm.ps1`, committed under
   `web/projects/base/src/lib/rules/wasm`), and `@attome/base`'s `RulesEvaluatorService` validates and

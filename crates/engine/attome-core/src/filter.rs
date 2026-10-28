@@ -75,6 +75,10 @@ pub struct Filter {
     /// that record and everything below it, or above it, up to 32 levels.
     /// `tagged` (B4-T4) takes a tag id on the `id` field and matches the
     /// records carrying that tag (a personal tag only for its owner).
+    /// `within_km` (A2-T3) takes `"lat,lng,km"` (or `{lat, lng, km}`) on a
+    /// geolocation field and matches the points at most `km` kilometres
+    /// away; a geolocation field takes no other operator but `is_null` and
+    /// `is_not_null`.
     #[schema(example = "eq")]
     pub op: String,
     /// Scalar filters retain the v1 string contract. Multi-select Choice
@@ -99,8 +103,112 @@ pub fn parameter_cast(data_type: &str) -> Option<&'static str> {
         "choice" | "icon" | "color" | "rich_text" | "image" => Some("text"),
         "lookup" | "uuid" => Some("uuid"),
         "text" | "file" | "string" => Some("text"),
+        // A2-T3: both are JSONB columns; a geolocation column is filtered
+        // only by `within_km` (see [`compile`]).
+        "geolocation" | "json" => Some("jsonb"),
         _ => None,
     }
+}
+
+/// A2-T3: the mean Earth radius the distance functions use, in kilometres.
+pub const EARTH_RADIUS_KM: f64 = 6371.0088;
+
+/// A2-T3: a geolocation column (`{"lat": .., "lng": ..}` JSONB) as a
+/// PostgreSQL `point(lng, lat)`, the expression its GiST index is built on.
+/// `column_sql` is an already-quoted column reference.
+pub fn geo_point_sql(column_sql: &str) -> String {
+    format!("point(({column_sql}->>'lng')::float8, ({column_sql}->>'lat')::float8)")
+}
+
+/// A2-T3: the great-circle (haversine) distance in kilometres between a
+/// geolocation column and the point bound at `$lat_param`/`$lng_param`
+/// (text binds, cast here).
+pub fn geo_distance_km_sql(column_sql: &str, lat_param: usize, lng_param: usize) -> String {
+    geo_distance_km_expr(
+        column_sql,
+        &format!("${lat_param}::float8"),
+        &format!("${lng_param}::float8"),
+    )
+}
+
+/// A2-T3: [`geo_distance_km_sql`] to a fixed point: a sort anchor that is
+/// not bound (a bind referenced only by `ORDER BY` would break the count and
+/// estimate statements that share the filter binds). The coordinates are
+/// `f64`s the caller parsed and range-checked ([`near_point`]), written by
+/// Rust's `Display`, which prints only digits, a sign and a point; no
+/// request text reaches the SQL.
+pub fn geo_distance_km_to(column_sql: &str, lat: f64, lng: f64) -> String {
+    geo_distance_km_expr(
+        column_sql,
+        &format!("({lat}::float8)"),
+        &format!("({lng}::float8)"),
+    )
+}
+
+fn geo_distance_km_expr(column_sql: &str, at_lat: &str, at_lng: &str) -> String {
+    let lat = format!("({column_sql}->>'lat')::float8");
+    let lng = format!("({column_sql}->>'lng')::float8");
+    format!(
+        "({EARTH_RADIUS_KM} * 2 * asin(least(1.0, sqrt( \
+           power(sin(radians({lat} - {at_lat}) / 2), 2) \
+           + cos(radians({at_lat})) * cos(radians({lat})) \
+             * power(sin(radians({lng} - {at_lng}) / 2), 2)))))"
+    )
+}
+
+/// A2-T3: a point and a radius from a `within_km` value, `"lat,lng,km"` or
+/// `{lat, lng, km}`; `None` when it is neither, a coordinate is out of range
+/// or the radius is not positive.
+pub fn within_km_value(value: Option<&Value>) -> Option<(f64, f64, f64)> {
+    let (lat, lng, km) = match value? {
+        Value::Object(map) => (
+            map.get("lat").and_then(Value::as_f64)?,
+            map.get("lng").and_then(Value::as_f64)?,
+            map.get("km").and_then(Value::as_f64)?,
+        ),
+        Value::String(s) => {
+            let mut parts = s.split(',').map(|p| p.trim().parse::<f64>());
+            let lat = parts.next()?.ok()?;
+            let lng = parts.next()?.ok()?;
+            let km = parts.next()?.ok()?;
+            if parts.next().is_some() {
+                return None;
+            }
+            (lat, lng, km)
+        }
+        _ => return None,
+    };
+    let in_range = (-90.0..=90.0).contains(&lat) && (-180.0..=180.0).contains(&lng);
+    (in_range && km.is_finite() && km > 0.0).then_some((lat, lng, km))
+}
+
+/// A2-T3: a point from a `"lat,lng"` sort anchor; `None` when it is not one.
+pub fn near_point(text: &str) -> Option<(f64, f64)> {
+    let (lat, lng) = text.split_once(',')?;
+    let (lat, lng) = (
+        lat.trim().parse::<f64>().ok()?,
+        lng.trim().parse::<f64>().ok()?,
+    );
+    ((-90.0..=90.0).contains(&lat) && (-180.0..=180.0).contains(&lng)).then_some((lat, lng))
+}
+
+/// A2-T3: the `(lat, lng)` box around a point that holds every point
+/// within `km`, as `(min_lat, min_lng, max_lat, max_lng)`: the prefilter the
+/// GiST index answers before the exact distance runs. Wide near the poles.
+pub fn bounding_box(lat: f64, lng: f64, km: f64) -> (f64, f64, f64, f64) {
+    let dlat = (km / EARTH_RADIUS_KM).to_degrees();
+    let cos = lat.to_radians().cos();
+    let dlng = if cos < 1e-6 {
+        180.0
+    } else {
+        (dlat / cos).min(180.0)
+    };
+    (
+        (lat - dlat).max(-90.0),
+        (lng - dlng).max(-180.0),
+        (lat + dlat).min(90.0),
+        (lng + dlng).min(180.0),
+    )
 }
 
 pub fn scalar_filter_value(filter: &Filter) -> Result<&str, AppError> {
@@ -216,6 +324,14 @@ pub trait FilterSchema {
     fn tag_scope(&self) -> Option<TagScope> {
         None
     }
+
+    /// A2-T3: whether `field` is a geolocation column, which `within_km`
+    /// needs and which takes no other comparison. The default (`false`)
+    /// refuses `within_km`.
+    fn is_geolocation(&self, field: &str) -> bool {
+        let _ = field;
+        false
+    }
 }
 
 /// Whose tags, on which entity's records, `tagged` reads.
@@ -265,6 +381,12 @@ pub fn cast_for_attr(attr: &AttrInfo) -> Result<&'static str, FieldCastError> {
 /// `contains`/`contains_any`/`contains_all` branch renders
 /// (`@> ARRAY[..]`/`&&`/`@>`) are only ever correct against a `TEXT[]`
 /// column.
+/// A2-T3: whether `attr` is a geolocation field — [`FilterSchema::is_geolocation`]
+/// for any [`AttrInfo`]-keyed whitelist.
+pub fn is_geolocation_attr(attr: &AttrInfo) -> bool {
+    attr.storage_type() == FieldType::Geolocation
+}
+
 pub fn is_multi_choice_attr(attr: &AttrInfo) -> bool {
     let field_type = FieldType::from_int(attr.field_type_int).unwrap_or(FieldType::Text);
     field_type == FieldType::Choice
@@ -411,11 +533,54 @@ pub fn compile(
         )),
     })?;
     let is_multi_choice = schema.is_multi_choice(&filter.field);
+    let is_geolocation = schema.is_geolocation(&filter.field);
     let field_sql = quote_ident(&filter.field);
     let n = placeholder_start;
 
     match filter.op.as_str() {
         "is_null" => Ok((format!("{field_sql} IS NULL"), Vec::new())),
+        // A2-T3: the points at most `km` away: a box the GiST index answers,
+        // then the exact great-circle distance.
+        "within_km" => {
+            if !is_geolocation {
+                return Err(AppError::Validation(format!(
+                    "within_km is only valid for geolocation fields: {}",
+                    filter.field
+                )));
+            }
+            let (lat, lng, km) = within_km_value(filter.value.as_ref()).ok_or_else(|| {
+                AppError::Validation(format!(
+                    "within_km takes \"lat,lng,km\" (lat -90..90, lng -180..180, km above 0) for field: {}",
+                    filter.field
+                ))
+            })?;
+            let (min_lat, min_lng, max_lat, max_lng) = bounding_box(lat, lng, km);
+            let (p_lat, p_lng, p_km) = (n, n + 1, n + 2);
+            let (b_min_lng, b_min_lat, b_max_lng, b_max_lat) = (n + 3, n + 4, n + 5, n + 6);
+            let point = geo_point_sql(&field_sql);
+            let distance = geo_distance_km_sql(&field_sql, p_lat, p_lng);
+            Ok((
+                format!(
+                    "({point} <@ box(point(${b_min_lng}::float8, ${b_min_lat}::float8), \
+                     point(${b_max_lng}::float8, ${b_max_lat}::float8)) \
+                     AND {distance} <= ${p_km}::float8)"
+                ),
+                vec![
+                    lat.to_string(),
+                    lng.to_string(),
+                    km.to_string(),
+                    min_lng.to_string(),
+                    min_lat.to_string(),
+                    max_lng.to_string(),
+                    max_lat.to_string(),
+                ],
+            ))
+        }
+        "is_not_null" => Ok((format!("{field_sql} IS NOT NULL"), Vec::new())),
+        op if is_geolocation => Err(AppError::Validation(format!(
+            "{op} is not valid for a geolocation field: {}; use within_km, is_null or is_not_null",
+            filter.field
+        ))),
         // A17-T2: the record's lookup is the given node or below it (`under`),
         // or the node or above it (`above`), in the target's own tree.
         op @ ("under" | "above") => {
@@ -480,7 +645,6 @@ pub fn compile(
                 vec![scope.entity, value.to_owned(), scope.user_id.to_string()],
             ))
         }
-        "is_not_null" => Ok((format!("{field_sql} IS NOT NULL"), Vec::new())),
         "in" if is_multi_choice => Err(AppError::Validation(format!(
             "in is not valid for a multi-select Choice field: {}; use contains_any",
             filter.field

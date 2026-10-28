@@ -219,6 +219,9 @@ fn data_type_of_storage(ft: &attome_core::FieldType) -> &'static str {
         FieldType::Choice => "choice",
         FieldType::Lookup => "lookup",
         FieldType::File | FieldType::Image => "file",
+        // A2-T3: never a group key or a sum.
+        FieldType::Geolocation => "geolocation",
+        FieldType::Json => "json",
         FieldType::Text
         | FieldType::Icon
         | FieldType::Color
@@ -247,6 +250,10 @@ impl FilterSchema for Whitelist {
 
     fn is_multi_choice(&self, field: &str) -> bool {
         self.multi_choice.contains(field)
+    }
+
+    fn is_geolocation(&self, field: &str) -> bool {
+        self.fields.get(field) == Some(&"geolocation")
     }
 }
 
