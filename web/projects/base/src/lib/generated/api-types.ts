@@ -37,7 +37,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/a2a/agents` */
+        /**
+         * List agent cards
+         * @description Every published agent object that declares a hand-off contract, with its role and its input and
+         *     output schemas, for trusted partners; an agent without a contract takes no outside work.
+         */
         get: operations["list_agents"];
         put?: never;
         post?: never;
@@ -56,7 +60,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/a2a/agents/{agent}/tasks` */
+        /**
+         * Hand an agent a task
+         * @description Checks the input against the agent's contract and runs one bounded turn of the agent in a session
+         *     of its own, answering with the contract's output.
+         */
         post: operations["create_task"];
         delete?: never;
         options?: never;
@@ -121,12 +129,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * AE1-T2: runs the published custom action `custom.{name}` as the calling
-         *     person. The arguments are checked against its input schema first (every
-         *     problem by field); a consequential action needs an `Idempotency-Key` (or
-         *     `x-idempotency-key`) header, which becomes the invocation's key, so a
-         *     retry with the same key never runs it twice. A completed action answers
-         *     200; one that waits (a confirmation, an approval, an undo window) 202.
+         * Run a custom action
+         * @description Runs the published custom action `custom.{name}` as the calling person, after checking the
+         *     arguments against its input schema (every problem by field). A consequential action needs an
+         *     `Idempotency-Key` and `X-Confirm: true`. A finished action answers 200; one that waits for a
+         *     confirmation, an approval or an undo window answers 202.
          */
         post: operations["invoke_custom_action"];
         delete?: never;
@@ -142,7 +149,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/agents/sessions` — the supervisor dashboard's one read. */
+        /**
+         * List agent sessions
+         * @description The agent sessions for the supervisor dashboard, filtered by the query. Holders of
+         *     `ai_agent.supervise`.
+         */
         get: operations["list_sessions"];
         put?: never;
         post?: never;
@@ -160,9 +171,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/agents/sessions/{id}/children` — the sessions this one
-         *     delegated to, oldest first (N8-T1): with each child's own trace, the
-         *     whole run tree.
+         * List a session's delegated sessions
+         * @description The sessions this one delegated to, oldest first, each with its own trace, so the whole run tree
+         *     shows. Holders of `ai_agent.supervise`.
          */
         get: operations["session_children"];
         put?: never;
@@ -181,10 +192,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/agents/sessions/{id}/run` — the session's run as one
-         *     tree (N29-T1): its parent and delegated children, every turn of its
-         *     conversations with the model, prompt version and end state, and each
-         *     turn's tool calls with the gate's decision and the ledger's outcome.
+         * Read an agent session's run
+         * @description The session's run as one tree: its parent and delegated children, every turn with its model, prompt
+         *     version and end state, and each turn's tool calls with the gate's decision and the ledger's outcome.
+         *     Holders of `ai_agent.supervise`.
          */
         get: operations["session_run"];
         put?: never;
@@ -203,10 +214,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/agents/sessions/{id}/trace` — every action a session
-         *     invoked, oldest first (N29-T2): what it did, what came of it and who it
-         *     acted as. Results are not included: they may hold record data, which the
-         *     records' own routes govern.
+         * Read an agent session's trace
+         * @description Every action the session invoked, oldest first: what it did, what came of it and who it acted as.
+         *     Results are left out, since they may hold record data. Holders of `ai_agent.supervise`.
          */
         get: operations["session_trace"];
         put?: never;
@@ -1555,7 +1565,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/archive/records` — `system.admin` only. */
+        /**
+         * List archived records
+         * @description The records retention moved to the archive (or, with `status=restored`, the ones restored),
+         *     optionally for one entity. Compliance administrators only.
+         */
         get: operations["list_archive_records"];
         put?: never;
         post?: never;
@@ -1574,7 +1588,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/admin/archive/records/{id}/restore` — `system.admin` only. */
+        /**
+         * Restore an archived record
+         * @description Puts an archived record back as a live row. Compliance administrators only. Audited.
+         */
         post: operations["restore"];
         delete?: never;
         options?: never;
@@ -1633,6 +1650,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Export the audit trail
+         * @description Streams the filtered audit entries as JSON lines (default), CEF or CSV for a SIEM or an archive.
+         *     An administrator exports everything, a unit auditor only their units; the export is itself
+         *     audited.
+         */
         get: operations["audit_export"];
         put?: never;
         post?: never;
@@ -1649,6 +1672,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Search the audit trail
+         * @description Audit entries filtered by entity, record, user, operation, field and date range. An administrator
+         *     reads everything, a unit auditor only their units; the search is itself audited.
+         */
         get: operations["audit_search"];
         put?: never;
         post?: never;
@@ -2485,6 +2513,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List server starts
+         * @description Each node start with its configuration fingerprint, newest first. Security administrators only.
+         */
         get: operations["list_config_starts"];
         put?: never;
         post?: never;
@@ -2501,6 +2533,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Compare two server starts
+         * @description The configuration keys whose values differ between starts `a` and `b`; secret values are never
+         *     stored, so never shown. Security administrators only.
+         */
         get: operations["diff_config_starts"];
         put?: never;
         post?: never;
@@ -2538,8 +2575,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List content pages
+         * @description The pages of one space that are not deleted: the root pages, or the children of one page, or the
+         *     pages whose name contains the search text anywhere in the tree; one-based pages. Content
+         *     administrators only.
+         */
         get: operations["list_content_pages"];
         put?: never;
+        /**
+         * Create a content page
+         * @description A draft page in a space, under a parent page or at the root, with its title and URL path,
+         *     optionally from a template. Content administrators only. Audited.
+         */
         post: operations["create_page"];
         delete?: never;
         options?: never;
@@ -2554,16 +2602,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a content page
+         * @description One page: its draft and published blocks, SEO fields, status, publishing schedule and
+         *     `row_version`. Content administrators only.
+         */
         get: operations["get_page"];
         put?: never;
         post?: never;
+        /**
+         * Delete a content page
+         * @description Marks the page deleted. Content administrators only. Audited.
+         */
         delete: operations["delete_page"];
         options?: never;
         head?: never;
         /**
-         * Requires an `If-Match: "<row_version>"` header on every call (D-079's
-         *     contract) — a missing or stale header is a 422, never an unguarded
-         *     last-write-wins update.
+         * Change a content page
+         * @description Changes the title, URL path, blocks or SEO fields given. Requires `If-Match: "<row_version>"`;
+         *     a missing or stale one is refused. Content administrators only. Audited.
          */
         patch: operations["update_page"];
         trace?: never;
@@ -2575,6 +2632,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a page's ancestors
+         * @description The pages above this one, furthest first, for a breadcrumb. Content administrators only.
+         */
         get: operations["get_ancestors"];
         put?: never;
         post?: never;
@@ -2660,6 +2721,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Move a content page
+         * @description Puts the page under another parent, or at the root; a move under the page itself or one of its
+         *     descendants is refused. Content administrators only. Audited.
+         */
         post: operations["move_page"];
         delete?: never;
         options?: never;
@@ -2717,11 +2783,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a page's related pages
+         * @description The pages linked to this one as related that are not deleted. Content administrators only.
+         */
         get: operations["get_related_pages"];
         /**
-         * Full-set replace, symmetric: writes both (id, related) and (related, id)
-         *     for every entry, so a read for either page's related list is a
-         *     single-direction query (D-369).
+         * Set a page's related pages
+         * @description Replaces the page's related pages with the ones given; each link works both ways. A page cannot be
+         *     related to itself. Content administrators only. Audited.
          */
         put: operations["set_related_pages"];
         post?: never;
@@ -2745,16 +2815,9 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Sets (or clears, via `null`) `review_by` — full replace (no empty-string
-         *     sentinel to resolve, unlike `seo_title`/`seo_description`), requiring
-         *     `If-Match` like every other page mutation (D-079). `PATCH`, not `PUT`
-         *     (unlike `schedule_page`'s otherwise-identical shape): `ApiService` (the
-         *     Angular client both surfaces share) has no `If-Match`-capable `put`, only
-         *     `patch` — `schedule_page` predates this endpoint and has no Angular
-         *     caller yet either, so this one follows the client capability that
-         *     actually exists rather than repeating the same gap.
-         *     `EngineJob::ContentReviewReminderSweep` reads this column, never writes
-         *     it; nothing else touches it.
+         * Set a page's review date
+         * @description Sets the date the page should be reviewed by, or clears it with `null`; a reminder goes out when it
+         *     comes. Requires `If-Match`. Content administrators only. Audited.
          */
         patch: operations["set_review_by"];
         trace?: never;
@@ -2768,11 +2831,9 @@ export interface paths {
         };
         get?: never;
         /**
-         * Sets (or clears, via `null`) `publish_at`/`unpublish_at` — the sweep
-         *     (`attome_content::scheduling::sweep_scheduled_transitions`,
-         *     `EngineJob::ContentScheduledPublishSweep`) is what actually flips
-         *     `status` once one of these passes `NOW()`; this endpoint only records the
-         *     schedule. Requires `If-Match` (D-079's contract), same as `update_page`.
+         * Schedule a page's publishing
+         * @description Sets or clears (`null`) when the page is published and unpublished; a background sweep changes
+         *     its status when the time passes. Requires `If-Match`. Content administrators only. Audited.
          */
         put: operations["schedule_page"];
         post?: never;
@@ -2858,8 +2919,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Reads `content_page_stats` — maintained only by
-         *     `EngineJob::ContentPageStatsRollup`, never by this route.
+         * Read a page's statistics
+         * @description Views, retrievals by search and AI, helpful and unhelpful votes and when it was last useful, as
+         *     the statistics rollup job counted them. Content administrators only.
          */
         get: operations["page_stats"];
         put?: never;
@@ -3106,8 +3168,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List content spaces
+         * @description Every space that is not deleted, by name. Content administrators only.
+         */
         get: operations["list_spaces"];
         put?: never;
+        /**
+         * Create a content space
+         * @description A space with its name, description, whether a publish in it waits for approval, and its kind
+         *     (`standard`, or `marketing`, which starts with the landing page templates; fixed once created).
+         *     Content administrators only. Audited.
+         */
         post: operations["create_space"];
         delete?: never;
         options?: never;
@@ -3122,12 +3194,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a content space
+         * @description One space's settings and `row_version`. Content administrators only.
+         */
         get: operations["get_space"];
         put?: never;
         post?: never;
+        /**
+         * Delete a content space
+         * @description Marks the space deleted. Content administrators only. Audited.
+         */
         delete: operations["delete_space"];
         options?: never;
         head?: never;
+        /**
+         * Change a content space
+         * @description Changes the fields given; an empty description clears it. Requires `If-Match:
+         *     "<row_version>"`. Content administrators only. Audited.
+         */
         patch: operations["update_space"];
         trace?: never;
     };
@@ -3138,8 +3223,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a space's allowed templates
+         * @description The templates a new page in this space may start from. Content administrators only.
+         */
         get: operations["get_space_templates"];
-        /** Full-set replace of the space's allowed templates. */
+        /**
+         * Set a space's allowed templates
+         * @description Replaces the templates a new page in this space may start from. Content administrators only.
+         *     Audited.
+         */
         put: operations["set_space_templates"];
         post?: never;
         delete?: never;
@@ -3155,8 +3248,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List content templates
+         * @description Every page template that is not deleted, by name. Content administrators only.
+         */
         get: operations["list_templates"];
         put?: never;
+        /**
+         * Create a content template
+         * @description A page template: its name, description and the blocks a page made from it starts with. Content
+         *     administrators only. Audited.
+         */
         post: operations["create_template"];
         delete?: never;
         options?: never;
@@ -3171,12 +3273,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a content template
+         * @description One template with its blocks and `row_version`. Content administrators only.
+         */
         get: operations["get_template"];
         put?: never;
         post?: never;
+        /**
+         * Delete a content template
+         * @description Marks the template deleted. Content administrators only. Audited.
+         */
         delete: operations["delete_template"];
         options?: never;
         head?: never;
+        /**
+         * Change a content template
+         * @description Changes the name, description or blocks given;
+         *     Requires `If-Match: "<row_version>"`. Content administrators only. Audited.
+         */
         patch: operations["update_template"];
         trace?: never;
     };
@@ -4438,13 +4553,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/dsr/requests` — `system.admin` only. */
+        /**
+         * List data subject requests
+         * @description Access, erasure and portability requests with their status. Compliance administrators only.
+         */
         get: operations["list_requests"];
         put?: never;
         /**
-         * `POST /api/v1/admin/dsr/requests` — `system.admin` only. Just records the
-         *     ask (`status = 'pending'`); fulfillment is a separate, explicit call to
-         *     one of the three `fulfill-*` endpoints below.
+         * Record a data subject request
+         * @description Records the request as pending; fulfilling it is a separate call to one of the fulfil routes.
+         *     Compliance administrators only. Audited.
          */
         post: operations["create_request"];
         delete?: never;
@@ -4462,7 +4580,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/admin/dsr/requests/{id}/fulfill-access` — `system.admin` only. */
+        /**
+         * Fulfil an access request
+         * @description Gathers the subject's data in the scopes given and completes the request. Compliance
+         *     administrators only. Audited.
+         */
         post: operations["fulfill_access"];
         delete?: never;
         options?: never;
@@ -4480,12 +4602,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/dsr/requests/{id}/fulfill-erasure` — `system.admin`
-         *     only. D-195: gated behind `approval.required_actions` via
-         *     `ACTION_DSR_FULFILL_ERASURE` (empty/off by default, same opt-in shape as
-         *     every other wired action — see `erasure_admin::erase_record` for the
-         *     identical pattern this mirrors). When gated, submits an approval request
-         *     instead of erasing anything and returns `202` with `approval_pending: true`.
+         * Fulfil an erasure request
+         * @description Erases the subject's data in the scopes given and completes the request. When
+         *     `approval.required_actions` gates it, this submits an approval request instead (202,
+         *     `approval_pending`). Compliance administrators only. Audited.
          */
         post: operations["fulfill_erasure"];
         delete?: never;
@@ -4503,7 +4623,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/admin/dsr/requests/{id}/fulfill-portability` — `system.admin` only. */
+        /**
+         * Fulfil a portability request
+         * @description Exports the subject's data in the scopes given and completes the request. Compliance administrators
+         *     only. Audited.
+         */
         post: operations["fulfill_portability"];
         delete?: never;
         options?: never;
@@ -6021,6 +6145,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Register an integration system
+         * @description An outside system with its base URL, screened against private addresses, and optionally its
+         *     credential, stored encrypted before the system is readable. Listing, renaming and deleting stay on
+         *     the record API. Integration administrators only. Audited.
+         */
         post: operations["create_system"];
         delete?: never;
         options?: never;
@@ -6037,6 +6167,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Rotate an integration system's credential
+         * @description Stores a new credential for the system, encrypted; it is never returned. Integration administrators
+         *     only. Audited.
+         */
         post: operations["rotate_credential"];
         delete?: never;
         options?: never;
@@ -6053,6 +6188,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Test an integration system's connection
+         * @description Calls the system's health check, guarded against private addresses when it dials. Integration
+         *     administrators only.
+         */
         post: operations["test_connection"];
         delete?: never;
         options?: never;
@@ -6203,9 +6343,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The knowledge indexer's shared state: when the search drain last advanced,
-         *     and which embedding model chunk vectors are written with (`null` when
-         *     knowledge is lexical-only by configuration).
+         * Read the knowledge indexer's state
+         * @description When the search drain last advanced, and which embedding model chunk vectors are written with
+         *     (`null` when knowledge is lexical only). AI administrators only.
          */
         get: operations["knowledge_indexer_status"];
         put?: never;
@@ -6224,10 +6364,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Why a question retrieves what it does (roadmap N15-T4): its terms, the
-         *     words dropped, and each passage's matched terms in rank order. Admin-only,
-         *     retrieved under the administrator's own permissions, and never recorded as
-         *     demand or as a gap.
+         * Explain a knowledge search
+         * @description Why a question retrieves what it does: its terms, the words dropped, and each passage's matched
+         *     terms in rank order, under the administrator's own permissions; never recorded as demand or as a
+         *     gap. AI administrators only.
          */
         get: operations["explain_knowledge"];
         put?: never;
@@ -6273,9 +6413,9 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Triages one gap topic. An explicit author decision, never a delete, so the
-         *     queue does not re-surface a topic without showing it was already judged
-         *     (D-452's rationale for the status column).
+         * Triage a knowledge gap
+         * @description Records an author's decision on a gap topic, never a delete, so the queue does not show a judged
+         *     topic again. AI administrators only. Audited.
          */
         patch: operations["triage_gap"];
         trace?: never;
@@ -6309,15 +6449,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/legal-holds` — `system.admin` only. */
+        /**
+         * List legal holds
+         * @description The legal holds placed on records, active and released. Compliance administrators only.
+         */
         get: operations["list_holds"];
         put?: never;
         /**
-         * `POST /api/v1/admin/legal-holds` — `system.admin` only. `entity_logicalname`
-         *     is validated against the live metadata registry (never interpolated from
-         *     unvalidated input — guidelines §4) but this intentionally does NOT check
-         *     whether `record_id` currently exists in that table; see the field's own
-         *     doc comment.
+         * Place a legal hold
+         * @description Holds one record of a known entity, so retention leaves it alone; the record need not exist yet.
+         *     Compliance administrators only. Audited.
          */
         post: operations["place_hold"];
         delete?: never;
@@ -6362,12 +6503,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/legal-holds/{id}/release` — `system.admin` only.
-         *     Idempotent: `COALESCE(released_at, NOW())` means releasing an
-         *     already-released hold updates nothing about `released_at` itself and
-         *     still returns `200` with the row's (unchanged) release time, not an
-         *     error — matching `destroy_key`'s own "idempotent retry" convention.
-         *     `404` only when the row is missing or soft-deleted.
+         * Release a legal hold
+         * @description Releases the hold; releasing one already released changes nothing and still answers 200.
+         *     Compliance administrators only. Audited.
          */
         post: operations["release_hold"];
         delete?: never;
@@ -6386,11 +6524,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/legal/matters/{id}/collect` — `system.admin` only.
-         *     Transitions the matter to `collecting` and enqueues
-         *     `EngineJob::LegalMatterCollect` in the same transaction (never an
-         *     `collecting` row with no job behind it), dedup-keyed on the matter id so
-         *     a repeated click before the job starts doesn't queue duplicates.
+         * Collect a legal matter's records
+         * @description Moves the matter to collecting and queues the collection job in the same transaction; asking again
+         *     before it starts queues nothing more. Compliance administrators only.
          */
         post: operations["collect"];
         delete?: never;
@@ -6409,8 +6545,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/legal/matters/{id}/release` — `system.admin` only.
-         *     Same enqueue-in-tx-dedup shape as `collect` above.
+         * Release a legal matter
+         * @description Moves a collected matter to releasing and queues the release job in the same transaction.
+         *     Compliance administrators only.
          */
         post: operations["release"];
         delete?: never;
@@ -6503,8 +6640,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The URL that asks a Microsoft tenant's administrator to consent for every
-         *     person at once.
+         * Get the Microsoft admin consent URL
+         * @description The URL a Microsoft tenant's administrator opens to consent to mail sync for every person at once.
          */
         get: operations["microsoft_admin_consent"];
         put?: never;
@@ -6522,10 +6659,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/mcp-servers` */
+        /**
+         * List MCP servers
+         * @description The outside MCP servers registered for agents to use. AI administrators only.
+         */
         get: operations["list_servers"];
         put?: never;
-        /** `POST /api/v1/admin/mcp-servers` */
+        /**
+         * Register an MCP server
+         * @description An outside MCP server agents may use: its URL, an optional bearer credential (stored encrypted,
+         *     never returned) and whether it may be outside the deployment. Its tools are imported separately. AI
+         *     administrators only. Audited.
+         */
         post: operations["create_server"];
         delete?: never;
         options?: never;
@@ -6542,7 +6687,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/admin/mcp-servers/{id}/import` — reads the server's tools. */
+        /**
+         * Import an MCP server's tools
+         * @description Reads the server's tool list; every new tool arrives switched off at the consequential tier until
+         *     an administrator reads it, sets its tier and switches it on. AI administrators only. Audited.
+         */
         post: operations["import_tools"];
         delete?: never;
         options?: never;
@@ -6557,7 +6706,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/mcp-servers/{id}/tools` */
+        /**
+         * List an MCP server's tools
+         * @description The tools imported from the server with their tier and whether each is on. AI administrators only.
+         */
         get: operations["list_tools"];
         put?: never;
         post?: never;
@@ -6575,7 +6727,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** `PUT /api/v1/admin/mcp-servers/{id}/tools/{tool}` — a tool's tier and switch. */
+        /**
+         * Set an MCP tool's tier and switch
+         * @description Sets the risk tier an agent's call to the tool is gated at, and switches it on or off. AI
+         *     administrators only. Audited.
+         */
         put: operations["set_tool"];
         post?: never;
         delete?: never;
@@ -8201,7 +8357,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/outcomes` — the "proposals and their fates" list. */
+        /**
+         * List AI outcomes
+         * @description What AI proposed and what became of each proposal, filtered by the query. AI administrators only.
+         */
         get: operations["list_outcomes"];
         put?: never;
         post?: never;
@@ -8218,6 +8377,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Compare AI quality by agent
+         * @description Per agent over the window, how its proposals fared: how many were measured, accepted, edited and
+         *     rejected. AI administrators only.
+         */
         get: operations["get_quality_by_agent"];
         put?: never;
         post?: never;
@@ -8234,6 +8398,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Compare AI quality by model
+         * @description The same figures per model. AI administrators only.
+         */
         get: operations["get_quality_by_model"];
         put?: never;
         post?: never;
@@ -8251,10 +8419,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/outcomes/summary` — "by kind, by source, acceptance
-         *     and effectiveness trends" (plan §3), the aggregate half of the dashboard
-         *     bundle. Deliberately unfiltered (unlike `list_outcomes`): the whole point
-         *     is one call showing every kind/source pair at once.
+         * Summarise AI outcomes
+         * @description Acceptance and effectiveness by kind and by source, every pair in one call. AI administrators only.
          */
         get: operations["get_outcome_summary"];
         put?: never;
@@ -8272,13 +8438,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List prediction models
+         * @description The prediction models, one-based pages. AI administrators only.
+         */
         get: operations["list_models"];
         put?: never;
         /**
-         * Creates the model row and enqueues its first training run — see
-         *     [`crate::train::create_and_enqueue`] for the actual transaction (insert +
-         *     `enqueue_in_tx`, a duplicate `name` surfacing as `Conflict` via the
-         *     unique index's `23505`) and the target/entity validation it performs.
+         * Create a prediction model
+         * @description Creates the model for its target and entity and queues its first training run in the same
+         *     transaction; a duplicate name is 409. AI administrators only. Audited.
          */
         post: operations["create_model"];
         delete?: never;
@@ -8294,12 +8463,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a prediction model
+         * @description One prediction model. AI administrators only.
+         */
         get: operations["get_model"];
         put?: never;
         post?: never;
         /**
-         * A soft "retire", not a hard delete — a retired model's past
-         *     `prediction` rows (and their `model_ref` FK) must stay readable.
+         * Retire a prediction model
+         * @description Retires the model; its past predictions stay readable. AI administrators only. Audited.
          */
         delete: operations["retire_model"];
         options?: never;
@@ -8317,9 +8490,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Re-queues a training run for an existing model — see
-         *     [`crate::train::enqueue_retrain`] for the `status != 'training'`
-         *     concurrency guard.
+         * Retrain a prediction model
+         * @description Queues a new training run; a model already training is refused. AI administrators only. Audited.
          */
         post: operations["retrain_model"];
         delete?: never;
@@ -8701,12 +8873,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/records/posture` — `system.admin` only. Four cheap
-         *     `COUNT(*)`s against already-indexed predicates (each table's own active-row
-         *     partial index — `idx_core_retention_action_status`,
-         *     `idx_core_legal_hold_active`, `idx_core_archive_record_entity_record`, and
-         *     `audit_legal_matter`'s ordinary `status` — no new index needed at this
-         *     table class's expected size).
+         * Read the records management posture
+         * @description How many retention actions are proposed, legal holds active, records still archived and legal
+         *     matters in progress. Compliance administrators only.
          */
         get: operations["records_posture"];
         put?: never;
@@ -8804,10 +8973,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/retention/actions` — `system.admin` only. Explicit
-         *     column projection (guidelines §4: no `SELECT *`), optional `status`/
-         *     `action_type` filters via a bound-parameter `($n::text IS NULL OR col =
-         *     $n)` predicate rather than dynamic SQL string-building.
+         * List retention actions
+         * @description The archive and delete actions the retention sweep proposed, optionally by status and type.
+         *     Compliance administrators only.
          */
         get: operations["list_actions"];
         put?: never;
@@ -8828,13 +8996,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/retention/actions/{id}/approve` — `system.admin` only.
-         * @description D-195: gated behind `approval.required_actions` (empty/off by default,
-         *     same opt-in shape as the other wired actions). When gated, this submits
-         *     an approval request for `{action_id}` instead of transitioning anything
-         *     and returns `202` with `approval_pending: true` — the `legal_hold`/
-         *     `dry_run` checks and the actual transition only run once a different
-         *     `system.admin` approves the request (`do_approve_retention_action`).
+         * Approve a retention action
+         * @description Approves a proposed archive or delete, which then runs unless a legal hold stops it. When
+         *     `approval.required_actions` gates it, a second administrator decides (202, `approval_pending`).
+         *     Compliance administrators only. Audited.
          */
         post: operations["approve_action"];
         delete?: never;
@@ -8853,12 +9018,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/retention/actions/{id}/reject` — `system.admin` only.
-         *     Rejecting frees the action's target for re-proposal on the next sweep
-         *     (migration 0067's partial unique index only blocks re-insert for
-         *     non-`rejected` rows) — never allowed while `legal_hold` is set, since a
-         *     hold's whole point is "nothing about this deployment's retention state
-         *     moves" while it's active.
+         * Reject a retention action
+         * @description The target can be proposed again by the next sweep; refused while a legal hold is set. Compliance
+         *     administrators only. Audited.
          */
         post: operations["reject_action"];
         delete?: never;
@@ -8877,11 +9039,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/retention/propose` — `system.admin` only. On-demand
-         *     version of the daily `EngineJob::ProposeRetentionActions` sweep (the
-         *     same job — this just enqueues it early). Dedup-keyed so repeated clicks
-         *     before the job actually runs don't queue duplicates; the propose step
-         *     itself is idempotent either way (migration 0067's partial unique index).
+         * Propose retention actions now
+         * @description Queues the daily retention sweep early; asking again before it runs queues nothing more.
+         *     Compliance administrators only. Audited.
          */
         post: operations["trigger_propose"];
         delete?: never;
@@ -9520,6 +9680,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List configured secrets
+         * @description Every secret the configuration holds with what uses it, its key ids and age; never a value.
+         *     Security administrators only.
+         */
         get: operations["list_secrets"];
         put?: never;
         post?: never;
@@ -11601,8 +11766,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List state models
+         * @description Every state model: its entity, state field, initial state and record type. Automation
+         *     administrators only.
+         */
         get: operations["list_state_models"];
         put?: never;
+        /**
+         * Create a state model
+         * @description A state model on an entity's choice field with its initial state, optionally for one record type
+         *     (fixed once created; a typed model is not recorded in changesets). Recorded in the open changeset
+         *     otherwise. Automation administrators only. Audited.
+         */
         post: operations["create_state_model"];
         delete?: never;
         options?: never;
@@ -11617,12 +11793,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a state model
+         * @description One state model: its entity, state field, initial state, whether it is active, its transitions and
+         *     `row_version`. Automation administrators only.
+         */
         get: operations["get_state_model"];
         put?: never;
         post?: never;
+        /**
+         * Delete a state model
+         * @description Retires the model. Recorded in the open changeset. Automation administrators only. Audited.
+         */
         delete: operations["delete_state_model"];
         options?: never;
         head?: never;
+        /**
+         * Change a state model
+         * @description Changes the fields given. Recorded in the open changeset. Automation administrators only. Audited.
+         */
         patch: operations["update_state_model"];
         trace?: never;
     };
@@ -11635,6 +11824,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Add a transition to a state model
+         * @description A named move from one state to another, with an optional privilege, guard expression, and entry
+         *     and exit actions. Recorded in the open changeset. Automation administrators only. Audited.
+         */
         post: operations["create_transition"];
         delete?: never;
         options?: never;
@@ -11652,9 +11846,18 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a transition
+         * @description Records can no longer take it. Recorded in the open changeset. Automation administrators only.
+         *     Audited.
+         */
         delete: operations["delete_transition"];
         options?: never;
         head?: never;
+        /**
+         * Change a transition
+         * @description Changes the fields given. Recorded in the open changeset. Automation administrators only. Audited.
+         */
         patch: operations["update_transition"];
         trace?: never;
     };
@@ -11752,6 +11955,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Preview a document template
+         * @description Renders a template against a real record read as the caller, so it sees only what the caller may
+         *     read, and warns about every field it names that renders empty for that reason; an unknown field or
+         *     a syntax error is refused. Writes nothing. Content administrators only.
+         */
         post: operations["preview_template"];
         delete?: never;
         options?: never;
@@ -12057,8 +12266,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List web portals
+         * @description Every web portal with its keyword, type, whether it is on, its owning team and MFA policy,
+         *     one-based pages. User administrators only.
+         */
         get: operations["portal_admin_list_portals"];
         put?: never;
+        /**
+         * Create a web portal
+         * @description A portal with its URL keyword, type, owning team (the staff team that owns what its users create)
+         *     and MFA policy. User administrators only. Audited.
+         */
         post: operations["portal_admin_create_portal"];
         delete?: never;
         options?: never;
@@ -12073,6 +12292,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a web portal
+         * @description One portal's settings and `row_version`. User administrators only.
+         */
         get: operations["portal_admin_get_portal"];
         put?: never;
         post?: never;
@@ -12116,6 +12339,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a portal's entity settings
+         * @description Per entity, the lookup field to the portal user that a portal create fills in. Role
+         *     administrators only.
+         */
         get: operations["portal_admin_list_entity_configs"];
         put?: never;
         post?: never;
@@ -12133,6 +12361,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /**
+         * Set a portal's entity settings
+         * @description Sets, or clears with `null`, the lookup field on the entity that a portal create fills with the
+         *     portal user. Role administrators only. Audited.
+         */
         put: operations["portal_admin_put_entity_config"];
         post?: never;
         delete?: never;
@@ -12148,6 +12381,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a portal's erasure requests
+         * @description The erasure requests of the portal's users, with their status, one-based pages. Compliance
+         *     administrators only.
+         */
         get: operations["portal_admin_list_erasure_requests"];
         put?: never;
         post?: never;
@@ -12166,6 +12404,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Reject an erasure request
+         * @description Closes an open erasure request without erasing, for example under a legal hold; the account is
+         *     untouched. Compliance administrators only. Audited.
+         */
         post: operations["portal_admin_reject_erasure_request"];
         delete?: never;
         options?: never;
@@ -12180,8 +12423,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a portal's roles
+         * @description The portal's roles with how many users hold each. Role administrators only.
+         */
         get: operations["portal_admin_list_roles"];
         put?: never;
+        /**
+         * Create a portal role
+         * @description A named role of the portal, with no grants yet. Role administrators only. Audited.
+         */
         post: operations["portal_admin_create_role"];
         delete?: never;
         options?: never;
@@ -12196,12 +12447,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a portal role
+         * @description One role with how many users hold it and its entity grants. Role administrators only.
+         */
         get: operations["portal_admin_get_role"];
         put?: never;
         post?: never;
+        /**
+         * Delete a portal role
+         * @description Removes the role and its grants. Role administrators only. Audited.
+         */
         delete: operations["portal_admin_delete_role"];
         options?: never;
         head?: never;
+        /**
+         * Rename a portal role
+         * @description Role administrators only. Audited.
+         */
         patch: operations["portal_admin_rename_role"];
         trace?: never;
     };
@@ -12213,8 +12476,18 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /**
+         * Grant a portal role access to an entity
+         * @description Sets what the role may do on the entity (read, create, update, delete), on which records (one to
+         *     three conditions, ANDed, such as `account_ref` equal to `@portal_user.account_ref`) and on which
+         *     fields (read, write, filter). Replaces any grant it had there. Role administrators only. Audited.
+         */
         put: operations["portal_admin_put_grant"];
         post?: never;
+        /**
+         * Remove a portal role's grant on an entity
+         * @description The role's users may do nothing more on that entity. Role administrators only. Audited.
+         */
         delete: operations["portal_admin_delete_grant"];
         options?: never;
         head?: never;
@@ -12234,6 +12507,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Change a web portal's settings
+         * @description Changes the keyword, type, on or off, owning team (`null` clears it) or MFA policy given, when
+         *     `row_version` is the stored one. User administrators only. Audited.
+         */
         patch: operations["portal_admin_update_portal_settings"];
         trace?: never;
     };
@@ -12244,8 +12522,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a portal's users
+         * @description The portal's users with their name, email or username and status, one-based pages. User
+         *     administrators only.
+         */
         get: operations["portal_admin_list_users"];
         put?: never;
+        /**
+         * Add a portal user
+         * @description A portal user with a name and an email or username (at least one), in `invited` status with no
+         *     password; the password is set when the invitation is accepted. User administrators only. Audited.
+         */
         post: operations["portal_admin_create_user"];
         delete?: never;
         options?: never;
@@ -12263,6 +12551,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a portal user
+         * @description Deletes the user's credentials, ending every session, and marks the profile deleted and disabled;
+         *     a restored profile has no credential and cannot sign in. User administrators only. Audited.
+         */
         delete: operations["portal_admin_delete_user"];
         options?: never;
         head?: never;
@@ -12278,6 +12571,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Disable a portal user
+         * @description The user cannot sign in, and every session they hold ends at once. User administrators only.
+         *     Audited.
+         */
         post: operations["portal_admin_disable_user"];
         delete?: never;
         options?: never;
@@ -12294,6 +12592,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Enable a portal user
+         * @description Returns the user to `active` when a password is set, otherwise to `invited`. User administrators
+         *     only. Audited.
+         */
         post: operations["portal_admin_enable_user"];
         delete?: never;
         options?: never;
@@ -12310,6 +12613,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Erase a portal user
+         * @description Scrubs the user's personal fields in place, keeping the id so their records and audit rows still
+         *     resolve (to "Erased user"), and removes every credential, session, token, role and pending
+         *     signup; consent records stay as evidence. The open erasure request is completed, or one is
+         *     recorded. Compliance administrators only. Audited.
+         */
         post: operations["portal_admin_erase_user"];
         delete?: never;
         options?: never;
@@ -12327,10 +12637,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * G-14: a portal user's data export. Not a second exporter: it records a DSR
-         *     `access` request and fulfils it through `attome-compliance`
-         *     (`record_and_fulfill_access`), which writes the `Security`/`Export` event
-         *     and keeps the request in the DSR list as evidence.
+         * Export a portal user's data
+         * @description Records a data subject access request for the user and fulfils it, so the export stays in the
+         *     request list as evidence. Compliance administrators only. Audited.
          */
         post: operations["portal_admin_export_user"];
         delete?: never;
@@ -12348,6 +12657,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Invite a portal user
+         * @description Emails the user an invitation link to set a password, the token and the email queued in one
+         *     transaction; refused when email is switched off. User administrators only. Audited.
+         */
         post: operations["portal_admin_invite_user"];
         delete?: never;
         options?: never;
@@ -12363,8 +12677,17 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /**
+         * Give a portal user a role
+         * @description Sets the user's role in the portal. Role administrators only. Audited.
+         */
         put: operations["portal_admin_assign_role"];
         post?: never;
+        /**
+         * Take a portal user's role away
+         * @description The user keeps their account but holds no role, and so none of its grants. Role administrators
+         *     only. Audited.
+         */
         delete: operations["portal_admin_unassign_role"];
         options?: never;
         head?: never;
@@ -12381,8 +12704,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/agents/{id}/sessions` — opens a new, killable session from
-         *     an active agent definition, with an explicit ceiling.
+         * Start an agent session
+         * @description Opens a new session, which can be ended at any time, from an active agent definition with an
+         *     explicit risk ceiling.
          */
         post: operations["start_session_from_definition"];
         delete?: never;
@@ -12400,6 +12724,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Undo an agent session
+         * @description Stores the undo plan and queues it; 202 with the run's id. The session's owner or a holder of
+         *     `ai_agent.supervise`. Audited.
+         */
         post: operations["post_undo"];
         delete?: never;
         options?: never;
@@ -12414,6 +12743,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Preview undoing an agent session
+         * @description The steps that would undo what the session changed, planned as the caller, writing nothing. The
+         *     session's owner or a holder of `ai_agent.supervise`.
+         */
         get: operations["get_undo_preview"];
         put?: never;
         post?: never;
@@ -12430,6 +12764,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List an invoice's payment promises
+         * @description The promises to pay recorded on the invoice, by people or agents, with their status. Anyone who
+         *     may read the invoice.
+         */
         get: operations["list_invoice_promises"];
         put?: never;
         post?: never;
@@ -12446,6 +12785,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List an invoice's payment reminders
+         * @description The reminders sent or planned for the invoice. Anyone who may read the invoice.
+         */
         get: operations["list_invoice_reminders"];
         put?: never;
         post?: never;
@@ -12464,6 +12807,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Confirm a payment promise
+         * @description Confirms a promise an agent recorded (pending review). Needs update rights on the invoice and the
+         *     promise's `If-Match` row version. Audited.
+         */
         post: operations["confirm_promise"];
         delete?: never;
         options?: never;
@@ -12480,6 +12828,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Reject a payment promise
+         * @description Rejects a promise an agent recorded; it no longer holds reminders back. Needs update rights on the
+         *     invoice and the promise's `If-Match` row version. Audited.
+         */
         post: operations["reject_promise"];
         delete?: never;
         options?: never;
@@ -12496,6 +12849,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Mark a payment promise kept or broken
+         * @description Needs update rights on the invoice and the promise's `If-Match` row version. Audited.
+         */
         post: operations["post_promise_status"];
         delete?: never;
         options?: never;
@@ -12511,14 +12868,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/ai/conversations` — the caller's own conversations, newest
-         *     first.
+         * List my AI conversations
+         * @description The caller's own conversations, newest first, one-based pages.
          */
         get: operations["list_conversations"];
         put?: never;
         /**
-         * `POST /api/v1/ai/conversations` — starts a conversation and its agent
-         *     session from an agent definition.
+         * Start an AI conversation
+         * @description Starts a conversation and its agent session from an agent definition, under that agent's limits
+         *     and the caller's own access.
          */
         post: operations["start_conversation"];
         delete?: never;
@@ -12535,15 +12893,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/ai/conversations/{id}` — metadata and the governance in
-         *     effect.
+         * Get an AI conversation
+         * @description The conversation's details and the governance in effect for it.
          */
         get: operations["get_conversation"];
         put?: never;
         post?: never;
         /**
-         * `DELETE /api/v1/ai/conversations/{id}` — ends the conversation and revokes
-         *     its session.
+         * End an AI conversation
+         * @description Ends the conversation and revokes its agent session.
          */
         delete: operations["end_conversation"];
         options?: never;
@@ -12559,14 +12917,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/ai/conversations/{id}/messages` — the transcript, oldest
-         *     first, paged by ordinal.
+         * Read an AI conversation's transcript
+         * @description The messages, oldest first, one-based pages.
          */
         get: operations["list_messages"];
         put?: never;
         /**
-         * `POST /api/v1/ai/conversations/{id}/messages` — sends a message and runs
-         *     one turn.
+         * Send a message to an AI conversation
+         * @description Sends the caller's message and runs one turn of the agent; a write the agent proposes waits for
+         *     confirmation or approval as its tier requires.
          */
         post: operations["send_chat_message"];
         delete?: never;
@@ -12584,9 +12943,9 @@ export interface paths {
         };
         get?: never;
         /**
-         * `PUT /api/v1/ai/conversations/{id}/messages/{message_id}/feedback` — the
-         *     caller's thumbs up or down on a turn's answer. Changing a vote replaces
-         *     it; there is one current vote per user and message.
+         * Rate an AI answer
+         * @description The caller's thumbs up or down on a turn's answer; voting again replaces it, one vote per person
+         *     and message.
          */
         put: operations["put_feedback"];
         post?: never;
@@ -12606,12 +12965,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/ai/conversations/{id}/runs` — gives the agent a task and
-         *     returns at once while it works through it in the background (N7-T1):
-         *     the same turn loop, gate and ledger as a chat message, bounded by
-         *     `max_steps`, ending in one of the turn's terminal states (completed,
-         *     awaiting confirmation or approval, a limit, a failure). Its steps and end
-         *     state are on the conversation's stream.
+         * Give the agent a task to run
+         * @description Returns at once while the agent works through the task in the background, with the same turn loop,
+         *     gate and ledger as a chat message, bounded by `max_steps`; it ends completed, waiting for
+         *     confirmation or approval, at a limit, or failed. Its steps are on the conversation's stream.
          */
         post: operations["start_conversation_run"];
         delete?: never;
@@ -12670,10 +13027,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/ai/conversations/{id}/tool-calls` — the conversation's tool
-         *     calls, oldest first. A read projection for display: `arguments` is shown on
-         *     a confirmation card and never sent back (I-13); the stored outcome is not
-         *     exposed.
+         * List a conversation's tool calls
+         * @description The tool calls oldest first, for display: `arguments` show on a confirmation card and are never
+         *     sent back, and the stored outcome is not exposed.
          */
         get: operations["list_tool_calls"];
         put?: never;
@@ -12695,8 +13051,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * `DELETE /api/v1/ai/conversations/{id}/tool-calls/{tid}` — rejects a
-         *     pending proposal.
+         * Reject an AI proposal
+         * @description The pending proposal is refused and never runs.
          */
         delete: operations["reject_tool_call"];
         options?: never;
@@ -12714,8 +13070,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/ai/conversations/{id}/tool-calls/{tid}/confirm` — executes a
-         *     **server-persisted** proposal as the agent action it is (I-13).
+         * Confirm an AI proposal
+         * @description Runs the server-stored proposal as the agent action it is, after checking the displayed
+         *     `arguments_hash` still matches; the client never sends arguments of its own.
          */
         post: operations["confirm_tool_call"];
         delete?: never;
@@ -12756,8 +13113,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/ai/deferred-actions` — the caller's held actions, newest
-         *     first; an administrator sees everyone's.
+         * List held AI actions
+         * @description The caller's actions held for an undo window or staged for review, newest first; an administrator
+         *     sees everyone's.
          */
         get: operations["list_deferred_actions"];
         put?: never;
@@ -12778,9 +13136,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/ai/deferred-actions/apply` — runs staged actions: one
-         *     agent session's, or chosen ones, now or after an undo window, in the
-         *     order they were staged.
+         * Apply staged AI actions
+         * @description Runs one agent session's staged actions, or chosen ones, now or after an undo window, in the order
+         *     they were staged. Audited.
          */
         post: operations["apply_deferred_actions"];
         delete?: never;
@@ -12799,8 +13157,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/ai/deferred-actions/discard` — discards staged actions so
-         *     they never run.
+         * Discard staged AI actions
+         * @description The staged actions never run. Audited.
          */
         post: operations["discard_deferred_actions"];
         delete?: never;
@@ -12819,8 +13177,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/ai/deferred-actions/{id}/cancel` — cancels a held action
-         *     before it runs. The person it acts for, or an administrator.
+         * Cancel a held AI action
+         * @description Cancels a held action before it runs. The person it acts for, or an administrator. Audited.
          */
         post: operations["cancel_deferred_action"];
         delete?: never;
@@ -12836,6 +13194,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List my AI follow-ups
+         * @description The caller's open follow-ups that agents' rules found, one-based pages.
+         */
         get: operations["list_my_followups"];
         put?: never;
         post?: never;
@@ -12854,6 +13216,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Dismiss an AI follow-up
+         * @description Closes the follow-up, with its `If-Match` row version; a stale or already closed one is 409.
+         */
         post: operations["dismiss_followup"];
         delete?: never;
         options?: never;
@@ -12868,6 +13234,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a meeting brief
+         * @description The brief prepared for the meeting. Anyone who may read the meeting.
+         */
         get: operations["get_meeting_brief"];
         put?: never;
         post?: never;
@@ -12886,6 +13256,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Regenerate a meeting brief
+         * @description Runs the meeting brief action again now, as the caller.
+         */
         post: operations["regenerate_meeting_brief"];
         delete?: never;
         options?: never;
@@ -12902,6 +13276,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Write meeting notes from a transcript
+         * @description Queues the meeting notes action for a transcript; 202.
+         */
         post: operations["post_meeting_notes"];
         delete?: never;
         options?: never;
@@ -12918,6 +13296,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Confirm meeting notes
+         * @description Confirms the drafted notes, with their `If-Match` row version, through the confirm notes action.
+         */
         post: operations["confirm_meeting_notes"];
         delete?: never;
         options?: never;
@@ -12953,6 +13335,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read an undo run
+         * @description The run and a page of its items, each step's outcome. Whoever asked for it, or a supervisor.
+         */
         get: operations["get_undo_run"];
         put?: never;
         post?: never;
@@ -13287,12 +13673,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Creates a dashboard and its entire page/section/widget tree from one
-         *     layout document — the single-call counterpart to building a dashboard
-         *     through a sequence of generic-entity-CRUD calls. Meant for a caller that
-         *     already has the whole layout decided (an AI-authoring flow, an import),
-         *     not for interactive editing — the visual Page Editor's own generic-CRUD
-         *     path remains how a human edits an existing dashboard.
+         * Create a dashboard from a layout
+         * @description Creates a dashboard and its whole tree of pages, sections and widgets from one layout document in
+         *     one transaction, for a caller that has the layout decided already (an AI authoring flow, an
+         *     import). Editing an existing dashboard stays the record API's job. Needs the dashboard create
+         *     privilege. Audited.
          */
         post: operations["create_from_layout"];
         delete?: never;
@@ -13309,11 +13694,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/attome-dashboard/widget-types` — lists every registered widget
-         *     descriptor, so a builder UI can populate its widget palette without
-         *     hardcoding the catalog. `SelfService` (authenticated-only, same policy
-         *     `attome-server`'s own sidebar read uses): this is a static capability
-         *     list, not a data or configuration read, so no further privilege applies.
+         * List widget types
+         * @description Every registered widget type with its descriptor, so a builder can fill its palette without a
+         *     hard-coded list. Any signed-in user: it is a list of capabilities, not data.
          */
         get: operations["list_widget_types"];
         put?: never;
@@ -13333,6 +13716,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Duplicate a widget
+         * @description Copies a widget, with its configuration, into its own section or into `target_section_id`. Needs
+         *     update rights on widgets and the right to create one. Audited.
+         */
         post: operations["duplicate"];
         delete?: never;
         options?: never;
@@ -13350,18 +13738,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/attome-dashboard/widget/validate-config` — the "reject
-         *     malformed configs at write time, not render time" surface for
-         *     `declarative_widget` (see this module's doc comment). Generic entity CRUD
-         *     has no per-field business-validation hook (`widget_registry.rs`'s doc
-         *     comment: `config` is an unvalidated client-owned blob on every
-         *     widget-carrying entity), so — same shape as `query_admin.rs`'s
-         *     publish-time `EXPLAIN` lint being "the friendly error, the missing grant
-         *     is the actual guarantee" — this is the sanctioned pre-save check the
-         *     widget config editor calls before writing through
-         *     `/api/v1/dashboard_widget`. Same authorization as this crate's other
-         *     bespoke widget business actions (`widget_actions.rs`): a caller who may
-         *     update a widget may check whether a config they intend to save is valid.
+         * Check a widget configuration
+         * @description Validates a declarative widget's configuration before it is saved through the record API, and
+         *     names every problem, so a bad configuration is refused when written rather than when drawn. Writes
+         *     nothing. Needs update rights on widgets.
          */
         post: operations["validate_config_route"];
         delete?: never;
@@ -13379,6 +13759,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Approve a dashboard
+         * @description A reviewer's sign-off: moves the working copy from review to approved, ready to publish.
+         *     Dashboard editors only. Audited.
+         */
         post: operations["approve_dashboard"];
         delete?: never;
         options?: never;
@@ -13395,6 +13780,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Archive a dashboard
+         * @description Marks the dashboard archived and inactive and clears its published version; the record API's
+         *     restore brings it back, still archived. Dashboard editors only. Audited.
+         */
         post: operations["archive"];
         delete?: never;
         options?: never;
@@ -13411,6 +13801,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Clone a dashboard
+         * @description A new draft dashboard named "<name> (Copy)", copied from this one. Dashboard editors only.
+         *     Audited.
+         */
         post: operations["clone_dashboard"];
         delete?: never;
         options?: never;
@@ -13425,6 +13820,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Check a dashboard's bound queries
+         * @description Whether every query and view its widgets name still exists and resolves, so a renamed or deleted
+         *     one is found before publishing instead of when a widget fails to draw. Anyone who may read the
+         *     dashboard.
+         */
         get: operations["dashboard_health_check"];
         put?: never;
         post?: never;
@@ -13443,6 +13844,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Add a page to a dashboard
+         * @description Creates the page together with its root grid section in one transaction, under the dashboard's
+         *     lifecycle lock. Dashboard editors only. Audited.
+         */
         post: operations["create_dashboard_page"];
         delete?: never;
         options?: never;
@@ -13459,6 +13865,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Get a page's data
+         * @description Runs every widget of one page over the records the caller may see, in one call. Writes nothing.
+         *     Anyone who may read the dashboard.
+         */
         post: operations["page_data"];
         delete?: never;
         options?: never;
@@ -13475,6 +13886,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Give a page its root section
+         * @description Adds the root grid section to a page that has none. Needs the right to create sections. Audited.
+         */
         post: operations["repair_root_section"];
         delete?: never;
         options?: never;
@@ -13492,13 +13907,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * D-195: gated behind `approval.required_actions` (empty/off by default,
-         *     same as every other wired action_type — see `attome_audit::approval::gate`).
-         *     When gated, this submits an approval request instead of publishing and
-         *     returns `202` with `approval_pending: true` — the dashboard stays
-         *     `approved` until a second, different `system.admin` decides the request
-         *     (`attome-api`'s `approval_admin::decide_approval`, wired to
-         *     `do_publish_dashboard` via `ACTION_DASHBOARD_PUBLISH`).
+         * Publish a dashboard
+         * @description Writes an approved dashboard's tree as a new immutable version and points viewers at it, pinning
+         *     each widget's query to the version it was published with. When `approval.required_actions` gates
+         *     it, this submits an approval request instead (202, `approval_pending`) and a second administrator
+         *     decides. Dashboard editors only. Audited.
          */
         post: operations["publish"];
         delete?: never;
@@ -13514,6 +13927,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a dashboard's published version
+         * @description The snapshot viewers see, which editing the working copy does not change. Anyone who may read
+         *     the dashboard.
+         */
         get: operations["published"];
         put?: never;
         post?: never;
@@ -13532,6 +13950,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Send a dashboard back to draft
+         * @description Moves the working copy from review back to draft. Dashboard editors only. Audited.
+         */
         post: operations["reject"];
         delete?: never;
         options?: never;
@@ -13548,6 +13970,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Resolve a dashboard's variables
+         * @description What `@current_user`, `@current_date` and the dashboard's other variables come to for this
+         *     viewer, embed context and URL overrides. Writes nothing. Anyone who may read the dashboard.
+         */
         post: operations["resolve_variables"];
         delete?: never;
         options?: never;
@@ -13564,6 +13991,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Start revising a published dashboard
+         * @description Returns the published working copy to draft for editing; viewers keep seeing the published
+         *     version. Dashboard editors only. Audited.
+         */
         post: operations["start_revision"];
         delete?: never;
         options?: never;
@@ -13580,6 +14012,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Submit a dashboard for review
+         * @description Moves the working copy from draft to review. Dashboard editors only. Audited.
+         */
         post: operations["submit_for_review"];
         delete?: never;
         options?: never;
@@ -13594,6 +14030,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a dashboard's draft tree
+         * @description The working copy's pages, sections and widgets in one response, for the editor. Needs update
+         *     rights on the dashboard.
+         */
         get: operations["draft_tree"];
         put?: never;
         post?: never;
@@ -13612,6 +14053,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Unpublish a dashboard
+         * @description Viewers see no published version any more and the working copy returns to draft. Dashboard editors
+         *     only. Audited.
+         */
         post: operations["unpublish"];
         delete?: never;
         options?: never;
@@ -13628,6 +14074,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Roll a dashboard back to a version
+         * @description Points viewers at an earlier published version, behind the same four-eyes gate as publishing.
+         *     Dashboard editors only. Audited.
+         */
         post: operations["activate_version"];
         delete?: never;
         options?: never;
@@ -13644,6 +14095,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Restore a version into the draft
+         * @description Writes an earlier version's tree into the working copy; what viewers see does not change until it
+         *     is published. Dashboard editors only. Audited.
+         */
         post: operations["restore_version"];
         delete?: never;
         options?: never;
@@ -13660,6 +14116,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Get a widget's data
+         * @description Runs one widget's definition over the records the caller may see and returns its values. Writes
+         *     nothing. Anyone who may read the dashboard.
+         */
         post: operations["widget_data"];
         delete?: never;
         options?: never;
@@ -13676,6 +14137,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Explain a widget's value
+         * @description How the widget's value is calculated, from the same resolved context as its data. Writes nothing.
+         *     Anyone who may read the dashboard.
+         */
         post: operations["widget_explain"];
         delete?: never;
         options?: never;
@@ -13692,6 +14158,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * List the records behind a widget value
+         * @description The records the caller may see that make up a widget's value, for drilling in. Writes nothing.
+         *     Anyone who may read the dashboard.
+         */
         post: operations["widget_records"];
         delete?: never;
         options?: never;
@@ -14581,6 +15052,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Apply an account's credit
+         * @description Allocates the account's unallocated credit to its open invoices. Audited.
+         */
         post: operations["post_apply_credit"];
         delete?: never;
         options?: never;
@@ -14595,6 +15070,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read an account's credit position
+         * @description The account's credit limit, whether it is on credit hold, its open balance, and whether an amount
+         *     would still fit, as order confirmation checks it.
+         */
         get: operations["get_credit"];
         put?: never;
         post?: never;
@@ -14611,6 +15091,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read an account's statement
+         * @description The account's issued documents, payments and write-offs over a period (this month by default), each
+         *     with what it adds to the balance; drafts, void and pro forma invoices do not count.
+         */
         get: operations["get_statement"];
         put?: never;
         post?: never;
@@ -14627,6 +15112,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read receivables ageing
+         * @description Each account's open balance by how overdue it is, as of a date.
+         */
         get: operations["get_ageing"];
         put?: never;
         post?: never;
@@ -14643,6 +15132,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read receivables ageing totals
+         * @description The open balance across accounts by how overdue it is, as of a date.
+         */
         get: operations["get_ageing_totals"];
         put?: never;
         post?: never;
@@ -14659,6 +15152,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Gather a dispute's evidence
+         * @description The evidence a chargeback a gateway reported can draw on, for a person to submit before the
+         *     deadline; nothing is submitted automatically.
+         */
         get: operations["get_evidence"];
         put?: never;
         post?: never;
@@ -14677,6 +15175,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Receive a payment gateway notification
+         * @description Where a payment gateway posts its events, with no session: the call is verified with the system's
+         *     webhook secret, each event is stored once and a job applies it to its payment. Rate limited per
+         *     address.
+         */
         post: operations["post_webhook"];
         delete?: never;
         options?: never;
@@ -14694,8 +15198,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * The caller may ask for invoices: `billing.issue`, held by billing staff
-         *     and by the service accounts of features that bill.
+         * Request an invoice
+         * @description Other features (a won order, a subscription charge, a project milestone) ask for invoices rather
+         *     than write them; a request is stored once per source. Holders of `billing.issue`. Audited.
          */
         post: operations["post_request"];
         delete?: never;
@@ -14713,6 +15218,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Apply a deposit to a final invoice
+         * @description Adds one negative line per VAT category of an issued deposit invoice to a draft final invoice. A
+         *     deposit applies once; a second application is 409. Audited.
+         */
         post: operations["post_apply_deposit"];
         delete?: never;
         options?: never;
@@ -14729,6 +15239,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Cancel an issued invoice
+         * @description Issues a credit note for whatever is still uncredited, at once and with a reason; the issue
+         *     approval threshold applies to it as to any document. Needs the billing credit privilege. Audited.
+         */
         post: operations["post_cancel"];
         delete?: never;
         options?: never;
@@ -14745,6 +15260,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Convert a pro forma invoice
+         * @description Copies a pro forma invoice and its lines into a new draft invoice, which is then priced and issued
+         *     as usual; the pro forma stays as it was. Needs the invoice create privilege. Audited.
+         */
         post: operations["post_convert_pro_forma"];
         delete?: never;
         options?: never;
@@ -14761,6 +15281,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Credit an issued invoice
+         * @description A draft credit note copying chosen lines of the issued invoice with a negative quantity, with a
+         *     reason; a line is never credited beyond what earlier credit notes left. An issued invoice itself
+         *     never changes. Needs the billing credit privilege. Audited.
+         */
         post: operations["post_credit_note"];
         delete?: never;
         options?: never;
@@ -14777,6 +15303,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Charge more on an issued invoice
+         * @description A draft debit note with new positive lines for a charge the invoice missed, with a reason. Needs
+         *     the billing credit privilege. Audited.
+         */
         post: operations["post_debit_note"];
         delete?: never;
         options?: never;
@@ -14791,6 +15322,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read an invoice's e-invoice
+         * @description The ZATCA e-invoice made when the invoice was issued: its status (pending, cleared, reported or
+         *     rejected), ZATCA's validation results and the QR code.
+         */
         get: operations["get_einvoice"];
         put?: never;
         post?: never;
@@ -14809,6 +15345,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Issue an invoice
+         * @description Recomputes a draft's totals and issues it with the next number of its series; it needs an account
+         *     and a line, and a pro forma never takes a number (409). Above `billing.issue_approval_threshold`
+         *     it opens an approval instead. With e-invoicing on, the e-invoice is made and sent in the same step.
+         *     Needs the billing issue privilege. Audited.
+         */
         post: operations["post_issue"];
         delete?: never;
         options?: never;
@@ -14825,6 +15368,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Recompute a draft invoice
+         * @description Prices each line through the tax engine and stores the invoice totals summed from the rounded
+         *     lines; only a draft (409 otherwise). Needs update rights on invoices. Audited.
+         */
         post: operations["post_recompute"];
         delete?: never;
         options?: never;
@@ -14841,6 +15389,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Write off an invoice balance
+         * @description Writes off up to what is open on an issued invoice, with a reason. Above
+         *     `billing.write_off_approval_threshold` it waits for approval. Needs the write-off privilege.
+         *     Audited.
+         */
         post: operations["post_write_off"];
         delete?: never;
         options?: never;
@@ -14855,6 +15409,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read recurring revenue
+         * @description Monthly recurring revenue per account and currency on a day (today by default), from the nightly
+         *     snapshots, and its movement over the days before (30 by default): new, expansion, contraction and
+         *     churn.
+         */
         get: operations["get_recurring"];
         put?: never;
         post?: never;
@@ -14873,6 +15433,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Create a payment link
+         * @description A single-use link for an issued invoice's open amount, an order's total, or a free amount for an
+         *     account, valid 72 hours by default. Holders of `payment_link.create`. Audited.
+         */
         post: operations["post_link"];
         delete?: never;
         options?: never;
@@ -14889,6 +15454,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Record a payment
+         * @description A manual payment from an account, allocated to its invoices, in one transaction under the account's
+         *     balance lock so two payments never allocate the same open amount. Audited.
+         */
         post: operations["post_payment"];
         delete?: never;
         options?: never;
@@ -14905,6 +15475,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Refund a payment
+         * @description Refunds part or all of a paid payment, never more than earlier refunds left, under the payment's
+         *     refund lock. Holders of `payment.refund`. Audited.
+         */
         post: operations["post_refund"];
         delete?: never;
         options?: never;
@@ -14921,6 +15496,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Reverse a payment
+         * @description Reverses a payment and its allocations, so the invoices it paid are open again. Audited.
+         */
         post: operations["post_reverse"];
         delete?: never;
         options?: never;
@@ -15128,6 +15707,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Report metered usage
+         * @description Takes a batch of usage records; each carries the sender's idempotency key, and one already stored
+         *     for the same line and time is counted as a duplicate, so a whole batch can be retried.
+         */
         post: operations["post_usage"];
         delete?: never;
         options?: never;
@@ -15795,10 +16379,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The caller's channels, most recently active first. */
+        /**
+         * List my chat channels
+         * @description The channels the signed-in person is a member of, most recently active first, one-based pages.
+         */
         get: operations["list_channels"];
         put?: never;
-        /** Starts a direct, group or record channel. */
+        /**
+         * Start a chat channel
+         * @description A direct channel (one per pair of people; asking again returns the same one), a named group, or a
+         *     channel on a record, whose members must each be able to read the record.
+         */
         post: operations["post_channel"];
         delete?: never;
         options?: never;
@@ -15815,7 +16406,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Adds someone to a group or record channel; any member may. */
+        /**
+         * Add a chat channel member
+         * @description Adds someone to a group or record channel; any member may. On a record channel the person must be
+         *     able to read the record. A channel the caller is not in is 404.
+         */
         post: operations["add_member"];
         delete?: never;
         options?: never;
@@ -15833,7 +16428,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Leaves a channel, or (its owner) removes someone from it. */
+        /**
+         * Leave or remove from a chat channel
+         * @description A member leaves the channel, or its owner removes someone from it.
+         */
         delete: operations["remove_member"];
         options?: never;
         head?: never;
@@ -15848,12 +16446,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A channel's messages: top-level ones newest first, or one thread oldest
-         *     first.
+         * List a channel's messages
+         * @description Top-level messages newest first, or one thread's replies oldest first. Members only; anyone else
+         *     gets 404.
          */
         get: operations["list_channel_messages"];
         put?: never;
-        /** Posts a message, optionally in a thread and with a document. */
+        /**
+         * Post a chat message
+         * @description Posts a message, optionally as a reply in a thread and with a document the poster may read.
+         *     Members only.
+         */
         post: operations["post_message"];
         delete?: never;
         options?: never;
@@ -15872,8 +16475,9 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Deletes a message: its author or the channel's owner. Under a legal hold
-         *     the text is kept for the hold and only hidden.
+         * Delete a chat message
+         * @description Its author or the channel's owner deletes it. Under a legal hold the text is kept for the hold and
+         *     only hidden.
          */
         delete: operations["delete_message"];
         options?: never;
@@ -15890,7 +16494,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Marks the channel read up to now. */
+        /**
+         * Mark a chat channel read
+         * @description Marks the channel read up to now for the signed-in member.
+         */
         post: operations["mark_channel_read"];
         delete?: never;
         options?: never;
@@ -15906,7 +16513,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Sets how long the channel keeps messages (its owner only). */
+        /**
+         * Set a chat channel's retention
+         * @description How long the channel keeps messages; its owner only.
+         */
         put: operations["set_retention"];
         post?: never;
         delete?: never;
@@ -16052,6 +16662,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Add a commission adjustment
+         * @description A manual adjustment with a reason; one above `commission.adjustment_approval_amount` waits for
+         *     approval. Audited.
+         */
         post: operations["commission_post_adjustment"];
         delete?: never;
         options?: never;
@@ -16068,6 +16683,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Dispute a statement line
+         * @description A seller disputes one of their own statement lines, with a reason. Audited.
+         */
         post: operations["commission_post_dispute"];
         delete?: never;
         options?: never;
@@ -16084,6 +16703,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Decide a commission dispute
+         * @description A reviewer (sales ops, or a manager for their team) accepts, rejects or settles the dispute with an
+         *     adjustment. Audited.
+         */
         post: operations["commission_post_decision"];
         delete?: never;
         options?: never;
@@ -16100,6 +16724,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Estimate a commission
+         * @description What one of the caller's own open opportunities would pay them under their published plan in the
+         *     current open period, computed in memory; nothing is written.
+         */
         post: operations["commission_post_estimate"];
         delete?: never;
         options?: never;
@@ -16116,6 +16745,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Apply a commission recalculation
+         * @description Applies the pending recalculation preview of an open period, so participants are paid what the
+         *     rules now give. Audited.
+         */
         post: operations["commission_post_recalc_apply"];
         delete?: never;
         options?: never;
@@ -16132,6 +16766,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Run commissions for a period
+         * @description Starts a calculation run of the plan version for the period: participants in batches, each in its
+         *     own transaction, resuming where it stopped. Audited.
+         */
         post: operations["commission_post_run"];
         delete?: never;
         options?: never;
@@ -16148,6 +16787,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Submit a commission period for close
+         * @description Sales ops submit the period; finance approves it through an approval request, which locks it and
+         *     approves its payouts, or sends it back with a comment. Needs the period's `If-Match` row version.
+         *     Audited.
+         */
         post: operations["commission_post_submit"];
         delete?: never;
         options?: never;
@@ -16164,6 +16809,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Publish a compensation plan
+         * @description Compiles the plan's draft version, every component, and publishes it with the hash of what was
+         *     compiled; overlapping or unreadable rate tables are refused with the component and reason.
+         *     Audited.
+         */
         post: operations["commission_post_publish"];
         delete?: never;
         options?: never;
@@ -16180,6 +16831,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Send a plan for signature
+         * @description For each participant of the latest published version who has not accepted it, renders the plan
+         *     document from a template and sends it for electronic signature; a participant is paid only once
+         *     signed. Audited.
+         */
         post: operations["commission_post_send_for_acceptance"];
         delete?: never;
         options?: never;
@@ -16194,6 +16851,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List commission statements
+         * @description A period's statement lines, adjustments and clawbacks, newest run first, filtered by the caller's
+         *     commission role: a seller their own, a manager their team's, sales ops everyone's.
+         */
         get: operations["commission_get_statements"];
         put?: never;
         post?: never;
@@ -16210,6 +16872,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read my commission statement
+         * @description The caller's own statement lines, adjustments and clawbacks for a period.
+         */
         get: operations["commission_get_my_statement"];
         put?: never;
         post?: never;
@@ -16705,6 +17371,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Match contract counterparties
+         * @description Proposes an account for each contract that names its counterparty only as text: an equal name, or
+         *     an account whose name starts the text or the other way round (at least four characters), with names
+         *     folded the same way, Arabic included. A tie makes no proposal. Audited.
+         */
         post: operations["post_run"];
         delete?: never;
         options?: never;
@@ -16721,6 +17393,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Decide a counterparty proposal
+         * @description Confirms the proposed account on the contract, or rejects the proposal. Audited.
+         */
         post: operations["post_decide"];
         delete?: never;
         options?: never;
@@ -16852,10 +17528,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/decisions/{id}/approve` — the human picks which option runs.
-         *     `dashboard_decision.update`: reuses the entity's own generic update privilege
-         *     for this bespoke business action, same convention `DashboardUpdate`/
-         *     `MetricUpdate` already use in this crate.
+         * Approve a decision
+         * @description A person picks which of the decision's options runs. Needs update rights on decisions. Audited.
          */
         post: operations["approve_decision"];
         delete?: never;
@@ -16874,9 +17548,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/decisions/{id}/execute` — runs the decision's chosen
-         *     option through [`dispatch`], the platform's one execution path (I-2), and
-         *     records the invocation id + result status on the decision.
+         * Run a decision's chosen option
+         * @description Runs the approved option through the platform's one action path, with its gate, and records the
+         *     invocation and its result on the decision. Audited.
          */
         post: operations["execute_decision"];
         delete?: never;
@@ -16974,6 +17648,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a document render
+         * @description A render's status and, once done, its document.
+         */
         get: operations["render_status"];
         put?: never;
         post?: never;
@@ -16992,6 +17670,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Render a document template
+         * @description Queues a render (202) of the template against a record, read as the caller so it sees only what
+         *     the caller may read.
+         */
         post: operations["render_document"];
         delete?: never;
         options?: never;
@@ -17032,6 +17715,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Create a document folder
+         * @description A named folder on one record for its documents. Audited.
+         */
         post: operations["create_folder"];
         delete?: never;
         options?: never;
@@ -17046,6 +17733,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Browse documents
+         * @description The documents the caller may read, grouped by entity, record and folder with counts, for the
+         *     documents browser.
+         */
         get: operations["get_tree"];
         put?: never;
         post?: never;
@@ -17065,8 +17757,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Asks for a recording to be transcribed (again); needs update access to the
-         *     document. The work runs on the job queue.
+         * Transcribe a recording
+         * @description Queues a transcription of the recording (again, if it has one). Needs update rights on the
+         *     document. Audited.
          */
         post: operations["post_transcribe"];
         delete?: never;
@@ -17082,7 +17775,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A recording's transcript, for anyone who may read the document. */
+        /**
+         * Read a recording's transcript
+         * @description Anyone who may read the document.
+         */
         get: operations["get_transcript"];
         put?: never;
         post?: never;
@@ -17099,8 +17795,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List e-invoicing devices
+         * @description The e-invoicing units (ZATCA devices) and whether each is onboarded. Holders of `einvoice.manage`.
+         */
         get: operations["get_devices"];
         put?: never;
+        /**
+         * Add an e-invoicing device
+         * @description A ZATCA e-invoicing unit, to be onboarded before it can sign invoices. Holders of
+         *     `einvoice.manage`. Audited.
+         */
         post: operations["post_device"];
         delete?: never;
         options?: never;
@@ -17117,6 +17822,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Onboard an e-invoicing device
+         * @description Onboards the device with ZATCA using the one-time password the Fatoora portal shows, so it can
+         *     stamp invoices. Holders of `einvoice.manage`. Audited.
+         */
         post: operations["post_onboard"];
         delete?: never;
         options?: never;
@@ -17179,7 +17889,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Creates a draft envelope from documents the caller may read. */
+        /**
+         * Create a signature envelope
+         * @description A draft envelope with documents the caller may read and its signers (name, email, role, signing
+         *     order); each file is hashed now, so the certificate names exactly what was signed. Audited.
+         */
         post: operations["post_esign_envelope"];
         delete?: never;
         options?: never;
@@ -17194,7 +17908,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** An envelope of the caller's (or any, for an administrator). */
+        /**
+         * Get a signature envelope
+         * @description The envelope with its documents, signers and where each signer is.
+         */
         get: operations["get_esign_envelope"];
         put?: never;
         post?: never;
@@ -17213,7 +17930,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Sends a draft envelope to its first signers. */
+        /**
+         * Send a signature envelope
+         * @description Emails the first signers in order a personal link; when everyone at one position has signed, the
+         *     next position is emailed. Audited.
+         */
         post: operations["post_esign_envelope_send"];
         delete?: never;
         options?: never;
@@ -17230,7 +17951,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Voids a draft or sent envelope. */
+        /**
+         * Void a signature envelope
+         * @description Stops the envelope; its links no longer work. Audited.
+         */
         post: operations["post_esign_envelope_void"];
         delete?: never;
         options?: never;
@@ -17245,12 +17969,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The envelope a signer's link opens. No sign-in: the link is the authority. */
+        /**
+         * Open a signing link
+         * @description What the signer is asked to sign. No session; the link's signed token is the credential.
+         */
         get: operations["get_esign_signer_view"];
         put?: never;
         /**
-         * A signer asks for a code, signs or declines. No sign-in: the link and
-         *     the emailed code are the authority.
+         * Act on a signing link
+         * @description The signer asks for a code, signs or declines. No session: the link and the emailed code are the
+         *     credential.
          */
         post: operations["post_esign_signer_action"];
         delete?: never;
@@ -17638,6 +18366,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Walk the record graph
+         * @description From a record, follows its lookups, record relationships and hierarchy a bounded number of hops,
+         *     checking the caller's read access at every hop, and returns the records reached.
+         */
         post: operations["traverse_route"];
         delete?: never;
         options?: never;
@@ -17654,6 +18387,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Start a GRC assessment
+         * @description Moves a planned assessment to in progress under its record lock. Audited.
+         */
         post: operations["start_assessment_route"];
         delete?: never;
         options?: never;
@@ -17670,6 +18407,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Remediate a GRC finding
+         * @description Marks an open finding remediated under its record lock; one already remediated, accepted as a risk
+         *     or closed is refused. Audited.
+         */
         post: operations["remediate_finding_route"];
         delete?: never;
         options?: never;
@@ -17731,6 +18473,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read who is away
+         * @description Which days the users asked about are away on approved leave.
+         */
         get: operations["get_hr_availability"];
         put?: never;
         post?: never;
@@ -17749,6 +18495,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Submit a leave request
+         * @description Counts the request's working days on the default business calendar, checks the employee's balance
+         *     for that leave type and year, and opens an approval; approving moves the days from remaining to
+         *     taken. Audited.
+         */
         post: operations["post_hr_leave_submit"];
         delete?: never;
         options?: never;
@@ -17765,6 +18517,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Hire from an accepted offer
+         * @description Creates the employee from the candidate, the offer's salary and start date and the posting's title,
+         *     as the caller, and links an existing user account with the candidate's email. An offer hires once.
+         *     Audited.
+         */
         post: operations["post_hr_hire"];
         delete?: never;
         options?: never;
@@ -17779,6 +18537,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Export payroll inputs
+         * @description One CSV for the period in a template's column layout: each active employee's base salary, unpaid
+         *     leave days and approved commission payouts. Needs the field grants for salaries and national ids;
+         *     every cell is guarded against formula injection. Audited.
+         */
         get: operations["get_hr_payroll_export"];
         put?: never;
         post?: never;
@@ -17797,6 +18561,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Hand payroll inputs over
+         * @description The period's payroll CSV, as the export gives it, and the approved commission payouts in it become
+         *     `exported`, so they are never handed over twice. Needs `employee.read`. Audited.
+         */
         post: operations["post_hr_payroll_handoff"];
         delete?: never;
         options?: never;
@@ -17813,6 +18582,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Confirm payroll ran
+         * @description Records that payroll ran for the period: its exported commission payouts become `paid`. Needs
+         *     `employee.read`. Audited.
+         */
         post: operations["post_hr_payroll_confirm"];
         delete?: never;
         options?: never;
@@ -17850,6 +18624,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Receive an integration webhook
+         * @description Where an outside system posts its events, with no session: the call must carry a timestamp within
+         *     five minutes and an HMAC-SHA256 signature with the system's credential over the timestamp and the
+         *     raw body.
+         */
         post: operations["handle_webhook"];
         delete?: never;
         options?: never;
@@ -17949,6 +18729,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read the group trial balance
+         * @description The trial balance of every company together, with inter-company postings eliminated, for a date
+         *     range.
+         */
         get: operations["get_group_trial_balance"];
         put?: never;
         post?: never;
@@ -17967,6 +18752,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Post an inter-company entry
+         * @description Writes both sides of a charge or loan between two companies of the group in one transaction, so the
+         *     group's books never hold one half. Audited.
+         */
         post: operations["post_intercompany_entry"];
         delete?: never;
         options?: never;
@@ -18023,7 +18813,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Merges contracts of one customer into the first. */
+        /**
+         * Combine revenue contracts
+         * @description Merges contracts of one customer into the first, for revenue recognition. Audited.
+         */
         post: operations["revrec_contracts_combine"];
         delete?: never;
         options?: never;
@@ -18080,7 +18873,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The balance sheet as of a date. */
+        /**
+         * Read the balance sheet
+         * @description Assets, liabilities and equity from the posted entries as of a date, with income not yet closed
+         *     into equity shown as current earnings.
+         */
         get: operations["ledger_balance_sheet"];
         put?: never;
         post?: never;
@@ -18097,7 +18894,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The profit and loss statement for a date range. */
+        /**
+         * Read the profit and loss statement
+         * @description Income and expense accounts summed from the posted entries over a date range.
+         */
         get: operations["ledger_profit_and_loss"];
         put?: never;
         post?: never;
@@ -18114,7 +18914,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The trial balance for a date range. */
+        /**
+         * Read the trial balance
+         * @description Each account's debits, credits and balance from the posted entries over a date range, in exact
+         *     decimals.
+         */
         get: operations["ledger_trial_balance"];
         put?: never;
         post?: never;
@@ -18402,7 +19206,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A campaign's members by status. */
+        /**
+         * Count a campaign's members by status
+         * @description How many of the campaign's members are in each status.
+         */
         get: operations["campaign_member_summary"];
         put?: never;
         post?: never;
@@ -18570,6 +19377,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Check in to a marketing event
+         * @description Checks a registered person in by the code on their ticket. Audited.
+         */
         post: operations["post_marketing_check_in"];
         delete?: never;
         options?: never;
@@ -18586,6 +19397,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Register for a marketing event
+         * @description Registers a person up to the event's capacity, and puts them on the waitlist after that. Audited.
+         */
         post: operations["post_marketing_registration"];
         delete?: never;
         options?: never;
@@ -18602,6 +19417,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Cancel an event registration
+         * @description Cancels the registration and promotes the first person waiting. Audited.
+         */
         post: operations["post_marketing_registration_cancel"];
         delete?: never;
         options?: never;
@@ -18705,6 +19524,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Count a marketing list
+         * @description How many people the list holds, estimated or exact, and how many can be reached for a purpose,
+         *     computed as the caller.
+         */
         get: operations["get_marketing_list_count"];
         put?: never;
         post?: never;
@@ -18743,6 +19567,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Explain a list membership
+         * @description Why one person is or is not in the list, condition by condition.
+         */
         get: operations["get_marketing_list_explain"];
         put?: never;
         post?: never;
@@ -18842,6 +19670,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a list's past members
+         * @description Who was in the list on a past date, as the caller may read them.
+         */
         get: operations["get_marketing_list_members_as_of"];
         put?: never;
         post?: never;
@@ -18878,6 +19710,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Sample a marketing list
+         * @description A few of the list's people the caller may read.
+         */
         get: operations["get_marketing_list_sample"];
         put?: never;
         post?: never;
@@ -19808,9 +20644,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/metrics` — every active metric definition, enriched with
-         *     query lineage. `dashboard_metric_definition.read` (plan §5: metric values are
-         *     visible to anyone who may read the definition).
+         * List metrics
+         * @description Every active metric definition with the queries it reads, one-based pages. Anyone who may read
+         *     metric definitions.
          */
         get: operations["list_metrics"];
         put?: never;
@@ -19854,11 +20690,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/metrics/{id}/compute` — admin on-demand trigger.
-         *     `dashboard_metric_definition.update`: triggering a computation is a business
-         *     action on the metric, same "reuse the CRUD update privilege for a
-         *     bespoke action" convention `attome_dashboard`'s own lifecycle transitions
-         *     use (`DashboardUpdate`).
+         * Compute a metric now
+         * @description Computes the metric now instead of waiting for its schedule. Needs update rights on metric
+         *     definitions. Audited.
          */
         post: operations["compute_metric"];
         delete?: never;
@@ -19897,7 +20731,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description What the metric reads (entities, attributes and other metrics) and what uses it (dashboard widgets, metrics), from the lineage graph; the counts preview what a change reaches (P10-T1). */
+        /**
+         * Read a metric's impact
+         * @description What the metric reads (entities, attributes and other metrics) and what uses it (dashboard widgets, metrics), from the lineage graph; the counts preview what a change reaches (P10-T1).
+         */
         get: operations["metric_impact"];
         put?: never;
         post?: never;
@@ -19914,6 +20751,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read what a metric is made of
+         * @description The metric's composition for a period: its child metrics with their weights and, for a formula
+         *     metric, the metrics the formula uses, each with its latest snapshot. A cycle or a deep hierarchy
+         *     gives a cut-short tree, never an error. Anyone who may read metric definitions.
+         */
         get: operations["metric_lineage"];
         put?: never;
         post?: never;
@@ -19931,9 +20774,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/metrics/{id}/snapshots` — the trend: every snapshot ever
-         *     recorded for this metric, newest period first, superseded rows included
-         *     (a restatement's whole history is visible, not just the current value).
+         * List a metric's snapshots
+         * @description Every value recorded for the metric, newest period first, superseded ones included, so a
+         *     restatement's whole history shows. Anyone who may read metric definitions.
          */
         get: operations["list_snapshots"];
         put?: never;
@@ -19976,8 +20819,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/model/agents/{agent}/sessions` — opens a session from a
-         *     published agent object (V2-D487).
+         * Start a session from an agent object
+         * @description Opens a session from a published agent object, under its limits.
          */
         post: operations["start_session_from_agent_object"];
         delete?: never;
@@ -20215,6 +21058,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Clear my notifications
+         * @description Clears the caller's in-app notifications.
+         */
         post: operations["clear"];
         delete?: never;
         options?: never;
@@ -20232,12 +21079,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Manually triggers a multi-channel notification (F163/F164/F172). This is
-         *     the direct-API-call path F165 leans on until Workflow Engine ships and
-         *     can call it automatically post-event (see `crate::dispatch`'s module
-         *     doc). Admin-gated for now, same reasoning as the other engine admin
-         *     surfaces (`s2s_admin.rs`/`license_admin.rs`) — there is no finer-grained
-         *     "who may send a notification" privilege model yet.
+         * Send a notification
+         * @description Sends a notification over its channels (in-app, email, SMS, push, chat), from a template or with
+         *     its own text, to a person or everyone. Administrators only. Audited.
          */
         post: operations["create_dispatch"];
         delete?: never;
@@ -20255,6 +21099,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Read my notifications
+         * @description The signed-in person's latest in-app notifications and how many are unread.
+         */
         post: operations["poll"];
         delete?: never;
         options?: never;
@@ -20271,6 +21119,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Mark a notification read
+         * @description Marks one of the caller's notifications read.
+         */
         post: operations["mark_read"];
         delete?: never;
         options?: never;
@@ -20287,6 +21139,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Get an S2S access token
+         * @description The OAuth 2.0 token endpoint for S2S clients: client credentials, or a workload's own identity token
+         *     from a trusted provider (RFC 7523), give a ten-minute access token for the client's service user,
+         *     checked like a signed call (status, idle limit, IP allow-list, rate and concurrency limits).
+         */
         post: operations["token"];
         delete?: never;
         options?: never;
@@ -20384,8 +21242,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * B18-T4: the caller's offline profile with entity metadata (no sensitive
-         *     attribute) and the rules a device evaluates before it syncs.
+         * Read my offline profile
+         * @description The caller's offline profile: the entity metadata a device needs (no sensitive attribute) and the
+         *     rules a device checks before it syncs.
          */
         get: operations["get_offline_profile"];
         put?: never;
@@ -20406,8 +21265,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B18-T5: the device's next page of its offline profile, with the records it
-         *     must drop.
+         * Pull offline changes
+         * @description The device's next page of its offline profile's records, with the records it must drop.
          */
         post: operations["post_pull"];
         delete?: never;
@@ -20426,8 +21285,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * B18-T7: applies a device's queued changes in order, once each, through
-         *     the same path as an online edit.
+         * Push offline changes
+         * @description Applies a device's queued changes in order, each once, through the same path as an online edit.
          */
         post: operations["post_push"];
         delete?: never;
@@ -21197,6 +22056,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Open a payment link
+         * @description The hosted payment page's view of a link. No session; the token is the credential.
+         */
         get: operations["get_pay"];
         put?: never;
         post?: never;
@@ -21215,6 +22078,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Pay through a payment link
+         * @description Starts the gateway checkout for the link's amount. No session; the token is the credential.
+         */
         post: operations["post_checkout"];
         delete?: never;
         options?: never;
@@ -21229,6 +22096,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a portfolio's summary
+         * @description The portfolio's figures rolled up from its programmes and their projects, computed when read.
+         */
         get: operations["portfolio_summary"];
         put?: never;
         post?: never;
@@ -21246,10 +22117,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/predictions?regarding_entity=&regarding_id=` — latest
-         *     predictions for one record, newest first. Powers the record banner and
-         *     the dashboard widget (`attome-dashboard`'s widget registry entry reads this
-         *     same endpoint via a widget's `config.regarding_entity`/`regarding_id`).
+         * Read a record's predictions
+         * @description The latest predictions about one record, newest first, for its banner and dashboard widget.
          */
         get: operations["list_predictions"];
         put?: never;
@@ -21267,8 +22136,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List process case definitions
+         * @description The case definitions process mining extracts events for. Automation administrators only.
+         */
         get: operations["list_case_defs"];
         put?: never;
+        /**
+         * Create a process case definition
+         * @description What one process case is: its name, the source its events come from, how source rows map to
+         *     activities and resources, and who may see it. Recorded in the open changeset. Automation
+         *     administrators only. Audited.
+         */
         post: operations["create_case_def"];
         delete?: never;
         options?: never;
@@ -21283,12 +22162,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a process case definition
+         * @description One case definition with its mappings. Automation administrators only.
+         */
         get: operations["get_case_def"];
         put?: never;
         post?: never;
+        /**
+         * Delete a process case definition
+         * @description Retires the definition. Recorded in the open changeset. Automation administrators only. Audited.
+         */
         delete: operations["delete_case_def"];
         options?: never;
         head?: never;
+        /**
+         * Change a process case definition
+         * @description Changes the fields given. Recorded in the open changeset; another layer's definition is 409.
+         *     Automation administrators only. Audited.
+         */
         patch: operations["update_case_def"];
         trace?: never;
     };
@@ -21299,6 +22191,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a process's bottlenecks (not built yet)
+         * @description Reserved for bottleneck detection; this release answers that it is not computed. Automation
+         *     administrators only.
+         */
         get: operations["bottlenecks"];
         put?: never;
         post?: never;
@@ -21336,6 +22233,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a process's directly-follows graph
+         * @description Which activity follows which and how often, with cycle times, from the latest snapshot the
+         *     extraction sweep computed; nothing is computed on the request. Automation administrators only.
+         */
         get: operations["get_dfg"];
         put?: never;
         post?: never;
@@ -21352,6 +22254,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a process's findings (not built yet)
+         * @description Reserved for process findings; this release answers that they are not computed. Automation
+         *     administrators only.
+         */
         get: operations["findings"];
         put?: never;
         post?: never;
@@ -21368,6 +22275,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a process's variants
+         * @description The distinct paths cases took through the process and how many cases took each, from the latest
+         *     snapshot. Automation administrators only.
+         */
         get: operations["get_variants"];
         put?: never;
         post?: never;
@@ -21505,6 +22417,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a programme's summary
+         * @description The programme's figures rolled up from its projects, computed when read.
+         */
         get: operations["program_summary"];
         put?: never;
         post?: never;
@@ -21523,6 +22439,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Approve a project change request
+         * @description Approves the change request through the four-eyes gate: when the approval policy requires it, this
+         *     submits an approval request a second person decides; otherwise it applies now. Audited.
+         */
         post: operations["approve_change_request"];
         delete?: never;
         options?: never;
@@ -21539,6 +22460,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Reject a project change request
+         * @description Rejects the change request, through the same four-eyes gate as approving. Audited.
+         */
         post: operations["reject_change_request"];
         delete?: never;
         options?: never;
@@ -21577,6 +22502,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Approve a timesheet
+         * @description Approves a submitted timesheet through the four-eyes gate, so its period is locked; when the
+         *     approval policy requires it, a second person decides. Audited.
+         */
         post: operations["approve_timesheet"];
         delete?: never;
         options?: never;
@@ -21593,6 +22523,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Reject a timesheet
+         * @description Sends a submitted timesheet back, through the same four-eyes gate as approving. Audited.
+         */
         post: operations["reject_timesheet"];
         delete?: never;
         options?: never;
@@ -21609,6 +22543,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Submit a timesheet
+         * @description Moves the owner's timesheet from draft to submitted for review; no approval gate applies to one's
+         *     own submission. Audited.
+         */
         post: operations["submit_timesheet"];
         delete?: never;
         options?: never;
@@ -21625,6 +22564,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Capture a project baseline
+         * @description Saves a snapshot of the project's work-item schedule that later progress is compared with;
+         *     baselines are never changed. Audited.
+         */
         post: operations["capture_project_baseline"];
         delete?: never;
         options?: never;
@@ -21660,6 +22604,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a project's summary
+         * @description The control centre tiles, computed live: health, weighted progress, budget consumed, open risks
+         *     and pending approvals.
+         */
         get: operations["project_summary"];
         put?: never;
         post?: never;
@@ -21676,6 +22625,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a project's work breakdown
+         * @description The work-item tree with each phase's progress weighted by points, computed when read; nothing is
+         *     stored on the parent.
+         */
         get: operations["work_item_rollup"];
         put?: never;
         post?: never;
@@ -21737,7 +22691,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Registers (or moves to the caller) one push address. */
+        /**
+         * Register a push address
+         * @description Registers one browser push address for the caller, or moves it to the caller.
+         */
         post: operations["register_push_subscription"];
         delete?: never;
         options?: never;
@@ -21755,7 +22712,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Removes one of the caller's push addresses. */
+        /**
+         * Remove a push address
+         * @description Removes one of the caller's push addresses.
+         */
         delete: operations["unregister"];
         options?: never;
         head?: never;
@@ -21769,7 +22729,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The key a browser subscribes with; 404 while Web Push is not configured. */
+        /**
+         * Get the Web Push key
+         * @description The public key a browser subscribes with; 404 while Web Push is not configured.
+         */
         get: operations["vapid_public_key"];
         put?: never;
         post?: never;
@@ -22034,6 +22997,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Assign a queued ticket
+         * @description Assigns one ticket already in the queue by the queue's distribution strategy. Audited.
+         */
         post: operations["assign_route"];
         delete?: never;
         options?: never;
@@ -22050,6 +23017,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Claim the next ticket in a queue
+         * @description The caller takes the queue's next waiting ticket. Audited.
+         */
         post: operations["claim_route"];
         delete?: never;
         options?: never;
@@ -22180,6 +23151,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Create a report
+         * @description A report on a live stored query, in CSV, XLSX or PPTX, written through the record engine so field
+         *     grants, lookups and audit apply. Audited.
+         */
         post: operations["create_report"];
         delete?: never;
         options?: never;
@@ -22194,6 +23170,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a report run
+         * @description A run's status, row count or error, and, once done, a download URL for its file.
+         */
         get: operations["run_status"];
         put?: never;
         post?: never;
@@ -22212,6 +23192,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Schedule a report
+         * @description Runs a report on a recurrence rule as a named user, who must be active and not an administrator, so
+         *     a schedule never sees more than an ordinary person would. Audited.
+         */
         post: operations["create_schedule"];
         delete?: never;
         options?: never;
@@ -22232,6 +23217,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Change a report schedule
+         * @description Changes the fields given under the same rules; the next run time is computed again. Audited.
+         */
         patch: operations["update_schedule"];
         trace?: never;
     };
@@ -22248,6 +23237,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Change a report
+         * @description Changes the fields given; a stored query must still be live. Audited.
+         */
         patch: operations["update_report"];
         trace?: never;
     };
@@ -22260,6 +23253,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Run a report
+         * @description Queues a run (202) that executes the report's stored query as the caller, under the caller's own
+         *     record rules, and renders the file.
+         */
         post: operations["run_report"];
         delete?: never;
         options?: never;
@@ -22274,6 +23272,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read resource capacity
+         * @description Per resource and period: the capacity there is, how much is allocated, how much was logged, and
+         *     whether the resource is over-committed. Computed when read.
+         */
         get: operations["resource_capacity"];
         put?: never;
         post?: never;
@@ -22291,10 +23294,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * D-779 item 8: what changed about the portal's accounts since `since`
-         *     (a password change, reset, disable or log out everywhere bumps the
-         *     credential epoch; erasure removes the account), so a trusted server can
-         *     revoke its own sessions within one pull. Same caller rules as the login.
+         * List portal account changes
+         * @description What changed about the portal's accounts since a time (a password change, reset, disable or sign-out
+         *     everywhere moves the credential epoch; erasure removes the account), so a trusted server can end
+         *     its own sessions within one pull.
          */
         get: operations["portal_trusted_account_changes"];
         put?: never;
@@ -22313,8 +23316,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * D-780: the account's email (masked) and MFA state, for the player's own
-         *     account screen.
+         * Read a portal account for a trusted server
+         * @description The account's email (masked) and MFA state, for the user's own account screen.
          */
         get: operations["portal_trusted_account_info"];
         put?: never;
@@ -22335,10 +23338,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * D-780: adds an email to the account once its owner opens the link sent to
-         *     it (the portal's `auth/email/verify`), after the password again. When
-         *     another account of the portal has the address, its owner gets a notice
-         *     instead and the answer is the same `sent`.
+         * Add an email to a portal account
+         * @description After the password again, sends a link to the new address; it is added only when its owner opens
+         *     it. When another account of the portal has the address, its owner is told instead, with the same
+         *     answer.
          */
         post: operations["portal_trusted_account_email"];
         delete?: never;
@@ -22357,8 +23360,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * D-780: a code from the authenticator app turns MFA on; the recovery codes
-         *     come back once.
+         * Confirm MFA for a portal account
+         * @description A code from the authenticator app turns MFA on; the recovery codes come back once.
          */
         post: operations["portal_trusted_account_mfa_confirm"];
         delete?: never;
@@ -22377,8 +23380,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * D-780: turns MFA off after the password and a current code (refused while
-         *     the portal requires MFA).
+         * Turn MFA off for a portal account
+         * @description After the password and a current code; refused while the portal requires MFA.
          */
         post: operations["portal_trusted_account_mfa_disable"];
         delete?: never;
@@ -22397,8 +23400,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * D-780: starts turning MFA on (after the password again): a new secret for
-         *     the player's authenticator app, in force once a code from it confirms it.
+         * Start MFA for a portal account
+         * @description After the password again, a new secret for the user's authenticator app, in force once a code from
+         *     it confirms it.
          */
         post: operations["portal_trusted_account_mfa_enroll"];
         delete?: never;
@@ -22416,6 +23420,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Check a portal login for a trusted server
+         * @description For a portal's own trusted server, over S2S: checks a portal user's credentials and answers with
+         *     the decision; a refusal is an outcome, not an error.
+         */
         post: operations["portal_trusted_login"];
         delete?: never;
         options?: never;
@@ -22500,6 +23509,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Save a call outcome
+         * @description Records a call attempt on a member the caller claimed: a final outcome (connected, wrong number, not
+         *     interested) ends it, anything else puts it back after the list's retry wait, and the list's outcome
+         *     rules run after commit. Audited.
+         */
         post: operations["post_sales_call_outcome"];
         delete?: never;
         options?: never;
@@ -22538,6 +23553,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Fill a call list
+         * @description Adds members as the caller sees them: from the list's saved view, from the caller's phone calls due
+         *     today, or from records named by hand, each checked for read access. Audited.
+         */
         post: operations["post_sales_build_list"];
         delete?: never;
         options?: never;
@@ -22554,6 +23574,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Claim the next call
+         * @description Takes the list's next pending member for the caller, so two callers never get the same one; a
+         *     member marked do-not-call, or without sales-call consent where that is required, is skipped.
+         *     Audited.
+         */
         post: operations["post_claim"];
         delete?: never;
         options?: never;
@@ -22570,6 +23596,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Dial a call list member
+         * @description Starts the call through the phone system: the agent's own phone rings, then the customer's, with the
+         *     caller id chosen for the customer's country, and the call is logged on the record. Audited.
+         */
         post: operations["post_dial"];
         delete?: never;
         options?: never;
@@ -22586,6 +23617,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Drop a voicemail
+         * @description Plays a recorded voicemail into the current call, on a call list that allows it. Audited.
+         */
         post: operations["post_voicemail"];
         delete?: never;
         options?: never;
@@ -22602,6 +23637,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Confirm a competitor mention
+         * @description Puts the competitor on the deal as suspected unless it is there already, and marks the mention
+         *     confirmed. Needs update rights on the deal and the mention's `If-Match` row version. Audited.
+         */
         post: operations["post_sales_mention_confirm"];
         delete?: never;
         options?: never;
@@ -22618,6 +23658,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Reject a competitor mention
+         * @description Marks the proposed mention rejected. Needs update rights on the deal and the mention's `If-Match`
+         *     row version. Audited.
+         */
         post: operations["post_sales_mention_reject"];
         delete?: never;
         options?: never;
@@ -22632,6 +23677,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a competitor's battle card
+         * @description The competitor with the knowledge article holding its battle card, when one is set.
+         */
         get: operations["get_sales_competitor_card"];
         put?: never;
         post?: never;
@@ -22648,6 +23697,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a competitor's head-to-head record
+         * @description The competitor's record against us on the deals the caller may read: outcomes, the mentions and the
+         *     review reasons.
+         */
         get: operations["get_sales_head_to_head"];
         put?: never;
         post?: never;
@@ -22736,6 +23790,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Apply my default team to my deals
+         * @description Queues a job that adds the missing default team members to the caller's open deals, in batches.
+         */
         post: operations["post_sales_default_team_apply"];
         delete?: never;
         options?: never;
@@ -22752,6 +23810,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Preview applying my default team
+         * @description The caller's own open deals that their default deal team would change, and how.
+         */
         post: operations["post_sales_default_team_preview"];
         delete?: never;
         options?: never;
@@ -22817,6 +23879,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a deal's battle cards
+         * @description The competitors on the deal, each with the knowledge article holding its battle card when one is
+         *     set. Anyone who may read the opportunity.
+         */
         get: operations["get_sales_battlecards"];
         put?: never;
         post?: never;
@@ -22835,6 +23902,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Change a deal's owner
+         * @description In one transaction: moves the owner and gives the new owner edit access and a place on the team,
+         *     keeps the old owner as a member with the role given or removes them, and moves or keeps their
+         *     splits. Needs update rights on the opportunity. Audited.
+         */
         post: operations["post_sales_change_owner"];
         delete?: never;
         options?: never;
@@ -22874,6 +23947,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Set a deal's discount
+         * @description Sets the discount over the whole deal and reprices its lines, totals and splits. Needs the deal's
+         *     `If-Match` row version and update rights on it. Audited.
+         */
         post: operations["post_sales_deal_discount"];
         delete?: never;
         options?: never;
@@ -22888,8 +23966,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a deal's lines
+         * @description The opportunity's product lines with their prices, discounts and totals. Anyone who may read the
+         *     opportunity.
+         */
         get: operations["get_sales_lines"];
         put?: never;
+        /**
+         * Add a line to a deal
+         * @description Adds a product from the deal's price list; every line is repriced, and the deal's totals, amount
+         *     and split amounts are written again in the same transaction. Needs the deal's `If-Match` row
+         *     version and update rights on it. Audited.
+         */
         post: operations["post_sales_line"];
         delete?: never;
         options?: never;
@@ -22907,9 +23996,19 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a deal line
+         * @description Removes the line and reprices the deal as adding a line does. Needs the deal's `If-Match` row
+         *     version and update rights on it. Audited.
+         */
         delete: operations["delete_sales_line"];
         options?: never;
         head?: never;
+        /**
+         * Change a deal line
+         * @description Changes the line's quantity, price or discount, then reprices the deal as adding a line does.
+         *     Needs the deal's `If-Match` row version and update rights on it. Audited.
+         */
         patch: operations["patch_sales_line"];
         trace?: never;
     };
@@ -22922,6 +24021,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Order a won deal
+         * @description A draft sales order from a `closed_won` opportunity: from its accepted primary quote when it has
+         *     one, otherwise from its own lines. A deal orders once. Needs the order create privilege. Audited.
+         */
         post: operations["post_sales_opportunity_order"];
         delete?: never;
         options?: never;
@@ -22960,6 +24064,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Shift a deal's schedules
+         * @description Moves every revenue and quantity schedule row of the deal by whole months, after the user agreed to
+         *     move them with a new close date; never called automatically. Needs update rights on the
+         *     opportunity. Audited.
+         */
         post: operations["post_sales_schedule_shift"];
         delete?: never;
         options?: never;
@@ -22975,6 +24085,12 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /**
+         * Set a deal's splits
+         * @description Replaces every credit split of the deal, checked against the split rules, and stores each amount.
+         *     On a won deal the change waits for approval with a reason and applies only if the deal has not
+         *     changed since. Needs update rights on the opportunity. Audited.
+         */
         put: operations["put_sales_splits"];
         post?: never;
         delete?: never;
@@ -22992,6 +24108,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Sync a deal with its primary quote
+         * @description Copies lines one way, from the quote to the deal or the other way. When both changed since the
+         *     last sync, it answers 409 `sync_both_changed` with both line sets unless `force` is set. Needs
+         *     update rights on the opportunity. Audited.
+         */
         post: operations["post_sales_quote_sync"];
         delete?: never;
         options?: never;
@@ -23008,6 +24130,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Add a deal team member
+         * @description Adds a user, with a share of the deal for read or edit access, or a partner contact (no share; a
+         *     partner reaches deals through the portal). Needs update rights on the opportunity. Audited.
+         */
         post: operations["post_sales_team_member"];
         delete?: never;
         options?: never;
@@ -23024,6 +24151,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Copy the account team onto a deal
+         * @description Copies the account team's members with the account roles given onto this deal, each with the share
+         *     their access gives; being on an account's team never grants deal access by itself. Needs update
+         *     rights on the opportunity. Audited.
+         */
         post: operations["post_sales_copy_account_team"];
         delete?: never;
         options?: never;
@@ -23041,9 +24174,18 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a deal team member
+         * @description Removes the member and their share of the deal. Needs update rights on the opportunity. Audited.
+         */
         delete: operations["delete_sales_team_member"];
         options?: never;
         head?: never;
+        /**
+         * Change a deal team member
+         * @description Changes the member's role or access, and their share with it. Needs update rights on the
+         *     opportunity. Audited.
+         */
         patch: operations["patch_sales_team_member"];
         trace?: never;
     };
@@ -23056,6 +24198,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Set a deal line's schedule
+         * @description Replaces the line's revenue or quantity schedule: spread evenly over months, by a percentage
+         *     pattern (totalling 100), or row by row (totalling the line). Rounding goes to the last row, so the
+         *     schedule always adds up to its line. Audited.
+         */
         post: operations["post_sales_line_schedule"];
         delete?: never;
         options?: never;
@@ -23072,6 +24220,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Confirm a sales order
+         * @description Confirms a draft order. Audited.
+         */
         post: operations["post_sales_order_confirm"];
         delete?: never;
         options?: never;
@@ -23109,6 +24261,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Pick products from a price list
+         * @description The products on the price list a line can use on a date, with list price and quantity breaks,
+         *     searched by name or SKU; only products the caller may read.
+         */
         get: operations["get_sales_price_list_products"];
         put?: never;
         post?: never;
@@ -23147,6 +24304,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Order an accepted quote
+         * @description A draft sales order with the quote's account, currency, payment terms, totals and one line per quote
+         *     line. A quote orders once. Audited.
+         */
         post: operations["post_sales_quote_order"];
         delete?: never;
         options?: never;
@@ -23254,6 +24416,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Realign territories
+         * @description Moves accounts to the territory the rules give them, as the preview shows.
+         */
         post: operations["post_realign"];
         delete?: never;
         options?: never;
@@ -23270,6 +24436,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Preview a territory realignment
+         * @description Which accounts would move to which territory under the enabled rules (the first rule by priority
+         *     whose condition holds); a condition that does not resolve never moves an account, and links made
+         *     by hand are never touched. Writes nothing.
+         */
         post: operations["post_preview"];
         delete?: never;
         options?: never;
@@ -23286,6 +24458,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Undo a bulk line change
+         * @description Puts a deal's lines back as they were before a deal discount or quote sync and reprices the deal:
+         *     once, by its author, within the undo window, and only while nothing has touched the lines since.
+         *     Audited.
+         */
         post: operations["post_sales_undo"];
         delete?: never;
         options?: never;
@@ -23368,11 +24546,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/scenarios/{id}/clone` — branch a new scenario off this one
-         *     (plan §3.1's "branching" + "versioning ... + a clone operation";
-         *     `attome-api` has no generic clone primitive to reuse — confirmed by
-         *     inspection — so this follows the one established bespoke-clone pattern in
-         *     this crate, `lifecycle.rs::do_clone`/`clone_dashboard`).
+         * Branch a scenario
+         * @description A new scenario copied from this one, to change and compare. Audited.
          */
         post: operations["clone_scenario"];
         delete?: never;
@@ -23389,13 +24564,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/scenarios/{id}/compare?with=uuid1,uuid2` — N scenarios x
-         *     metrics comparison matrix (plan §3.1). A straightforward read over the
-         *     entities `scenario_seed.rs` provisions: the metric column set is the
-         *     union of every `dashboard_scenario_metric` row referenced by any scenario being
-         *     compared; each cell is that scenario's most recent `evaluate` result for
-         *     that metric, or an explicit `not_evaluated` placeholder when it never ran
-         *     one. `dashboard_scenario.read`.
+         * Compare scenarios
+         * @description This scenario and the ones in `with`, against every metric any of them uses: each cell is that
+         *     scenario's latest evaluated value, or `not_evaluated`. Needs read rights on scenarios.
          */
         get: operations["compare"];
         put?: never;
@@ -23416,11 +24587,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/scenarios/{id}/evaluate` — see this module's doc comment
-         *     for exactly what this does and does not compute. `dashboard_scenario.update`:
-         *     reuses the entity's own generic update privilege for this bespoke
-         *     business action (it writes new `dashboard_scenario_result` rows), same
-         *     convention `MetricUpdate`/`DecisionUpdate` already use in this crate.
+         * Evaluate a scenario
+         * @description Computes the scenario's metrics and stores the results. Needs update rights on scenarios. Audited.
          */
         post: operations["evaluate"];
         delete?: never;
@@ -23519,13 +24687,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Bare `RecordScoped`, and one of only two routes entitled to it (D-353,
-         *     counted by `route_authz.rs`'s ratchet): the entity is not a path segment
-         *     but a body field (`entity` / `entity_logical_name`), and it is resolved
-         *     against the database — `resolve_entity` accepts either an id or a
-         *     logicalname — so there is nothing for `RecordScoped<Read>` to read off the
-         *     matched route. `run_aggregate` makes the `ctx.require(&logicalname,
-         *     "read")` call itself, immediately after that resolution.
+         * Aggregate one entity's records
+         * @description Counts, sums, averages, minimums and maximums over one entity's records grouped by its fields,
+         *     validated against its metadata and limited to the records the caller may read.
          */
         post: operations["aggregate"];
         delete?: never;
@@ -23566,12 +24730,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * M37 Phase 2 (D-452) — semantic related-page suggestions for the content
-         *     admin UI, distinct from `attome-content`'s manual `related_page_ids`
-         *     full-set-replace endpoint. Admin-gated like every content-authoring
-         *     surface, even though the query itself only ever returns page ids: this is
-         *     an authoring tool, not a retrieval-serving route, and has no reason to be
-         *     reachable by a caller who cannot already manage content.
+         * Suggest related knowledge pages
+         * @description Pages semantically close to one page, for content authors to pick related pages from. AI
+         *     administrators only.
          */
         get: operations["related_knowledge"];
         put?: never;
@@ -23589,6 +24750,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Run a saved search
+         * @description Runs a saved search now, under the caller's own access.
+         */
         get: operations["run"];
         put?: never;
         post?: never;
@@ -23605,6 +24770,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Suggest search terms
+         * @description Completions for what the caller has typed, from a suggestion table rebuilt periodically.
+         */
         get: operations["suggest"];
         put?: never;
         post?: never;
@@ -23645,8 +24814,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The service catalog (G3-T3): active offerings, searched in Arabic or
-         *     English across name, description and category.
+         * Browse the service catalogue
+         * @description The active service offerings, searched in Arabic or English across name, description and category.
          */
         get: operations["catalog_route"];
         put?: never;
@@ -23664,6 +24833,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List active service offerings
+         * @description The catalogue offerings a requester can pick from.
+         */
         get: operations["list_active_offerings"];
         put?: never;
         post?: never;
@@ -23682,6 +24855,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Request a service offering
+         * @description Creates a work request that takes the offering's defaults (priority, SLA policy, queue). Audited.
+         */
         post: operations["create_work_request"];
         delete?: never;
         options?: never;
@@ -23763,7 +24940,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The caller's orders and where each item stands (G3-T3). */
+        /**
+         * List my service orders
+         * @description The caller's service orders and where each item stands.
+         */
         get: operations["my_orders_route"];
         put?: never;
         post?: never;
@@ -23894,6 +25074,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List my hand-offs
+         * @description The hand-offs waiting for the caller: to them, or to a queue they are a member of.
+         */
         get: operations["list_handoffs"];
         put?: never;
         post?: never;
@@ -23912,6 +25096,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Accept a hand-off
+         * @description Takes the handed-off work, with the hand-off's `If-Match` row version. Audited.
+         */
         post: operations["accept_handoff"];
         delete?: never;
         options?: never;
@@ -23928,6 +25116,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Return a hand-off
+         * @description Gives the work back with a note, with the hand-off's `If-Match` row version. Audited.
+         */
         post: operations["return_handoff"];
         delete?: never;
         options?: never;
@@ -24010,7 +25202,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Records a stock movement and its balance change. */
+        /**
+         * Record a stock movement
+         * @description An append-only movement and the balance it changes, in one transaction under the balance row's
+         *     lock, so the balance is always the sum of its movements. Audited.
+         */
         post: operations["post_stock_movement"];
         delete?: never;
         options?: never;
@@ -24027,7 +25223,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Holds stock for a reference. */
+        /**
+         * Reserve stock
+         * @description Holds a quantity of a product at a location for a reference, until it is released or expires.
+         *     Audited.
+         */
         post: operations["post_stock_reservation"];
         delete?: never;
         options?: never;
@@ -24044,7 +25244,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Releases a held reservation. */
+        /**
+         * Release a stock reservation
+         * @description The held quantity is free again. Audited.
+         */
         post: operations["post_stock_reservation_release"];
         delete?: never;
         options?: never;
@@ -24061,6 +25264,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Hand a ticket off
+         * @description A person hands the ticket to another person or a queue, with a summary of where it stands. Audited.
+         */
         post: operations["post_ticket_handoff"];
         delete?: never;
         options?: never;
@@ -24075,6 +25282,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a ticket's hand-offs
+         * @description Every hand-off of the ticket, between agents and people, with its outcome.
+         */
         get: operations["list_ticket_handoffs"];
         put?: never;
         post?: never;
@@ -24179,7 +25390,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Runs the warranty date backfill once confirmed. */
+        /**
+         * Backfill warranty dates
+         * @description With `confirm: true`, queues the job that writes each asset's warranty expiry date through the
+         *     record engine as the person who confirmed, 500 assets a batch. Audited.
+         */
         post: operations["post_warranty_backfill"];
         delete?: never;
         options?: never;
@@ -24196,7 +25411,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Previews the warranty date backfill. */
+        /**
+         * Preview the warranty date backfill
+         * @description Counts the assets whose warranty expiry date would change from their active warranty entitlements,
+         *     and shows a few. Writes nothing.
+         */
         post: operations["post_warranty_backfill_preview"];
         delete?: never;
         options?: never;
@@ -24279,8 +25498,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Download a shared file
+         * @description Redirects (303) to a five-minute download URL for the file a share link names, counting against the
+         *     link's download limit; a link with a password is opened with POST instead. An unknown, revoked,
+         *     expired or used-up link is 404. No session; rate limited.
+         */
         get: operations["download_shared_file"];
         put?: never;
+        /**
+         * Download a password-protected shared file
+         * @description Checks the link's password and answers the five-minute download URL as JSON, counting against the
+         *     link's download limit. An unknown, revoked, expired or used-up link is 404. No session; rate
+         *     limited.
+         */
         post: operations["open_shared_file"];
         delete?: never;
         options?: never;
@@ -24432,9 +25663,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * J4-T1: a provider's delivery receipt for one message. The token names the
-         *     ledger row; a bad or expired one is 404, as is a receipt for a different
-         *     provider message.
+         * Receive an SMS delivery receipt
+         * @description A provider's delivery receipt for one message; the token names the message, and a bad or expired
+         *     one, or a receipt for another provider message, is 404. No session.
          */
         post: operations["receipt"];
         delete?: never;
@@ -24534,7 +25765,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The public status page (no sign-in), rebuilt at most every 30 seconds. */
+        /**
+         * Read the public status page
+         * @description The overall status, each public component, the open incidents and the planned maintenance, rebuilt
+         *     at most every 30 seconds. No session.
+         */
         get: operations["get_status_page"];
         put?: never;
         post?: never;
@@ -24551,10 +25786,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The confirmation page; its button confirms. */
+        /**
+         * Open a subscription confirmation
+         * @description The confirmation page for an emailed link; its button confirms. No session.
+         */
         get: operations["get_status_confirm"];
         put?: never;
-        /** Confirms a subscription. */
+        /**
+         * Confirm a status subscription
+         * @description Confirms the subscription the token names. No session.
+         */
         post: operations["post_status_confirm"];
         delete?: never;
         options?: never;
@@ -24571,7 +25812,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Asks to receive status updates by email: a confirmation link is sent. */
+        /**
+         * Subscribe to status updates
+         * @description Asks to receive status updates by email; a confirmation link is sent. No session.
+         */
         post: operations["post_status_subscribe"];
         delete?: never;
         options?: never;
@@ -24586,10 +25830,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The unsubscribe page; its button unsubscribes. */
+        /**
+         * Open an unsubscribe link
+         * @description The unsubscribe page for an emailed link; its button unsubscribes. No session.
+         */
         get: operations["get_status_unsubscribe"];
         put?: never;
-        /** Stops a subscriber's emails. */
+        /**
+         * Unsubscribe from status updates
+         * @description Stops the subscriber's emails. No session.
+         */
         post: operations["post_status_unsubscribe"];
         delete?: never;
         options?: never;
@@ -24813,6 +26063,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Recalculate every unresolved SLA
+         * @description The same recalculation for up to 500 tickets after `after`, in id order; call again with
+         *     `next_after` until it is `null`. Each ticket commits on its own. Automation administrators only.
+         *     Audited.
+         */
         post: operations["recalculate_unresolved_route"];
         delete?: never;
         options?: never;
@@ -24829,6 +26085,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Apply an SLA policy to a ticket
+         * @description Assigns the SLA policy that matches the ticket and computes its resolution deadline in business
+         *     time, or records why it could not. Needs update rights on tickets. Audited.
+         */
         post: operations["apply_sla_policy"];
         delete?: never;
         options?: never;
@@ -24845,6 +26106,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Pause a ticket's SLA clock
+         * @description Stops the ticket's SLA time from counting until it is resumed; a second pause or resume already
+         *     in progress is 409. Needs update rights on tickets. Audited.
+         */
         post: operations["pause_clock_route"];
         delete?: never;
         options?: never;
@@ -24861,6 +26127,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Resume a ticket's SLA clock
+         * @description Starts the clock again now and recalculates the deadline from the time left. Needs update rights
+         *     on tickets. Audited.
+         */
         post: operations["resume_clock_route"];
         delete?: never;
         options?: never;
@@ -24877,6 +26148,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Recalculate a ticket's unresolved SLA
+         * @description For a ticket whose SLA deadline could not be worked out (its business calendar did not resolve),
+         *     tries again: stores the deadline when it resolves now, or records another attempt. Any other
+         *     ticket is left alone, so it is safe to repeat. Needs update rights on tickets. Audited.
+         */
         post: operations["recalculate_ticket_route"];
         delete?: never;
         options?: never;
@@ -24891,6 +26168,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a ticket's timeline
+         * @description The ticket's audit events, status changes, communications and linked decisions in one feed, newest
+         *     first, filtered to what the caller may read. Anyone who may read tickets.
+         */
         get: operations["ticket_timeline"];
         put?: never;
         post?: never;
@@ -24950,7 +26232,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Counts an open (D16-T1). Always answers the pixel, whatever the token. */
+        /**
+         * Count an email open
+         * @description Counts an open for the signed token and always answers the tracking pixel, whatever the token, so
+         *     it reveals nothing. No session.
+         */
         get: operations["track_open"];
         put?: never;
         post?: never;
@@ -25403,6 +26689,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Convert a work request to a project
+         * @description Creates a project from the work request and marks the request converted, in one transaction. Needs
+         *     the right to create projects and to update the request. Audited.
+         */
         post: operations["convert_to_project"];
         delete?: never;
         options?: never;
@@ -25419,6 +26710,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Convert a work request to a task
+         * @description Creates a task from the work request and marks the request converted, in one transaction. Needs the
+         *     right to create tasks and to update the request. Audited.
+         */
         post: operations["convert_to_task"];
         delete?: never;
         options?: never;
@@ -25435,6 +26731,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Convert a work request to a ticket
+         * @description Creates a service ticket from the work request and marks the request converted, in one transaction.
+         *     Needs the right to create tickets and to update the request. Audited.
+         */
         post: operations["convert_to_ticket"];
         delete?: never;
         options?: never;
@@ -25836,6 +27137,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List workflow trigger dead letters
+         * @description The change-feed events whose workflow entry triggers the dispatcher gave up on, with the last
+         *     error, one-based pages. Automation administrators only.
+         */
         get: operations["workflow_list_trigger_dead_letters"];
         put?: never;
         post?: never;
@@ -25855,6 +27161,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Discard a workflow trigger dead letter
+         * @description Drops the event from the dead letters without starting anything. Automation administrators only.
+         *     Audited.
+         */
         delete: operations["workflow_discard_trigger_dead_letter"];
         options?: never;
         head?: never;
@@ -25870,6 +27181,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Replay a workflow trigger dead letter
+         * @description Starts the entry triggers the event matches again; a trigger that already started for the event
+         *     is not started twice. Automation administrators only. Audited.
+         */
         post: operations["workflow_replay_trigger_dead_letter"];
         delete?: never;
         options?: never;
@@ -26996,10 +28312,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * S1-T12: invokes a record-bound action on the record in the path, through
-         *     the same gate as `/api/v1/actions/{id}/invoke`; `entity` and `record_id`
-         *     come from the path and replace any in the body. An action that does not
-         *     work on one record answers 404 here.
+         * Invoke an action on a record
+         * @description Runs a record-bound AI action on the record in the path through the same gate as
+         *     `/api/v1/actions/{id}/invoke`; the path's entity and record replace any in the body. An action that
+         *     does not work on one record is 404. Anyone who may read the record; the action's own rules apply.
          */
         post: operations["invoke_record_action"];
         delete?: never;
@@ -27198,9 +28514,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a file's check-out
+         * @description Who holds the lock on the file, since when and with what note, and whether it is the caller.
+         *     Anyone who may read the record.
+         */
         get: operations["get_file_checkout"];
         put?: never;
+        /**
+         * Check out a record's file
+         * @description Takes the lock on the file for the caller (taking it again is a no-op); while it is held nobody
+         *     else, administrators included, may store a new version. Needs update rights on the record. Audited.
+         */
         post: operations["check_out_file"];
+        /**
+         * Check in a record's file
+         * @description Releases the caller's lock after storing the new version; an administrator may break someone
+         *     else's lock with `force=true`. Needs update rights on the record. Audited.
+         */
         delete: operations["check_in_file"];
         options?: never;
         head?: never;
@@ -27214,6 +28545,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a file's download URL
+         * @description A short-lived URL to download the field's file, one of a multi-file field's files (`key`), or an
+         *     earlier version (`version`). Anyone who may read the record.
+         */
         get: operations["get_download_url"];
         put?: never;
         post?: never;
@@ -27253,8 +28589,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a file's share links
+         * @description The external links to the file, newest first; never their tokens. Anyone who may read the record.
+         */
         get: operations["list_file_share_links"];
         put?: never;
+        /**
+         * Share a file outside the deployment
+         * @description A link to the file as stored now, for someone without an account: it expires, may need a password
+         *     and may allow only so many downloads. The token is shown once. Needs update rights on the record.
+         *     Audited.
+         */
         post: operations["create_file_share_link"];
         delete?: never;
         options?: never;
@@ -27272,6 +28618,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Revoke a share link
+         * @description The link stops working at once. Needs update rights on the record. Audited.
+         */
         delete: operations["revoke_file_share_link"];
         options?: never;
         head?: never;
@@ -27287,6 +28637,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Start a file upload
+         * @description Opens an upload session and returns a short-lived URL to PUT the bytes to, in quarantine; nothing
+         *     is trusted until the session is finalised and the scan passes. Refused while someone else has the
+         *     file checked out. Needs update rights on the record.
+         */
         post: operations["create_upload_session"];
         delete?: never;
         options?: never;
@@ -27301,6 +28657,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read an upload session
+         * @description The upload session's status. Anyone who may read the record.
+         */
         get: operations["get_upload_session_status"];
         put?: never;
         post?: never;
@@ -27319,6 +28679,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Finish a file upload
+         * @description Checks the uploaded object is there and queues its scan; once clean, the file can be set on the
+         *     field through the record API. Needs update rights on the record.
+         */
         post: operations["finalize_upload_session"];
         delete?: never;
         options?: never;
@@ -27333,6 +28698,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a file's versions
+         * @description Every stored version of the field's file, newest first. Anyone who may read the record.
+         */
         get: operations["list_file_versions"];
         put?: never;
         post?: never;
@@ -27352,6 +28721,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Purge a file version
+         * @description Deletes a stored version of the file for good. Needs delete rights on the record. Audited.
+         */
         delete: operations["purge_file_version_route"];
         options?: never;
         head?: never;
@@ -27367,6 +28740,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Restore a file version
+         * @description Makes an earlier version the field's current file. Needs update rights on the record. Audited.
+         */
         post: operations["restore_file_version"];
         delete?: never;
         options?: never;
@@ -27829,6 +29206,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Move a record to another state
+         * @description Takes one transition of the record's state model, checking its conditions; a transition that
+         *     needs approval parks the record and submits the request instead. `If-Match` is optional. Needs
+         *     update rights on the record. Audited.
+         */
         post: operations["transition_record"];
         delete?: never;
         options?: never;
@@ -27846,13 +29229,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * M07 Phase F (D-770) — withdraws the record's open transition approval and
-         *     returns the record to the state it came from. Only the request's own
-         *     requester may cancel an open request (`403` otherwise); when the request
-         *     already closed without executing (rejected, expired, invalidated) but the
-         *     record is still parked, the requester or an administrator may release it
-         *     here (a rejection goes to its `on_reject_state`, the rest to the origin).
-         *     See `crate::approval`.
+         * Cancel a transition approval
+         * @description Withdraws the record's open transition approval and returns the record to the state it came from;
+         *     only the requester may. When the request already closed without running but the record is still
+         *     parked, the requester or an administrator releases it here. Audited.
          */
         post: operations["cancel_transition_approval"];
         delete?: never;
@@ -27868,6 +29248,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a record's available transitions
+         * @description The transitions the record's state model allows from its current state, each with its name and
+         *     target state. Anyone who may read the record.
+         */
         get: operations["list_available_transitions"];
         put?: never;
         post?: never;
@@ -28131,9 +29516,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * D-780: the emailed link that adds an address to an account (asked for
-         *     through the portal's trusted server). The address is written, verified,
-         *     only now; the address it replaces, if any, is told.
+         * Verify an added email address
+         * @description The emailed link that adds an address to a portal account: the address is written, verified, only
+         *     now, and the address it replaces, if any, is told.
          */
         post: operations["portal_email_add_verify"];
         delete?: never;
@@ -28151,6 +29536,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Accept a portal invitation
+         * @description Sets the invited user's password from the invitation token; the account becomes active and its
+         *     email verified. An invalid or expired invitation, or a password that fails the policy, is 422.
+         */
         post: operations["portal_accept_invitation"];
         delete?: never;
         options?: never;
@@ -28167,6 +29557,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Sign in to a web portal
+         * @description Checks the portal user's email or username and password and sets the portal's session cookies;
+         *     an account with MFA answers 401 `mfa_required` until the code is sent too. Rate limited per portal
+         *     and per account, failing closed. An unknown or disabled portal is 404.
+         */
         post: operations["portal_login"];
         delete?: never;
         options?: never;
@@ -28183,6 +29579,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Sign out of a web portal
+         * @description Ends the session and clears the portal's cookies.
+         */
         post: operations["portal_logout"];
         delete?: never;
         options?: never;
@@ -28199,6 +29599,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Confirm MFA enrolment
+         * @description Turns MFA on with a code from the pending secret and returns new recovery codes, shown once. A
+         *     wrong code, or no pending enrolment, is 422.
+         */
         post: operations["portal_mfa_confirm"];
         delete?: never;
         options?: never;
@@ -28215,6 +29620,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Turn MFA off
+         * @description Turns the portal user's MFA off for an authenticator code; refused (422) on a portal that requires
+         *     MFA.
+         */
         post: operations["portal_mfa_disable"];
         delete?: never;
         options?: never;
@@ -28231,6 +29641,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Start MFA enrolment
+         * @description A pending TOTP secret for the signed-in portal user to add to an authenticator app; it takes
+         *     effect only once confirmed with a code.
+         */
         post: operations["portal_mfa_enroll"];
         delete?: never;
         options?: never;
@@ -28247,6 +29662,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Replace MFA recovery codes
+         * @description A new set of recovery codes, shown once, for an authenticator code; the old set stops working.
+         */
         post: operations["portal_mfa_recovery_codes"];
         delete?: never;
         options?: never;
@@ -28263,6 +29682,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Link an identity provider to a portal account
+         * @description Finishes a pending link with proof of the existing account and signs in; an unknown, used or
+         *     expired link, or a failed proof, is 401.
+         */
         post: operations["portal_oidc_link"];
         delete?: never;
         options?: never;
@@ -28279,6 +29703,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Finish an identity provider sign-in with MFA
+         * @description Sends the MFA code for a provider sign-in that needs one and signs in; an unknown, used or expired
+         *     step, or a wrong code, is 401.
+         */
         post: operations["portal_oidc_mfa"];
         delete?: never;
         options?: never;
@@ -28293,6 +29722,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Finish signing in with an identity provider
+         * @description Where the provider sends the browser back. Redirects (303) to the portal app: home when signed in,
+         *     a page that finishes a pending link or MFA step, or the login page with one error, whatever went
+         *     wrong.
+         */
         get: operations["portal_oidc_callback"];
         put?: never;
         post?: never;
@@ -28309,6 +29744,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Start signing in with an identity provider
+         * @description Redirects (303) to one of the portal's OIDC providers, after binding the flow to this portal,
+         *     provider and browser so a sign-in cannot be planted in someone else's browser.
+         */
         get: operations["portal_oidc_start"];
         put?: never;
         post?: never;
@@ -28327,6 +29767,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Refresh a portal session
+         * @description Rotates the refresh token and sets new session cookies; a missing, expired or reused refresh token
+         *     is 401, and a reused one ends its whole family.
+         */
         post: operations["portal_refresh_session"];
         delete?: never;
         options?: never;
@@ -28343,6 +29788,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Reset a portal password
+         * @description Sets a new password from a reset link's token and ends every existing session; an invalid or
+         *     expired link, or a password that fails the policy, is 422. Rate limited.
+         */
         post: operations["portal_reset_confirm"];
         delete?: never;
         options?: never;
@@ -28359,6 +29809,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Ask for a portal password reset
+         * @description Emails a reset link when the address has an account; the answer is the same either way, so it
+         *     tells nobody whether an account exists. Rate limited. 503 when email is not configured.
+         */
         post: operations["portal_reset_request"];
         delete?: never;
         options?: never;
@@ -28375,6 +29830,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Sign up to a web portal
+         * @description Asks for an account with an email, a password and the portal's current consent versions. The
+         *     answer is 202 whatever happened (a verification link, a notice to an existing account, or nothing),
+         *     so it reveals no account. A password that fails the policy, a consent that does not match, or a
+         *     failed CAPTCHA is 422.
+         */
         post: operations["portal_signup_request"];
         delete?: never;
         options?: never;
@@ -28391,6 +29853,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Verify a portal signup
+         * @description Creates the account from the emailed verification link; sign in with the password given at signup.
+         *     An invalid, used or expired link, or a portal whose signup closed, is 422.
+         */
         post: operations["portal_signup_verify"];
         delete?: never;
         options?: never;
@@ -28405,12 +29872,23 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get the signed-in portal user
+         * @description The portal user's own profile and `row_version`. On a portal that requires MFA, a user not yet
+         *     enrolled reaches only the MFA and sign-out routes.
+         */
         get: operations["portal_me"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Change the signed-in portal user's profile
+         * @description Changes the profile fields the portal lets users edit (never email, status, lookups or files).
+         *     Requires `If-Match` with the profile's `row_version`; a stale one is 409. Needs the portal's
+         *     current consent.
+         */
         patch: operations["portal_update_me"];
         trace?: never;
     };
@@ -28421,8 +29899,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read the portal's consent versions
+         * @description The portal's current consent versions and whether the signed-in user accepted them.
+         */
         get: operations["portal_consent_state"];
         put?: never;
+        /**
+         * Accept the portal's terms
+         * @description Records the user's acceptance of the portal's current versions; other versions are 422.
+         */
         post: operations["portal_consent_accept"];
         delete?: never;
         options?: never;
@@ -28439,6 +29925,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Ask for my portal account to be erased
+         * @description Sends the request to staff, who erase or reject it; an open request is returned rather than a
+         *     second one made.
+         */
         post: operations["portal_erasure_request"];
         delete?: never;
         options?: never;
@@ -28455,6 +29946,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Change a portal password
+         * @description Changes the password given the current one; every other session ends and this one is issued
+         *     again. A wrong current password, or a new one that fails the policy, is 422.
+         */
         post: operations["portal_change_password"];
         delete?: never;
         options?: never;
@@ -28469,6 +29965,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List my portal sessions
+         * @description The signed-in user's live sessions, to end the ones they do not recognise.
+         */
         get: operations["portal_list_sessions"];
         put?: never;
         post?: never;
@@ -28487,6 +29987,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * End my other portal sessions
+         * @description Ends every session of the user except this one.
+         */
         post: operations["portal_end_other_sessions"];
         delete?: never;
         options?: never;
@@ -28504,6 +30008,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * End one of my portal sessions
+         * @description Ends the session at once.
+         */
         delete: operations["portal_end_session"];
         options?: never;
         head?: never;
@@ -28517,6 +30025,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List the entities a portal user can use
+         * @description The entities the caller's role has a grant on (at most 100). Needs the portal's current consent.
+         */
         get: operations["portal_metadata_index"];
         put?: never;
         post?: never;
@@ -28533,6 +30045,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Describe an entity for a portal user
+         * @description What the caller's role may do on the entity and the fields it may read or write. Needs the
+         *     portal's current consent.
+         */
         get: operations["portal_metadata_entity"];
         put?: never;
         post?: never;
@@ -28549,8 +30066,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List records in a portal
+         * @description The records of the entity inside the caller's role scope, one-based pages up to the portal's cap,
+         *     sorted by a filterable field; any other query key is an equality filter on a filterable field.
+         */
         get: operations["portal_list_records"];
         put?: never;
+        /**
+         * Create a record in a portal
+         * @description Creates a record through the shared entity engine, owned by the portal's team and naming the portal
+         *     user, when the role may create it and write every field given; a record that would fall outside
+         *     the caller's scope is 422. An idempotency key replays the first result.
+         */
         post: operations["portal_create_record"];
         delete?: never;
         options?: never;
@@ -28565,12 +30093,26 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a record in a portal
+         * @description One record inside the caller's scope, with the fields the role may read.
+         */
         get: operations["portal_get_record"];
         put?: never;
         post?: never;
+        /**
+         * Delete a record in a portal
+         * @description Deletes a record inside the caller's scope when the role may, with its `If-Match` row version; a
+         *     record with dependents is 409.
+         */
         delete: operations["portal_delete_record"];
         options?: never;
         head?: never;
+        /**
+         * Change a record in a portal
+         * @description Changes fields the role may write, with the record's `If-Match` row version; a change that would
+         *     move the record out of the caller's scope is 422.
+         */
         patch: operations["portal_update_record"];
         trace?: never;
     };
@@ -28581,6 +30123,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Download a record's file in a portal
+         * @description A short-lived URL serving the file as an attachment, when the role can read the field; a
+         *     multi-file field needs `key`.
+         */
         get: operations["portal_download_record_file"];
         put?: never;
         post?: never;
@@ -28599,6 +30146,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Start a file upload in a portal
+         * @description An upload session and a short-lived URL to PUT the bytes to, in quarantine, for a file field the
+         *     role can write; content type, size, storage quota and the number of open sessions are limited.
+         */
         post: operations["portal_start_upload"];
         delete?: never;
         options?: never;
@@ -28613,6 +30165,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a portal upload session
+         * @description The session's progress; once `clean`, `final_key` is the value to write on the record's field.
+         */
         get: operations["portal_upload_status"];
         put?: never;
         post?: never;
@@ -28631,6 +30187,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Finish a portal file upload
+         * @description Marks the upload `uploaded` and queues its scan, or `rejected`; a finalised session is 409.
+         */
         post: operations["portal_finalize_upload"];
         delete?: never;
         options?: never;
@@ -66996,6 +68556,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The archive entry */
                 id: string;
             };
             cookie?: never;
@@ -70230,6 +71791,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -70279,6 +71841,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -70326,6 +71889,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -70397,6 +71961,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -70625,6 +72190,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -70818,6 +72384,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -70858,6 +72425,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -70920,6 +72488,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -70991,6 +72560,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -71307,6 +72877,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The page */
                 id: string;
             };
             cookie?: never;
@@ -72250,6 +73821,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The space */
                 id: string;
             };
             cookie?: never;
@@ -72299,6 +73871,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The space */
                 id: string;
             };
             cookie?: never;
@@ -72346,6 +73919,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The space */
                 id: string;
             };
             cookie?: never;
@@ -72417,6 +73991,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The space */
                 id: string;
             };
             cookie?: never;
@@ -72457,6 +74032,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The space */
                 id: string;
             };
             cookie?: never;
@@ -72617,6 +74193,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The template */
                 id: string;
             };
             cookie?: never;
@@ -72666,6 +74243,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The template */
                 id: string;
             };
             cookie?: never;
@@ -72713,6 +74291,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The template */
                 id: string;
             };
             cookie?: never;
@@ -76609,6 +78188,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The request */
                 id: string;
             };
             cookie?: never;
@@ -76662,6 +78242,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The request */
                 id: string;
             };
             cookie?: never;
@@ -76713,6 +78294,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The request */
                 id: string;
             };
             cookie?: never;
@@ -81725,6 +83307,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The integration system */
                 id: string;
             };
             cookie?: never;
@@ -81787,6 +83370,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The integration system */
                 id: string;
             };
             cookie?: never;
@@ -82300,6 +83884,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The gap topic */
                 id: string;
             };
             cookie?: never;
@@ -82630,6 +84215,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The hold */
                 id: string;
             };
             cookie?: never;
@@ -82679,6 +84265,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The legal matter */
                 id: string;
             };
             cookie?: never;
@@ -82737,6 +84324,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The legal matter */
                 id: string;
             };
             cookie?: never;
@@ -89669,6 +91257,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The retention action */
                 id: string;
             };
             cookie?: never;
@@ -89718,6 +91307,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The retention action */
                 id: string;
             };
             cookie?: never;
@@ -92407,7 +93997,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 logicalname: string;
+                /** @description The record */
                 record_id: string;
             };
             cookie?: never;
@@ -95446,6 +97038,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description `mfa`, `s2s` or `erasure` */
                 domain: string;
             };
             cookie?: never;
@@ -104540,6 +106133,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -104602,6 +106196,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -104664,6 +106259,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -104713,6 +106309,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -104753,6 +106350,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -104824,7 +106422,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
+                /** @description The page */
                 page_id: string;
             };
             cookie?: never;
@@ -104887,7 +106487,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
+                /** @description The page */
                 page_id: string;
             };
             cookie?: never;
@@ -104946,6 +106548,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -105017,6 +106620,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -105066,6 +106670,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -105128,6 +106733,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -105172,6 +106778,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -105234,6 +106841,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -105296,6 +106904,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -105354,6 +106963,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
             };
             cookie?: never;
@@ -105416,7 +107026,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
+                /** @description The version to show */
                 version_id: string;
             };
             cookie?: never;
@@ -105488,7 +107100,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
+                /** @description The version to restore */
                 version_id: string;
             };
             cookie?: never;
@@ -105547,7 +107161,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
+                /** @description The widget */
                 widget_id: string;
             };
             cookie?: never;
@@ -105610,7 +107226,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
+                /** @description The widget */
                 widget_id: string;
             };
             cookie?: never;
@@ -105673,7 +107291,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The dashboard */
                 id: string;
+                /** @description The widget */
                 widget_id: string;
             };
             cookie?: never;
@@ -111346,6 +112966,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The channel */
                 id: string;
             };
             cookie?: never;
@@ -111397,7 +113018,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The channel */
                 id: string;
+                /** @description The member */
                 user_id: string;
             };
             cookie?: never;
@@ -111461,6 +113084,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The channel */
                 id: string;
             };
             cookie?: never;
@@ -111510,6 +113134,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The channel */
                 id: string;
             };
             cookie?: never;
@@ -111563,7 +113188,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The channel */
                 id: string;
+                /** @description The message */
                 message_id: string;
             };
             cookie?: never;
@@ -111611,6 +113238,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The channel */
                 id: string;
             };
             cookie?: never;
@@ -111649,6 +113277,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The channel */
                 id: string;
             };
             cookie?: never;
@@ -114137,6 +115766,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The decision */
                 id: string;
             };
             cookie?: never;
@@ -114208,6 +115838,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The decision */
                 id: string;
             };
             cookie?: never;
@@ -114451,6 +116082,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The render */
                 render_id: string;
             };
             cookie?: never;
@@ -114500,6 +116132,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The template */
                 id: string;
             };
             cookie?: never;
@@ -114721,6 +116354,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The document */
                 id: string;
             };
             cookie?: never;
@@ -114768,6 +116402,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The document */
                 id: string;
             };
             cookie?: never;
@@ -116391,6 +118026,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The assessment */
                 id: string;
             };
             cookie?: never;
@@ -116449,6 +118085,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The finding */
                 id: string;
             };
             cookie?: never;
@@ -121873,6 +123510,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The mail provider the connection is for */
                 provider: string;
             };
             cookie?: never;
@@ -122012,7 +123650,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The video provider */
                 provider: string;
+                /** @description The provider's meeting id */
                 id: string;
             };
             cookie?: never;
@@ -122382,6 +124022,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The metric */
                 id: string;
             };
             cookie?: never;
@@ -122512,6 +124153,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The metric */
                 id: string;
             };
             cookie?: never;
@@ -122567,6 +124209,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The metric */
                 id: string;
             };
             cookie?: never;
@@ -122628,6 +124271,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The metric */
                 id: string;
             };
             cookie?: never;
@@ -126049,6 +127693,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The portfolio */
                 id: string;
             };
             cookie?: never;
@@ -127110,6 +128755,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The programme */
                 id: string;
             };
             cookie?: never;
@@ -127159,6 +128805,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The change request */
                 id: string;
             };
             cookie?: never;
@@ -127235,6 +128882,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The change request */
                 id: string;
             };
             cookie?: never;
@@ -127383,6 +129031,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The timesheet */
                 id: string;
             };
             cookie?: never;
@@ -127459,6 +129108,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The timesheet */
                 id: string;
             };
             cookie?: never;
@@ -127535,6 +129185,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The timesheet */
                 id: string;
             };
             cookie?: never;
@@ -127593,6 +129244,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The project */
                 id: string;
             };
             cookie?: never;
@@ -127723,6 +129375,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The project */
                 id: string;
             };
             cookie?: never;
@@ -127772,6 +129425,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The project */
                 id: string;
             };
             cookie?: never;
@@ -127989,6 +129643,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The push subscription */
                 id: string;
             };
             cookie?: never;
@@ -128672,6 +130327,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The queue */
                 id: string;
             };
             cookie?: never;
@@ -128743,6 +130399,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The queue */
                 id: string;
             };
             cookie?: never;
@@ -129187,6 +130844,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The report run */
                 run_id: string;
             };
             cookie?: never;
@@ -129287,6 +130945,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The schedule */
                 id: string;
             };
             cookie?: never;
@@ -129340,6 +130999,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The report */
                 id: string;
             };
             cookie?: never;
@@ -129393,6 +131053,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The report */
                 id: string;
             };
             cookie?: never;
@@ -133176,6 +134837,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The scenario */
                 id: string;
             };
             cookie?: never;
@@ -133228,6 +134890,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The scenario */
                 id: string;
             };
             cookie?: never;
@@ -133286,6 +134949,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The scenario */
                 id: string;
             };
             cookie?: never;
@@ -133945,6 +135609,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The service offering */
                 id: string;
             };
             cookie?: never;
@@ -133998,6 +135663,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The service offering */
                 id: string;
             };
             cookie?: never;
@@ -135532,6 +137198,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The share link's token */
                 token: string;
             };
             cookie?: never;
@@ -135570,6 +137237,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The share link's token */
                 token: string;
             };
             cookie?: never;
@@ -136040,6 +137708,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The receipt token sent with the message */
                 token: string;
             };
             cookie?: never;
@@ -137015,6 +138684,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The ticket */
                 id: string;
             };
             cookie?: never;
@@ -137071,6 +138741,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The ticket */
                 id: string;
             };
             cookie?: never;
@@ -137133,6 +138804,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The ticket */
                 id: string;
             };
             cookie?: never;
@@ -137191,6 +138863,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The ticket */
                 id: string;
             };
             cookie?: never;
@@ -137249,6 +138922,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The ticket */
                 id: string;
             };
             cookie?: never;
@@ -138411,6 +140085,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The work request */
                 id: string;
             };
             cookie?: never;
@@ -138482,6 +140157,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The work request */
                 id: string;
             };
             cookie?: never;
@@ -138553,6 +140229,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The work request */
                 id: string;
             };
             cookie?: never;
@@ -138624,6 +140301,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The work request */
                 id: string;
             };
             cookie?: never;
@@ -143487,7 +145165,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
                 /** @description Action id, e.g. record.summarize */
                 name: string;
@@ -144068,8 +145748,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
             };
             cookie?: never;
@@ -144119,8 +145802,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
             };
             cookie?: never;
@@ -144195,8 +145881,11 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
             };
             cookie?: never;
@@ -144266,8 +145955,11 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
             };
             cookie?: never;
@@ -144384,8 +146076,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
             };
             cookie?: never;
@@ -144435,8 +146130,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
             };
             cookie?: never;
@@ -144499,9 +146197,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
+                /** @description The link */
                 link_id: string;
             };
             cookie?: never;
@@ -144549,8 +146251,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
             };
             cookie?: never;
@@ -144604,9 +146309,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
+                /** @description The upload session */
                 session_id: string;
             };
             cookie?: never;
@@ -144656,9 +146365,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
+                /** @description The upload session */
                 session_id: string;
             };
             cookie?: never;
@@ -144708,8 +146421,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
             };
             cookie?: never;
@@ -144759,9 +146475,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
+                /** @description The version number */
                 version_no: number;
             };
             cookie?: never;
@@ -144818,9 +146538,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The entity's logical name */
                 entity: string;
+                /** @description The record */
                 id: string;
+                /** @description The file field */
                 field: string;
+                /** @description The version number */
                 version_no: number;
             };
             cookie?: never;
