@@ -159,7 +159,7 @@ pub async fn txt_values(name: &str) -> Result<Vec<String>, String> {
         Ok(found
             .answers()
             .iter()
-            .filter_map(|record| match record.data() {
+            .filter_map(|record| match &record.data {
                 hickory_resolver::proto::rr::RData::TXT(txt) => Some(
                     txt.txt_data
                         .iter()
