@@ -1647,6 +1647,18 @@ async fn dispatch_platform_job(
                 "billing renewals: run finished"
             );
         }
+        // B15-T1: changed addresses get coordinates.
+        EngineJob::GeocodeSweep => {
+            let run = attome_integration::connector::adapters::geocode::run(&attome_state).await?;
+            if run.lookups > 0 || run.located > 0 {
+                tracing::info!(
+                    events = run.events,
+                    lookups = run.lookups,
+                    located = run.located,
+                    "geocode: run finished"
+                );
+            }
+        }
         // W1-T13: contracts drafted from quotes, orders and intake requests.
         EngineJob::ContractLinkSweep => {
             let run = attome_contract::links::run(&attome_state).await?;
@@ -2986,6 +2998,7 @@ const DEDUP_KEY_TAG_EXPIRY: &str = "tag-expiry";
 const DEDUP_KEY_CONTRACT_KEY_DATES: &str = "contract-key-dates";
 const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
 const DEDUP_KEY_CONTRACT_LINK_SWEEP: &str = "contract-link-sweep";
+const DEDUP_KEY_GEOCODE_SWEEP: &str = "geocode-sweep";
 const DEDUP_KEY_BILLING_HANDOFF_SWEEP: &str = "billing-handoff-sweep";
 const DEDUP_KEY_BILLING_RENEWAL_SWEEP: &str = "billing-renewal-sweep";
 const DEDUP_KEY_BILLING_GENERATE_CHARGES: &str = "billing-generate-charges";
@@ -5626,6 +5639,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::ContractKeyDates => DEDUP_KEY_CONTRACT_KEY_DATES,
         EngineJob::RecurringTaskRoll => DEDUP_KEY_RECURRING_TASK_ROLL,
         EngineJob::ContractLinkSweep => DEDUP_KEY_CONTRACT_LINK_SWEEP,
+        EngineJob::GeocodeSweep => DEDUP_KEY_GEOCODE_SWEEP,
         EngineJob::BillingHandoffSweep => DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         EngineJob::BillingRenewalSweep => DEDUP_KEY_BILLING_RENEWAL_SWEEP,
         EngineJob::BillingGenerateCharges => DEDUP_KEY_BILLING_GENERATE_CHARGES,
@@ -8219,6 +8233,17 @@ pub fn spawn_billing_renewal_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::BillingRenewalSweep,
         DEDUP_KEY_BILLING_RENEWAL_SWEEP,
         "billing renewals",
+    );
+}
+
+/// B15-T1: every five minutes, changed addresses geocoded.
+pub fn spawn_geocode_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::GeocodeSweep,
+        DEDUP_KEY_GEOCODE_SWEEP,
+        "geocode",
     );
 }
 

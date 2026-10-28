@@ -710,6 +710,36 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(5),
         ),
+        // B15-T1: background geocoding.
+        SettingDescriptor::new(
+            "geocode.base_url",
+            "The geocoding provider: a self-hosted Nominatim or a service answering its \
+         /search?format=jsonv2 shape. Empty turns geocoding off (B15-T1).",
+            || json!({"type": "string", "maxLength": 500}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
+            "geocode.targets",
+            "The entities whose address is geocoded: for each, the address attributes in order \
+         and the geolocation attribute the point is written to (B15-T1).",
+            || {
+                json!({"type": "array", "maxItems": 50, "items": {
+                    "type": "object", "additionalProperties": false,
+                    "required": ["entity", "address", "location"],
+                    "properties": {
+                        "entity": {"type": "string", "maxLength": 63},
+                        "address": {"type": "array", "minItems": 1, "maxItems": 10,
+                                    "items": {"type": "string", "maxLength": 63}},
+                        "location": {"type": "string", "maxLength": 63}
+                    }
+                }})
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
         // L1-T7: golden-record changes sent only once certified.
         SettingDescriptor::new(
             "master.certified_only",

@@ -484,6 +484,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // W1-T13: contracts from accepted quotes, confirmed orders and intake.
     crate::jobs::spawn_contract_link_scheduler(db.clone(), std::time::Duration::from_secs(15 * 60));
+    // B15-T1: changed addresses geocoded.
+    crate::jobs::spawn_geocode_scheduler(db.clone(), std::time::Duration::from_secs(5 * 60));
     // W1-T4: contract notice deadlines, renewal tasks and obligations, nightly.
     crate::jobs::spawn_contract_key_dates_scheduler(
         db.clone(),

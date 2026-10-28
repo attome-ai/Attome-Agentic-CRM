@@ -781,6 +781,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from
   `WSADuplicateSocketW`, or `-` to read it from stdin) is set, so a supervisor can hand the same
   socket to the next version; otherwise it binds as before.
+- Background geocoding (B15-T1): with `geocode.base_url` set (a self-hosted Nominatim or a service
+  answering its search shape) and `geocode.targets` naming an entity's address attributes and its
+  geolocation attribute, a changed address gets its point within minutes, written through the
+  ordinary update as the record's owner. Answers are cached by normalised address (migration 0327).
 - Second-factor policy screens (Q5-T10): the role form's Sign-in tab edits single sign-on, the
   second-factor mode, allowed factors (codes sent by email or message cannot be chosen for a role
   that grants administration), grace days, remember-browser days and phishing-resistant only, through

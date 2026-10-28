@@ -14,6 +14,8 @@ pub mod docusign;
 pub mod dynamics;
 /// S12-T2: what the ERP connectors exchange with Attome.
 pub mod erp;
+/// B15-T1: addresses geocoded in the background, cached by address.
+pub mod geocode;
 /// A24-T2: HubSpot as a migration source.
 pub mod hubspot;
 /// D30-T1: LinkedIn Lead Gen Forms responses mapped onto leads.
