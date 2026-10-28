@@ -643,3 +643,148 @@ async fn reapply_pack_is_idempotent() {
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
+
+/// Z12-T14: a branch calendar end to end. The SA pack makes the country
+/// calendar; a branch inherits it with a short Thursday; a person assigned to
+/// the branch gets 8 business hours from a Wednesday 15:00 in Riyadh on
+/// Sunday at 11:00 (1 h Wednesday, 4 h Thursday, Friday and Saturday off,
+/// 3 h Sunday); confirming a sighting moves the country calendar's version.
+#[tokio::test]
+async fn end_to_end_branch_calendar() {
+    let system = skip_if_no_db!(test_system().await);
+    let db = system.state().base.db.clone();
+    let admin = seed_admin(&db).await;
+    let cookie = session_cookie(admin);
+    let person = seed_user(&db).await;
+    let app = full_app(system);
+    clear_saudi_calendars(&db).await;
+
+    let (status, applied) = send(
+        &app,
+        "POST",
+        "/api/v1/admin/calendars/packs/sa/apply",
+        &cookie,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    let country: Uuid = applied["calendar_id"].as_str().unwrap().parse().unwrap();
+
+    let day = |start: u16, end: u16| json!([{ "start_minute": start, "end_minute": end }]);
+    let (status, branch) = send(
+        &app,
+        "POST",
+        "/api/v1/admin/calendars",
+        &cookie,
+        Some(json!({
+            "name": format!("z12t14-branch-{}", Uuid::now_v7().simple()),
+            "name_ar": "فرع",
+            "tz": "Asia/Riyadh",
+            "parent_calendar_id": country,
+            "working_days": ["sun", "mon", "tue", "wed", "thu"],
+            "hours": {
+                "sun": day(480, 960), "mon": day(480, 960), "tue": day(480, 960),
+                "wed": day(480, 960), "thu": day(480, 720)
+            }
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{branch}");
+    let branch: Uuid = branch["id"].as_str().unwrap().parse().unwrap();
+
+    let (status, assigned) = send(
+        &app,
+        "PUT",
+        &format!("/api/v1/calendar-assignments/user/{person}"),
+        &cookie,
+        Some(json!({ "calendar_id": branch })),
+    )
+    .await;
+    assert!(status.is_success(), "{status} {assigned}");
+
+    // A Wednesday whose Thursday and Sunday are working days in the country
+    // calendar, a few weeks out.
+    let holidays = holidays_of(&db, country).await;
+    let mut wednesday = chrono::Utc::now().date_naive() + chrono::Duration::days(21);
+    while wednesday.weekday() != chrono::Weekday::Wed
+        || [0, 1, 4]
+            .iter()
+            .any(|d| holidays.contains(&(wednesday + chrono::Duration::days(*d))))
+    {
+        wednesday = wednesday.succ_opt().unwrap();
+    }
+    // 15:00 in Riyadh (UTC+3, no daylight saving) is 12:00 UTC.
+    let from = wednesday.and_hms_opt(12, 0, 0).unwrap().and_utc();
+    let (status, answer) = send(
+        &app,
+        "POST",
+        &format!("/api/v1/calendars/{country}/calculate"),
+        &cookie,
+        Some(json!({ "op": "add", "from": from, "minutes": 480, "user_id": person })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{answer}");
+    assert_eq!(
+        answer["calendar_id"],
+        branch.to_string(),
+        "the person's own calendar"
+    );
+    let result: chrono::DateTime<chrono::Utc> = answer["result"].as_str().unwrap().parse().unwrap();
+    let sunday = wednesday + chrono::Duration::days(4);
+    assert_eq!(
+        result,
+        sunday.and_hms_opt(8, 0, 0).unwrap().and_utc(),
+        "Sunday 11:00 Riyadh"
+    );
+
+    // Confirming a sighting on the country calendar is a new version of it.
+    let version = |detail: &Value| detail["current_version"].as_i64().unwrap();
+    let (_, before) = send(
+        &app,
+        "GET",
+        &format!("/api/v1/admin/calendars/{country}"),
+        &cookie,
+        None,
+    )
+    .await;
+    let year = chrono::Utc::now().year();
+    let (status, sightings) = send(
+        &app,
+        "GET",
+        &format!("/api/v1/calendar-sightings?year={year}"),
+        &cookie,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{sightings}");
+    let eid = sightings
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["calendar_id"] == country.to_string())
+        .expect("a sighted holiday on the country calendar")
+        .clone();
+    let expected: NaiveDate = eid["expected_start"].as_str().unwrap().parse().unwrap();
+    let (status, confirmed) = send(
+        &app,
+        "POST",
+        "/api/v1/calendar-sightings",
+        &cookie,
+        Some(json!({
+            "rule_id": eid["rule_id"],
+            "hijri_year": eid["hijri_year"],
+            "confirmed_start": expected.succ_opt().unwrap()
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{confirmed}");
+    let (_, after) = send(
+        &app,
+        "GET",
+        &format!("/api/v1/admin/calendars/{country}"),
+        &cookie,
+        None,
+    )
+    .await;
+    assert!(version(&after) > version(&before), "{before} -> {after}");
+}

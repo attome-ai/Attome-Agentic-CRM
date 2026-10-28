@@ -373,3 +373,101 @@ mod tests {
         );
     }
 }
+
+/// Z12-T14: no rule or season, however malformed, makes expansion panic;
+/// an expanded season never yields a range that crosses midnight.
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn arb_weekday() -> impl Strategy<Value = String> {
+        prop_oneof![
+            Just("mon"),
+            Just("tue"),
+            Just("wed"),
+            Just("thu"),
+            Just("fri"),
+            Just("sat"),
+            Just("sun"),
+            Just("xyz"),
+            Just(""),
+        ]
+        .prop_map(str::to_owned)
+    }
+
+    fn arb_rule() -> impl Strategy<Value = HolidayRule> {
+        prop_oneof![
+            (0u32..15, 0u32..34, 0u8..20).prop_map(|(month, day, span_days)| HolidayRule::Fixed {
+                month,
+                day,
+                span_days
+            }),
+            (0u32..15, arb_weekday(), -3i8..8, 0u8..20).prop_map(
+                |(month, weekday, n, span_days)| {
+                    HolidayRule::NthWeekday {
+                        month,
+                        weekday,
+                        n,
+                        span_days,
+                    }
+                }
+            ),
+            (0u8..15, 0u8..33, 0u8..20).prop_map(|(month, day, span_days)| HolidayRule::Hijri {
+                month,
+                day,
+                span_days
+            }),
+            (-80_000i32..80_000, 0u8..20).prop_map(|(offset, span_days)| HolidayRule::OneOff {
+                date: NaiveDate::from_ymd_opt(2000, 1, 1).unwrap()
+                    + chrono::Duration::days(i64::from(offset)),
+                span_days,
+            }),
+        ]
+    }
+
+    fn arb_ranges() -> impl Strategy<Value = Vec<TimeRange>> {
+        proptest::collection::vec(
+            (0u16..1600, 0u16..1600).prop_map(|(a, b)| TimeRange::new(a, b)),
+            0..3,
+        )
+    }
+
+    fn arb_season() -> impl Strategy<Value = Season> {
+        (
+            arb_rule(),
+            arb_rule(),
+            proptest::collection::btree_map(arb_weekday(), arb_ranges(), 0..8),
+        )
+            .prop_map(|(start, end, hours)| Season { start, end, hours })
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(512))]
+
+        #[test]
+        fn expand_never_panics_for_any_rule(rule in arb_rule(), year in 1990i32..2070) {
+            // An error is a fine answer to a malformed rule; a panic is not.
+            if let Ok(days) = expand(&rule, year) {
+                prop_assert!(days.windows(2).all(|w| w[0] <= w[1]), "sorted: {days:?}");
+                prop_assert!(days.len() <= 2 * usize::from(MAX_SPAN_DAYS), "{days:?}");
+            }
+        }
+
+        #[test]
+        fn season_hours_never_cross_midnight(season in arb_season(), year in 1990i32..2070) {
+            if let Ok(days) = expand_season(&season, year) {
+                for (day, ranges) in &days {
+                    for range in ranges {
+                        prop_assert!(
+                            range.is_valid(),
+                            "{day}: {}..{} crosses midnight or is empty",
+                            range.start_minute,
+                            range.end_minute
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
