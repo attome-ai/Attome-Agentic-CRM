@@ -1469,6 +1469,10 @@ async fn mfa_disable(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Get the signed-in portal user
+///
+/// The portal user's own profile and `row_version`. On a portal that requires MFA, a user not yet
+/// enrolled reaches only the MFA and sign-out routes.
 #[utoipa::path(
     get,
     operation_id = "portal_me",
@@ -1526,6 +1530,11 @@ async fn me_of(
     })
 }
 
+/// Change the signed-in portal user's profile
+///
+/// Changes the profile fields the portal lets users edit (never email, status, lookups or files).
+/// Requires `If-Match` with the profile's `row_version`; a stale one is 409. Needs the portal's
+/// current consent.
 #[utoipa::path(
     patch,
     operation_id = "portal_update_me",
@@ -1706,6 +1715,10 @@ fn if_match(headers: &HeaderMap, required: bool) -> Result<Option<i64>, AppError
         .ok_or_else(|| AppError::Validation("If-Match must be a row_version integer".into()))
 }
 
+/// List records in a portal
+///
+/// The records of the entity inside the caller's role scope, one-based pages up to the portal's cap,
+/// sorted by a filterable field; any other query key is an equality filter on a filterable field.
 #[utoipa::path(
     get,
     operation_id = "portal_list_records",
@@ -1759,6 +1772,9 @@ async fn list_records(
     ))
 }
 
+/// Get a record in a portal
+///
+/// One record inside the caller's scope, with the fields the role may read.
 #[utoipa::path(
     get,
     operation_id = "portal_get_record",
@@ -1791,6 +1807,10 @@ struct FileQuery {
     key: Option<String>,
 }
 
+/// Download a record's file in a portal
+///
+/// A short-lived URL serving the file as an attachment, when the role can read the field; a
+/// multi-file field needs `key`.
 #[utoipa::path(
     get,
     operation_id = "portal_download_record_file",
@@ -1825,6 +1845,11 @@ async fn download_record_file(
     ))
 }
 
+/// Create a record in a portal
+///
+/// Creates a record through the shared entity engine, owned by the portal's team and naming the portal
+/// user, when the role may create it and write every field given; a record that would fall outside
+/// the caller's scope is 422. An idempotency key replays the first result.
 #[utoipa::path(
     post,
     operation_id = "portal_create_record",
@@ -1856,6 +1881,10 @@ async fn create_record(
     Ok((StatusCode::CREATED, Json(record)))
 }
 
+/// Change a record in a portal
+///
+/// Changes fields the role may write, with the record's `If-Match` row version; a change that would
+/// move the record out of the caller's scope is 422.
 #[utoipa::path(
     patch,
     operation_id = "portal_update_record",
@@ -1891,6 +1920,10 @@ async fn update_record(
     ))
 }
 
+/// Delete a record in a portal
+///
+/// Deletes a record inside the caller's scope when the role may, with its `If-Match` row version; a
+/// record with dependents is 409.
 #[utoipa::path(
     delete,
     operation_id = "portal_delete_record",

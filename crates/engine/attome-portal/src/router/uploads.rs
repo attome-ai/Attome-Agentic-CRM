@@ -82,6 +82,10 @@ fn owner(plan: &AccessPlan) -> FileOwner {
     FileOwner::Portal(plan.portal_user_id)
 }
 
+/// Start a file upload in a portal
+///
+/// An upload session and a short-lived URL to PUT the bytes to, in quarantine, for a file field the
+/// role can write; content type, size, storage quota and the number of open sessions are limited.
 #[utoipa::path(
     post,
     operation_id = "portal_start_upload",
@@ -134,6 +138,9 @@ async fn start_upload(
     ))
 }
 
+/// Finish a portal file upload
+///
+/// Marks the upload `uploaded` and queues its scan, or `rejected`; a finalised session is 409.
 #[utoipa::path(
     post,
     operation_id = "portal_finalize_upload",
@@ -167,6 +174,9 @@ async fn finalize_upload(
     ))
 }
 
+/// Read a portal upload session
+///
+/// The session's progress; once `clean`, `final_key` is the value to write on the record's field.
 #[utoipa::path(
     get,
     operation_id = "portal_upload_status",

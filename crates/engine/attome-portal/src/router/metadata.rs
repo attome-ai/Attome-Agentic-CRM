@@ -113,6 +113,9 @@ async fn view(
     )))
 }
 
+/// List the entities a portal user can use
+///
+/// The entities the caller's role has a grant on (at most 100). Needs the portal's current consent.
 #[utoipa::path(
     get,
     operation_id = "portal_metadata_index",
@@ -162,6 +165,10 @@ async fn metadata_index(
     }))
 }
 
+/// Describe an entity for a portal user
+///
+/// What the caller's role may do on the entity and the fields it may read or write. Needs the
+/// portal's current consent.
 #[utoipa::path(
     get,
     operation_id = "portal_metadata_entity",

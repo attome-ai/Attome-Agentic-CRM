@@ -422,6 +422,9 @@ async fn email_add_verify(
     }
 }
 
+/// Read the portal's consent versions
+///
+/// The portal's current consent versions and whether the signed-in user accepted them.
 #[utoipa::path(
     get,
     path = "/{keyword}/api/v1/me/consent",
@@ -451,6 +454,9 @@ async fn consent_state(
     }))
 }
 
+/// Accept the portal's terms
+///
+/// Records the user's acceptance of the portal's current versions; other versions are 422.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/me/consent",
@@ -511,6 +517,10 @@ async fn consent_accept(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Change a portal password
+///
+/// Changes the password given the current one; every other session ends and this one is issued
+/// again. A wrong current password, or a new one that fails the policy, is 422.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/me/password",
@@ -606,6 +616,9 @@ async fn change_password(
     Ok(response)
 }
 
+/// List my portal sessions
+///
+/// The signed-in user's live sessions, to end the ones they do not recognise.
 #[utoipa::path(
     get,
     path = "/{keyword}/api/v1/me/sessions",
@@ -629,6 +642,9 @@ async fn list_sessions(
     Ok(Json(account::list_sessions(&mut conn, &principal).await?))
 }
 
+/// End one of my portal sessions
+///
+/// Ends the session at once.
 #[utoipa::path(
     delete,
     path = "/{keyword}/api/v1/me/sessions/{id}",
@@ -672,6 +688,9 @@ async fn end_session(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// End my other portal sessions
+///
+/// Ends every session of the user except this one.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/me/sessions/end-others",
@@ -710,6 +729,10 @@ async fn end_other_sessions(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Ask for my portal account to be erased
+///
+/// Sends the request to staff, who erase or reject it; an open request is returned rather than a
+/// second one made.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/me/erasure-request",
