@@ -55,6 +55,8 @@ async fn mfa_policy_columns_exist() {
     }
     assert!(!columns(&db, "user_mfa_grace").await.is_empty());
     assert!(!columns(&db, "remembered_device").await.is_empty());
+    // Q5-T6: what past sign-ins came from.
+    assert!(!columns(&db, "sign_in_seen").await.is_empty());
 }
 
 #[tokio::test]

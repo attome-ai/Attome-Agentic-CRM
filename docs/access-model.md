@@ -185,6 +185,12 @@ nothing. A role may set its own mode instead, stricter or not.
   the strictest role's shortest), until a password change, reset or disable, or a sign-out of
   every session. An administrator's browser is never remembered. The browser holds only an
   opaque token; the server keeps its hash.
+- **Risky sign-ins ask again.** A remembered browser still gets the second factor when the
+  sign-in is risky: a browser family (browser and operating system, not its version) or a country
+  not seen for that person in 90 days, or three wrong passwords in a row just before. The country
+  comes from the offline database `auth.geoip_database` names; without one, only the device and
+  the failures count. What was seen is kept per person without the address; a person with no
+  history yet is not judged.
 
 A role's mode is stored with its sign-in policy (`role_auth_policy`). The route that sets it today,
 `PUT /api/v1/admin/security/roles/{id}/auth-policy`, sets single sign-on only; setting the second

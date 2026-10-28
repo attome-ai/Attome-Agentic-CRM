@@ -9,6 +9,10 @@
 
 use std::collections::HashMap;
 
+/// Q5-T6: a new device or country, or recent failures, asks for the second
+/// factor again.
+pub mod risk;
+
 use attome_server::login_restrictions::RoleSignInRule;
 use attome_types::AppError;
 use chrono::{DateTime, Utc};

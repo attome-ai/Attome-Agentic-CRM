@@ -475,6 +475,19 @@ pub(super) async fn login(
         // remembered browser skips it while the policy allows.
         let device =
             attome_auth::remembered_device::presented(&headers, state.config.auth.secure_cookies);
+        // Q5-T6: a new device or country, or recent failures, ask for the
+        // second factor even on a remembered browser. A failed check counts
+        // as risky (fail closed).
+        let device = match device {
+            Some(bearer)
+                if !risky_sign_in(&state, &body.email, streak)
+                    .await
+                    .unwrap_or(true) =>
+            {
+                Some(bearer)
+            }
+            _ => None,
+        };
         let ring = state.pepper_ring();
         accounts::login_with_policy(
             &state.db,
@@ -685,6 +698,28 @@ async fn record_failed_second_factor(
 /// account exists, so it adds no timing difference between the two. An
 /// unknown identifier yields [`failed_login::Subject::Unknown`] and nothing
 /// about the typed string is kept (D-541 G3-1 a).
+/// Q5-T6: whether a password sign-in for `email` is risky (see
+/// `attome_security::sign_in_rules::risk`); an unknown address is not.
+async fn risky_sign_in(state: &AppState, email: &str, streak: i64) -> Result<bool, AppError> {
+    let failed_login::Subject::Known { user_id, .. } = failed_login_subject(state, email).await?
+    else {
+        return Ok(false);
+    };
+    let (device, country) = super::session::sign_in_place();
+    let risk = attome_security::sign_in_rules::risk::assess(
+        &state.db,
+        user_id,
+        &device,
+        country.as_deref(),
+        u32::try_from(streak).unwrap_or(u32::MAX),
+    )
+    .await?;
+    if risk.any() {
+        tracing::info!(%user_id, reasons = ?risk.reasons(), "auth: a risky sign-in asks for the second factor");
+    }
+    Ok(risk.any())
+}
+
 async fn failed_login_subject(
     state: &AppState,
     email: &str,

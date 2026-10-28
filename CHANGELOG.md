@@ -781,6 +781,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from
   `WSADuplicateSocketW`, or `-` to read it from stdin) is set, so a supervisor can hand the same
   socket to the next version; otherwise it binds as before.
+- Risky sign-ins ask again (Q5-T6): a password sign-in from a browser family or country not seen
+  for that person in 90 days, or after three wrong passwords in a row, asks for the second factor
+  even on a remembered browser. The country comes from the offline database `auth.geoip_database`
+  names; without one only the device and failures count. Migration 0326 keeps what was seen (never
+  the address).
 - App layers in order, and clashes (Y11-T11): an app's (a pack's `product` changesets) first apply
   gives it the next place in the layer order, listed by `GET /api/v1/admin/metadata/app-layers`, and
   the properties it sets are recorded under its name. Planning an app's changeset lists in

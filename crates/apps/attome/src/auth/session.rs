@@ -27,6 +27,20 @@ use attome_types::ErrorResponse;
 
 // ── Session issuance (shared by register/login/google) ───────────────────────
 
+/// Q5-T6: the browser family and, with `auth.geoip_database` set, the
+/// country of the request being served.
+pub(super) fn sign_in_place() -> (String, Option<String>) {
+    let meta = attome_server::middleware::request_meta::current();
+    let device = attome_security::sign_in_rules::risk::device_family(
+        meta.user_agent.as_deref().unwrap_or_default(),
+    );
+    let country = meta
+        .ip_address
+        .and_then(|ip| ip.parse::<std::net::IpAddr>().ok())
+        .and_then(attome_server::login_restrictions::geoip::country);
+    (device, country)
+}
+
 /// Q9-T1: refuses the sign-in (`403`) when a role `user_id` holds restricts
 /// where or when they may sign in and this attempt is outside it. The
 /// caller's address is the trusted client IP the request-meta layer
@@ -165,6 +179,20 @@ pub(super) async fn issue_session_cookies_for(
         }
     }
     let issued = issued?;
+    // Q5-T6: a completed sign-in's device and country become known.
+    if login.is_some() {
+        let (device, country) = sign_in_place();
+        if let Err(error) = attome_security::sign_in_rules::risk::remember(
+            &state.db,
+            user_id,
+            &device,
+            country.as_deref(),
+        )
+        .await
+        {
+            tracing::warn!(%user_id, %error, "auth: the sign-in's device and country were not recorded");
+        }
+    }
     let refresh_cookie = cookie::build(
         cookie::refresh_cookie_name(secure),
         &issued.bearer,
