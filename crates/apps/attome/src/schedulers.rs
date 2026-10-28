@@ -88,6 +88,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(86_400),
     );
+    // A9-T3: stored formulas over today() or now(), daily.
+    crate::jobs::spawn_time_formula_recompute_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // Y2-T8: the table-health sample, daily.
     crate::jobs::spawn_table_health_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // Q16-T2: the whole audit chain verified once a week.

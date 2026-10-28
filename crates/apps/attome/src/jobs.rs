@@ -3172,6 +3172,7 @@ const DEDUP_KEY_SOCIAL_MENTIONS_SYNC: &str = "social-mentions-sync";
 const DEDUP_KEY_SOCIAL_PUBLISH: &str = "social-publish";
 /// AA10-T5: mass-operation undo values past retention (a registered job type).
 const DEDUP_KEY_HEAVY_OP_UNDO_RETENTION: &str = "heavy-op-undo-retention";
+const DEDUP_KEY_TIME_FORMULA_RECOMPUTE: &str = "time-formula-recompute";
 
 /// Z1-T8: reminds administrators of secrets older than
 /// `security.secret_max_age_days`. A registered type (Z7-T1), not an
@@ -3646,6 +3647,12 @@ pub const SOCIAL_MENTIONS_SYNC: attome_jobs::JobType =
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
     attome_jobs::JobType::new("social_reviews_sync", 1);
 
+/// A9-T3: daily, stored formulas over `today()` or `now()` recomputed.
+pub const TIME_FORMULA_RECOMPUTE: attome_jobs::JobType = attome_jobs::JobType {
+    lane: attome_jobs::Lane::Batch,
+    ..attome_jobs::JobType::new("time_formula_recompute", 1)
+};
+
 /// AA10-T5: daily, the values mass operations replaced are cleared once
 /// past `limits.heavy_op.undo_retention_days`.
 pub const HEAVY_OP_UNDO_RETENTION: attome_jobs::JobType =
@@ -3680,6 +3687,23 @@ pub fn register_job_types() {
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if cleared > 0 {
                     tracing::info!(cleared, "mass operations: undo values past retention cleared");
+                }
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            TIME_FORMULA_RECOMPUTE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let changed = attome_records::entity_mutation::recompute_time_based_formulas(
+                    &state,
+                    chrono::Utc::now(),
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if changed > 0 {
+                    tracing::info!(changed, "time-based formulas recomputed");
                 }
                 Ok(())
             },
@@ -5649,6 +5673,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == HEAVY_OP_UNDO_RETENTION.name => {
             DEDUP_KEY_HEAVY_OP_UNDO_RETENTION
         }
+        EngineJob::Registered(job) if job.name == TIME_FORMULA_RECOMPUTE.name => {
+            DEDUP_KEY_TIME_FORMULA_RECOMPUTE
+        }
         EngineJob::Registered(job) if job.name == CALENDAR_SYNC.name => DEDUP_KEY_CALENDAR_SYNC,
         EngineJob::Registered(job) if job.name == OAUTH_REFRESH.name => DEDUP_KEY_OAUTH_REFRESH,
         EngineJob::Registered(job) if job.name == NOTIFICATION_QUEUE_SWEEP.name => {
@@ -6372,6 +6399,25 @@ pub fn spawn_heavy_op_undo_retention_scheduler(db: DbPool, interval: std::time::
         job,
         DEDUP_KEY_HEAVY_OP_UNDO_RETENTION,
         "mass undo retention",
+    );
+}
+
+/// A9-T3: daily, stored formulas over the clock recomputed.
+pub fn spawn_time_formula_recompute_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(TIME_FORMULA_RECOMPUTE.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "time-based formula recompute: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_TIME_FORMULA_RECOMPUTE,
+        "time-based formula recompute",
     );
 }
 

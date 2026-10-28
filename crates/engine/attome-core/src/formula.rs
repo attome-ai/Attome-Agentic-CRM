@@ -72,6 +72,35 @@ impl FormulaMode {
     }
 }
 
+/// A9-T3: whether `expression` reads the clock (`today()` or `now()`), so a
+/// stored value goes stale as days pass and is recomputed daily. Pure; an
+/// expression that does not parse reads no clock.
+pub fn is_time_based(expression: &str) -> bool {
+    fn reads_clock(expr: &Expr) -> bool {
+        match expr {
+            Expr::Call { name, args } => {
+                matches!(name.as_str(), "today" | "now") || args.iter().any(reads_clock)
+            }
+            Expr::Unary { expr, .. } => reads_clock(expr),
+            Expr::Binary { lhs, rhs, .. } => reads_clock(lhs) || reads_clock(rhs),
+            Expr::ListLit(items) => items.iter().any(reads_clock),
+            Expr::Lambda { body, .. } => reads_clock(body),
+            _ => false,
+        }
+    }
+    attome_rules::parse(expression).is_ok_and(|expr| reads_clock(&expr))
+}
+
+/// A9-T3: whether `attr` is a stored formula whose expression reads the
+/// clock: a `read_time` one is never stale and a generated one is the
+/// database's.
+pub fn is_time_based_stored(attr: &AttrInfo) -> bool {
+    attr.is_formula()
+        && !attr.is_generated_formula()
+        && !is_read_time(attr.options.as_ref())
+        && parse_options(attr.options.as_ref()).is_ok_and(|o| is_time_based(&o.expression))
+}
+
 /// A9-T1: whether a formula field's options say `mode: read_time`.
 pub fn is_read_time(options: Option<&Value>) -> bool {
     options.and_then(|o| o.get("mode")).and_then(Value::as_str) == Some("read_time")
@@ -315,6 +344,28 @@ mod tests {
     use super::*;
     use crate::meta_registry::{DataClassification, OnTargetDelete};
     use serde_json::json;
+
+    #[test]
+    fn formula_time_based_sees_today_and_now_anywhere() {
+        for expression in [
+            "today()",
+            "date_diff(today(), due_date)",
+            "if(is_null(closed_on), date_diff(now(), opened_on), 0)",
+            "-date_diff(today(), due_date)",
+            "max(1, date_diff(today(), due_date))",
+        ] {
+            assert!(is_time_based(expression), "{expression}");
+        }
+        for expression in [
+            "amount * 2",
+            "date_diff(closed_on, opened_on)",
+            "lower(name)",
+            "today(",
+            "",
+        ] {
+            assert!(!is_time_based(expression), "{expression}");
+        }
+    }
 
     /// A9-T1: `mode` defaults to stored, reads `read_time`, and cannot be
     /// combined with a generated column.

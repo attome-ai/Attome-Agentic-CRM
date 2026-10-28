@@ -103,3 +103,20 @@ rule declares every one-hop reference and path of up to three lookups that resol
 entity's lookups (sensitive fields are never readable), and each write loads those values once, a
 null, missing or soft-deleted link reading as null.
 
+
+## Formula fields and the clock
+
+A formula field is computed in one of two ways:
+
+- **Stored**, the default: computed on every write and kept in its column.
+- **`read_time`** (A9-T1): computed whenever a record is read. Its column stays empty.
+
+A stored formula that reads the clock (`today()` or `now()`, such as
+`date_diff(today(), due_date, "days")`) goes stale as days pass. So a daily job
+(`time_formula_recompute`, A9-T3) recomputes every such formula, 500 records at a time. It
+writes only the records whose value changed, and those writes move each record's
+`row_version`, so an edit started before the run gets `409` and reloads.
+
+For a value that must be exact at every moment, use `read_time`: it never goes stale and
+the job leaves it alone. A generated formula is the database's to keep, and the job skips
+it too.

@@ -1433,6 +1433,147 @@ async fn compute_formula_values(
     Ok(out)
 }
 
+/// A9-T3: records one recompute batch reads.
+pub const TIME_FORMULA_BATCH: i64 = 500;
+
+/// A9-T3: whether a recomputed formula value differs from the stored one,
+/// numbers compared as numbers (`12` and `12.0` are the same). Pure.
+pub fn formula_value_changed(stored: Option<&Value>, computed: &Value) -> bool {
+    let stored = stored.unwrap_or(&Value::Null);
+    match (stored.as_f64(), computed.as_f64()) {
+        (Some(a), Some(b)) => (a - b).abs() > f64::EPSILON * a.abs().max(b.abs()).max(1.0),
+        _ => stored != computed,
+    }
+}
+
+/// The text a recomputed value binds as, for its column's cast; `None` is
+/// SQL NULL. Pure.
+fn formula_bind_text(value: &Value) -> Option<String> {
+    match value {
+        Value::Null => None,
+        Value::String(s) => Some(s.clone()),
+        other => Some(other.to_string()),
+    }
+}
+
+/// A9-T3: recomputes every stored formula that reads the clock (`today()`,
+/// `now()`) as of `now`, a keyset batch of [`TIME_FORMULA_BATCH`] records at
+/// a time, writing only the records whose value changed: those columns and
+/// `row_version`, in one statement per record, then dropping each record's
+/// cached version so a conditional read sees the new value. No transaction
+/// spans a batch. A record a formula cannot evaluate keeps its value and is
+/// logged. Answers how many records changed.
+pub async fn recompute_time_based_formulas(
+    state: &EngineState,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<usize, AppError> {
+    let entities: Vec<(String, Vec<AttrInfo>)> = state
+        .entities
+        .load()
+        .iter()
+        .filter(|e| {
+            e.attrs
+                .iter()
+                .any(attome_core::formula::is_time_based_stored)
+        })
+        .map(|e| (e.logicalname.clone(), e.attrs.clone()))
+        .collect();
+    let mut changed = 0usize;
+    for (entity, attrs) in entities {
+        let targets: Vec<&AttrInfo> = attrs
+            .iter()
+            .filter(|a| attome_core::formula::is_time_based_stored(a))
+            .collect();
+        let rules: Vec<(String, attome_core::RuleDef)> =
+            crate::rule_engine::formula_rules(&entity, &attrs)
+                .into_iter()
+                .filter(|(target, _)| targets.iter().any(|a| &a.logicalname == target))
+                .collect();
+        let table = quote_ident(&entity);
+        let mut after = Uuid::nil();
+        loop {
+            let rows: Vec<(Uuid, Value)> = sqlx::query_as(&format!(
+                "SELECT t.id, row_to_json(t)::jsonb FROM {table} t \
+                  WHERE t.id > $1 ORDER BY t.id LIMIT $2"
+            ))
+            .bind(after)
+            .bind(TIME_FORMULA_BATCH)
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            let Some((last, _)) = rows.last() else { break };
+            after = *last;
+            let full = rows.len() == usize::try_from(TIME_FORMULA_BATCH).unwrap_or(usize::MAX);
+            let mut touched = Vec::new();
+            for (id, row) in rows {
+                let Some(map) = row.as_object() else { continue };
+                let ctx = crate::rule_engine::context_for_record(now, &attrs, map);
+                let mut sets: Vec<(&AttrInfo, Option<String>)> = Vec::new();
+                for (target, rule) in &rules {
+                    let compiled =
+                        crate::rule_engine::get_or_compile_formula(state, &attrs, rule).await?;
+                    let value = match crate::rule_engine::evaluate_value(rule, &compiled, &ctx) {
+                        Ok(value) => value,
+                        Err(_) if crate::rule_engine::has_blank_input(rule, &ctx) => {
+                            attome_rules::Value::Null
+                        }
+                        Err(error) => {
+                            tracing::warn!(%entity, %id, field = %target, %error, "time-based formula not recomputed");
+                            continue;
+                        }
+                    };
+                    let json = crate::rule_engine::json_from_rules_value(&value);
+                    if formula_value_changed(map.get(target), &json)
+                        && let Some(attr) = targets.iter().find(|a| &a.logicalname == target)
+                    {
+                        sets.push((attr, formula_bind_text(&json)));
+                    }
+                }
+                if sets.is_empty() {
+                    continue;
+                }
+                let assignments = sets
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (attr, _))| {
+                        format!(
+                            "{} = ${}{}",
+                            quote_ident(&attr.logicalname),
+                            i + 1,
+                            attr.storage_type().sql_cast(false)
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let sql = format!(
+                    "UPDATE {table} SET {assignments}, row_version = row_version + 1 WHERE id = ${}",
+                    sets.len() + 1
+                );
+                let mut q = sqlx::query(&sql);
+                for (_, text) in &sets {
+                    q = q.bind(text.clone());
+                }
+                q.bind(id)
+                    .execute(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?;
+                touched.push(id);
+            }
+            for id in &touched {
+                crate::entity_crud::row_version_cache::forget(&entity, *id).await;
+            }
+            if !touched.is_empty() {
+                attome_core::cache_invalidation::ring_after_commit(&state.base.redis);
+                changed += touched.len();
+            }
+            if !full {
+                break;
+            }
+        }
+    }
+    Ok(changed)
+}
+
 /// A9-T1: fills each `read_time` formula field present in `rows` (a field
 /// the caller may not read, or did not select, is absent and stays absent)
 /// with its value computed now from the row's own fields. A blank input or
@@ -4909,5 +5050,88 @@ mod metadata_table_lock_tests {
             true,
             "user_account_mm_role"
         ));
+    }
+}
+
+/// A9-T3: a days-overdue formula follows the clock it is given.
+#[cfg(test)]
+mod time_formula_tests {
+    use super::*;
+    use attome_core::OnTargetDelete;
+    use serde_json::json;
+
+    fn attr(name: &str, field_type_int: i32, options: Option<Value>) -> AttrInfo {
+        AttrInfo {
+            logicalname: name.to_owned(),
+            field_type_int,
+            is_required: false,
+            max_length: None,
+            is_sensitive: false,
+            is_write_restricted: false,
+            is_sortable: false,
+            is_filterable: true,
+            lookup_entity_ref: None,
+            on_target_delete: OnTargetDelete::Orphan,
+            data_classification: Default::default(),
+            sensitivity: Default::default(),
+            sensitivity_confirmed: false,
+            options,
+        }
+    }
+
+    #[test]
+    fn formula_time_based_days_overdue_follows_a_fake_clock() {
+        let attrs = vec![
+            attr("due_date", 5, None),
+            attr(
+                "days_overdue",
+                16,
+                Some(json!({
+                    "expression": "date_diff(today(), due_date, \"days\")",
+                    "result_type": "number"
+                })),
+            ),
+            attr(
+                "doubled",
+                16,
+                Some(json!({ "expression": "1 + 1", "result_type": "number" })),
+            ),
+        ];
+        assert!(attome_core::formula::is_time_based_stored(&attrs[1]));
+        assert!(!attome_core::formula::is_time_based_stored(&attrs[2]));
+
+        let (_, rule) = crate::rule_engine::formula_rules("task", &attrs)
+            .into_iter()
+            .find(|(target, _)| target == "days_overdue")
+            .expect("the formula's rule");
+        let compiled =
+            attome_core::formula::compile_formula(&attrs, attrs[1].options.as_ref()).unwrap();
+        let row = json!({ "due_date": "2026-10-20" });
+        let on = |day: u32| {
+            let now = chrono::NaiveDate::from_ymd_opt(2026, 10, day)
+                .unwrap()
+                .and_hms_opt(9, 0, 0)
+                .unwrap()
+                .and_utc();
+            let ctx = crate::rule_engine::context_for_record(now, &attrs, row.as_object().unwrap());
+            crate::rule_engine::json_from_rules_value(
+                &crate::rule_engine::evaluate_value(&rule, &compiled, &ctx).unwrap(),
+            )
+        };
+        let (monday, tuesday) = (on(26), on(27));
+        assert!(
+            formula_value_changed(Some(&monday), &tuesday),
+            "{monday} -> {tuesday}"
+        );
+        assert_eq!(
+            (tuesday.as_f64().unwrap() - monday.as_f64().unwrap()).abs(),
+            1.0,
+            "one more day overdue a day later"
+        );
+        assert!(!formula_value_changed(Some(&json!(8)), &json!(8.0)));
+        assert!(formula_value_changed(None, &json!(1)));
+        assert!(!formula_value_changed(None, &Value::Null));
+        assert_eq!(formula_bind_text(&json!(8.5)).as_deref(), Some("8.5"));
+        assert_eq!(formula_bind_text(&Value::Null), None);
     }
 }
