@@ -169,3 +169,20 @@ so no connection is refused during a replacement: on Linux pass the descriptor n
 `ATTOME_LISTEN_FD`; on Windows pass the base64 of the `WSAPROTOCOL_INFOW` from
 `WSADuplicateSocketW` in `ATTOME_LISTEN_PROTOCOL_INFO`, or `-` and write it as the first line of
 the child's standard input. Without either variable the server binds `app.port` as usual.
+
+`attome supervise` is that supervisor:
+
+```text
+attome supervise --token-file <path> [--listen 127.0.0.1:7865] [--control-addr 127.0.0.1:7866]
+                 [--server-exe <path>] [--child-arg <arg>]...
+```
+
+It binds `--listen` once and runs `<server-exe> serve` (this binary by default) on it with
+`ATTOME_SUPERVISED=1`, which makes the server print `READY` once it serves and stop gracefully when
+its standard input closes. `POST /restart` on the control address, which must be a loopback address,
+with the header `X-Supervisor-Token` set to the token file's content (at least 16 characters),
+starts the new server (for example a newly installed binary), waits up to two minutes for its
+`READY`, and only then closes the old server's input so it drains. Both accept on the one socket
+while they overlap, so no request is refused. A new server that never becomes ready is stopped and
+the old one keeps serving; the answer is then 500. Ctrl+C or a service stop drains the server and
+ends the supervisor.

@@ -29,6 +29,9 @@ Usage:
                                 systemd unit, from the directory with config.json
   attome serve                  Run the server (flags: --print-openapi,
                                 --bootstrap-admin <email>)
+  attome supervise --token-file <path> [--listen <addr>]
+                                Run the server on a socket it keeps, with
+                                zero-downtime restarts over POST /restart
   attome worker                 Run the job worker only
   attome migrate                Apply database migrations and exit
   attome healthcheck            Exit 0 when the local server is healthy
@@ -152,6 +155,10 @@ fn main() -> ExitCode {
         ["service-run", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::service::service_run(&rest).map_err(Into::into))
+        }
+        ["supervise", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::supervise::run(&rest).map_err(Into::into))
         }
         ["serve", ..] => outcome(attome::serve::run()),
         ["worker", ..] => outcome(attome::cmd::worker::run()),

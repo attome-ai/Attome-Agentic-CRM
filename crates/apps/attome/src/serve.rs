@@ -520,6 +520,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     base_state
         .started
         .store(true, std::sync::atomic::Ordering::Relaxed);
+    // AB7-T4: a supervised server tells its supervisor it serves.
+    attome::cmd::supervise::announce_ready_when_supervised();
     tokio::spawn({
         let (db, node) = (deploy_db.clone(), deploy_node.clone());
         async move {

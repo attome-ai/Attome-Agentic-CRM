@@ -130,6 +130,10 @@ fleet-console = ["dep:attome-fleet"]
 # Z5-T8: HTTP/3 over QUIC from the built-in edge (`app.tls.http3`).
 http3 = ["dep:quinn", "dep:h3", "dep:h3-quinn", "dep:bytes"]
 
+[target.'cfg(unix)'.dependencies]
+# AB7-T4: the supervisor hands its listening socket to the server it starts.
+libc.workspace = true
+
 [target.'cfg(windows)'.dependencies]
 # AB7-T3: the inherited socket's protocol information arrives as base64.
 base64.workspace = true
