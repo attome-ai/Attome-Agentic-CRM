@@ -318,6 +318,10 @@ struct DeliveryListQuery {
 
 // ── Handlers: subscriptions ──────────────────────────────────────────────────
 
+/// List event subscriptions
+///
+/// The webhook and audit subscriptions that are not deleted, newest first, one-based pages,
+/// optionally only one kind or only active ones. Integration administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/events/subscriptions",
@@ -392,6 +396,12 @@ async fn list_subscriptions(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Create an event subscription
+///
+/// A webhook or audit subscription: which entities, operations and named events it matches, the
+/// target URL (http or https, screened against private addresses now and at every send), retry class,
+/// payload shape and owner. The signing secret is generated here and returned once, in the plain and
+/// the Standard Webhooks form; it is stored encrypted. Integration administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/events/subscriptions",
@@ -537,11 +547,14 @@ async fn create_subscription(
     ))
 }
 
+/// Get an event subscription
+///
+/// One subscription's settings and filters, without its secret. Integration administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/events/subscriptions/{id}",
     tag = "admin-events",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The subscription")),
     responses(
         (status = 200, description = "Success", body = SubscriptionDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -561,11 +574,16 @@ async fn get_subscription(
     Ok(Json(detail))
 }
 
+/// Change an event subscription
+///
+/// Changes the fields given (name, active, filters, target URL, retry class, attempts, payload
+/// shape, target authentication) when `row_version` is the stored one; a stale version is 409.
+/// Integration administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/events/subscriptions/{id}",
     tag = "admin-events",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The subscription")),
     request_body = UpdateSubscriptionBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -728,11 +746,15 @@ async fn update_subscription(
     get_subscription(State(state), ctx, Path(id)).await
 }
 
+/// Rotate a subscription's signing secret
+///
+/// Generates a new signing secret, stores it encrypted and returns it once; deliveries are signed
+/// with it from now on. Integration administrators only. Audited as a credential rotation.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/events/subscriptions/{id}/secret/rotate",
     tag = "admin-events",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The subscription")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Credential, AuditOperation::Rotate)])))),
     responses(
         (status = 200, description = "Success", body = SecretRotatedResponse),
@@ -793,11 +815,15 @@ async fn rotate_secret(
     }))
 }
 
+/// Delete an event subscription
+///
+/// Marks the subscription deleted and inactive, so it matches nothing more; its delivery log stays.
+/// Integration administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/events/subscriptions/{id}",
     tag = "admin-events",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The subscription")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::SoftDelete)])))),
     responses(
         (status = 200, description = "Success", body = serde_json::Value),
@@ -845,12 +871,16 @@ async fn delete_subscription(
 
 // ── Handlers: deliveries ─────────────────────────────────────────────────────
 
+/// List a subscription's deliveries
+///
+/// The delivery log of one subscription, newest first, one-based pages, optionally only one status:
+/// attempts, the last error and HTTP status, and when it was delivered. Integration administrators only.
 #[utoipa::path(
     get,
     operation_id = "list_event_deliveries",
     path = "/api/v1/admin/events/subscriptions/{id}/deliveries",
     tag = "admin-events",
-    params(("id" = Uuid, Path), DeliveryListQuery),
+    params(("id" = Uuid, Path, description = "The subscription"), DeliveryListQuery),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<DeliveryListItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -980,13 +1010,14 @@ struct QueuedDeliveries {
     queued: i64,
 }
 
+/// Send a test delivery
 #[utoipa::path(
     post,
     path = "/api/v1/admin/events/subscriptions/{id}/test",
     tag = "admin-events",
     operation_id = "event_subscription_send_test",
     description = "Queues one test delivery to the subscription's target (M13-T4): entity `attome_test`, operation `test`, signed like every delivery. Its outcome shows in the delivery log.",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The subscription")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Execute)])))),
     responses(
         (status = 202, description = "The test delivery is queued", body = QueuedDeliveries),
@@ -1052,13 +1083,14 @@ struct ReplayBody {
     from: DateTime<Utc>,
 }
 
+/// Replay a subscription's deliveries
 #[utoipa::path(
     post,
     path = "/api/v1/admin/events/subscriptions/{id}/replay",
     tag = "admin-events",
     operation_id = "event_subscription_replay",
     description = "Sends again every delivery the subscription matched since `from` (M13-T4): delivered, failed and dead-lettered ones go back to pending with their attempts reset, at most 10,000. Each keeps its event id, so a receiver that deduplicates on `webhook-id` sees a retry, not a new event.",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The subscription")),
     request_body = ReplayBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Execute)])))),
     responses(
