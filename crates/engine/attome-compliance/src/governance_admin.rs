@@ -133,7 +133,10 @@ async fn fetch_domain(
     .map_err(AppError::internal)
 }
 
-/// `GET /api/v1/admin/governance/domains` — `system.admin` only.
+/// List data domains
+///
+/// The data domains of the accountability register, with each one's steward and deputy, one-based
+/// pages. Compliance administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/domains",
@@ -187,7 +190,10 @@ struct CreateDomainBody {
     deputy_ref: Option<Uuid>,
 }
 
-/// `POST /api/v1/admin/governance/domains` — `system.admin` only.
+/// Create a data domain
+///
+/// A named data domain with an optional description, steward and deputy (each an active user).
+/// Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/governance/domains",
@@ -260,12 +266,15 @@ async fn create_domain(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
-/// `GET /api/v1/admin/governance/domains/{id}` — `system.admin` only.
+/// Get a data domain
+///
+/// One domain: its name, description, steward, deputy and `row_version`. Compliance administrators
+/// only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/domains/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The domain")),
     responses(
         (status = 200, description = "Success", body = DataDomainSummary),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -303,12 +312,16 @@ struct UpdateDomainBody {
     row_version: i64,
 }
 
-/// `PATCH /api/v1/admin/governance/domains/{id}` — `system.admin` only.
+/// Change a data domain
+///
+/// Changes the fields given (name, description, steward, deputy) when `row_version` is the stored
+/// one; an empty description clears it, and a steward or deputy can be replaced but not cleared.
+/// Compliance administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/governance/domains/{id}",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The domain")),
     request_body = UpdateDomainBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -435,18 +448,16 @@ struct AssignEntitiesBody {
     entity_logicalnames: Vec<String>,
 }
 
-/// `POST /api/v1/admin/governance/domains/{id}/entities` — `system.admin`
-/// only. Assigns every named entity's `domain_ref` to this domain
-/// (re-assigning it away from any prior domain it belonged to — an entity
-/// has at most one domain). Every name is validated against the live
-/// metadata registry first (never interpolated from unvalidated input,
-/// guidelines §4); the whole call is rejected if any name is unknown, rather
-/// than partially applying.
+/// Assign entities to a data domain
+///
+/// Moves every named entity into this domain, out of any domain it was in (an entity has at most
+/// one). Every name is checked against the live metadata first, and one unknown name refuses the
+/// whole call. Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/governance/domains/{id}/entities",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The domain")),
     request_body = AssignEntitiesBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Grant)])))),
     responses(
@@ -502,16 +513,15 @@ async fn assign_entities(
     Ok(Json(domain_entities(&state.base.db, id).await?))
 }
 
-/// `DELETE /api/v1/admin/governance/domains/{id}/entities/{entity_logicalname}`
-/// — `system.admin` only. Clears the entity's `domain_ref` back to
-/// unassigned, but only if it currently belongs to exactly this domain (a
-/// stale unassign against the wrong domain id is a no-op `404`, not a
-/// silent success against whichever domain the entity actually has).
+/// Remove an entity from a data domain
+///
+/// Leaves the entity in no domain, but only if it is in this one; against another domain the call is
+/// 404 and changes nothing. Compliance administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/governance/domains/{id}/entities/{entity_logicalname}",
     tag = "admin",
-    params(("id" = Uuid, Path), ("entity_logicalname" = String, Path)),
+    params(("id" = Uuid, Path, description = "The domain"), ("entity_logicalname" = String, Path, description = "The entity's logical name")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "Success"),
@@ -870,12 +880,15 @@ type DsrCandidateRow = (
     String,
 );
 
-/// `GET /api/v1/admin/governance/domains/{id}/report` — `system.admin` only.
+/// Read a data domain's accountability report
+///
+/// The domain's steward and deputy, its entities and their data classification, the legal holds on
+/// them and the data subject requests that touched them. Compliance administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/domains/{id}/report",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The domain")),
     responses(
         (status = 200, description = "Success", body = DomainReport),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

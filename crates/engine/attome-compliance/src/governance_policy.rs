@@ -171,13 +171,16 @@ fn check_role(role: &str) -> Result<(), AppError> {
     }
 }
 
-/// Lists a domain's governance roles.
+/// List a domain's governance roles
+///
+/// Who holds which governance role in the domain (owner, steward, deputy, custodian, consumer). Anyone
+/// holding a role in the domain, or `system.admin`.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/domains/{id}/roles",
     operation_id = "governance_list_roles",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The domain")),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<GovernanceRole>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -214,7 +217,7 @@ async fn list_roles(
     path = "/api/v1/admin/governance/domains/{id}/roles",
     operation_id = "governance_put_role",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The domain")),
     request_body = GovernanceRole,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -268,13 +271,16 @@ async fn put_role(
     Ok(Json(body))
 }
 
-/// Takes a governance role away.
+/// Take a governance role away
+///
+/// The person named in the query no longer holds that role in the domain. The domain's owner or
+/// steward, or `system.admin`. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/governance/domains/{id}/roles",
     operation_id = "governance_delete_role",
     tag = "admin",
-    params(("id" = Uuid, Path), RoleQuery),
+    params(("id" = Uuid, Path, description = "The domain"), RoleQuery),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "The role is no longer held"),
@@ -340,7 +346,7 @@ pub struct GovernedChange {
     path = "/api/v1/admin/governance/domains/{id}/governed-change",
     tag = "admin",
     operation_id = "governance_put_governed_change",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The domain")),
     request_body = GovernedChange,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -665,13 +671,16 @@ pub async fn create(
     load_policy(state, id).await
 }
 
-/// Reads a governance policy.
+/// Get a governance policy
+///
+/// One policy: its English and Arabic name and text, its version and its enforcement links. Anyone
+/// holding a role in its domain, or `system.admin`; anyone else gets 404.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/policies/{id}",
     operation_id = "governance_get_policy",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The policy")),
     responses(
         (status = 200, description = "Success", body = GovernancePolicy),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -696,7 +705,7 @@ async fn get_policy(
     path = "/api/v1/admin/governance/policies/{id}",
     operation_id = "governance_update_policy",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The policy")),
     request_body = UpdatePolicyBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
@@ -781,7 +790,7 @@ async fn update_policy(
     path = "/api/v1/admin/governance/policies/{id}",
     operation_id = "governance_delete_policy",
     tag = "admin",
-    params(("id" = Uuid, Path), RowVersionQuery),
+    params(("id" = Uuid, Path, description = "The policy"), RowVersionQuery),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "Removed"),
@@ -898,7 +907,7 @@ pub fn exception_plan(approvers: &[Uuid]) -> attome_approval::ApprovalPlan {
     path = "/api/v1/admin/governance/policies/{id}/exceptions",
     operation_id = "governance_request_exception",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The policy")),
     request_body = ExceptionBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Submitted)])))),
     responses(
@@ -1011,13 +1020,16 @@ async fn load_exception(state: &EngineState, id: Uuid) -> Result<PolicyException
         .ok_or(AppError::NotFound)
 }
 
-/// Lists a policy's exceptions.
+/// List a policy's exceptions
+///
+/// The exceptions asked for on the policy, with their status (requested, approved, rejected,
+/// expired) and who asked. Anyone holding a role in its domain, or `system.admin`.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/policies/{id}/exceptions",
     operation_id = "governance_list_exceptions",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The policy")),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<PolicyException>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1295,7 +1307,11 @@ async fn certify(
     Ok(Json(row))
 }
 
-/// Reads an asset's certification, `stale` when its definition changed.
+/// Get an asset's certification
+///
+/// Who certified the asset and when, and `stale` when its definition (an entity's columns and
+/// active attributes) has changed since. Anyone holding a role in the asset's domain, or
+/// `system.admin`.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/certifications",
