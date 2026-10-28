@@ -36,6 +36,10 @@ fn event(
     SecurityEvent::new(category, operation, actor, entity, record)
 }
 
+/// Create a web portal
+///
+/// A portal with its URL keyword, type, owning team (the staff team that owns what its users create)
+/// and MFA policy. User administrators only. Audited.
 #[utoipa::path(
     post,
     operation_id = "portal_admin_create_portal",
@@ -183,6 +187,10 @@ async fn put_auth_policy(
     Ok(Json(saved))
 }
 
+/// Change a web portal's settings
+///
+/// Changes the keyword, type, on or off, owning team (`null` clears it) or MFA policy given, when
+/// `row_version` is the stored one. User administrators only. Audited.
 #[utoipa::path(
     patch,
     operation_id = "portal_admin_update_portal_settings",
@@ -224,6 +232,10 @@ async fn update_portal_settings(
     Ok(Json(portal))
 }
 
+/// Add a portal user
+///
+/// A portal user with a name and an email or username (at least one), in `invited` status with no
+/// password; the password is set when the invitation is accepted. User administrators only. Audited.
 #[utoipa::path(
     post,
     operation_id = "portal_admin_create_user",
@@ -295,6 +307,10 @@ async fn set_enabled(
     Ok(Json(user))
 }
 
+/// Disable a portal user
+///
+/// The user cannot sign in, and every session they hold ends at once. User administrators only.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/webportals/{id}/users/{user_id}/disable",
@@ -321,6 +337,10 @@ async fn disable_user(
     set_enabled(&state, ctx.user_id, id, user_id, false).await
 }
 
+/// Enable a portal user
+///
+/// Returns the user to `active` when a password is set, otherwise to `invited`. User administrators
+/// only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/webportals/{id}/users/{user_id}/enable",
@@ -347,6 +367,10 @@ async fn enable_user(
     set_enabled(&state, ctx.user_id, id, user_id, true).await
 }
 
+/// Remove a portal user
+///
+/// Deletes the user's credentials, ending every session, and marks the profile deleted and disabled;
+/// a restored profile has no credential and cannot sign in. User administrators only. Audited.
 #[utoipa::path(
     delete,
     operation_id = "portal_admin_delete_user",
@@ -399,6 +423,10 @@ impl std::fmt::Debug for InvitationSent {
     }
 }
 
+/// Invite a portal user
+///
+/// Emails the user an invitation link to set a password, the token and the email queued in one
+/// transaction; refused when email is switched off. User administrators only. Audited.
 #[utoipa::path(
     post,
     operation_id = "portal_admin_invite_user",
@@ -546,6 +574,9 @@ impl std::fmt::Debug for EntityConfig {
     }
 }
 
+/// Create a portal role
+///
+/// A named role of the portal, with no grants yet. Role administrators only. Audited.
 #[utoipa::path(
     post,
     operation_id = "portal_admin_create_role",
@@ -588,6 +619,11 @@ async fn create_role(
     Ok((StatusCode::CREATED, Json(role)))
 }
 
+/// Grant a portal role access to an entity
+///
+/// Sets what the role may do on the entity (read, create, update, delete), on which records (one to
+/// three conditions, ANDed, such as `account_ref` equal to `@portal_user.account_ref`) and on which
+/// fields (read, write, filter). Replaces any grant it had there. Role administrators only. Audited.
 #[utoipa::path(
     put,
     operation_id = "portal_admin_put_grant",
@@ -647,6 +683,9 @@ async fn put_grant(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Remove a portal role's grant on an entity
+///
+/// The role's users may do nothing more on that entity. Role administrators only. Audited.
 #[utoipa::path(
     delete,
     operation_id = "portal_admin_delete_grant",
@@ -689,6 +728,9 @@ async fn delete_grant(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Give a portal user a role
+///
+/// Sets the user's role in the portal. Role administrators only. Audited.
 #[utoipa::path(
     put,
     operation_id = "portal_admin_assign_role",
@@ -731,6 +773,10 @@ async fn assign_role(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Set a portal's entity settings
+///
+/// Sets, or clears with `null`, the lookup field on the entity that a portal create fills with the
+/// portal user. Role administrators only. Audited.
 #[utoipa::path(
     put,
     operation_id = "portal_admin_put_entity_config",
@@ -785,6 +831,10 @@ async fn put_entity_config(
 
 // ── Reads, role lifecycle and erasure (plan §9.5 G-8, G-14) ──────────────────
 
+/// List web portals
+///
+/// Every web portal with its keyword, type, whether it is on, its owning team and MFA policy,
+/// one-based pages. User administrators only.
 #[utoipa::path(
     get,
     operation_id = "portal_admin_list_portals",
@@ -820,6 +870,9 @@ async fn list_portals(
     }))
 }
 
+/// Get a web portal
+///
+/// One portal's settings and `row_version`. User administrators only.
 #[utoipa::path(
     get,
     operation_id = "portal_admin_get_portal",
@@ -843,6 +896,10 @@ async fn get_portal(
     Ok(Json(provision::load_portal(&mut conn, id).await?))
 }
 
+/// List a portal's users
+///
+/// The portal's users with their name, email or username and status, one-based pages. User
+/// administrators only.
 #[utoipa::path(
     get,
     operation_id = "portal_admin_list_users",
@@ -880,6 +937,9 @@ async fn list_users(
     }))
 }
 
+/// List a portal's roles
+///
+/// The portal's roles with how many users hold each. Role administrators only.
 #[utoipa::path(
     get,
     operation_id = "portal_admin_list_roles",
@@ -911,6 +971,9 @@ async fn list_roles(
     }))
 }
 
+/// Get a portal role
+///
+/// One role with how many users hold it and its entity grants. Role administrators only.
 #[utoipa::path(
     get,
     operation_id = "portal_admin_get_role",
@@ -937,6 +1000,9 @@ async fn get_role(
     Ok(Json(crate::roles::get_role(&mut conn, id, role_id).await?))
 }
 
+/// Rename a portal role
+///
+/// Role administrators only. Audited.
 #[utoipa::path(
     patch,
     operation_id = "portal_admin_rename_role",
@@ -982,6 +1048,9 @@ async fn rename_role(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Delete a portal role
+///
+/// Removes the role and its grants. Role administrators only. Audited.
 #[utoipa::path(
     delete,
     operation_id = "portal_admin_delete_role",
@@ -1024,6 +1093,10 @@ async fn delete_role(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Take a portal user's role away
+///
+/// The user keeps their account but holds no role, and so none of its grants. Role administrators
+/// only. Audited.
 #[utoipa::path(
     delete,
     operation_id = "portal_admin_unassign_role",
@@ -1065,6 +1138,10 @@ async fn unassign_role(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// List a portal's entity settings
+///
+/// Per entity, the lookup field to the portal user that a portal create fills in. Role
+/// administrators only.
 #[utoipa::path(
     get,
     operation_id = "portal_admin_list_entity_configs",
@@ -1096,6 +1173,10 @@ async fn list_entity_configs(
     }))
 }
 
+/// List a portal's erasure requests
+///
+/// The erasure requests of the portal's users, with their status, one-based pages. Compliance
+/// administrators only.
 #[utoipa::path(
     get,
     operation_id = "portal_admin_list_erasure_requests",
@@ -1145,6 +1226,12 @@ impl std::fmt::Debug for ErasureDone {
     }
 }
 
+/// Erase a portal user
+///
+/// Scrubs the user's personal fields in place, keeping the id so their records and audit rows still
+/// resolve (to "Erased user"), and removes every credential, session, token, role and pending
+/// signup; consent records stay as evidence. The open erasure request is completed, or one is
+/// recorded. Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     operation_id = "portal_admin_erase_user",
@@ -1188,6 +1275,10 @@ async fn erase_user(
     Ok(Json(ErasureDone { erasure_request_id }))
 }
 
+/// Export a portal user's data
+///
+/// Records a data subject access request for the user and fulfils it, so the export stays in the
+/// request list as evidence. Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     operation_id = "portal_admin_export_user",
@@ -1206,10 +1297,10 @@ async fn erase_user(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// G-14: a portal user's data export. Not a second exporter: it records a DSR
-/// `access` request and fulfils it through `attome-compliance`
-/// (`record_and_fulfill_access`), which writes the `Security`/`Export` event
-/// and keeps the request in the DSR list as evidence.
+// G-14: a portal user's data export. Not a second exporter: it records a DSR
+// `access` request and fulfils it through `attome-compliance`
+// (`record_and_fulfill_access`), which writes the `Security`/`Export` event
+// and keeps the request in the DSR list as evidence.
 async fn export_user(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<area::Compliance>>,
@@ -1237,6 +1328,10 @@ async fn export_user(
     Ok(Json(result))
 }
 
+/// Reject an erasure request
+///
+/// Closes an open erasure request without erasing, for example under a legal hold; the account is
+/// untouched. Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     operation_id = "portal_admin_reject_erasure_request",
