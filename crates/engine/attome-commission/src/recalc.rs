@@ -172,6 +172,10 @@ pub struct CommissionRecalcApplied {
     pub previews_applied: u64,
 }
 
+/// Apply a commission recalculation
+///
+/// Applies the pending recalculation preview of an open period, so participants are paid what the
+/// rules now give. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/commission/periods/{id}/recalc/apply",

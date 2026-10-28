@@ -250,6 +250,9 @@ pub struct CommissionDisputeCreated {
     pub dispute_id: Uuid,
 }
 
+/// Dispute a statement line
+///
+/// A seller disputes one of their own statement lines, with a reason. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/commission/disputes",
@@ -332,6 +335,10 @@ pub struct CommissionDisputeDecisionBody {
     pub comment: String,
 }
 
+/// Decide a commission dispute
+///
+/// A reviewer (sales ops, or a manager for their team) accepts, rejects or settles the dispute with an
+/// adjustment. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/commission/disputes/{id}/decision",
@@ -465,6 +472,10 @@ pub struct CommissionAdjustmentBody {
     pub reason: String,
 }
 
+/// Add a commission adjustment
+///
+/// A manual adjustment with a reason; one above `commission.adjustment_approval_amount` waits for
+/// approval. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/commission/adjustments",

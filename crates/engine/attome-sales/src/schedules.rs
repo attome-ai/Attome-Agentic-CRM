@@ -188,6 +188,11 @@ pub struct SalesSchedule {
     pub rows: Vec<ScheduleRow>,
 }
 
+/// Set a deal line's schedule
+///
+/// Replaces the line's revenue or quantity schedule: spread evenly over months, by a percentage
+/// pattern (totalling 100), or row by row (totalling the line). Rounding goes to the last row, so the
+/// schedule always adds up to its line. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/opportunity-lines/{line_id}/schedule",

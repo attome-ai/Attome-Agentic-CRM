@@ -295,6 +295,9 @@ fn row_from_json(row: &serde_json::Value) -> Option<RawRow> {
     ))
 }
 
+/// Read my commission statement
+///
+/// The caller's own statement lines, adjustments and clawbacks for a period.
 #[utoipa::path(
     get,
     path = "/api/v1/commission/statements/me",
@@ -321,6 +324,10 @@ pub(crate) async fn commission_get_my_statement(
     ))
 }
 
+/// List commission statements
+///
+/// A period's statement lines, adjustments and clawbacks, newest run first, filtered by the caller's
+/// commission role: a seller their own, a manager their team's, sales ops everyone's.
 #[utoipa::path(
     get,
     path = "/api/v1/commission/statements",
@@ -394,6 +401,10 @@ pub fn estimate_amounts(
 
 type ParticipantRow = (Uuid, Uuid);
 
+/// Estimate a commission
+///
+/// What one of the caller's own open opportunities would pay them under their published plan in the
+/// current open period, computed in memory; nothing is written.
 #[utoipa::path(
     post,
     path = "/api/v1/commission/estimate",

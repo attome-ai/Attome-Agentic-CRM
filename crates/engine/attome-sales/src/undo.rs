@@ -101,6 +101,11 @@ pub struct SalesUndone {
 
 type SnapshotRow = (Uuid, Value, Value, Uuid, bool, bool);
 
+/// Undo a bulk line change
+///
+/// Puts a deal's lines back as they were before a deal discount or quote sync and reprices the deal:
+/// once, by its author, within the undo window, and only while nothing has touched the lines since.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/undo/{snapshot_id}",

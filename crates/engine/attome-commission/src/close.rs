@@ -78,6 +78,11 @@ pub struct CommissionPeriodSubmitted {
     pub approval_request_id: Uuid,
 }
 
+/// Submit a commission period for close
+///
+/// Sales ops submit the period; finance approves it through an approval request, which locks it and
+/// approves its payouts, or sends it back with a comment. Needs the period's `If-Match` row version.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/commission/periods/{id}/submit",

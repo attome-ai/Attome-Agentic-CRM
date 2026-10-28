@@ -215,6 +215,10 @@ pub async fn decide_mention(
     })
 }
 
+/// Confirm a competitor mention
+///
+/// Puts the competitor on the deal as suspected unless it is there already, and marks the mention
+/// confirmed. Needs update rights on the deal and the mention's `If-Match` row version. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/competitor-mentions/{id}/confirm",
@@ -246,6 +250,10 @@ pub(crate) async fn post_sales_mention_confirm(
     ))
 }
 
+/// Reject a competitor mention
+///
+/// Marks the proposed mention rejected. Needs update rights on the deal and the mention's `If-Match`
+/// row version. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/competitor-mentions/{id}/reject",
@@ -467,6 +475,10 @@ pub async fn head_to_head(
     })
 }
 
+/// Read a competitor's head-to-head record
+///
+/// The competitor's record against us on the deals the caller may read: outcomes, the mentions and the
+/// review reasons.
 #[utoipa::path(
     get,
     path = "/api/v1/sales/competitors/{id}/head-to-head",
@@ -488,6 +500,9 @@ pub(crate) async fn get_sales_head_to_head(
     Ok(Json(head_to_head(&state, &ctx, competitor).await?))
 }
 
+/// Get a competitor's battle card
+///
+/// The competitor with the knowledge article holding its battle card, when one is set.
 #[utoipa::path(
     get,
     path = "/api/v1/sales/competitors/{id}/card",

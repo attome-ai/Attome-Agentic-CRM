@@ -301,6 +301,11 @@ pub async fn apply(state: &EngineState, user: Uuid) -> Result<u64, AppError> {
     Ok(moved)
 }
 
+/// Preview a territory realignment
+///
+/// Which accounts would move to which territory under the enabled rules (the first rule by priority
+/// whose condition holds); a condition that does not resolve never moves an account, and links made
+/// by hand are never touched. Writes nothing.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/territories/realign/preview",
@@ -324,6 +329,9 @@ pub(crate) async fn post_preview(
     Ok(axum::Json(preview(&state, &ctx).await?))
 }
 
+/// Realign territories
+///
+/// Moves accounts to the territory the rules give them, as the preview shows.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/territories/realign",

@@ -90,6 +90,11 @@ pub struct SalesCallOutcomeSaved {
 
 type MemberRow = (Option<Uuid>, Option<String>, Option<i64>, Option<i64>);
 
+/// Save a call outcome
+///
+/// Records a call attempt on a member the caller claimed: a final outcome (connected, wrong number, not
+/// interested) ends it, anything else puts it back after the list's retry wait, and the list's outcome
+/// rules run after commit. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/call-list-members/{id}/outcome",

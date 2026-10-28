@@ -71,6 +71,10 @@ pub fn like_pattern(q: &str) -> String {
     format!("%{escaped}%")
 }
 
+/// Pick products from a price list
+///
+/// The products on the price list a line can use on a date, with list price and quantity breaks,
+/// searched by name or SKU; only products the caller may read.
 #[utoipa::path(
     get,
     path = "/api/v1/sales/price-lists/{id}/products",

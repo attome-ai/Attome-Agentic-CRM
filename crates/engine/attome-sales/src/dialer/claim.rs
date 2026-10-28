@@ -338,6 +338,11 @@ impl attome_server::authz::PrivilegeKey for CallListCall {
     const KEY: &'static str = "call_list.call";
 }
 
+/// Claim the next call
+///
+/// Takes the list's next pending member for the caller, so two callers never get the same one; a
+/// member marked do-not-call, or without sales-call consent where that is required, is skipped.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/call-lists/{id}/claim",

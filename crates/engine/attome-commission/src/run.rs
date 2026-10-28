@@ -483,6 +483,10 @@ pub struct CommissionRunStarted {
     pub run_id: Uuid,
 }
 
+/// Run commissions for a period
+///
+/// Starts a calculation run of the plan version for the period: participants in batches, each in its
+/// own transaction, resuming where it stopped. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/commission/periods/{id}/runs",

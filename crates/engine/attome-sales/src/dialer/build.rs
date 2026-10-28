@@ -302,6 +302,10 @@ pub async fn build_list(
     Ok(stats)
 }
 
+/// Fill a call list
+///
+/// Adds members as the caller sees them: from the list's saved view, from the caller's phone calls due
+/// today, or from records named by hand, each checked for read access. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/call-lists/{id}/build",

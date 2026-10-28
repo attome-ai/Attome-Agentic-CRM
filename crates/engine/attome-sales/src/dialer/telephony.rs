@@ -335,6 +335,10 @@ pub async fn drop_voicemail_for_list(
     attome_db::tx::commit(tx).await
 }
 
+/// Dial a call list member
+///
+/// Starts the call through the phone system: the agent's own phone rings, then the customer's, with the
+/// caller id chosen for the customer's country, and the call is logged on the record. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/call-lists/{id}/dial",
@@ -366,6 +370,9 @@ pub(crate) async fn post_dial(
     ))
 }
 
+/// Drop a voicemail
+///
+/// Plays a recorded voicemail into the current call, on a call list that allows it. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/call-lists/{id}/voicemail",

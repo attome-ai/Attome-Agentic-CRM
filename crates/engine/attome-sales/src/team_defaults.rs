@@ -296,6 +296,9 @@ async fn deals_to_change(db: &attome_db::DbPool, owner: Uuid) -> Result<Vec<Uuid
     .map_err(AppError::internal)
 }
 
+/// Preview applying my default team
+///
+/// The caller's own open deals that their default deal team would change, and how.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/default-team/preview",
@@ -326,6 +329,9 @@ pub struct SalesDefaultTeamApply {
     pub queued: bool,
 }
 
+/// Apply my default team to my deals
+///
+/// Queues a job that adds the missing default team members to the caller's open deals, in batches.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/default-team/apply",

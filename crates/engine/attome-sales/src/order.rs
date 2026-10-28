@@ -671,6 +671,10 @@ fn request_line(
     })
 }
 
+/// Order an accepted quote
+///
+/// A draft sales order with the quote's account, currency, payment terms, totals and one line per quote
+/// line. A quote orders once. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/quotes/{id}/order",
@@ -728,6 +732,9 @@ pub(crate) async fn post_sales_opportunity_order(
     ))
 }
 
+/// Confirm a sales order
+///
+/// Confirms a draft order. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/sales/orders/{id}/confirm",

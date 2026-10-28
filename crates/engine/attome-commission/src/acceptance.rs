@@ -67,6 +67,11 @@ pub struct AcceptanceRequested {
     pub render_ids: Vec<Uuid>,
 }
 
+/// Send a plan for signature
+///
+/// For each participant of the latest published version who has not accepted it, renders the plan
+/// document from a template and sends it for electronic signature; a participant is paid only once
+/// signed. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/commission/plans/{id}/send-for-acceptance",

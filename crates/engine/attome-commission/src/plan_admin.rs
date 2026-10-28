@@ -57,6 +57,11 @@ pub struct CommissionPlanPublished {
     pub components: usize,
 }
 
+/// Publish a compensation plan
+///
+/// Compiles the plan's draft version, every component, and publishes it with the hash of what was
+/// compiled; overlapping or unreadable rate tables are refused with the component and reason.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/commission/plans/{id}/publish",
