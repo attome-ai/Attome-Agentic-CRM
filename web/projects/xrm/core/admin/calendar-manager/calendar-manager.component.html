@@ -1,121 +1,361 @@
 <section class="page">
   <header>
     <div>
-      <h1>Calendar Manager</h1>
-      <p>Business calendars — timezone, working days/hours, holidays, and one-off exceptions — for SLA due dates and schedules.</p>
+      <h1>{{ 'calendarManager.title' | translate }}</h1>
+      <p>{{ 'calendarManager.subtitle' | translate }}</p>
     </div>
-    <button class="primary" (click)="startCreate()"><i class="las la-plus"></i> New calendar</button>
+    <div class="header-actions">
+      <button class="ghost" data-open-packs (click)="openPacks()"><i class="las la-flag"></i> {{ 'calendarManager.packs' | translate }}</button>
+      <button class="primary" (click)="startCreate()"><i class="las la-plus"></i> {{ 'calendarManager.newCalendar' | translate }}</button>
+    </div>
   </header>
 
-  @if (message()) { <div class="notice">{{ message() }}</div> }
-  @if (error()) { <div class="notice error">{{ error() }}</div> }
+  @if (message()) { <div class="notice" role="status">{{ message() }}</div> }
+  @if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
+
+  @if (packsOpen()) {
+    <section class="packs" aria-labelledby="packs-title">
+      <div class="packs-head">
+        <h2 id="packs-title">{{ 'calendarManager.packsTitle' | translate }}</h2>
+        <button class="ghost small" (click)="packsOpen.set(false)" [attr.aria-label]="'calendarManager.close' | translate"><i class="las la-times"></i></button>
+      </div>
+      <p class="hint">{{ 'calendarManager.packsHint' | translate }}</p>
+      @for (pack of packs(); track pack.code) {
+        <div class="pack-row" [attr.data-pack]="pack.code">
+          <div class="pack-copy">
+            <strong>{{ nameOf(pack) }}</strong>
+            <small>{{ pack.country_code }} · {{ pack.tz }} · {{ 'calendarManager.reviewedFor' | translate: { year: pack.reviewed_for_year } }}</small>
+            <small>{{ pack.holidays.join(' · ') }}</small>
+            <a [href]="pack.source_url" target="_blank" rel="noopener noreferrer">{{ 'calendarManager.source' | translate }}</a>
+          </div>
+          <button class="primary" [disabled]="saving()" (click)="applyPack(pack)">{{ 'calendarManager.apply' | translate }}</button>
+        </div>
+      } @empty {
+        <p class="hint">{{ 'calendarManager.noPacks' | translate }}</p>
+      }
+    </section>
+  }
 
   <div class="workspace">
     <div class="list-panel">
       <div class="toolbar">
-        <input [(ngModel)]="search" placeholder="Filter calendars…" autocomplete="off">
-        <span>{{ filtered().length }} calendars</span>
+        <input [(ngModel)]="search" [placeholder]="'calendarManager.filter' | translate" autocomplete="off">
+        <span>{{ 'calendarManager.count' | translate: { count: filtered().length } }}</span>
       </div>
       @if (loading()) {
-        <div class="empty">Loading calendars…</div>
+        <div class="empty">{{ 'calendarManager.loading' | translate }}</div>
       } @else {
         @for (item of filtered(); track item.id) {
           <button class="item" [class.selected]="selectedId() === item.id" (click)="select(item)">
             <span class="item-icon"><i class="las la-calendar-alt"></i></span>
             <span class="item-copy">
-              <strong>{{ item.name }}</strong>
-              <small>{{ item.tz }} · {{ item.working_days.length }} working days</small>
+              <strong>{{ nameOf(item) }}</strong>
+              <small>{{ item.tz }} · {{ 'calendarManager.workingDayCount' | translate: { count: item.working_days.length } }}</small>
             </span>
             <xrm-owner-layer-badge [layer]="item.owner_layer" />
-            @if (item.is_default) { <span class="tag">Default</span> }
+            @if (item.is_default) { <span class="tag">{{ 'calendarManager.default' | translate }}</span> }
           </button>
         } @empty {
-          <div class="empty">No calendars match.</div>
+          <div class="empty">{{ 'calendarManager.noMatch' | translate }}</div>
         }
       }
     </div>
 
     <div class="editor">
       @if (editing()) {
-        <h2>{{ creating() ? 'New calendar' : 'Edit calendar' }}</h2>
-        <div class="grid">
-          <label>Name<input [(ngModel)]="draft.name" maxlength="120"></label>
-          <label>Timezone (IANA)<input [(ngModel)]="draft.tz" placeholder="e.g. Asia/Dubai"></label>
-          <label class="wide">Description<input [(ngModel)]="draft.description" placeholder="Optional"></label>
-          <label>Working hours start<input type="time" [(ngModel)]="draft.startClock"></label>
-          <label>Working hours end<input type="time" [(ngModel)]="draft.endClock"></label>
-          <label class="switch"><input type="checkbox" [(ngModel)]="draft.is_default"> Default calendar</label>
-        </div>
-
-        <div class="weekdays">
-          <h3>Working days</h3>
-          <div class="days">
-            @for (day of weekdays; track day.key) {
-              <label class="day" [class.active]="hasWorkingDay(day.key)">
-                <input type="checkbox" [checked]="hasWorkingDay(day.key)" (change)="toggleWorkingDay(day.key)">
-                {{ day.label }}
-              </label>
-            }
-          </div>
-          <p class="hint">One start/end time applies to every selected day. A richer per-day schedule (a lunch break, a shorter Friday) can be authored via the API or a bundle; editing here simplifies it back to one range per day.</p>
-        </div>
-
-        <div class="actions">
-          <button class="primary" [disabled]="saving() || !draft.name.trim() || !draft.tz.trim()" (click)="save()">
-            {{ saving() ? 'Saving…' : 'Save changes' }}
-          </button>
-          @if (!creating()) {
-            <button class="danger" [disabled]="saving()" (click)="deactivate()">Deactivate calendar</button>
-          }
-          <button class="ghost" (click)="cancel()">Cancel</button>
-        </div>
-
+        <h2>{{ (creating() ? 'calendarManager.newCalendar' : 'calendarManager.editCalendar') | translate }}</h2>
         @if (!creating()) {
-          <div class="holidays">
-            <h3>Holidays</h3>
-            <div class="holiday-add">
-              <input [(ngModel)]="newHolidayName" placeholder="Holiday name" maxlength="120">
-              <input type="date" [(ngModel)]="newHolidayDate">
-              <button class="ghost" [disabled]="!newHolidayName.trim() || !newHolidayDate" (click)="addHoliday()">Add</button>
-            </div>
-            @for (holiday of holidays(); track holiday.id) {
-              <div class="holiday-row">
-                <span>{{ holiday.holiday_date }}</span>
-                <strong>{{ holiday.name }}</strong>
-                <button class="ghost small" (click)="removeHoliday(holiday)"><i class="las la-trash"></i></button>
-              </div>
-            } @empty {
-              <p class="hint">No holidays configured for this calendar.</p>
+          <nav class="tabs" role="tablist">
+            @for (tabKey of tabs; track tabKey) {
+              <button role="tab" class="tab" [class.active]="tab() === tabKey" [attr.aria-selected]="tab() === tabKey"
+                [attr.data-tab]="tabKey" (click)="setTab(tabKey)">{{ ('calendarManager.tab.' + tabKey) | translate }}</button>
             }
+          </nav>
+        }
+
+        @if (tab() === 'details' || creating()) {
+          <div class="grid">
+            <label>{{ 'calendarManager.name' | translate }}<input [(ngModel)]="draft.name" maxlength="120"></label>
+            <label>{{ 'calendarManager.nameAr' | translate }}<input [(ngModel)]="draft.name_ar" maxlength="120" dir="rtl"></label>
+            <label>{{ 'calendarManager.timezone' | translate }}<input [(ngModel)]="draft.tz" [placeholder]="'calendarManager.timezonePlaceholder' | translate" dir="ltr"></label>
+            <label>{{ 'calendarManager.parent' | translate }}
+              <select [(ngModel)]="draft.parent_calendar_id">
+                <option value="">{{ 'calendarManager.noParent' | translate }}</option>
+                @for (c of parentChoices(); track c.id) { <option [value]="c.id">{{ nameOf(c) }}</option> }
+              </select>
+            </label>
+            <label class="wide">{{ 'calendarManager.description' | translate }}<input [(ngModel)]="draft.description"></label>
+            <label>{{ 'calendarManager.hoursStart' | translate }}<input type="time" [(ngModel)]="draft.startClock"></label>
+            <label>{{ 'calendarManager.hoursEnd' | translate }}<input type="time" [(ngModel)]="draft.endClock"></label>
+            <label class="switch"><input type="checkbox" [(ngModel)]="draft.is_default"> {{ 'calendarManager.defaultCalendar' | translate }}</label>
+          </div>
+          @if (draft.parent_calendar_id) { <p class="hint">{{ 'calendarManager.parentHint' | translate }}</p> }
+
+          <div class="weekdays">
+            <h3>{{ 'calendarManager.workingDays' | translate }}</h3>
+            <div class="days">
+              @for (day of weekdays; track day) {
+                <label class="day" [class.active]="hasWorkingDay(day)">
+                  <input type="checkbox" [checked]="hasWorkingDay(day)" (change)="toggleWorkingDay(day)">
+                  {{ ('calendarManager.weekday.' + day) | translate }}
+                </label>
+              }
+            </div>
+            <p class="hint">{{ 'calendarManager.hoursHint' | translate }}</p>
           </div>
 
-          <div class="holidays">
-            <h3>Exceptions</h3>
-            <p class="hint">A date whose hours differ from its weekday: a half day, a one-off working Saturday, or an unplanned closure. A date cannot be both a holiday and an exception.</p>
-            <div class="holiday-add exception-add">
-              <input [(ngModel)]="newExceptionName" placeholder="Reason" maxlength="120">
-              <input type="date" [(ngModel)]="newExceptionDate">
-              <label class="switch"><input type="checkbox" [(ngModel)]="newExceptionClosed"> Closed all day</label>
-              @if (!newExceptionClosed) {
-                <input type="time" [(ngModel)]="newExceptionStart" aria-label="Exception start">
-                <input type="time" [(ngModel)]="newExceptionEnd" aria-label="Exception end">
-              }
-              <button class="ghost" [disabled]="!newExceptionName.trim() || !newExceptionDate" (click)="addException()">Add</button>
-            </div>
-            @for (exception of exceptions(); track exception.id) {
-              <div class="holiday-row">
-                <span>{{ exception.exception_date }}</span>
-                <strong>{{ exception.name }}</strong>
-                <span>{{ describeRanges(exception) }}</span>
-                <button class="ghost small" (click)="removeException(exception)" aria-label="Remove exception"><i class="las la-trash"></i></button>
-              </div>
-            } @empty {
-              <p class="hint">No exceptions configured for this calendar.</p>
+          <div class="actions">
+            <button class="primary" [disabled]="saving() || !draft.name.trim() || !draft.tz.trim()" (click)="save()">
+              {{ (saving() ? 'calendarManager.saving' : 'calendarManager.save') | translate }}
+            </button>
+            @if (!creating()) {
+              <button class="danger" [disabled]="saving()" (click)="deactivate()">{{ 'calendarManager.deactivate' | translate }}</button>
             }
+            <button class="ghost" (click)="cancel()">{{ 'calendarManager.cancel' | translate }}</button>
           </div>
         }
+
+        @if (!creating()) {
+          @switch (tab()) {
+            @case ('dates') {
+              <div class="block">
+                <h3>{{ 'calendarManager.holidays' | translate }}</h3>
+                <div class="row-add">
+                  <input [(ngModel)]="newHolidayName" [placeholder]="'calendarManager.holidayName' | translate" maxlength="120">
+                  <input type="date" [(ngModel)]="newHolidayDate">
+                  <button class="ghost" [disabled]="!newHolidayName.trim() || !newHolidayDate" (click)="addHoliday()">{{ 'calendarManager.add' | translate }}</button>
+                </div>
+                @for (holiday of holidays(); track holiday.id) {
+                  <div class="row">
+                    <span>{{ holiday.holiday_date | localDate: { dateStyle: 'medium', timeZone: 'UTC' } }}</span>
+                    <strong>{{ holiday.name }}</strong>
+                    <button class="ghost small" (click)="removeHoliday(holiday)" [attr.aria-label]="'calendarManager.remove' | translate"><i class="las la-trash"></i></button>
+                  </div>
+                } @empty {
+                  <p class="hint">{{ 'calendarManager.noHolidays' | translate }}</p>
+                }
+              </div>
+
+              <div class="block">
+                <h3>{{ 'calendarManager.exceptions' | translate }}</h3>
+                <p class="hint">{{ 'calendarManager.exceptionsHint' | translate }}</p>
+                <div class="row-add wrap">
+                  <input [(ngModel)]="newExceptionName" [placeholder]="'calendarManager.reason' | translate" maxlength="120">
+                  <input type="date" [(ngModel)]="newExceptionDate">
+                  <label class="switch"><input type="checkbox" [(ngModel)]="newExceptionClosed"> {{ 'calendarManager.closedAllDay' | translate }}</label>
+                  @if (!newExceptionClosed) {
+                    <input type="time" [(ngModel)]="newExceptionStart" [attr.aria-label]="'calendarManager.from' | translate">
+                    <input type="time" [(ngModel)]="newExceptionEnd" [attr.aria-label]="'calendarManager.to' | translate">
+                  }
+                  <button class="ghost" [disabled]="!newExceptionName.trim() || !newExceptionDate" (click)="addException()">{{ 'calendarManager.add' | translate }}</button>
+                </div>
+                @for (exception of exceptions(); track exception.id) {
+                  <div class="row">
+                    <span>{{ exception.exception_date | localDate: { dateStyle: 'medium', timeZone: 'UTC' } }}</span>
+                    <strong>{{ exception.name }}</strong>
+                    <span>{{ describeRanges(exception) }}</span>
+                    <button class="ghost small" (click)="removeException(exception)" [attr.aria-label]="'calendarManager.remove' | translate"><i class="las la-trash"></i></button>
+                  </div>
+                } @empty {
+                  <p class="hint">{{ 'calendarManager.noExceptions' | translate }}</p>
+                }
+              </div>
+            }
+
+            @case ('rules') {
+              <div class="block">
+                <h3>{{ 'calendarManager.rules' | translate }}</h3>
+                <p class="hint">{{ 'calendarManager.rulesHint' | translate }}</p>
+                <div class="grid">
+                  <label>{{ 'calendarManager.name' | translate }}<input [(ngModel)]="ruleDraft.name" maxlength="120"></label>
+                  <label>{{ 'calendarManager.nameAr' | translate }}<input [(ngModel)]="ruleDraft.name_ar" maxlength="120" dir="rtl"></label>
+                  <label>{{ 'calendarManager.ruleKind' | translate }}
+                    <select [(ngModel)]="ruleDraft.kind" data-rule-kind>
+                      @for (k of ruleKinds; track k) { <option [value]="k">{{ ('calendarManager.kind.' + k) | translate }}</option> }
+                    </select>
+                  </label>
+                  <label>{{ 'calendarManager.spanDaysLabel' | translate }}<input type="number" min="1" max="15" [(ngModel)]="ruleDraft.span_days"></label>
+                  @if (ruleDraft.kind === 'one_off') {
+                    <label>{{ 'calendarManager.date' | translate }}<input type="date" [(ngModel)]="ruleDraft.date"></label>
+                  } @else {
+                    <label>{{ (ruleDraft.kind === 'hijri' ? 'calendarManager.hijriMonth' : 'calendarManager.month') | translate }}<input type="number" min="1" max="12" [(ngModel)]="ruleDraft.month"></label>
+                    @if (ruleDraft.kind === 'nth_weekday') {
+                      <label>{{ 'calendarManager.weekdayLabel' | translate }}
+                        <select [(ngModel)]="ruleDraft.weekday">
+                          @for (day of weekdays; track day) { <option [value]="day">{{ ('calendarManager.weekday.' + day) | translate }}</option> }
+                        </select>
+                      </label>
+                      <label>{{ 'calendarManager.nth' | translate }}<input type="number" min="-1" max="5" [(ngModel)]="ruleDraft.n"></label>
+                    } @else {
+                      <label>{{ 'calendarManager.day' | translate }}<input type="number" min="1" max="31" [(ngModel)]="ruleDraft.day"></label>
+                    }
+                  }
+                  @if (ruleDraft.kind === 'hijri') {
+                    <label class="switch"><input type="checkbox" [(ngModel)]="ruleDraft.needs_sighting"> {{ 'calendarManager.needsSighting' | translate }}</label>
+                  }
+                </div>
+                <div class="actions">
+                  <button class="primary" [disabled]="saving() || !ruleDraft.name.trim()" (click)="addRule()">{{ 'calendarManager.addRule' | translate }}</button>
+                </div>
+                @for (rule of rules(); track rule.id) {
+                  <div class="row">
+                    <strong>{{ nameOf(rule) }}</strong>
+                    <span>{{ describeRule(rule) }}</span>
+                    @if (rule.needs_sighting) { <span class="tag">{{ 'calendarManager.needsSighting' | translate }}</span> }
+                    <button class="ghost small" (click)="removeRule(rule)" [attr.aria-label]="'calendarManager.remove' | translate"><i class="las la-trash"></i></button>
+                  </div>
+                } @empty {
+                  <p class="hint">{{ 'calendarManager.noRules' | translate }}</p>
+                }
+              </div>
+
+              @if (expanded(); as x) {
+                <div class="block" data-expanded>
+                  <h3>{{ 'calendarManager.expandedTitle' | translate: { from: x.from_year, to: x.from_year + x.years - 1 } }}</h3>
+                  <table class="dates">
+                    <thead>
+                      <tr>
+                        <th scope="col">{{ 'calendarManager.rule' | translate }}</th>
+                        <th scope="col">{{ 'calendarManager.gregorian' | translate }}</th>
+                        <th scope="col">{{ 'calendarManager.hijri' | translate }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (r of x.rules; track r.rule_id) {
+                        @if (r.error) {
+                          <tr><th scope="row">{{ nameOf(r) }}</th><td colspan="2" class="error-text">{{ r.error }}</td></tr>
+                        }
+                        @for (d of r.days; track d.date) {
+                          <tr [attr.data-day]="d.date">
+                            <th scope="row">{{ nameOf(r) }}</th>
+                            <td>{{ d.date | localDate: { dateStyle: 'medium', timeZone: 'UTC' } }}</td>
+                            <td data-hijri>{{ d.hijri ?? '—' }}</td>
+                          </tr>
+                        }
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            }
+
+            @case ('seasons') {
+              <div class="block">
+                <h3>{{ 'calendarManager.seasons' | translate }}</h3>
+                <p class="hint">{{ 'calendarManager.seasonsHint' | translate }}</p>
+                <div class="grid">
+                  <label>{{ 'calendarManager.name' | translate }}<input [(ngModel)]="seasonDraft.name" maxlength="120"></label>
+                  <label>{{ 'calendarManager.nameAr' | translate }}<input [(ngModel)]="seasonDraft.name_ar" maxlength="120" dir="rtl"></label>
+                  <label>{{ 'calendarManager.startsHijri' | translate }}
+                    <span class="pair">
+                      <input type="number" min="1" max="30" [(ngModel)]="seasonDraft.startDay" [attr.aria-label]="'calendarManager.day' | translate">
+                      <input type="number" min="1" max="12" [(ngModel)]="seasonDraft.startMonth" [attr.aria-label]="'calendarManager.hijriMonth' | translate">
+                    </span>
+                  </label>
+                  <label>{{ 'calendarManager.endsHijri' | translate }}
+                    <span class="pair">
+                      <input type="number" min="1" max="30" [(ngModel)]="seasonDraft.endDay" [attr.aria-label]="'calendarManager.day' | translate">
+                      <input type="number" min="1" max="12" [(ngModel)]="seasonDraft.endMonth" [attr.aria-label]="'calendarManager.hijriMonth' | translate">
+                    </span>
+                  </label>
+                </div>
+                <div class="season-days">
+                  @for (day of weekdays; track day) {
+                    <div class="season-day">
+                      <label class="switch"><input type="checkbox" [(ngModel)]="seasonDraft.days[day].on"> {{ ('calendarManager.weekday.' + day) | translate }}</label>
+                      @if (seasonDraft.days[day].on) {
+                        <input type="time" [(ngModel)]="seasonDraft.days[day].start" [attr.aria-label]="'calendarManager.from' | translate">
+                        <input type="time" [(ngModel)]="seasonDraft.days[day].end" [attr.aria-label]="'calendarManager.to' | translate">
+                      }
+                    </div>
+                  }
+                </div>
+                <div class="actions">
+                  <button class="primary" [disabled]="saving() || !seasonDraft.name.trim()" (click)="addSeason()">{{ 'calendarManager.addSeason' | translate }}</button>
+                </div>
+                @for (season of seasons(); track season.id) {
+                  <div class="row">
+                    <strong>{{ nameOf(season) }}</strong>
+                    <button class="ghost small" (click)="removeSeason(season)" [attr.aria-label]="'calendarManager.remove' | translate"><i class="las la-trash"></i></button>
+                  </div>
+                } @empty {
+                  <p class="hint">{{ 'calendarManager.noSeasons' | translate }}</p>
+                }
+              </div>
+            }
+
+            @case ('sightings') {
+              <div class="block">
+                <h3>{{ 'calendarManager.sightings' | translate }}</h3>
+                <p class="hint">{{ 'calendarManager.sightingsHint' | translate }}</p>
+                @for (row of calendarSightings(); track sightingKey(row)) {
+                  <div class="row sighting" [attr.data-sighting]="sightingKey(row)">
+                    <strong>{{ row.rule_name }}</strong>
+                    <span>{{ 'calendarManager.expected' | translate }}: {{ row.expected_start | localDate: { dateStyle: 'medium', timeZone: 'UTC' } }}</span>
+                    @if (row.confirmed_start) {
+                      <span class="tag">{{ 'calendarManager.confirmedOn' | translate }}: {{ row.confirmed_start | localDate: { dateStyle: 'medium', timeZone: 'UTC' } }}</span>
+                    }
+                    <input type="date" [(ngModel)]="sightingDates[sightingKey(row)]" [attr.aria-label]="'calendarManager.moveTo' | translate">
+                    <button class="primary" data-confirm-sighting [disabled]="confirming().has(sightingKey(row)) || sightingUnchanged(row)" (click)="confirmSighting(row)">
+                      {{ ((sightingDates[sightingKey(row)] || row.expected_start) === row.expected_start ? 'calendarManager.confirm' : 'calendarManager.move') | translate }}
+                    </button>
+                  </div>
+                } @empty {
+                  <p class="hint">{{ 'calendarManager.noSightings' | translate }}</p>
+                }
+              </div>
+            }
+
+            @case ('feeds') {
+              <div class="block">
+                <h3>{{ 'calendarManager.feeds' | translate }}</h3>
+                <p class="hint">{{ 'calendarManager.feedsHint' | translate }}</p>
+                <div class="row-add wrap">
+                  <input [(ngModel)]="newFeedUrl" [placeholder]="'calendarManager.feedUrlPlaceholder' | translate" type="url" dir="ltr" [attr.aria-label]="'calendarManager.feedUrl' | translate">
+                  <label class="switch"><input type="checkbox" [(ngModel)]="newFeedEnabled"> {{ 'calendarManager.enabled' | translate }}</label>
+                  <button class="ghost" [disabled]="!newFeedUrl.trim()" (click)="addFeed()">{{ 'calendarManager.add' | translate }}</button>
+                </div>
+                @for (feed of feeds(); track feed.id) {
+                  <div class="row">
+                    <strong dir="ltr">{{ feed.url }}</strong>
+                    <span>{{ (feed.enabled ? 'calendarManager.enabled' : 'calendarManager.disabled') | translate }}</span>
+                    @if (feed.last_fetched_at) { <span>{{ feed.last_fetched_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</span> }
+                    @if (feed.last_error) { <span class="error-text">{{ feed.last_error }}</span> }
+                    <button class="ghost small" (click)="removeFeed(feed)" [attr.aria-label]="'calendarManager.remove' | translate"><i class="las la-trash"></i></button>
+                  </div>
+                } @empty {
+                  <p class="hint">{{ 'calendarManager.noFeeds' | translate }}</p>
+                }
+              </div>
+            }
+
+            @case ('assignments') {
+              <div class="block">
+                <h3>{{ 'calendarManager.assignments' | translate }}</h3>
+                <p class="hint">{{ 'calendarManager.assignmentsHint' | translate }}</p>
+                <div class="row-add wrap">
+                  <select [(ngModel)]="subjectType" [attr.aria-label]="'calendarManager.subjectType' | translate">
+                    <option value="user">{{ 'calendarManager.user' | translate }}</option>
+                    <option value="team">{{ 'calendarManager.team' | translate }}</option>
+                  </select>
+                  <input [(ngModel)]="subjectId" [placeholder]="'calendarManager.subjectId' | translate" dir="ltr">
+                  <button class="ghost" [disabled]="!subjectId.trim()" (click)="findAssignment()">{{ 'calendarManager.find' | translate }}</button>
+                </div>
+                <div class="row-add wrap">
+                  <select [(ngModel)]="assignCalendarId" [attr.aria-label]="'calendarManager.calendar' | translate">
+                    @for (c of calendars(); track c.id) { <option [value]="c.id">{{ nameOf(c) }}</option> }
+                  </select>
+                  <button class="primary" [disabled]="!subjectId.trim() || !assignCalendarId" (click)="saveAssignment()">{{ 'calendarManager.assign' | translate }}</button>
+                  @if (assignment()) {
+                    <button class="danger" (click)="clearAssignment()">{{ 'calendarManager.unassign' | translate }}</button>
+                  }
+                </div>
+              </div>
+            }
+          }
+        }
       } @else {
-        <div class="empty editor-empty"><i class="las la-calendar-alt"></i><p>Select a calendar to edit, or create a new one.</p></div>
+        <div class="empty editor-empty"><i class="las la-calendar-alt"></i><p>{{ 'calendarManager.selectHint' | translate }}</p></div>
       }
     </div>
   </div>

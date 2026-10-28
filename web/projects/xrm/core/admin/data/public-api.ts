@@ -23,6 +23,9 @@ export type {
   CalendarAdminItem, CalendarMutation, CalendarTimeRange,
   CalendarHoliday, CalendarHolidayMutation,
   CalendarException, CalendarExceptionMutation,
+  CalendarFull, CalendarRule, CalendarRuleBody, CalendarSeason, CalendarSeasonBody,
+  CalendarSighting, CalendarSightingBody, CalendarPack, CalendarPackApplied,
+  CalendarFeed, CalendarFeedBody, CalendarAssignment, CalendarExpandedRules,
   MetadataLabel, MetadataLabelMutation,
   RelationshipDef, CreateRelationshipBody, UpdateRelationshipBody,
 } from './services/admin.service';

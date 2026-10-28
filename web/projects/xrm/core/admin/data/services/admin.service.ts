@@ -102,6 +102,10 @@ export interface CalendarTimeRange {
 export interface CalendarAdminItem {
   id:            string;
   name:          string;
+  /** Z12-T13: the Arabic name, the calendar it inherits from, and its country. */
+  name_ar?:      string | null;
+  parent_calendar_id?: string | null;
+  country_code?: string | null;
   description:   string | null;
   tz:            string;
   working_days:  string[];
@@ -114,12 +118,30 @@ export interface CalendarAdminItem {
 
 export interface CalendarMutation {
   name:          string;
+  name_ar?:      string | null;
+  parent_calendar_id?: string | null;
   description?:  string | null;
   tz:            string;
   working_days:  string[];
   hours:         Record<string, CalendarTimeRange[]>;
   is_default:    boolean;
 }
+
+// Z12-T13 — rules, seasons, sightings, packs, feeds and assignments, typed
+// from the generated wire schemas.
+export type CalendarFull = ApiComponents['schemas']['CalendarFull'];
+export type CalendarRule = ApiComponents['schemas']['RuleDetail'];
+export type CalendarRuleBody = ApiComponents['schemas']['HolidayRuleDef'];
+export type CalendarSeason = ApiComponents['schemas']['SeasonDetail'];
+export type CalendarSeasonBody = ApiComponents['schemas']['SeasonDef'];
+export type CalendarSighting = ApiComponents['schemas']['SightingRow'];
+export type CalendarSightingBody = ApiComponents['schemas']['SightingBody'];
+export type CalendarPack = ApiComponents['schemas']['PackSummary'];
+export type CalendarPackApplied = ApiComponents['schemas']['AppliedPack'];
+export type CalendarFeed = ApiComponents['schemas']['CalendarFeed'];
+export type CalendarFeedBody = ApiComponents['schemas']['CalendarFeedBody'];
+export type CalendarAssignment = ApiComponents['schemas']['AssignmentRow'];
+export type CalendarExpandedRules = ApiComponents['schemas']['ExpandedRules'];
 
 export interface CalendarHoliday {
   id:            string;
@@ -277,6 +299,85 @@ export class AdminService {
 
   deleteException(calendarId: string, exceptionId: string): Observable<void> {
     return this.api.delete(`/api/v1/admin/calendars/${calendarId}/exceptions/${exceptionId}`);
+  }
+
+  // ── Calendar rules, seasons, sightings, packs, feeds (Z12-T6..T8, T13) ───
+
+  getCalendar(id: string): Observable<CalendarFull> {
+    return this.api.get<CalendarFull>(`/api/v1/admin/calendars/${id}`);
+  }
+
+  createRule(calendarId: string, body: CalendarRuleBody): Observable<CalendarRule> {
+    return this.api.post<CalendarRule>(`/api/v1/admin/calendars/${calendarId}/holiday-rules`, body);
+  }
+
+  deleteRule(calendarId: string, ruleId: string): Observable<void> {
+    return this.api.delete(`/api/v1/admin/calendars/${calendarId}/holiday-rules/${ruleId}`);
+  }
+
+  /** Each rule's days, Gregorian and Hijri, for `years` from `fromYear`. */
+  expandedRules(calendarId: string, fromYear?: number, years = 2): Observable<CalendarExpandedRules> {
+    const params: Record<string, string> = { years: String(years) };
+    if (fromYear !== undefined) params['from_year'] = String(fromYear);
+    return this.api.get<CalendarExpandedRules>(
+      `/api/v1/admin/calendars/${calendarId}/holiday-rules/expanded`, params);
+  }
+
+  createSeason(calendarId: string, body: CalendarSeasonBody): Observable<CalendarSeason> {
+    return this.api.post<CalendarSeason>(`/api/v1/admin/calendars/${calendarId}/seasons`, body);
+  }
+
+  deleteSeason(calendarId: string, seasonId: string): Observable<void> {
+    return this.api.delete(`/api/v1/admin/calendars/${calendarId}/seasons/${seasonId}`);
+  }
+
+  /** Every sighted holiday expected to start in the Gregorian `year`. */
+  listSightings(year: number): Observable<CalendarSighting[]> {
+    return this.api.get<CalendarSighting[]>('/api/v1/calendar-sightings', { year: String(year) });
+  }
+
+  confirmSighting(body: CalendarSightingBody): Observable<unknown> {
+    return this.api.post<unknown>('/api/v1/calendar-sightings', body);
+  }
+
+  listPacks(): Observable<CalendarPack[]> {
+    return this.api.get<CalendarPack[]>('/api/v1/admin/calendars/packs');
+  }
+
+  applyPack(code: string): Observable<CalendarPackApplied> {
+    return this.api.post<CalendarPackApplied>(
+      `/api/v1/admin/calendars/packs/${encodeURIComponent(code)}/apply`, {});
+  }
+
+  listFeeds(calendarId: string): Observable<CalendarFeed[]> {
+    return this.api.getAllPages<CalendarFeed>('/api/v1/calendar-feeds', { calendar_id: calendarId });
+  }
+
+  createFeed(body: CalendarFeedBody): Observable<CalendarFeed> {
+    return this.api.post<CalendarFeed>('/api/v1/calendar-feeds', body);
+  }
+
+  deleteFeed(id: string): Observable<void> {
+    return this.api.delete(`/api/v1/calendar-feeds/${id}`);
+  }
+
+  getAssignment(subjectType: 'user' | 'team', subjectId: string): Observable<CalendarAssignment> {
+    return this.api.get<CalendarAssignment>(
+      `/api/v1/calendar-assignments/${subjectType}/${encodeURIComponent(subjectId)}`);
+  }
+
+  putAssignment(
+    subjectType: 'user' | 'team', subjectId: string, calendarId: string, rowVersion?: number | null,
+  ): Observable<CalendarAssignment> {
+    return this.api.put<CalendarAssignment>(
+      `/api/v1/calendar-assignments/${subjectType}/${encodeURIComponent(subjectId)}`,
+      { calendar_id: calendarId, row_version: rowVersion ?? null },
+    );
+  }
+
+  deleteAssignment(subjectType: 'user' | 'team', subjectId: string): Observable<void> {
+    return this.api.delete(
+      `/api/v1/calendar-assignments/${subjectType}/${encodeURIComponent(subjectId)}`);
   }
 
   // ── Metadata labels (M05 Phase 1, D-426) ─────────────────────────────────

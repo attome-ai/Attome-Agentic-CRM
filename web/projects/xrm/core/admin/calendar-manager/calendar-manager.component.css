@@ -35,12 +35,30 @@ input,select { box-sizing:border-box; width:100%; background:#0b1528; color:#e2e
 .day.active { border-color:#14b8a6; color:#99f6e4; background:#0f766e1a; }
 .day input { width:auto; }
 .actions { display:flex; gap:9px; margin-top:22px; }
-.holidays { margin-top:24px; padding-top:20px; border-top:1px solid #24324d; }
-.holiday-add { display:flex; gap:9px; margin:10px 0; }
-.exception-add { flex-wrap:wrap; align-items:center; }
-.holiday-row { display:flex; align-items:center; gap:12px; padding:8px 10px; border-bottom:1px solid #1e2b43; }
-.holiday-row span { color:#8291aa; font-size:13px; min-width:100px; }
-.holiday-row strong { flex:1; }
+.block { margin-block-start:24px; padding-block-start:20px; border-block-start:1px solid var(--color-border, #24324d); }
+.row-add { display:flex; gap:9px; margin-block:10px; }
+.row-add.wrap { flex-wrap:wrap; align-items:center; }
+.row-add > input, .row-add > select { flex:1 1 160px; }
+.row { display:flex; align-items:center; gap:12px; padding-block:8px; padding-inline:10px; border-block-end:1px solid var(--color-border, #1e2b43); flex-wrap:wrap; }
+.row span { color:var(--color-text-secondary, #8291aa); font-size:13px; min-inline-size:100px; }
+.row strong { flex:1; }
+.row input[type=date] { inline-size:auto; }
+.header-actions { display:flex; gap:9px; }
+.tabs { display:flex; gap:4px; flex-wrap:wrap; margin-block-end:18px; border-block-end:1px solid var(--color-border, #24324d); }
+.tab { background:transparent; border:0; border-block-end:2px solid transparent; color:var(--color-text-secondary, #94a3b8); padding-block:8px; padding-inline:12px; }
+.tab.active { color:var(--color-text-primary, #e2e8f0); border-block-end-color:var(--color-accent, #14b8a6); }
+.packs { background:var(--color-bg-alt, #101b31); border:1px solid var(--color-border, #24324d); border-radius:12px; padding-block:16px; padding-inline:18px; margin-block-end:18px; }
+.packs-head { display:flex; align-items:center; justify-content:space-between; }
+.pack-row { display:flex; align-items:center; gap:14px; padding-block:12px; border-block-end:1px solid var(--color-border, #1e2b43); }
+.pack-copy { flex:1; display:flex; flex-direction:column; gap:3px; }
+.pack-copy small { color:var(--color-text-secondary, #8291aa); }
+.dates { inline-size:100%; border-collapse:collapse; margin-block-start:8px; }
+.dates th, .dates td { text-align:start; padding-block:6px; padding-inline:8px; border-block-end:1px solid var(--color-border, #1e2b43); font-size:13px; }
+.error-text { color:var(--color-danger, #fca5a5); }
+.pair { display:flex; gap:6px; }
+.season-days { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:8px; margin-block-start:12px; }
+.season-day { display:flex; gap:6px; align-items:center; }
+.season-day input[type=time] { inline-size:auto; }
 .empty { padding:35px; text-align:center; color:#94a3b8; }
 .editor-empty { height:450px; display:flex; flex-direction:column; justify-content:center; align-items:center; }
 .editor-empty i { font-size:42px; margin-bottom:10px; }
