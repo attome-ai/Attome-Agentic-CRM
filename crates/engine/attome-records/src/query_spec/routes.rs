@@ -344,6 +344,18 @@ pub async fn execute_spec(
     ctx: &SecurityContext,
     spec: QuerySpec,
 ) -> Result<RunResponse, AppError> {
+    execute_spec_on(state, ctx, spec, attome_security::field_gate::Surface::Bulk).await
+}
+
+/// [`execute_spec`] with fields gated on `surface`: S4-T12's record list
+/// (`GET /api/v1/{entity}`) runs on `Interactive`, so its masked fields read
+/// masked as they always have.
+pub async fn execute_spec_on(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    spec: QuerySpec,
+    surface: attome_security::field_gate::Surface,
+) -> Result<RunResponse, AppError> {
     let levels: HashMap<Uuid, AccessLevel> = if ctx.is_admin {
         HashMap::new()
     } else {
@@ -378,6 +390,7 @@ pub async fn execute_spec(
                 tz,
                 fiscal_start_month: 1,
             },
+            surface,
         };
         if spec.aggregates.is_empty() && spec.group_by.is_empty() && spec.having.is_none() {
             Plan::Rows(compile::compile(&spec, &env)?)

@@ -425,6 +425,7 @@ mod tests {
             ctx,
             access,
             clock,
+            surface: attome_security::field_gate::Surface::Bulk,
         };
         let spec: QuerySpec = serde_json::from_value(doc).expect("spec");
         compile(&spec, &env)

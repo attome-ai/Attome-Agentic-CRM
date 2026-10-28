@@ -147,3 +147,49 @@ fn get_list_cursor_pages_without_overlap() {
         assert!(pages >= 3);
     });
 }
+
+// feature: S4
+#[test]
+fn list_and_query_run_return_identical_rows() {
+    // S4-T12: the list compiles through QuerySpec, so the same select,
+    // filter and sort through query/run answer the same rows.
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let entity = fixture(&app).await;
+        let (status, listed) = get(
+            &app,
+            &format!(
+                "/api/v1/{entity}?select=title,amount&filter%5Bamount%5D%5Bgte%5D=30&sort=-amount"
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{listed}");
+        let (status, ran) = app
+            .request(
+                Method::POST,
+                "/api/v1/query/run",
+                Some(json!({ "spec": {
+                    "entity": entity,
+                    "select": ["title", "amount"],
+                    "where": {"kind": "compare", "field": "amount", "op": "gte", "value": 30},
+                    "sort": [{"field": "amount", "desc": true}],
+                    "page_size": 50
+                }})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{ran}");
+        assert_eq!(items(&listed).len(), 5, "{listed}");
+        assert_eq!(items(&listed), items(&ran), "list {listed}\nrun {ran}");
+
+        // With no select the list still answers every attribute and the
+        // system columns, as before the switch.
+        let (status, page) = get(&app, &format!("/api/v1/{entity}")).await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        let first = &items(&page)[0];
+        for column in ["id", "title", "amount", "created_at", "row_version"] {
+            assert!(first.get(column).is_some(), "{column} missing: {first}");
+        }
+    });
+}

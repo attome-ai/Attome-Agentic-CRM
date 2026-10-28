@@ -109,6 +109,9 @@ pub struct Env<'a> {
     pub ctx: &'a SecurityContext,
     pub access: &'a Access,
     pub clock: Clock,
+    /// S4-T12: the surface fields are gated on (D-589): `Bulk` for a query,
+    /// `Interactive` for the record list, whose masked fields read masked.
+    pub surface: Surface,
 }
 
 impl std::fmt::Debug for Env<'_> {
@@ -293,13 +296,37 @@ impl<'a> Builder<'a> {
             &entity.logicalname,
             attr,
             entity.primary_name_attribute.as_deref(),
-            Surface::Bulk,
+            self.env.surface,
         )
         .then_some(attr)
     }
 
-    /// A field of `entity` itself, through the field gate (D-589: a query is
-    /// a bulk surface). A field the gate refuses is reported as unknown, so
+    /// S4-T12: the masked expression of a root field `ctx` may see only
+    /// masked, on the interactive surface; `None` anywhere else. Only a
+    /// selected column reads it: a masked field is not filtered or sorted on.
+    fn masked_field(&self, scope: &Scope<'a>, name: &str) -> Option<String> {
+        if self.env.surface != Surface::Interactive || scope.depth > 0 {
+            return None;
+        }
+        let entity = scope.entity;
+        let attr = entity.attrs.iter().find(|a| a.logicalname == name)?;
+        match field_gate::projection(
+            self.env.ctx,
+            &entity.logicalname,
+            attr,
+            entity.primary_name_attribute.as_deref(),
+            Surface::Interactive,
+        ) {
+            attome_core::field_mask::ColumnAccess::Masked(format) => {
+                Some(format.sql(&format!("{}.{}", scope.alias, quote_ident(name))))
+            }
+            _ => None,
+        }
+    }
+
+    /// A field of `entity` itself, through the field gate on the env's
+    /// surface (D-589: a query is a bulk surface, the record list an
+    /// interactive one). A field the gate refuses is reported as unknown, so
     /// its existence is not disclosed either.
     fn own_field(&self, entity: &'a EntityMeta, alias: &str, name: &str) -> Option<Col> {
         let expr = format!("{alias}.{}", quote_ident(name));
@@ -867,8 +894,13 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<Compiled, AppError> {
         }
     };
     for name in &spec.select {
-        let col = b.resolve(&scope, name)?;
-        add(name, &col.expr);
+        match b.resolve(&scope, name) {
+            Ok(col) => add(name, &col.expr),
+            Err(unknown) => match b.masked_field(&scope, name) {
+                Some(expr) => add(name, &expr),
+                None => return Err(unknown),
+            },
+        }
     }
     if spec.select.is_empty()
         && let Some(primary) = root.primary_name_attribute.as_deref()
@@ -1202,6 +1234,7 @@ pub(super) mod fixtures {
             ctx,
             access,
             clock: clock(),
+            surface: attome_security::field_gate::Surface::Bulk,
         };
         let spec: QuerySpec = serde_json::from_value(doc).expect("spec");
         compile(&spec, &env)
@@ -1270,6 +1303,7 @@ mod tests {
             ctx,
             access: &access,
             clock: clock(),
+            surface: attome_security::field_gate::Surface::Bulk,
         };
         let spec: QuerySpec = serde_json::from_value(doc).expect("spec");
         compile(&spec, &env)

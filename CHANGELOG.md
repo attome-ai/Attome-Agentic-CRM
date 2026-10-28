@@ -21,6 +21,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Changed
+- `GET /api/v1/{entity}` now runs through the same query engine as `POST /api/v1/query/run`
+  (S4-T12): the same select, filter and sort answer the same rows, and paging under a sort other
+  than `id` resumes at the right place. Its `next_cursor` now carries the sort keys, so a cursor
+  issued before this release is a 400 `invalid_cursor`; read the first page again. A list whose
+  plan exceeds the interactive cost limit is a 422 `query_too_large`.
 - A delete's lookup rules now apply at every depth (A7-T1). A record that a cascade deactivates has its own dependents' rules applied in turn, and a restrict lookup anywhere below refuses the whole delete with `409 cascade_restricted`, whose message names the blocking path. Restoring the deleted record brings back what the cascade took, at every level. Before, a cascade stopped one level down.
 - Sensitivity labels (A1-T2): a field labelled Secret is never readable inside an agent action, grant
   or administrator or not, unless its options set `allow_ai: true`; DSR exports count confirmed labels

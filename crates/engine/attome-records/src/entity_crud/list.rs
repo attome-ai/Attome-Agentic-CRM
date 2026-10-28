@@ -1,6 +1,8 @@
 //! S1-T2: `GET /api/v1/{entity}`, a keyset-paged list of an entity's
-//! records through `query/execute`'s engine (the entity's default view, its
-//! record-level scoping and field masking unchanged).
+//! records. S4-T12: a page compiles to a QuerySpec and runs through
+//! `query/run`'s engine (`execute_spec_on`), on the interactive surface so
+//! record-level scoping and field masking are as before; with no `select`
+//! it returns the system columns and every attribute the caller may see.
 //!
 //! - `select=a,b`: the attributes to return (as `query/execute`'s `select`);
 //! - `filter[<field>][<op>]=<value>`: one filter per pair, `op` one of the
@@ -29,7 +31,11 @@ use serde::Deserialize;
 use serde_json::Value;
 use utoipa::IntoParams;
 
+use attome_security::field_gate::{self, Surface};
+
 use crate::query_exec::ExecuteQueryRequest;
+use crate::query_spec::routes::{RunResponse, execute_spec_on};
+use crate::query_spec::{Condition, QuerySpec, SortKey};
 
 /// The operators a list filter may name.
 const OPERATORS: &[&str] = &[
@@ -136,8 +142,8 @@ pub fn parse_sort(sort: Option<&str>) -> (String, String) {
         (status = 410, description = "L7-T4: the delta token is older than the change feed keeps (resync_needed); read the list again", body = ErrorResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller may not read this entity", body = ErrorResponse),
-        (status = 404, description = "No such entity, or it has no default view", body = ErrorResponse),
-        (status = 422, description = "A malformed filter, sort or select", body = ErrorResponse),
+        (status = 404, description = "No such entity", body = ErrorResponse),
+        (status = 422, description = "A malformed filter, sort or select, or a page over the interactive cost limit (query_too_large)", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -172,19 +178,81 @@ pub(super) async fn list_records(
         let delta = crate::query_exec::execute_delta(&state, &ctx, request, token).await?;
         return Ok(Json(delta).into_response());
     }
-    let request = ExecuteQueryRequest::for_entity_list(
-        entity_input,
-        filters,
-        order_by,
-        order_dir,
-        page_size,
-        attome_types::cursor::open_uuid(params.cursor.as_deref())?,
+    // S4-T12: a page compiles through QuerySpec, the engine query/run uses,
+    // on the interactive surface (masked fields read masked).
+    let select = match select {
+        Some(select) => select,
+        None => default_select(&state, &ctx, &entity_input)?,
+    };
+    let spec = QuerySpec {
+        entity: entity_input,
         select,
-    );
-    let response =
-        crate::query_exec::execute_stored_query_with_definition(&state, &ctx, request, None)
-            .await?;
-    Ok(Json(response.into_cursor_page()).into_response())
+        r#where: (!filters.is_empty()).then(|| Condition::And {
+            all: filters
+                .into_iter()
+                .map(|f| Condition::Compare {
+                    field: f.field,
+                    op: f.op,
+                    value: f.value,
+                })
+                .collect(),
+        }),
+        sort: if order_by.is_empty() {
+            Vec::new()
+        } else {
+            vec![SortKey {
+                field: order_by,
+                desc: order_dir == "desc",
+            }]
+        },
+        page_size: Some(page_size),
+        cursor: params.cursor,
+        group_by: Vec::new(),
+        aggregates: Vec::new(),
+        having: None,
+        explain: false,
+        as_of: None,
+        params: Default::default(),
+        totals: None,
+    };
+    let RunResponse::Rows(page) = execute_spec_on(&state, &ctx, spec, Surface::Interactive).await?
+    else {
+        return Err(AppError::internal("a record list compiled to aggregates"));
+    };
+    let items = page
+        .items
+        .into_iter()
+        .map(|row| Value::Object(row.0))
+        .collect();
+    Ok(Json(CursorPage::new(items, page.next_cursor)).into_response())
+}
+
+/// S4-T12: the columns a list with no `select` returns, as before: the
+/// system columns and every attribute `ctx` may read, or see masked, on the
+/// interactive surface. An unknown entity is a 404.
+fn default_select(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    entity: &str,
+) -> Result<Vec<String>, AppError> {
+    let registry = state.entities.load();
+    let meta = registry.get(entity).ok_or(AppError::NotFound)?;
+    let primary = meta.primary_name_attribute.as_deref();
+    let system = attome_core::ALL_SYSTEM_COLS
+        .iter()
+        .filter(|c| attome_core::data_definition::system_column_type(c).is_some())
+        .map(|c| (*c).to_owned());
+    let attrs = meta
+        .attrs
+        .iter()
+        .filter(|attr| {
+            !matches!(
+                field_gate::projection(ctx, &meta.logicalname, attr, primary, Surface::Interactive),
+                attome_core::field_mask::ColumnAccess::Hidden
+            )
+        })
+        .map(|attr| attr.logicalname.clone());
+    Ok(system.chain(attrs).collect())
 }
 
 #[derive(utoipa::OpenApi)]
