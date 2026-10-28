@@ -11,3 +11,6 @@ export type { DeadLetterGroup, DeadLetterItem, GroupReplayStarted } from './dead
 export type {
   DeadLetterJobItem, DeadLetterJobsPage, ReplayResponse,
 } from './services/jobs-admin.service';
+// AA10-T8 — every long-running operation, with its controls.
+export { OperationsComponent, controlsFor, progressPercent, isWorking } from './operations/operations.component';
+export type { OperationSummary, MassControl } from './operations/operations.component';

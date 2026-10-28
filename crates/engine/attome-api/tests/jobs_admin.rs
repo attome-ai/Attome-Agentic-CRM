@@ -580,6 +580,19 @@ fn a_dead_letter_can_be_discarded() {
 
 /// AA10-T7: the operations list's ids for a caller, following every page.
 async fn operation_ids(app: &axum::Router, cookie: &str) -> Vec<(String, String)> {
+    operation_items(app, cookie)
+        .await
+        .iter()
+        .map(|item| {
+            (
+                item["id"].as_str().unwrap().to_owned(),
+                item["kind"].as_str().unwrap().to_owned(),
+            )
+        })
+        .collect()
+}
+
+async fn operation_items(app: &axum::Router, cookie: &str) -> Vec<serde_json::Value> {
     let mut out = Vec::new();
     let mut cursor: Option<String> = None;
     loop {
@@ -599,12 +612,7 @@ async fn operation_ids(app: &axum::Router, cookie: &str) -> Vec<(String, String)
             .await
             .unwrap();
         let page: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        for item in page["items"].as_array().unwrap() {
-            out.push((
-                item["id"].as_str().unwrap().to_owned(),
-                item["kind"].as_str().unwrap().to_owned(),
-            ));
-        }
+        out.extend(page["items"].as_array().unwrap().iter().cloned());
         match page["next_cursor"].as_str() {
             Some(next) => cursor = Some(next.to_owned()),
             None => return out,
@@ -638,6 +646,22 @@ fn operations_list_shows_mass_and_bulk() {
         .fetch_one(&db)
         .await
         .expect("seed a bulk operation");
+        // AA10-T8: a mass row carries what its controls and time left need.
+        let items = operation_items(&app, &owner_cookie).await;
+        let row = |id: Uuid| {
+            items
+                .iter()
+                .find(|item| item["id"] == id.to_string())
+                .cloned()
+                .expect("listed")
+        };
+        let mass_row = row(mass);
+        assert_eq!(mass_row["row_version"], 1);
+        assert_eq!(
+            mass_row["seconds_left"].as_i64(),
+            attome_records::mass::seconds_left("running", Some(1200), 0)
+        );
+        assert!(row(bulk)["row_version"].is_null());
         let mass = (mass.to_string(), "mass".to_owned());
         let bulk = (bulk.to_string(), "bulk".to_owned());
 

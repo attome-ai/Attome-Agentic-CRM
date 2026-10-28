@@ -66,6 +66,11 @@
         <button type="button" class="btn btn-danger" [disabled]="bulkActionRunning()"
           (click)="deleteSelected()">{{ 'entityList.deleteSelected' | translate }}</button>
         }
+        <!-- AA10-T8: every matching record, after the estimate-confirm step. -->
+        @if (massFilter() !== undefined) {
+        <button type="button" class="btn btn-secondary" data-mass-delete [disabled]="bulkActionRunning()"
+          (click)="openMassDelete()">{{ 'entityList.deleteAllMatching' | translate }}</button>
+        }
         }
         <button type="button" class="btn btn-text" (click)="clearSelection()">{{ 'entityList.cancel' | translate }}</button>
         }
@@ -500,5 +505,9 @@
   <xrm-bulk-edit-dialog #bulkEditDialog [entityName]="entityName()" [recordIds]="selectedRecordIdList()"
     [filters]="bulkEditFilters()"
     (busyChange)="bulkActionRunning.set($event)" (applied)="onBulkEditApplied()" />
+  }
+  @defer (when massDeleteRequested()) {
+  <xrm-mass-confirm-dialog #massDeleteDialog [entity]="entityName()" kind="delete"
+    [filter]="massFilter() ?? null" (started)="onMassStarted($event)" />
   }
 </div>

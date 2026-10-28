@@ -117,6 +117,20 @@ with its counts. The operation becomes `undone` once chunk 0, the last to replay
 The values an operation replaced are kept for `limits.heavy_op.undo_retention_days` (30 by
 default) after it finishes. A daily job clears older ones, and undo is then refused with `409`.
 
+## In the app
+
+A list's selection bar has **Delete all matching**. It deletes every record the view's filters
+match, not only the selected ones. It is hidden while a tag filter is on, because a tag filter
+has no condition form. The confirm dialog shows the estimate first: how many records, how long,
+and whether it runs in the background. Only then can it start, and it sends the rows it showed
+as `confirm_estimate_rows`. A background operation opens the operations screen.
+
+The operations screen (`/xrm/admin/jobs/operations`, over `GET /api/v1/admin/operations`) lists
+every long-running operation. For each it shows progress, time left, who started it and why. It
+refreshes every 5 seconds while any is working. A mass operation's pause, resume, cancel and
+undo buttons send the `row_version` the screen last showed. A stale screen gets the `409` and
+reloads.
+
 ## From an AI agent
 
 `record.mass.estimate`, `record.mass.start` and `record.mass.start_confirmed` run the same engine as

@@ -658,6 +658,13 @@ struct OperationSummary {
     reason: Option<String>,
     created_at: DateTime<Utc>,
     finished_at: Option<DateTime<Utc>>,
+    /// A mass operation's `row_version`, for the `If-Match` of its pause,
+    /// resume, cancel and undo routes; other kinds have none.
+    row_version: Option<i64>,
+    /// While a mass operation works: the seconds left at the estimated
+    /// speed.
+    #[sqlx(skip)]
+    seconds_left: Option<i64>,
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -697,17 +704,17 @@ fn parse_operations_cursor(raw: &str) -> Result<(DateTime<Utc>, Uuid), AppError>
 /// branch is bounded by `$5` before the merge.
 const OPERATIONS_SQL: &str = "\
 SELECT id, kind, action, entity, status, rows_done, estimated_rows, started_by, reason,
-       created_at, finished_at
+       created_at, finished_at, row_version
   FROM (
   (SELECT id, 'mass'::text AS kind, kind AS action, entity_logicalname AS entity, status,
-          rows_done, estimated_rows, started_by, reason, created_at, finished_at
+          rows_done, estimated_rows, started_by, reason, created_at, finished_at, row_version
      FROM heavy_operation
     WHERE ($2 OR started_by = $1) AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
     ORDER BY created_at DESC, id DESC LIMIT $5)
   UNION ALL
   (SELECT id, 'bulk', operation, entity_logicalname, status,
           (succeeded + failed + rejected)::bigint, total::bigint, created_by, NULL, created_at,
-          CASE WHEN status IN ('completed', 'failed') THEN updated_at END
+          CASE WHEN status IN ('completed', 'failed') THEN updated_at END, NULL::bigint
      FROM automation_bulk_operation
     WHERE NOT is_deleted AND ($2 OR created_by = $1)
       AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
@@ -715,7 +722,7 @@ SELECT id, kind, action, entity, status, rows_done, estimated_rows, started_by, 
   UNION ALL
   (SELECT id, 'bulk_transform', transform, entity_logicalname, status,
           (succeeded + failed)::bigint, total::bigint, created_by, NULL, created_at,
-          CASE WHEN status IN ('completed', 'failed') THEN updated_at END
+          CASE WHEN status IN ('completed', 'failed') THEN updated_at END, NULL::bigint
      FROM bulk_transform_operation
     WHERE NOT is_deleted AND ($2 OR created_by = $1)
       AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
@@ -723,14 +730,15 @@ SELECT id, kind, action, entity, status, rows_done, estimated_rows, started_by, 
   UNION ALL
   (SELECT id, 'staged_import', operation, entity_logicalname, status,
           NULL::bigint, NULL::bigint, created_by, NULL, created_at,
-          CASE WHEN status IN ('approved', 'rejected') THEN COALESCE(approved_at, updated_at) END
+          CASE WHEN status IN ('approved', 'rejected') THEN COALESCE(approved_at, updated_at) END,
+          NULL::bigint
      FROM automation_staged_import
     WHERE NOT is_deleted AND ($2 OR created_by = $1)
       AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
     ORDER BY created_at DESC, id DESC LIMIT $5)
   UNION ALL
   (SELECT id, 'import', match_mode, entity_logicalname, status,
-          cursor_row::bigint, NULL::bigint, created_by, NULL, created_at, finished_at
+          cursor_row::bigint, NULL::bigint, created_by, NULL, created_at, finished_at, NULL::bigint
      FROM import_job
     WHERE ($2 OR created_by = $1) AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
     ORDER BY created_at DESC, id DESC LIMIT $5)
@@ -793,6 +801,13 @@ async fn list_operations(
         .fetch_all(&state.base.db)
         .await
         .map_err(AppError::internal)?;
+    for row in rows.iter_mut().filter(|r| r.kind == "mass") {
+        row.seconds_left = attome_records::mass::seconds_left(
+            &row.status,
+            row.estimated_rows,
+            row.rows_done.unwrap_or(0),
+        );
+    }
     let has_more = rows.len() > usize::try_from(page_size).unwrap_or(usize::MAX);
     rows.truncate(usize::try_from(page_size).unwrap_or(usize::MAX));
     let next_cursor = if has_more {
@@ -833,6 +848,8 @@ async fn list_operations(
                     reason: None,
                     created_at: started,
                     finished_at: None,
+                    row_version: None,
+                    seconds_left: None,
                 }
             })
             .collect();

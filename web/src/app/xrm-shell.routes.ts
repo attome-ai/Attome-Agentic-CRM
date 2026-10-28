@@ -781,6 +781,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/jobs').then(m => m.SchedulesComponent),
           },
           {
+            // AA10-T8: every long-running operation, with its controls.
+            path: 'jobs/operations',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/jobs').then(m => m.OperationsComponent),
+          },
+          {
             path: 'jobs/dead-letters',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/jobs').then(m => m.DeadLetterInboxComponent),

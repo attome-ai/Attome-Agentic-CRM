@@ -38,6 +38,10 @@ import { liveRows } from './live-rows';
 // every bespoke form loads (scripts/chunk-budget.mjs). Referenced only by the
 // `imports` array, the `@defer` block and a type position, so it stays deferrable.
 import { BulkEditDialogComponent } from './bulk-edit-dialog.component';
+// AA10-T8: deferred the same way; the estimate-confirm step before a mass action.
+import { MassConfirmDialogComponent } from './mass-confirm-dialog.component';
+import type { MassRun } from './mass-confirm-dialog.component';
+import { filtersToCondition } from './mass-condition';
 // Deferred the same way (U12 Phase A, D-607): the advanced-find builder loads
 // the first time it is opened.
 import { AdvancedFindPanelComponent } from './advanced-find-panel.component';
@@ -201,6 +205,7 @@ export function richTextToPlainText(html: string): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports:     [
     FormsModule, NgComponentOutlet, RouterLink, TranslatePipe, ChoicePillComponent, BulkEditDialogComponent,
+    MassConfirmDialogComponent,
     AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent, BulkTagComponent, ActionBarComponent,
     ListCardsComponent, EditableGridComponent, RecordTypePickerComponent, RecordTemplatePickerComponent, EmptyStateComponent,
   ],
@@ -394,6 +399,10 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   readonly bulkEditRequested = signal(false);
   private readonly bulkEditDialog = viewChild<BulkEditDialogComponent>('bulkEditDialog');
   private bulkEditOpenPending = false;
+  /** AA10-T8: set by the first "Delete all matching" click; renders the deferred dialog. */
+  readonly massDeleteRequested = signal(false);
+  private readonly massDeleteDialog = viewChild<MassConfirmDialogComponent>('massDeleteDialog');
+  private massDeleteOpenPending = false;
 
   /** D3-T3: the sales entry point, loaded on a lead list for its bulk convert and disqualify. */
   readonly leadBulk = signal<SalesModule | null>(null);
@@ -494,6 +503,13 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
         this.leadBulkRequested = true;
         // Nothing to show when it cannot load: the other bulk actions stay.
         import('@attome/xrm/sales').then(m => this.leadBulk.set(m), () => undefined);
+      }
+    });
+    effect(() => {
+      const dialog = this.massDeleteDialog();
+      if (dialog && this.massDeleteOpenPending) {
+        this.massDeleteOpenPending = false;
+        untracked(() => dialog.show());
       }
     });
     // Opens the dialog once its deferred chunk has rendered it.
@@ -805,6 +821,9 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
 
   /** B5-T4: the view's filters, for a bulk edit of every matching record. */
   readonly bulkEditFilters = computed(() => this.buildColumnFilters());
+  /** AA10-T8: the view's filters as a mass-operation condition; `undefined`
+   * when one (a tag filter) has none, and the mass action is not offered. */
+  readonly massFilter = computed(() => filtersToCondition(this.buildColumnFilters()));
 
   private buildColumnFilters(): QueryFilter[] {
     const filters: QueryFilter[] = [...this.fixedFilters()];
@@ -1308,6 +1327,26 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   onBulkEditApplied(): void {
     this.clearSelection();
     this.load();
+  }
+
+  /** AA10-T8: deletes every record the view's filters match, after the
+   * estimate-confirm step; never without it. */
+  openMassDelete(): void {
+    if (this.massFilter() === undefined || this.bulkActionRunning()) return;
+    const dialog = this.massDeleteDialog();
+    if (dialog) { dialog.show(); return; }
+    this.massDeleteOpenPending = true;
+    this.massDeleteRequested.set(true);
+  }
+
+  /** A mass delete started: a small one has finished, a large one runs on
+   * and is followed on the operations screen. */
+  onMassStarted(run: MassRun): void {
+    this.clearSelection();
+    this.load();
+    if (run.operation.status !== 'done') {
+      void this.router.navigate(['/xrm/admin/jobs/operations']);
+    }
   }
 
   /** U7 Phase A — a bulk Assign finished (its dialog reported the outcome). */
