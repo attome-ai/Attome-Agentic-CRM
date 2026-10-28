@@ -1031,16 +1031,39 @@ fn commission_settings() -> Vec<SettingDescriptor> {
 
 /// AB5-T6: operating switches.
 fn ops_settings() -> Vec<SettingDescriptor> {
-    vec![SettingDescriptor::new(
-        "ops.read_only",
-        "Read-only mode: while true, every write answers 503 `read_only`; reading, \
-         signing in and this switch keep working. Every server follows it within \
-         the read-only refresh interval.",
-        || json!({"type": "boolean"}),
-        &[SettingScope::Deployment],
-        false,
-        || json!(false),
-    )]
+    vec![
+        SettingDescriptor::new(
+            "ops.read_only",
+            "Read-only mode: while true, every write answers 503 `read_only`; reading, \
+             signing in and this switch keep working. Every server follows it within \
+             the read-only refresh interval.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        // AB11-T4: the status watch.
+        SettingDescriptor::new(
+            "ops.status_watch",
+            "Status watch: while true, a component of the status page that stays down for \
+             three minutes gets an internal draft incident (one per component while one is \
+             open). Needs the ops module.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
+            "ops.status_auto_publish_minutes",
+            "Minutes after which an automatic draft incident is published with an \
+             investigating update in both languages; 0 (the default) leaves every draft \
+             for a person to publish.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 1440}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+    ]
 }
 
 fn core_settings() -> Vec<SettingDescriptor> {

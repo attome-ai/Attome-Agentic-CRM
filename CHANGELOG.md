@@ -45,6 +45,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Automatic draft incidents (AB11-T4): with the setting `ops.status_watch` on, a status component down
+  for three minutes gets one internal draft incident while none is open for it (migration 0315 keeps
+  `degraded_since`); `ops.status_auto_publish_minutes` (0, off, by default) publishes such a draft with a
+  bilingual investigating update after that many minutes.
 - Planned maintenance (AB11-T5): `POST /api/v1/ops/maintenance`, `PATCH /api/v1/ops/maintenance/{id}` and
   `POST /api/v1/ops/maintenance/{id}/cancel` (`ops.incident.publish`, `If-Match` on changes; both titles,
   a future start and a later end), audited; `GET /api/v1/ops/maintenance?from=&to=` lists the windows in a

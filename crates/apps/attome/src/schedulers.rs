@@ -306,6 +306,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_status_notify_scheduler(db.clone(), std::time::Duration::from_secs(30));
     // D23-T7: deal coverage gaps, a tick every ten seconds.
     crate::jobs::spawn_deal_coverage_scheduler(db.clone(), std::time::Duration::from_secs(10));
+    // AB11-T4: the status watch, a tick every minute (it reads the setting).
+    crate::jobs::spawn_ops_status_watch_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // J10-T1: the unified router, a tick every fifteen seconds.
     crate::jobs::spawn_service_router_scheduler(db.clone(), std::time::Duration::from_secs(15));
     // E8-T5: journey entries, a tick every ten seconds; date sources hourly.

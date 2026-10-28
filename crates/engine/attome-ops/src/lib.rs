@@ -38,6 +38,8 @@ pub mod public_status;
 pub mod recovery_targets;
 /// AB2-T7: the cluster's status and failover history routes.
 pub mod status;
+/// AB11-T4: draft incidents for components that stay down.
+pub mod status_watch;
 /// AB2-T8: planned switchover under two-person control.
 pub mod switchover;
 /// AB8-T6: the upgrade record and its routes.

@@ -3161,6 +3161,7 @@ const DEDUP_KEY_STATUS_NOTIFY: &str = "status-page-notify";
 const DEDUP_KEY_DEAL_COVERAGE: &str = "sales-deal-coverage";
 /// J10-T1: the unified router's tick (a registered job type).
 const DEDUP_KEY_SERVICE_ROUTER: &str = "service-router-tick";
+const DEDUP_KEY_OPS_STATUS_WATCH: &str = "ops-status-watch";
 /// E23-T1: profile event retention (a registered job type).
 const DEDUP_KEY_PROFILE_EVENT_RETENTION: &str = "profile-event-retention";
 /// J8-T1: the Google reviews read (a registered job type).
@@ -3564,6 +3565,10 @@ pub const IMPORT_APPLY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_document::import_jobs::APPLY_JOB, 1);
 pub const IMPORT_UNDO: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_document::import_jobs::UNDO_JOB, 1);
+
+/// AB11-T4: the status watch, every minute.
+pub const OPS_STATUS_WATCH: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ops::status_watch::TICK_JOB, 1);
 
 /// J10-T1: the unified router: expire offers, overflow, offer waiting work.
 pub const SERVICE_ROUTER_TICK: attome_jobs::JobType =
@@ -4907,6 +4912,28 @@ pub fn register_job_types() {
         ) {
             tracing::error!(%error, "job type registration failed");
         }
+        // AB11-T4: the status watch.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            OPS_STATUS_WATCH,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_OPS) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let stats = attome_ops::status_watch::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if stats.drafted > 0 || stats.published > 0 {
+                    tracing::warn!(
+                        drafted = stats.drafted,
+                        published = stats.published,
+                        "status watch: automatic incidents"
+                    );
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         // J10-T1: the unified router.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SERVICE_ROUTER_TICK,
@@ -5734,6 +5761,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == SERVICE_ROUTER_TICK.name => {
             DEDUP_KEY_SERVICE_ROUTER
+        }
+        EngineJob::Registered(job) if job.name == OPS_STATUS_WATCH.name => {
+            DEDUP_KEY_OPS_STATUS_WATCH
         }
         EngineJob::Registered(job) if job.name == MARKETING_JOURNEY_ENTRY.name => {
             DEDUP_KEY_JOURNEY_ENTRY
@@ -7365,6 +7395,21 @@ pub fn spawn_service_router_scheduler(db: DbPool, interval: std::time::Duration)
             "service router",
         ),
         Err(error) => tracing::error!(%error, "service router: not scheduled"),
+    }
+}
+
+/// AB11-T4: every minute, one status watch run (one pending at most).
+pub fn spawn_ops_status_watch_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(OPS_STATUS_WATCH.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_OPS_STATUS_WATCH,
+            "ops status watch",
+        ),
+        Err(error) => tracing::error!(%error, "ops status watch: not scheduled"),
     }
 }
 
