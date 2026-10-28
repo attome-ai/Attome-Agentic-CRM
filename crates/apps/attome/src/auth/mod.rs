@@ -161,6 +161,11 @@ pub fn public_routes(
             "/api/v1/auth/mfa/pending-confirm",
             post(local::mfa_pending_confirm),
         )
+        .route(
+            // Q5-T3: put required enrolment off within the grace period.
+            "/api/v1/auth/mfa/postpone",
+            post(local::mfa_postpone),
+        )
         .layer(Extension(license))
         .layer(Extension(auditor))
 }

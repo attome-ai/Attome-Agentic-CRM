@@ -366,6 +366,8 @@ fn oidc_error_redirect(state: &AppState, error: AppError) -> Response {
         // the email's domain is not verified for the provider.
         AppError::RequestRejected("tenant_not_allowed") => "tenant_not_allowed",
         AppError::RequestRejected("domain_not_verified") => "domain_not_verified",
+        // Q5-T3: a second factor is required and the provider reported none.
+        AppError::RequestRejected("mfa_required") => "mfa_required",
         _ => "oidc_error",
     };
     let location = format!("{}/login?{reason}=1", state.config.frontend_url());
@@ -460,6 +462,20 @@ async fn oidc_callback_inner(
         &active_license,
     )
     .await?;
+    // Q5-T3: when the person's roles require a second factor, the provider
+    // must have reported one, unless enrolment is still within its grace
+    // period.
+    let requirement = attome_security::mfa_policy::requirement_for(
+        &state.db,
+        user_id,
+        &state.config.auth.mfa_policy,
+    )
+    .await?;
+    if !attome_auth::accounts::federated_mfa_met(&requirement, identity.idp_mfa, chrono::Utc::now())
+    {
+        tracing::warn!(provider, %user_id, "oidc_callback: a second factor is required and the provider reported none");
+        return Err(AppError::RequestRejected("mfa_required"));
+    }
     // Q1-T9: a provider added on screen applies its group mappings and
     // profile claims at each sign-in, in one transaction with their events,
     // before the session exists.

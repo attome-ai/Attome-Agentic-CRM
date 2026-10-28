@@ -437,6 +437,11 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "Login-time forced-enrolment confirmation, same pending_token credential as pending-enroll.",
     ),
     (
+        "POST",
+        "/api/v1/auth/mfa/postpone",
+        "Q5-T3: puts forced enrolment off within the grace period, same pending_token credential as pending-enroll.",
+    ),
+    (
         "GET",
         "/api/v1/auth/oidc/providers",
         "Public provider discovery for the sign-in page, read before any session exists. Bypass-listed subtree.",

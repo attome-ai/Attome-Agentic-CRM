@@ -4230,6 +4230,32 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"pending_token": token, "code": codes[0]})),
             )
         }
+        "POST /api/v1/auth/mfa/postpone" => {
+            // Q5-T3: a role that requires a second factor, within its grace.
+            let (user, _) = seed_user(&fx.base, "mfa-postpone").await;
+            let required = role(fx).await;
+            sqlx::query(
+                "INSERT INTO role_auth_policy (role_ref, mfa_mode, mfa_grace_days) \
+                 VALUES ($1, 'required', 7)",
+            )
+            .bind(required)
+            .execute(&fx.base.db)
+            .await
+            .expect("role policy");
+            sqlx::query("INSERT INTO user_account_mm_role (user_ref, role_ref) VALUES ($1, $2)")
+                .bind(user)
+                .bind(required)
+                .execute(&fx.base.db)
+                .await
+                .expect("grant the role");
+            let token = pending_token(fx, user, attome_auth::TokenType::MfaPendingEnroll).await;
+            request(
+                "POST",
+                "/api/v1/auth/mfa/postpone",
+                None,
+                Some(json!({"pending_token": token})),
+            )
+        }
         "POST /api/v1/auth/mfa/pending-confirm" => {
             let (user, _) = seed_user(&fx.base, "mfa-forced").await;
             let token = pending_token(fx, user, attome_auth::TokenType::MfaPendingEnroll).await;

@@ -4162,6 +4162,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   check it. Until then its sign-ins end on the login page with `domain_not_verified`. Configured
   providers are unchanged. A provider's `tenant_allowlist` is now enforced: a token whose `tid` is
   missing or not listed ends with `tenant_not_allowed`.
+- Password and provider sign-in apply each person's role second-factor policy (Q5-T3).
+  `auth.mfa_policy` is now only what a role set to `inherit` means, and a `system.admin`
+  holder without a factor must enrol at their next password sign-in. A provider sign-in
+  that a required policy covers ends with `mfa_required` unless the provider reported MFA
+  or the person is within the grace period. New route: `POST /api/v1/auth/mfa/postpone`.
 - `POST /api/v1/auth/logout` answers a JSON body, `{"redirect": ...}` for a session from an OIDC
   provider with an end-session endpoint, `{}` otherwise (Q1-T10).
 - `POST /api/v1/sales/orders/{id}/confirm`: `invoice_request_id` is null when the order's

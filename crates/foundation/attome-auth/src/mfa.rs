@@ -372,6 +372,31 @@ fn verify_pending_token(
     Ok((claims.sub, claims.jti))
 }
 
+/// Q5-T3: redeems an `MfaEnrollmentRequired` pending token without a code,
+/// for a person putting enrolment off within their grace period: the token
+/// must verify as an enrolment token, its challenge must be live, and the
+/// challenge is consumed, so the token works once. Answers the person.
+pub async fn redeem_pending_enroll(
+    redis: &Store,
+    pending_token: &str,
+    jwt_ring: &KeyRing,
+    issuer: &str,
+    audience: &str,
+) -> Result<Uuid, AppError> {
+    let (user_id, jti) = verify_pending_token(
+        pending_token,
+        TokenType::MfaPendingEnroll,
+        jwt_ring,
+        issuer,
+        audience,
+    )?;
+    require_live_challenge(redis, jti).await?;
+    if !challenge_step(redis, jti, true, 1).await? {
+        return Err(AppError::Unauthorized);
+    }
+    Ok(user_id)
+}
+
 // ── Enrollment status ───────────────────────────────────────────────────────
 
 /// Whether `user_id` has a confirmed (active) TOTP enrollment. Deliberately

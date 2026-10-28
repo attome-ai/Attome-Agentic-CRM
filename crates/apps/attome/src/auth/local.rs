@@ -470,13 +470,18 @@ pub(super) async fn login(
     let attempt = if attome_security::accounts::is_reserved_service_email(&body.email) {
         Err(AppError::Unauthorized)
     } else {
-        accounts::login(
+        // Q5-T3: the person's roles decide the second factor;
+        // `auth.mfa_policy` is what a role set to inherit means.
+        accounts::login_with_policy(
             &state.db,
             &state.redis_coordination,
             &body.email,
             &body.password,
             state.config.auth.require_verified_email,
-            &state.config.auth.mfa_policy,
+            &attome_security::mfa_policy::RoleMfaPolicySource {
+                db: &state.db,
+                deployment_floor: &state.config.auth.mfa_policy,
+            },
             &state.secrets.load().jwt_secret,
             &state.config.auth.jwt_issuer,
             state.config.jwt_audience(),
@@ -896,6 +901,67 @@ pub(super) async fn mfa_pending_enroll(
         .into_response())
 }
 
+/// Put off required MFA enrolment
+///
+/// Q5-T3: with the `MfaEnrollmentRequired` pending token, signs the person in
+/// with their password alone and puts enrolment off for a day, never past
+/// the grace period their roles' policy gives once a second factor becomes
+/// required. After the grace period it is refused (403) and the person must
+/// enrol. The token works once. Bypass-listed like `mfa/pending-enroll`;
+/// rate limited in the `mfa` class.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/mfa/postpone",
+    tag = "auth",
+    request_body = MfaPendingEnrollBody,
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Security, AuditOperation::Login)])))),
+    responses(
+        (status = 200, description = "Signed in; enrolment is put off"),
+        (status = 401, description = "The pending token is not a live enrolment token", body = ErrorResponse),
+        (status = 403, description = "The grace period is over, or no second factor is required", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+)]
+pub(super) async fn mfa_postpone(
+    State(state): State<AppState>,
+    Extension(auditor): Extension<SecurityAuditor>,
+    Json(body): Json<MfaPendingEnrollBody>,
+) -> Result<Response, AppError> {
+    let user_id = mfa::redeem_pending_enroll(
+        &state.redis_coordination,
+        &body.pending_token,
+        &state.secrets.load().jwt_secret,
+        &state.config.auth.jwt_issuer,
+        state.config.jwt_audience(),
+    )
+    .await?;
+    let Some(until) = attome_security::mfa_policy::postpone_enrolment(
+        &state.db,
+        user_id,
+        &state.config.auth.mfa_policy,
+        chrono::Utc::now(),
+    )
+    .await?
+    else {
+        return Err(AppError::Forbidden);
+    };
+    tracing::info!(%user_id, %until, "mfa: enrolment put off");
+    // The pending enrolment token comes only from a verified password.
+    let cookies = issue_session_cookies_for(
+        &state,
+        user_id,
+        &AuthContext::password(),
+        Some((&auditor, "password (mfa enrolment postponed)")),
+    )
+    .await?;
+    Ok((
+        StatusCode::OK,
+        AppendHeaders(cookies),
+        Json(AuthResponse { user_id }),
+    )
+        .into_response())
+}
+
 /// Confirm required MFA enrolment
 ///
 /// Confirms forced enrollment and, on success, issues a real session
@@ -1232,6 +1298,7 @@ pub(super) async fn verify_email_confirm(
     mfa_recovery,
     mfa_pending_enroll,
     mfa_pending_confirm,
+    mfa_postpone,
     reset_request,
     reset_confirm,
     verify_email_confirm

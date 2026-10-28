@@ -55,6 +55,8 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/auth/mfa/verify",
     "/api/v1/auth/mfa/pending-enroll",
     "/api/v1/auth/mfa/pending-confirm",
+    // Q5-T3: same pending enrolment token as pending-enroll.
+    "/api/v1/auth/mfa/postpone",
     "/health",
     "/health/ready",
     // U9-T1: the startup probe, same unauthenticated convention.
@@ -635,6 +637,7 @@ mod tests {
     #[test]
     fn mfa_login_time_paths_are_bypassed() {
         assert!(is_bypass("/api/v1/auth/mfa/verify"));
+        assert!(is_bypass("/api/v1/auth/mfa/postpone"));
         assert!(is_bypass("/api/v1/auth/mfa/verify-recovery"));
         assert!(is_bypass("/api/v1/auth/mfa/pending-enroll"));
         assert!(is_bypass("/api/v1/auth/mfa/pending-confirm"));

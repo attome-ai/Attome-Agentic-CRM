@@ -190,6 +190,107 @@ pub async fn effective_for(
     Ok(compile(&rows, is_admin, deployment_floor))
 }
 
+/// How long one postponement of enrolment lasts (never past the grace
+/// period's end).
+pub const POSTPONE_HOURS: i64 = 24;
+
+/// Q5-T3: the second-factor requirement a sign-in applies to `user_id`: their
+/// roles' effective policy, `deployment_floor` (`auth.mfa_policy`) standing
+/// for a role set to inherit. When a factor is required and the person has
+/// none, the grace clock starts the first time (`user_mfa_grace`) and runs
+/// for the policy's grace days; until then they may postpone enrolling.
+pub async fn requirement_for(
+    db: &DbPool,
+    user_id: Uuid,
+    deployment_floor: &str,
+) -> Result<attome_auth::accounts::UserMfaRequirement, AppError> {
+    use attome_auth::accounts::UserMfaRequirement;
+    let is_admin = crate::delegation::holds_system_admin(db, user_id).await?;
+    let policy = effective_for(db, user_id, is_admin, deployment_floor).await?;
+    match policy.mode {
+        MfaMode::Off => Ok(UserMfaRequirement::default()),
+        MfaMode::Optional => Ok(UserMfaRequirement {
+            optional: true,
+            ..UserMfaRequirement::default()
+        }),
+        MfaMode::Required => {
+            let mut requirement = UserMfaRequirement {
+                required: true,
+                ..UserMfaRequirement::default()
+            };
+            if attome_auth::mfa::is_enrolled(db, user_id).await? {
+                return Ok(requirement);
+            }
+            let (since, postponed): (
+                chrono::DateTime<chrono::Utc>,
+                Option<chrono::DateTime<chrono::Utc>>,
+            ) = sqlx::query_as(
+                "INSERT INTO user_mfa_grace (user_ref, required_since) VALUES ($1, now()) \
+                 ON CONFLICT (user_ref) DO UPDATE SET user_ref = EXCLUDED.user_ref \
+                 RETURNING required_since, postpone_until",
+            )
+            .bind(user_id)
+            .fetch_one(db)
+            .await
+            .map_err(AppError::internal)?;
+            let grace_until = since + chrono::Duration::days(i64::from(policy.grace_days));
+            requirement.grace_until = Some(grace_until);
+            requirement.postponed_until = postponed.map(|p| p.min(grace_until));
+            Ok(requirement)
+        }
+    }
+}
+
+/// Q5-T3: puts `user_id`'s enrolment off for [`POSTPONE_HOURS`], never past
+/// the grace period. `None` when no factor is required of them, or the grace
+/// period is over.
+pub async fn postpone_enrolment(
+    db: &DbPool,
+    user_id: Uuid,
+    deployment_floor: &str,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<Option<chrono::DateTime<chrono::Utc>>, AppError> {
+    let requirement = requirement_for(db, user_id, deployment_floor).await?;
+    let Some(grace_until) = requirement
+        .grace_until
+        .filter(|_| requirement.in_grace(now))
+    else {
+        return Ok(None);
+    };
+    let until = (now + chrono::Duration::hours(POSTPONE_HOURS)).min(grace_until);
+    sqlx::query("UPDATE user_mfa_grace SET postpone_until = $2 WHERE user_ref = $1")
+        .bind(user_id)
+        .bind(until)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(Some(until))
+}
+
+/// Q5-T3: the per-role policy as a sign-in's policy source.
+#[derive(Debug, Clone, Copy)]
+pub struct RoleMfaPolicySource<'a> {
+    pub db: &'a DbPool,
+    /// `auth.mfa_policy`: what a role set to inherit means.
+    pub deployment_floor: &'a str,
+}
+
+impl attome_auth::accounts::MfaPolicySource for RoleMfaPolicySource<'_> {
+    fn policy_for(
+        &self,
+        user_id: Uuid,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<attome_auth::accounts::UserMfaRequirement, AppError>,
+                > + Send
+                + '_,
+        >,
+    > {
+        Box::pin(requirement_for(self.db, user_id, self.deployment_floor))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

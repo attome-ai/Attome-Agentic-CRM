@@ -341,16 +341,121 @@ pub enum LoginOutcome {
     },
 }
 
+/// Q5-T3: what a person's second-factor policy asks of a sign-in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct UserMfaRequirement {
+    /// A second factor is required.
+    pub required: bool,
+    /// A second factor is used when the person has one (and offered).
+    pub optional: bool,
+    /// While required and not enrolled: until when the person may postpone
+    /// enrolling. `None` or past: no more postponing.
+    pub grace_until: Option<chrono::DateTime<chrono::Utc>>,
+    /// While required and not enrolled: the person postponed enrolling
+    /// until this time (never past `grace_until`).
+    pub postponed_until: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+impl UserMfaRequirement {
+    /// The requirement a deployment-wide `auth.mfa_policy` value stands for
+    /// (`off`, `optional`, `required`; anything else reads as `optional`).
+    pub fn from_mode(mode: &str) -> Self {
+        Self {
+            required: mode == "required",
+            optional: mode != "off" && mode != "required",
+            grace_until: None,
+            postponed_until: None,
+        }
+    }
+
+    /// Whether enrolment may still be put off at `now`.
+    pub fn in_grace(&self, now: chrono::DateTime<chrono::Utc>) -> bool {
+        self.grace_until.is_some_and(|until| now < until)
+    }
+
+    /// Whether the person has put enrolment off past `now`.
+    pub fn postponed(&self, now: chrono::DateTime<chrono::Utc>) -> bool {
+        self.postponed_until.is_some_and(|until| now < until)
+    }
+}
+
+/// Q5-T3: where a sign-in gets the person's second-factor requirement. The
+/// deployment-wide switch is [`ConfigMfaPolicy`]; the per-role policy lives
+/// above this crate (`attome_security::mfa_policy::RoleMfaPolicySource`).
+pub trait MfaPolicySource: Send + Sync {
+    fn policy_for(
+        &self,
+        user_id: Uuid,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<UserMfaRequirement, AppError>> + Send + '_>,
+    >;
+}
+
+/// The deployment-wide `auth.mfa_policy` as a policy source: the same
+/// requirement for everyone, with no grace period.
+#[derive(Debug, Clone, Copy)]
+pub struct ConfigMfaPolicy<'a>(pub &'a str);
+
+impl MfaPolicySource for ConfigMfaPolicy<'_> {
+    fn policy_for(
+        &self,
+        _user_id: Uuid,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<UserMfaRequirement, AppError>> + Send + '_>,
+    > {
+        let requirement = UserMfaRequirement::from_mode(self.0);
+        Box::pin(async move { Ok(requirement) })
+    }
+}
+
+/// Q5-T3: what a password sign-in does next.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MfaStep {
+    /// A session now.
+    Session,
+    /// Ask for the person's second factor.
+    Challenge,
+    /// Make the person enrol one first.
+    Enrol,
+}
+
+/// Q5-T3: the step for `requirement`, whether the person has a second
+/// factor, at `now`. Off: a session, even with a factor. Otherwise a person
+/// with a factor is asked for it. Required without one: enrol, unless the
+/// person postponed it within the grace period. Optional without one: a
+/// session. Pure.
+pub fn mfa_step(
+    requirement: &UserMfaRequirement,
+    enrolled: bool,
+    now: chrono::DateTime<chrono::Utc>,
+) -> MfaStep {
+    if !requirement.required && !requirement.optional {
+        return MfaStep::Session;
+    }
+    if enrolled {
+        return MfaStep::Challenge;
+    }
+    if requirement.required && !requirement.postponed(now) {
+        return MfaStep::Enrol;
+    }
+    MfaStep::Session
+}
+
+/// Q5-T3: whether a sign-in through an identity provider meets
+/// `requirement`: when a factor is required, the provider must have
+/// reported one (`idp_mfa`, Q1-T11), or the person must be within the grace
+/// period (enrolment is postponed until it ends). Pure.
+pub fn federated_mfa_met(
+    requirement: &UserMfaRequirement,
+    idp_mfa: bool,
+    now: chrono::DateTime<chrono::Utc>,
+) -> bool {
+    !requirement.required || idp_mfa || requirement.in_grace(now) || requirement.postponed(now)
+}
+
 /// Verifies an email + password login. Returns a [`LoginOutcome`] — a bare
 /// session only when `mfa_policy` and the account's enrollment state allow
-/// it outright.
-///
-/// `require_verified_email` (`config.auth.require_verified_email`) rejects an
-/// otherwise-correct login with `Forbidden` when the account's
-/// `email_verified` is still false — checked only *after* the password has
-/// already verified, so this is not a new enumeration oracle (an attacker
-/// without the password never reaches this branch; one who has it already
-/// knows the account exists).
+/// it outright. The deployment-wide form of [`login_with_policy`].
 #[allow(clippy::too_many_arguments)]
 pub async fn login(
     db: &DbPool,
@@ -359,6 +464,42 @@ pub async fn login(
     password: &str,
     require_verified_email: bool,
     mfa_policy: &str,
+    jwt_ring: &KeyRing,
+    issuer: &str,
+    audience: &str,
+) -> Result<LoginOutcome, AppError> {
+    login_with_policy(
+        db,
+        redis,
+        email,
+        password,
+        require_verified_email,
+        &ConfigMfaPolicy(mfa_policy),
+        jwt_ring,
+        issuer,
+        audience,
+    )
+    .await
+}
+
+/// Verifies an email + password login. Returns a [`LoginOutcome`] — a bare
+/// session only when the person's requirement (`policy`, Q5-T3) and the
+/// account's enrollment state allow it outright.
+///
+/// `require_verified_email` (`config.auth.require_verified_email`) rejects an
+/// otherwise-correct login with `Forbidden` when the account's
+/// `email_verified` is still false — checked only *after* the password has
+/// already verified, so this is not a new enumeration oracle (an attacker
+/// without the password never reaches this branch; one who has it already
+/// knows the account exists).
+#[allow(clippy::too_many_arguments)]
+pub async fn login_with_policy(
+    db: &DbPool,
+    redis: &Store,
+    email: &str,
+    password: &str,
+    require_verified_email: bool,
+    policy: &dyn MfaPolicySource,
     jwt_ring: &KeyRing,
     issuer: &str,
     audience: &str,
@@ -402,39 +543,94 @@ pub async fn login(
 
     // BAU-12e: `last_login` is stamped by `refresh::issue_with` when a
     // session is actually issued, never here before a second factor.
-    if mfa_policy == "off" {
+    let requirement = policy.policy_for(user_id).await?;
+    if !requirement.required && !requirement.optional {
         return Ok(LoginOutcome::Session(user_id));
     }
+    let enrolled = crate::mfa::is_enrolled(db, user_id).await?;
+    match mfa_step(&requirement, enrolled, chrono::Utc::now()) {
+        MfaStep::Challenge => {
+            let pending_token = crate::mfa::start_challenge(
+                redis,
+                user_id,
+                TokenType::MfaPendingLogin,
+                jwt_ring,
+                issuer,
+                audience,
+            )
+            .await?;
+            Ok(LoginOutcome::MfaRequired { pending_token })
+        }
+        MfaStep::Enrol => {
+            let pending_token = crate::mfa::start_challenge(
+                redis,
+                user_id,
+                TokenType::MfaPendingEnroll,
+                jwt_ring,
+                issuer,
+                audience,
+            )
+            .await?;
+            Ok(LoginOutcome::MfaEnrollmentRequired { pending_token })
+        }
+        // Optional and never enrolled, or enrolment postponed within the
+        // grace period: the password alone is a full session.
+        MfaStep::Session => Ok(LoginOutcome::Session(user_id)),
+    }
+}
 
-    if crate::mfa::is_enrolled(db, user_id).await? {
-        let pending_token = crate::mfa::start_challenge(
-            redis,
-            user_id,
-            TokenType::MfaPendingLogin,
-            jwt_ring,
-            issuer,
-            audience,
-        )
-        .await?;
-        return Ok(LoginOutcome::MfaRequired { pending_token });
+#[cfg(test)]
+mod mfa_step_tests {
+    use super::*;
+
+    fn at(secs: i64) -> chrono::DateTime<chrono::Utc> {
+        chrono::DateTime::from_timestamp(secs, 0).unwrap()
     }
 
-    if mfa_policy == "required" {
-        let pending_token = crate::mfa::start_challenge(
-            redis,
-            user_id,
-            TokenType::MfaPendingEnroll,
-            jwt_ring,
-            issuer,
-            audience,
-        )
-        .await?;
-        return Ok(LoginOutcome::MfaEnrollmentRequired { pending_token });
+    #[test]
+    fn the_deployment_modes_keep_their_meaning() {
+        let now = at(1_000);
+        let off = UserMfaRequirement::from_mode("off");
+        let optional = UserMfaRequirement::from_mode("optional");
+        let required = UserMfaRequirement::from_mode("required");
+        assert_eq!(mfa_step(&off, true, now), MfaStep::Session);
+        assert_eq!(mfa_step(&optional, true, now), MfaStep::Challenge);
+        assert_eq!(mfa_step(&optional, false, now), MfaStep::Session);
+        assert_eq!(mfa_step(&required, true, now), MfaStep::Challenge);
+        assert_eq!(mfa_step(&required, false, now), MfaStep::Enrol);
+        assert_eq!(UserMfaRequirement::from_mode("unknown"), optional);
     }
 
-    // mfa_policy == "optional" and the account never enrolled — password
-    // alone is still a full session.
-    Ok(LoginOutcome::Session(user_id))
+    #[test]
+    fn a_postponement_holds_only_until_it_ends() {
+        let required = UserMfaRequirement {
+            required: true,
+            optional: false,
+            grace_until: Some(at(2_000)),
+            postponed_until: Some(at(1_500)),
+        };
+        assert_eq!(mfa_step(&required, false, at(1_000)), MfaStep::Session);
+        assert_eq!(mfa_step(&required, false, at(1_600)), MfaStep::Enrol);
+        assert!(required.in_grace(at(1_999)) && !required.in_grace(at(2_000)));
+    }
+
+    #[test]
+    fn a_provider_factor_meets_a_required_policy() {
+        let required = UserMfaRequirement::from_mode("required");
+        assert!(federated_mfa_met(&required, true, at(1)));
+        assert!(!federated_mfa_met(&required, false, at(1)));
+        let in_grace = UserMfaRequirement {
+            grace_until: Some(at(10)),
+            ..required
+        };
+        assert!(federated_mfa_met(&in_grace, false, at(5)));
+        assert!(!federated_mfa_met(&in_grace, false, at(10)));
+        assert!(federated_mfa_met(
+            &UserMfaRequirement::from_mode("optional"),
+            false,
+            at(1)
+        ));
+    }
 }
 
 /// BAU-15b (hardening 2.7): upgrades a verified password's hash to the current
